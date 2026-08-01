@@ -8,7 +8,7 @@ TCJ Framework uses semantic versioning with pre-release identifiers during activ
 0.1.0-preview.1
 ```
 
-The shared package version is defined in `eng/Packaging.props`.
+The shared package version is defined in `eng/Packaging.props` and mirrored in `eng/release-manifest.json` for release validation.
 
 ## Preview versions
 
@@ -34,9 +34,10 @@ Create the tag only after:
 
 1. the release commit is on `main`;
 2. build, test, and pack checks succeed;
-3. package contents have been inspected;
-4. release notes and the changelog are updated;
-5. the `nuget-production` environment and NuGet.org Trusted Publishing policy are configured.
+3. the manual `Release preflight` workflow succeeds on `main`;
+4. package contents and Package IDs have been inspected;
+5. release notes and the changelog are updated;
+6. the `nuget-production` environment and NuGet.org Trusted Publishing policy are configured.
 
 The tag triggers `.github/workflows/release.yml`. The workflow validates that the tag version matches `eng/Packaging.props`, publishes through short-lived OIDC credentials, and creates the GitHub Release. See [Release automation](releasing.md).
 

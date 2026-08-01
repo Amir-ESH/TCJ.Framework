@@ -8,18 +8,20 @@ The workflow uses NuGet.org Trusted Publishing and GitHub OIDC. It does not requ
 A release is rejected unless all of the following are true:
 
 - the tag starts with `v` and contains a valid semantic version;
-- the tag version matches `eng/Packaging.props`;
+- the tag version matches both `eng/Packaging.props` and `eng/release-manifest.json`;
+- the changelog contains a dated section for that version;
 - the tagged commit is reachable from `main`;
 - restore, Release build, tests, and pack succeed;
-- exactly five `.nupkg` and five `.snupkg` files are produced.
+- exactly five `.nupkg` and five `.snupkg` files are produced;
+- each package contains the expected ID, version, repository metadata, MIT license expression, README, license file, assembly, and portable symbols.
 
-After validation, the protected `nuget-production` environment publishes the packages to NuGet.org and creates a GitHub Release with all package files attached.
+After validation, the protected `nuget-production` environment publishes the packages to NuGet.org and creates a GitHub Release with package assets and notes extracted from `CHANGELOG.md`.
 
 ## One-time GitHub configuration
 
 ### Allow the NuGet login action
 
-The repository currently limits workflows to selected actions. Go to:
+The repository limits workflows to selected actions. Go to:
 
 ```text
 Settings → Actions → General → Actions permissions
@@ -31,7 +33,7 @@ Keep GitHub-created actions enabled and add this allowed action pattern:
 NuGet/login@v1
 ```
 
-The CI/CD workflows also use these GitHub-owned actions:
+The workflows also use these GitHub-owned actions:
 
 ```text
 actions/checkout@v6
@@ -64,12 +66,10 @@ Create an environment variable:
 
 ```text
 Name: NUGET_USER
-Value: your nuget.org profile username, not your email address
+Value: your NuGet.org profile username, not your email address
 ```
 
 No NuGet API-key secret is needed.
-
-If the **Trusted Publishing** page is not available in your NuGet.org account, do not create a release tag yet. Keep the tag-based workflow disabled until a scoped fallback publishing credential is configured deliberately; never place an API key in the repository or workflow file.
 
 ## One-time NuGet.org configuration
 
@@ -91,15 +91,63 @@ Environment: nuget-production
 
 Enter only `release.yml` as the workflow filename, not the `.github/workflows/` path.
 
-## Prepare a release
+## Release manifest
 
-1. Update the shared version in `eng/Packaging.props`.
-2. Move release notes from `Unreleased` into the matching version section in `CHANGELOG.md`.
-3. Merge `develop` into `main` through a protected pull request.
-4. Confirm `Build, test and pack` succeeds on `main`.
-5. Create and push the annotated tag from the exact `main` commit.
+The release-specific values are stored in:
 
-Example preview release:
+```text
+eng/release-manifest.json
+```
+
+For every new version, update these fields together:
+
+```text
+version
+tag
+releaseDate
+packages
+```
+
+`eng/verify-release.py` ensures the manifest, MSBuild version, package projects, changelog, documentation, and built packages agree.
+
+## Run release preflight
+
+After the release pull request is merged into `main`, open:
+
+```text
+Actions → Release preflight → Run workflow
+```
+
+Select branch:
+
+```text
+main
+```
+
+For the first publication choose:
+
+```text
+package-id-policy: available
+```
+
+For later releases choose `existing`. `report-only` reports the NuGet.org state without enforcing it.
+
+The preflight workflow:
+
+1. requires `main`;
+2. verifies release metadata and the dated changelog section;
+3. queries NuGet.org for all five package IDs;
+4. restores, builds, tests, and packs;
+5. inspects the actual `.nupkg` and `.snupkg` contents;
+6. uploads a release-candidate artifact and test results.
+
+Download and review the `release-candidate-*` artifact before tagging. The first publication cannot claim a package ID that already exists on NuGet.org under another owner.
+
+## Publish the first preview
+
+Complete [`RELEASE_CHECKLIST.md`](../RELEASE_CHECKLIST.md), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.
+
+Create the annotated tag:
 
 ```bash
 git switch main
@@ -111,19 +159,20 @@ git tag -a v0.1.0-preview.1 \
 git push origin v0.1.0-preview.1
 ```
 
-A version containing a prerelease suffix, such as `-preview.1`, produces a GitHub pre-release automatically.
+A version containing a pre-release suffix, such as `-preview.1`, creates a GitHub pre-release automatically.
 
 ## Publication sequence
 
-The workflow performs these operations:
+The release workflow performs these operations:
 
-1. validate the tag and version;
-2. build and test the complete solution;
-3. create and verify all primary and symbol packages;
-4. pause for the `nuget-production` environment approval when configured;
-5. exchange the GitHub OIDC token for a short-lived NuGet API key;
-6. publish all packages and associated symbol packages;
-7. create the GitHub Release and attach `.nupkg` and `.snupkg` files.
+1. validates the tag, manifest, package version, and changelog;
+2. builds and tests the complete solution;
+3. creates and deeply inspects all primary and symbol packages;
+4. extracts release notes from the matching changelog section;
+5. pauses for the `nuget-production` environment approval;
+6. exchanges the GitHub OIDC token for a short-lived NuGet API key;
+7. publishes all packages and associated symbol packages;
+8. creates the GitHub pre-release and attaches `.nupkg` and `.snupkg` files.
 
 `--skip-duplicate` allows a safe rerun after a partial NuGet.org outage. The immutable tag guarantees that reruns use the same source commit and package version.
 
@@ -133,4 +182,4 @@ Do not move or recreate an existing public release tag with different content.
 
 If no packages were published, delete the failed tag, correct the release commit, and create the tag again.
 
-If any package was published, increment the version, update `eng/Packaging.props` and `CHANGELOG.md`, and publish a new tag. NuGet package versions are immutable.
+If any package was published, increment the version, update `eng/Packaging.props`, `eng/release-manifest.json`, and `CHANGELOG.md`, then publish a new tag. NuGet package versions are immutable.

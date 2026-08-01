@@ -10,6 +10,7 @@ This directory documents the public behavior of the current `0.1.0-preview.1` so
 4. [Development workflow](development.md)
 5. [Versioning and releases](versioning.md)
 6. [Release automation](releasing.md)
+7. [First preview release notes](releases/0.1.0-preview.1.md)
 
 ## Package reference
 
@@ -29,7 +30,7 @@ This directory documents the public behavior of the current `0.1.0-preview.1` so
 
 ## Important preview constraints
 
-- NuGet packages are not published yet.
+- `0.1.0-preview.1` is a public preview; pin the exact version and review the changelog before upgrading.
 - Public APIs may change before `1.0.0`.
 - Domain-event dispatch is explicit; `SaveChangesAsync` does not dispatch events automatically.
 - Soft deletion is explicit through `ISoftDeleteRepository`; calling `Remove` performs physical deletion.

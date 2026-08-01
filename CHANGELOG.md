@@ -6,13 +6,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
-### Added
-
-- Automated CI validation, package-set verification, Trusted Publishing release workflow, GitHub Releases, and weekly Dependabot updates.
-- Comprehensive project, package, architecture, contribution, support, security, and versioning documentation.
-- GitHub issue forms and pull-request template.
-
-## [0.1.0-preview.1] - Unreleased
+## [0.1.0-preview.1] - 2026-08-01
 
 ### Added
 
@@ -24,6 +18,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Product API sample.
 - Cross-package xUnit v3 test projects.
 - Shared NuGet packaging metadata and symbol-package settings.
+- Comprehensive project, package, architecture, contribution, support, security, and versioning documentation.
+- GitHub issue forms and pull-request template.
+- CI validation, package-content verification, release preflight, Trusted Publishing, GitHub Releases, and weekly Dependabot updates.
 
-[Unreleased]: https://github.com/Amir-ESH/TCJ.Framework/compare/main...develop
+[Unreleased]: https://github.com/Amir-ESH/TCJ.Framework/compare/v0.1.0-preview.1...develop
 [0.1.0-preview.1]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.1
