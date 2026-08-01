@@ -1,0 +1,67 @@
+name: Bug report
+description: Report reproducible incorrect behavior in TCJ Framework.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Remove secrets and personal data from all logs and examples.
+  - type: input
+    id: version
+    attributes:
+      label: TCJ version or commit
+      placeholder: 0.1.0-preview.1 or commit SHA
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system and .NET SDK version.
+      placeholder: Windows 11, .NET SDK 10.0.100
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - TCJ.Core
+        - TCJ.DependencyInjection
+        - TCJ.EntityFrameworkCore
+        - TCJ.EntityFrameworkCore.SqlServer
+        - TCJ.AspNetCore
+        - Sample or build infrastructure
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide exact steps and the smallest useful code sample.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the complete exception or failing assertion with secrets removed.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and pull requests.
+          required: true
+        - label: I removed credentials, tokens, connection passwords, and personal data.
+          required: true

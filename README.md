@@ -1,10 +1,15 @@
 # TCJ Framework
 
-TCJ is a modular foundation for building .NET 10 applications with explicit boundaries between domain primitives, dependency injection, persistence, SQL Server, and ASP.NET Core integration.
+[![CI](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/ci.yml)
 
-> **Status:** `0.1.0-preview.1` is a preview release. Public APIs may change before `1.0.0`.
+TCJ Framework is a modular foundation for building .NET 10 applications with explicit boundaries between domain primitives, dependency injection, persistence, SQL Server, and ASP.NET Core integration.
 
-Source code and issue tracking: https://github.com/Amir-ESH/TCJ.Framework
+> **Status:** `0.1.0-preview.1` is the first public preview. Public APIs may change before `1.0.0`; pin the exact preview version in production-like environments.
+
+- Repository: <https://github.com/Amir-ESH/TCJ.Framework>
+- Documentation: <https://github.com/Amir-ESH/TCJ.Framework/tree/main/docs>
+- Product API sample: <https://github.com/Amir-ESH/TCJ.Framework/tree/main/samples/TCJ.Empty>
+- License: [MIT](https://github.com/Amir-ESH/TCJ.Framework/blob/main/LICENSE.txt)
 
 ## Packages
 
@@ -12,23 +17,48 @@ Source code and issue tracking: https://github.com/Amir-ESH/TCJ.Framework
 | --- | --- |
 | `TCJ.Core` | Entities, Result pattern, domain-event contracts, guards, identifiers, and security abstractions. |
 | `TCJ.DependencyInjection` | Convention-based service registration and sequential domain-event dispatching. |
-| `TCJ.EntityFrameworkCore` | Repositories, specifications, unit of work, auditing, soft delete, seeding, and entity search. |
+| `TCJ.EntityFrameworkCore` | Repositories, specifications, unit of work, auditing, soft delete, seeding, and entity metadata search. |
 | `TCJ.EntityFrameworkCore.SqlServer` | SQL Server registration options and rowversion conventions. |
-| `TCJ.AspNetCore` | Current-user resolution, Result-to-HTTP mapping, Problem Details, and exception handling. |
+| `TCJ.AspNetCore` | Current-user resolution, Result-to-HTTP mapping, Problem Details, and centralized exception handling. |
 
-## Installation
+## Requirements
 
-Install only the packages required by your application:
+- .NET SDK `10.0.100` or a compatible SDK selected by [`global.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/main/global.json)
+- SQL Server only when using `TCJ.EntityFrameworkCore.SqlServer` or running the sample application
+
+## Install the preview packages
+
+Install only the modules required by the application:
 
 ```bash
-dotnet add package TCJ.Core --prerelease
-dotnet add package TCJ.DependencyInjection --prerelease
-dotnet add package TCJ.EntityFrameworkCore --prerelease
-dotnet add package TCJ.EntityFrameworkCore.SqlServer --prerelease
-dotnet add package TCJ.AspNetCore --prerelease
+dotnet add package TCJ.Core --version 0.1.0-preview.1
+dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.1
+dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.1
+dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.1
+dotnet add package TCJ.AspNetCore --version 0.1.0-preview.1
 ```
 
-## Minimal setup
+## Quick start from source
+
+Clone the repository to build, test, or run the included sample:
+
+```bash
+git clone https://github.com/Amir-ESH/TCJ.Framework.git
+cd TCJ.Framework
+dotnet restore TCJ.slnx
+dotnet build TCJ.slnx -c Release --no-restore
+dotnet test TCJ.slnx -c Release --no-build
+```
+
+Run the Product API sample:
+
+```bash
+dotnet run --project samples/TCJ.Empty/TCJ.Empty.csproj
+```
+
+The default Development connection string uses SQL Server LocalDB on Windows. See the [sample README](https://github.com/Amir-ESH/TCJ.Framework/blob/main/samples/TCJ.Empty/README.md) for configuration details.
+
+## Minimal application setup
 
 ```csharp
 using TCJ.AspNetCore.Extensions;
@@ -37,12 +67,14 @@ using TCJ.EntityFrameworkCore.SqlServer.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+string connectionString = builder.Configuration
+    .GetConnectionString("Default")
+    ?? throw new InvalidOperationException(
+        "Connection string 'Default' was not found.");
+
 builder.Services.AddTcjDependencyInjection(typeof(Program).Assembly);
 builder.Services.AddTcjAspNetCore();
-builder.Services.AddTcjSqlServer<AppDbContext>(
-    builder.Configuration.GetConnectionString("Default")
-        ?? throw new InvalidOperationException(
-            "Connection string 'Default' was not found."));
+builder.Services.AddTcjSqlServer<AppDbContext>(connectionString);
 
 var app = builder.Build();
 
@@ -50,7 +82,21 @@ app.UseTcjAspNetCore();
 app.Run();
 ```
 
-A complete Product API sample is available in `samples/TCJ.Empty`.
+Your `DbContext` must implement `IReadDbContext` and `IWriteDbContext`:
+
+```csharp
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
+    : DbContext(options), IReadDbContext, IWriteDbContext
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplySoftDeleteQueryFilters();
+        modelBuilder.ApplyTcjSqlServerConventions();
+    }
+}
+```
 
 ## Build, test, and pack
 
@@ -63,6 +109,26 @@ dotnet pack TCJ.slnx -c Release --no-build
 
 NuGet packages and symbol packages are written to `artifacts/packages`.
 
+## Documentation map
+
+- [Getting started](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/getting-started.md)
+- [Architecture and package boundaries](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/architecture.md)
+- [Package reference](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/README.md#package-reference)
+- [Guides and recipes](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/README.md#guides)
+- [Development workflow](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/development.md)
+- [Versioning and releases](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/versioning.md)
+- [Release automation](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/releasing.md)
+- [First preview release notes](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/releases/0.1.0-preview.1.md)
+- [Release checklist](https://github.com/Amir-ESH/TCJ.Framework/blob/main/RELEASE_CHECKLIST.md)
+- [Contributing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md)
+- [Security policy](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SECURITY.md)
+- [Support](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SUPPORT.md)
+- [Changelog](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CHANGELOG.md)
+
+## Contributing
+
+Contributions are welcome through focused issues and pull requests. Read [`CONTRIBUTING.md`](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md) before opening a change.
+
 ## License
 
-TCJ is licensed under the MIT License. See `LICENSE.txt`.
+TCJ Framework is licensed under the [MIT License](https://github.com/Amir-ESH/TCJ.Framework/blob/main/LICENSE.txt).

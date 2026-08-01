@@ -1,0 +1,126 @@
+name: Release preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_id_policy:
+        description: Expected NuGet.org state for the package IDs
+        required: true
+        type: choice
+        default: available
+        options:
+          - available
+          - existing
+          - report-only
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  preflight:
+    name: Validate release candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Require the main branch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Release preflight must run from main. Selected ref: $GITHUB_REF" >&2
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Verify release metadata
+        run: python3 eng/verify-release.py
+
+      - name: Check NuGet package IDs
+        run: >
+          python3 eng/check-nuget-package-ids.py
+          --policy "${{ inputs.package_id_policy }}"
+
+      - name: Restore dependencies
+        run: dotnet restore TCJ.slnx
+
+      - name: Build solution
+        run: >
+          dotnet build TCJ.slnx
+          --configuration Release
+          --no-restore
+
+      - name: Run tests
+        run: >
+          dotnet test TCJ.slnx
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=preflight-test-results.trx"
+          --results-directory TestResults
+
+      - name: Pack release candidate
+        run: >
+          dotnet pack TCJ.slnx
+          --configuration Release
+          --no-build
+
+      - name: Verify package set
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          bash eng/verify-packages.sh "$version"
+
+      - name: Inspect package metadata and contents
+        run: >
+          python3 eng/verify-release.py
+          --package-directory artifacts/packages
+
+      - name: Create release notes preview
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          python3 eng/extract-release-notes.py \
+            --version "$version" \
+            --output artifacts/release/RELEASE_NOTES.md
+
+      - name: Upload preflight test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-test-results-${{ github.run_id }}
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload release candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-candidate-${{ github.run_id }}
+          path: |
+            artifacts/packages/*
+            artifacts/release/RELEASE_NOTES.md
+            eng/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30

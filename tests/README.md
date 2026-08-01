@@ -1,26 +1,30 @@
-# TCJ tests
+# Tests
 
-The suite uses xUnit.net v3.
+The repository separates tests by production package:
 
-The test suite is split by production package so failures remain easy to locate:
+```text
+TCJ.Core.Tests
+TCJ.DependencyInjection.Tests
+TCJ.EntityFrameworkCore.Tests
+TCJ.EntityFrameworkCore.SqlServer.Tests
+TCJ.AspNetCore.Tests
+```
 
-- `TCJ.Core.Tests`: result invariants, domain entities and UUID v7 generation.
-- `TCJ.DependencyInjection.Tests`: marker-based registrations and domain-event dispatch.
-- `TCJ.EntityFrameworkCore.Tests`: auditing, soft delete, specifications, entity search and unit of work.
-- `TCJ.EntityFrameworkCore.SqlServer.Tests`: SQL Server rowversion conventions and provider registration.
-- `TCJ.AspNetCore.Tests`: current-user resolution and Result-to-HTTP mapping.
+The suite uses xUnit v3, Microsoft.NET.Test.Sdk, the Visual Studio runner adapter, and Coverlet collection settings shared through `TestProject.props`.
 
 Run all tests:
 
-```powershell
-dotnet test .\TCJ.slnx -c Release
+```bash
+dotnet test TCJ.slnx -c Release
 ```
 
-Run with coverage:
+Run coverage:
 
-```powershell
-dotnet test .\TCJ.slnx `
-  -c Release `
-  --collect:"XPlat Code Coverage" `
-  --settings .\tests\coverlet.runsettings
+```bash
+dotnet test TCJ.slnx \
+  -c Release \
+  --collect:"XPlat Code Coverage" \
+  --settings tests/coverlet.runsettings
 ```
+
+Tests should focus on public behavior and high-risk integration boundaries. Bug fixes should include a regression test in the closest package-specific project.

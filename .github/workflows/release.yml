@@ -1,0 +1,262 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  build-and-pack:
+    name: Validate, build, test and pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    outputs:
+      version: ${{ steps.release-version.outputs.value }}
+      prerelease: ${{ steps.release-version.outputs.prerelease }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Verify release metadata
+        run: python3 eng/verify-release.py
+
+      - name: Validate release tag
+        id: release-version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="$GITHUB_REF_NAME"
+          version="${tag#v}"
+          declared_version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          declared_tag="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["tag"])')"
+
+          if [[ "$tag" != "$declared_tag" ]]; then
+            echo "Tag '$tag' does not match release manifest tag '$declared_tag'." >&2
+            exit 1
+          fi
+
+          if [[ "$version" != "$declared_version" ]]; then
+            echo "Tag version '$version' does not match release manifest version '$declared_version'." >&2
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "The tagged commit is not reachable from origin/main." >&2
+            exit 1
+          fi
+
+          prerelease=false
+          if [[ "$version" == *-* ]]; then
+            prerelease=true
+          fi
+
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+      - name: Restore dependencies
+        run: dotnet restore TCJ.slnx
+
+      - name: Build solution
+        run: >
+          dotnet build TCJ.slnx
+          --configuration Release
+          --no-restore
+
+      - name: Run tests
+        run: >
+          dotnet test TCJ.slnx
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=release-test-results.trx"
+          --results-directory TestResults
+
+      - name: Pack release packages
+        run: >
+          dotnet pack TCJ.slnx
+          --configuration Release
+          --no-build
+          -p:Version=${{ steps.release-version.outputs.value }}
+
+      - name: Verify release package set
+        run: >
+          bash eng/verify-packages.sh
+          "${{ steps.release-version.outputs.value }}"
+
+      - name: Inspect release package metadata and contents
+        run: >
+          python3 eng/verify-release.py
+          --package-directory artifacts/packages
+
+      - name: Extract release notes
+        run: >
+          python3 eng/extract-release-notes.py
+          --version "${{ steps.release-version.outputs.value }}"
+          --output artifacts/release/RELEASE_NOTES.md
+
+      - name: Upload release packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-packages-${{ steps.release-version.outputs.value }}
+          path: artifacts/packages/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-metadata-${{ steps.release-version.outputs.value }}
+          path: artifacts/release/RELEASE_NOTES.md
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload release test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-test-results-${{ github.run_id }}
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 30
+
+  publish:
+    name: Publish NuGet and GitHub release
+    needs: build-and-pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: nuget-production
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Download release packages
+        uses: actions/download-artifact@v8
+        with:
+          name: release-packages-${{ needs.build-and-pack.outputs.version }}
+          path: artifacts/packages
+
+      - name: Download release metadata
+        uses: actions/download-artifact@v8
+        with:
+          name: release-metadata-${{ needs.build-and-pack.outputs.version }}
+          path: artifacts/release
+
+      - name: Verify downloaded release candidate
+        run: >
+          python3 eng/verify-release.py
+          --package-directory artifacts/packages
+
+      - name: Validate NuGet publishing configuration
+        shell: bash
+        env:
+          NUGET_USER: ${{ vars.NUGET_USER }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$NUGET_USER" ]]; then
+            echo "Environment variable NUGET_USER is not configured." >&2
+            exit 1
+          fi
+
+          if [[ ! -s artifacts/release/RELEASE_NOTES.md ]]; then
+            echo "Release notes artifact is missing or empty." >&2
+            exit 1
+          fi
+
+      - name: Request short-lived NuGet API key
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Publish packages to NuGet.org
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          packages=(artifacts/packages/*.nupkg)
+          if (( ${#packages[@]} == 0 )); then
+            echo "No .nupkg files were found." >&2
+            exit 1
+          fi
+
+          for package in "${packages[@]}"; do
+            dotnet nuget push "$package" \
+              --api-key "$NUGET_API_KEY" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
+
+      - name: Create or update GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.build-and-pack.outputs.version }}
+          IS_PRERELEASE: ${{ needs.build-and-pack.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          assets=(artifacts/packages/*.nupkg artifacts/packages/*.snupkg)
+          release_args=(
+            "$GITHUB_REF_NAME"
+            "${assets[@]}"
+            --repo "$GITHUB_REPOSITORY"
+            --title "TCJ Framework $RELEASE_VERSION"
+            --notes-file artifacts/release/RELEASE_NOTES.md
+            --verify-tag
+          )
+
+          edit_args=(
+            "$GITHUB_REF_NAME"
+            --repo "$GITHUB_REPOSITORY"
+            --title "TCJ Framework $RELEASE_VERSION"
+            --notes-file artifacts/release/RELEASE_NOTES.md
+          )
+
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            release_args+=(--prerelease)
+            edit_args+=(--prerelease)
+          fi
+
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "${edit_args[@]}"
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "${release_args[@]}"
+          fi
