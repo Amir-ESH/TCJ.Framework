@@ -4,7 +4,7 @@
 
 TCJ Framework is a modular foundation for building .NET 10 applications with explicit boundaries between domain primitives, dependency injection, persistence, SQL Server, and ASP.NET Core integration.
 
-> **Status:** `0.1.0-preview.1` is under active development. Public APIs may change before `1.0.0`, and the NuGet packages have not been published yet.
+> **Status:** `0.1.0-preview.1` is the first public preview. Public APIs may change before `1.0.0`; pin the exact preview version in production-like environments.
 
 - Repository: <https://github.com/Amir-ESH/TCJ.Framework>
 - Documentation: <https://github.com/Amir-ESH/TCJ.Framework/tree/main/docs>
@@ -26,9 +26,21 @@ TCJ Framework is a modular foundation for building .NET 10 applications with exp
 - .NET SDK `10.0.100` or a compatible SDK selected by [`global.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/main/global.json)
 - SQL Server only when using `TCJ.EntityFrameworkCore.SqlServer` or running the sample application
 
+## Install the preview packages
+
+Install only the modules required by the application:
+
+```bash
+dotnet add package TCJ.Core --version 0.1.0-preview.1
+dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.1
+dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.1
+dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.1
+dotnet add package TCJ.AspNetCore --version 0.1.0-preview.1
+```
+
 ## Quick start from source
 
-The preview packages are not published yet. Clone the repository and use the included sample or project references during development:
+Clone the repository to build, test, or run the included sample:
 
 ```bash
 git clone https://github.com/Amir-ESH/TCJ.Framework.git
@@ -106,6 +118,8 @@ NuGet packages and symbol packages are written to `artifacts/packages`.
 - [Development workflow](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/development.md)
 - [Versioning and releases](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/versioning.md)
 - [Release automation](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/releasing.md)
+- [First preview release notes](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/releases/0.1.0-preview.1.md)
+- [Release checklist](https://github.com/Amir-ESH/TCJ.Framework/blob/main/RELEASE_CHECKLIST.md)
 - [Contributing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md)
 - [Security policy](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SECURITY.md)
 - [Support](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SUPPORT.md)

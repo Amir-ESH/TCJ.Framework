@@ -37,7 +37,10 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Validate release tag and package version
+      - name: Verify release metadata
+        run: python3 eng/verify-release.py
+
+      - name: Validate release tag
         id: release-version
         shell: bash
         run: |
@@ -45,30 +48,16 @@ jobs:
 
           tag="$GITHUB_REF_NAME"
           version="${tag#v}"
+          declared_version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          declared_tag="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["tag"])')"
 
-          if [[ "$tag" == "$version" ]]; then
-            echo "Release tags must start with 'v'. Received: $tag" >&2
+          if [[ "$tag" != "$declared_tag" ]]; then
+            echo "Tag '$tag' does not match release manifest tag '$declared_tag'." >&2
             exit 1
           fi
-
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
-            echo "Release tag is not a valid semantic version: $tag" >&2
-            exit 1
-          fi
-
-          declared_version="$(python3 - <<'PY'
-          import xml.etree.ElementTree as ET
-
-          root = ET.parse("eng/Packaging.props").getroot()
-          version = root.findtext("./PropertyGroup/Version")
-          if not version:
-              raise SystemExit("eng/Packaging.props does not define Version.")
-          print(version.strip())
-          PY
-          )"
 
           if [[ "$version" != "$declared_version" ]]; then
-            echo "Tag version '$version' does not match eng/Packaging.props version '$declared_version'." >&2
+            echo "Tag version '$version' does not match release manifest version '$declared_version'." >&2
             exit 1
           fi
 
@@ -114,11 +103,30 @@ jobs:
           bash eng/verify-packages.sh
           "${{ steps.release-version.outputs.value }}"
 
+      - name: Inspect release package metadata and contents
+        run: >
+          python3 eng/verify-release.py
+          --package-directory artifacts/packages
+
+      - name: Extract release notes
+        run: >
+          python3 eng/extract-release-notes.py
+          --version "${{ steps.release-version.outputs.value }}"
+          --output artifacts/release/RELEASE_NOTES.md
+
       - name: Upload release packages
         uses: actions/upload-artifact@v7
         with:
           name: release-packages-${{ steps.release-version.outputs.value }}
           path: artifacts/packages/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-metadata-${{ steps.release-version.outputs.value }}
+          path: artifacts/release/RELEASE_NOTES.md
           if-no-files-found: error
           retention-days: 30
 
@@ -157,10 +165,16 @@ jobs:
           name: release-packages-${{ needs.build-and-pack.outputs.version }}
           path: artifacts/packages
 
-      - name: Verify downloaded package set
+      - name: Download release metadata
+        uses: actions/download-artifact@v8
+        with:
+          name: release-metadata-${{ needs.build-and-pack.outputs.version }}
+          path: artifacts/release
+
+      - name: Verify downloaded release candidate
         run: >
-          bash eng/verify-packages.sh
-          "${{ needs.build-and-pack.outputs.version }}"
+          python3 eng/verify-release.py
+          --package-directory artifacts/packages
 
       - name: Validate NuGet publishing configuration
         shell: bash
@@ -170,7 +184,12 @@ jobs:
           set -euo pipefail
 
           if [[ -z "$NUGET_USER" ]]; then
-            echo "Repository or environment variable NUGET_USER is not configured." >&2
+            echo "Environment variable NUGET_USER is not configured." >&2
+            exit 1
+          fi
+
+          if [[ ! -s artifacts/release/RELEASE_NOTES.md ]]; then
+            echo "Release notes artifact is missing or empty." >&2
             exit 1
           fi
 
@@ -201,7 +220,7 @@ jobs:
               --skip-duplicate
           done
 
-      - name: Create GitHub release
+      - name: Create or update GitHub release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -217,15 +236,24 @@ jobs:
             "${assets[@]}"
             --repo "$GITHUB_REPOSITORY"
             --title "TCJ Framework $RELEASE_VERSION"
-            --generate-notes
+            --notes-file artifacts/release/RELEASE_NOTES.md
             --verify-tag
+          )
+
+          edit_args=(
+            "$GITHUB_REF_NAME"
+            --repo "$GITHUB_REPOSITORY"
+            --title "TCJ Framework $RELEASE_VERSION"
+            --notes-file artifacts/release/RELEASE_NOTES.md
           )
 
           if [[ "$IS_PRERELEASE" == "true" ]]; then
             release_args+=(--prerelease)
+            edit_args+=(--prerelease)
           fi
 
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "${edit_args[@]}"
             gh release upload "$GITHUB_REF_NAME" "${assets[@]}" \
               --repo "$GITHUB_REPOSITORY" \
               --clobber

@@ -12,7 +12,17 @@ Use only the modules required by the application:
 | SQL Server provider defaults | `TCJ.EntityFrameworkCore.SqlServer` |
 | Problem Details and Result-to-HTTP mapping | `TCJ.AspNetCore` |
 
-The preview packages are not published yet. While working from this repository, use project references like the sample does.
+Install the exact preview versions required by the application:
+
+```bash
+dotnet add package TCJ.Core --version 0.1.0-preview.1
+dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.1
+dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.1
+dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.1
+dotnet add package TCJ.AspNetCore --version 0.1.0-preview.1
+```
+
+The sample continues to use project references so it always exercises the current repository source.
 
 ## 2. Define a DbContext
 
