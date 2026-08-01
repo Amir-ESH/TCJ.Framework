@@ -1,5 +1,7 @@
 # TCJ Framework
 
+[![CI](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/ci.yml)
+
 TCJ Framework is a modular foundation for building .NET 10 applications with explicit boundaries between domain primitives, dependency injection, persistence, SQL Server, and ASP.NET Core integration.
 
 > **Status:** `0.1.0-preview.1` is under active development. Public APIs may change before `1.0.0`, and the NuGet packages have not been published yet.
@@ -103,6 +105,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`.
 - [Guides and recipes](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/README.md#guides)
 - [Development workflow](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/development.md)
 - [Versioning and releases](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/versioning.md)
+- [Release automation](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/releasing.md)
 - [Contributing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md)
 - [Security policy](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SECURITY.md)
 - [Support](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SUPPORT.md)
