@@ -1,0 +1,42 @@
+<Project>
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Version>0.1.0-preview.1</Version>
+
+    <Authors>TCJ Contributors</Authors>
+    <Company>TCJ</Company>
+    <Product>TCJ</Product>
+    <Copyright>Copyright © 2026 TCJ Contributors</Copyright>
+
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/Amir-ESH/TCJ.Framework</PackageProjectUrl>
+    <PackageReleaseNotes>Initial preview release. Public APIs may change before version 1.0.0.</PackageReleaseNotes>
+
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DebugType>portable</DebugType>
+
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/Amir-ESH/TCJ.Framework.git</RepositoryUrl>
+
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\artifacts\packages</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None
+      Include="$(MSBuildThisFileDirectory)..\README.md"
+      Pack="true"
+      PackagePath="/"
+      Link="README.md" />
+
+    <None
+      Include="$(MSBuildThisFileDirectory)..\LICENSE.txt"
+      Pack="true"
+      PackagePath="/"
+      Link="LICENSE.txt" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\TestProject.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TCJ.Core\TCJ.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/TCJ.Empty/TCJ.Empty.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/TCJ.AspNetCore/TCJ.AspNetCore.csproj" />
+    <Project Path="src/TCJ.Core/TCJ.Core.csproj" />
+    <Project Path="src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj" />
+    <Project Path="src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj" />
+    <Project Path="src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TCJ.AspNetCore.Tests/TCJ.AspNetCore.Tests.csproj" />
+    <Project Path="tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj" />
+    <Project Path="tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj" />
+    <Project Path="tests/TCJ.EntityFrameworkCore.SqlServer.Tests/TCJ.EntityFrameworkCore.SqlServer.Tests.csproj" />
+    <Project Path="tests/TCJ.EntityFrameworkCore.Tests/TCJ.EntityFrameworkCore.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\eng\Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>TCJ.Core</PackageId>
+    <Title>TCJ Core</Title>
+    <Description>Foundational abstractions and utilities for modular .NET applications, including entities, results, domain events, guards, identifiers, and security contracts.</Description>
+    <PackageTags>tcj;dotnet;ddd;domain-driven-design;result-pattern;domain-events;entities</PackageTags>
+
+    <PublishTrimmed>false</PublishTrimmed>
+    <IsAotCompatible>false</IsAotCompatible>
+  </PropertyGroup>
+</Project>

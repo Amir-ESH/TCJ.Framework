@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\eng\Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>TCJ.EntityFrameworkCore.SqlServer</PackageId>
+    <Title>TCJ Entity Framework Core SQL Server</Title>
+    <Description>SQL Server provider integration for TCJ Entity Framework Core, including resilient registration options and rowversion conventions.</Description>
+    <PackageTags>tcj;dotnet;entity-framework-core;ef-core;sql-server;rowversion;resiliency</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TCJ.Core\TCJ.Core.csproj" />
+    <ProjectReference Include="..\TCJ.EntityFrameworkCore\TCJ.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+  </ItemGroup>
+</Project>

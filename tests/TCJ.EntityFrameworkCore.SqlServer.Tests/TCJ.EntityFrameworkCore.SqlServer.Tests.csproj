@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\TestProject.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TCJ.Core\TCJ.Core.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.EntityFrameworkCore\TCJ.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.EntityFrameworkCore.SqlServer\TCJ.EntityFrameworkCore.SqlServer.csproj" />
+  </ItemGroup>
+</Project>

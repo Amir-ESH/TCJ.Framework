@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\TestProject.props" />
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TCJ.Core\TCJ.Core.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.AspNetCore\TCJ.AspNetCore.csproj" />
+  </ItemGroup>
+</Project>
