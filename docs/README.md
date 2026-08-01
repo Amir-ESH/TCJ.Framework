@@ -9,6 +9,7 @@ This directory documents the public behavior of the current `0.1.0-preview.1` so
 3. [Product API sample](../samples/TCJ.Empty/README.md)
 4. [Development workflow](development.md)
 5. [Versioning and releases](versioning.md)
+6. [Release automation](releasing.md)
 
 ## Package reference
 

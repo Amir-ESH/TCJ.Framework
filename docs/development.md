@@ -31,6 +31,14 @@ dotnet pack TCJ.slnx -c Release --no-build
 
 Packages are written to `artifacts/packages`.
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It restores, builds, tests, packs, verifies the complete package set, and uploads test and NuGet artifacts.
+
+Release publication is isolated in `.github/workflows/release.yml` and is triggered only by `v*` tags. See [Release automation](releasing.md).
+
+Dependabot checks NuGet and GitHub Actions dependencies weekly and targets update pull requests to `develop`.
+
 ## Branch model
 
 ```text

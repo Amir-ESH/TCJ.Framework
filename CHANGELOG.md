@@ -8,6 +8,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Automated CI validation, package-set verification, Trusted Publishing release workflow, GitHub Releases, and weekly Dependabot updates.
 - Comprehensive project, package, architecture, contribution, support, security, and versioning documentation.
 - GitHub issue forms and pull-request template.
 

@@ -35,7 +35,10 @@ Create the tag only after:
 1. the release commit is on `main`;
 2. build, test, and pack checks succeed;
 3. package contents have been inspected;
-4. release notes and the changelog are updated.
+4. release notes and the changelog are updated;
+5. the `nuget-production` environment and NuGet.org Trusted Publishing policy are configured.
+
+The tag triggers `.github/workflows/release.yml`. The workflow validates that the tag version matches `eng/Packaging.props`, publishes through short-lived OIDC credentials, and creates the GitHub Release. See [Release automation](releasing.md).
 
 Example:
 

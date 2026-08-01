@@ -54,6 +54,10 @@ docs: explain SQL Server retries
 test: cover current user resolution
 ```
 
+## Automated validation
+
+Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check. Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
+
 ## Pull requests
 
 Target regular changes to `develop`. Release pull requests flow from `develop` to `main`.
