@@ -11,6 +11,8 @@ Describe the problem and the approach taken.
 - [ ] No public API change
 - [ ] Public API added or changed
 - [ ] Breaking change documented
+- [ ] Package validation passes against the published API baseline
+- [ ] Any `CPxxxx` suppression is minimal and explained
 
 ## Validation
 

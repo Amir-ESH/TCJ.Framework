@@ -7,11 +7,14 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] The intended changes are merged into `develop`.
 - [ ] `[Unreleased]` contains complete user-facing notes.
 - [ ] Public API changes and migration notes are documented.
+- [ ] Package validation is green against the version in `eng/PackageValidation.props`.
+- [ ] Any compatibility suppression is minimal, reviewed, and described in the changelog.
 - [ ] The published-package smoke workflow is green for the previous release.
 
 ## Prepare release metadata
 
 - [ ] `eng/Packaging.props` contains the intended version.
+- [ ] `eng/PackageValidation.props` matches `eng/published-release.json`.
 - [ ] `eng/release-manifest.json` contains the same version and matching `v` tag.
 - [ ] Set manifest `status` to `ready`.
 - [ ] Set manifest `releaseDate` to `YYYY-MM-DD`.
@@ -43,6 +46,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 ## Post-release reset
 
 - [ ] Copy the released version, tag, and date to `eng/published-release.json`.
+- [ ] Move `TCJPublishedPackageVersion` in `eng/PackageValidation.props` to the new release.
 - [ ] Increment `eng/Packaging.props` and `eng/release-manifest.json` to the next preview.
 - [ ] Set manifest `status` to `development` and `releaseDate` to `null`.
 - [ ] Start a fresh `[Unreleased]` section.

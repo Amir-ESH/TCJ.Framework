@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- Keep this value aligned with eng/published-release.json. -->
+    <TCJPublishedPackageVersion>0.1.0-preview.1</TCJPublishedPackageVersion>
+
+    <!-- The .NET SDK runs API compatibility checks after Pack. -->
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>$(TCJPublishedPackageVersion)</PackageValidationBaselineVersion>
+  </PropertyGroup>
+</Project>

@@ -76,7 +76,7 @@ jobs:
           --logger "trx;LogFileName=preflight-test-results.trx"
           --results-directory TestResults
 
-      - name: Pack release candidate
+      - name: Pack and validate release candidate
         run: >
           dotnet pack TCJ.slnx
           --configuration Release

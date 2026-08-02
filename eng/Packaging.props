@@ -1,4 +1,6 @@
 <Project>
+  <Import Project="$(MSBuildThisFileDirectory)PackageValidation.props" />
+
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <Version>0.1.0-preview.2</Version>
