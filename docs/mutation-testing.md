@@ -1,122 +1,310 @@
 # Mutation testing quality gate
 
-Mutation testing measures whether the test suite detects deliberate behavioral defects in production code. Stryker.NET creates small compiled-code changes, called mutants, and reruns the relevant tests. A mutant is **killed** when a test fails because of the change and **survives** when the tests still pass.
+Mutation testing checks whether tests detect deliberate behavioral changes in production code. Stryker.NET creates mutants, runs the tests against them, and records whether each mutant was killed, survived, timed out, could not compile, or was outside the tested behavior.
 
 Code coverage and mutation testing answer different questions:
 
-- code coverage asks whether a line or branch executed;
-- mutation testing asks whether the assertions would detect a meaningful change in that executed behavior.
+- coverage asks whether code executed;
+- mutation testing asks whether assertions detect a meaningful behavioral change.
 
-High coverage remains useful, but it does not prove that assertions are strong. The repository therefore keeps coverage and mutation testing as separate quality gates.
+Both gates are required. A high coverage percentage is not a substitute for a valid mutation result.
 
-## Initial baseline
+## Why the original Step 29 result was rejected
 
-The first controlled baseline mutates:
+PR #52 introduced the first mutation workflow, but its only mutation run was not a valid baseline:
 
-- `TCJ.Core`, using `tests/TCJ.Core.Tests`;
-- `TCJ.DependencyInjection`, using `tests/TCJ.DependencyInjection.Tests`.
+- Stryker reported that coverage capture failed for both projects;
+- all `524` tested mutants survived;
+- no mutant was killed;
+- the aggregate score was `0.00%`;
+- the verification step failed;
+- the pull request was merged before the mutation workflow became green;
+- the repository contained a suggested `50%` threshold, but no reviewed, measured baseline.
 
-The repository policy is stored in `eng/mutation-policy.json`. The initial aggregate requirements are:
+The rejected run is preserved in `eng/mutation-baseline.json` as incident evidence. It is deliberately marked `pending`, not recorded as a baseline.
 
-- mutation score: at least `50.0%`;
-- tested mutants: at least `20`.
+A structurally valid JSON report is not automatically a trustworthy mutation result. The verifier now rejects degenerate executions such as an all-survived run, zero killed mutants, incomplete statuses, excessive compile errors, runner failures, report hash mismatches, and inconsistent source revisions.
 
-This is a starting baseline, not the final quality target. Add focused tests first, then raise the minimum score in a dedicated pull request after a stable report has been reviewed.
+## Current controlled scope
 
-## Configuration and reports
+The first accepted baseline is intentionally limited to reviewed behavior in two production projects.
 
-`stryker-config.json` contains the shared Stryker.NET settings. Stryker runs once per production project because one Stryker invocation mutates one project under test. The repository verifier then combines the two JSON reports and applies one aggregate policy.
+### `TCJ.Core`
 
-Generated outputs are written to:
+- `Entities/Entity.cs`
+- `Identifiers/GuidGenerator.cs`
+- `Results/CommonErrors.cs`
+- `Results/Result.cs`
+- `Results/ResultError.cs`
+- `Results/ResultOfT.cs`
+
+Tests:
 
 ```text
-artifacts/mutation/mutation-summary.json
-artifacts/mutation/MUTATION_SUMMARY.md
-artifacts/mutation/reports/TCJ.Core/reports/mutation-report.html
-artifacts/mutation/reports/TCJ.Core/reports/mutation-report.json
-artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.html
-artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.json
+tests/TCJ.Core.Tests
 ```
 
-`artifacts/`, local Stryker output directories, and the local tool directory are ignored by Git. The policy, verifier, workflow, and shared Stryker configuration must remain tracked.
+### `TCJ.DependencyInjection`
+
+- `DomainEvents/DomainEventDispatcher.cs`
+- `Extensions/ServiceCollectionExtensions.cs`
+
+Tests:
+
+```text
+tests/TCJ.DependencyInjection.Tests
+```
+
+The selected files contain meaningful behavior and have focused assertions. Marker interfaces, generated files, migrations, samples, smoke projects, and option-only boilerplate are outside the first controlled scope.
+
+`DomainEventHandlerInvoker.cs` is temporarily outside the first baseline because the Stryker 4.16.0 run in PR #52 placed its generated mutations in safe mode and reported compile errors for the file. This exclusion is visible in `eng/mutation-policy.json` and must be reconsidered when the runner or source shape changes.
+
+## Runner configuration
+
+The test suite uses xUnit v3. `tests/TestProject.props` therefore enables the Microsoft Testing Platform runner:
+
+```xml
+<UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+```
+
+Stryker is pinned in `.config/dotnet-tools.json` and configured with:
+
+```text
+test-runner: mtp
+coverage-analysis: off
+```
+
+Coverage optimization is disabled because the original `perTest` coverage capture failed. In `off` mode, Stryker runs all relevant tests against every tested mutant. This is slower but gives a safer remediation baseline. Coverage optimization may be re-enabled only in a dedicated pull request that proves equivalent results.
+
+## Files that define the gate
+
+```text
+.config/dotnet-tools.json
+stryker-config.json
+eng/mutation-policy.json
+eng/mutation-baseline.json
+eng/run-mutation-testing.py
+eng/verify-mutation-results.py
+eng/tests/test_run_mutation_testing.py
+eng/tests/test_verify_mutation_results.py
+.github/workflows/mutation-testing.yml
+.github/workflows/ci.yml
+```
+
+The full mutation workflow is called by `.github/workflows/ci.yml` when selected production, test, mutation-policy, runner, or workflow files change. A path-detection job skips the expensive mutation run for unrelated documentation-only changes. When mutation testing is relevant, the normal `Build, test and pack` job cannot succeed unless the reusable mutation gate succeeds. This prevents a repeat of PR #52 without running Stryker twice for the same CI event.
+
+## Valid-result requirements
+
+Before score enforcement, the verifier validates execution health.
+
+A result is rejected when any of these conditions occurs:
+
+- the Stryker runner failed;
+- the expected JSON or HTML report is missing;
+- the report is not Stryker schema version 2;
+- no tests were discovered;
+- the report identifies the wrong production project;
+- report, runner-log, and run-metadata hashes differ;
+- a runner log contains a known invalid-execution marker such as failed coverage capture;
+- project reports were generated from different commits;
+- a project killed no mutants;
+- all tested mutants survived;
+- tested-mutant counts are below policy;
+- compile-error percentage exceeds policy;
+- runtime-error, pending, or not-run mutants exceed policy.
+
+Only after execution health passes are the mutation-score and recorded-baseline floors evaluated.
+
+## Quality policy
+
+`eng/mutation-policy.json` defines:
+
+- pinned Stryker version;
+- required test runner and coverage-analysis mode;
+- controlled mutation targets;
+- minimum aggregate mutation score;
+- minimum tested and killed mutant counts;
+- per-project minimums;
+- maximum compile-error rate;
+- report and metadata paths;
+- baseline path;
+- documented scope notes.
+
+The initial quality target is `50.0%`. This target is not itself the baseline. The baseline is the measured and reviewed result stored in `eng/mutation-baseline.json`.
+
+## Baseline states
+
+### Pending
+
+A pending baseline blocks merge validation. It documents why no result has been accepted yet.
+
+### Recorded
+
+A recorded baseline contains:
+
+- source revision;
+- Stryker version;
+- runner mode;
+- measured aggregate score;
+- complete mutant counts;
+- per-project counts;
+- SHA-256 hashes of both reports;
+- reviewer identity, review time, and review notes;
+- an explicit attestation that survived mutants were reviewed.
+
+Normal verification enforces both:
+
+- the policy minimum;
+- the recorded baseline score, minus only an explicitly configured regression allowance.
+
+The default regression allowance is zero.
+
+## Capture the first real baseline
+
+The first real baseline requires two commits. This avoids inventing a score before Stryker has completed a valid run.
+
+1. Push the remediation files to a branch.
+2. Open **Actions → Mutation testing → Run workflow**.
+3. Select `capture-baseline`.
+4. Confirm that the workflow is green.
+5. Download the mutation artifact.
+6. Review both HTML reports, especially every survived mutant.
+7. Place `mutation-baseline-candidate.json` under `artifacts/mutation/`.
+8. Convert the candidate into an accepted baseline with explicit review metadata:
+
+   ```bash
+   python3 eng/verify-mutation-results.py accept-baseline \
+     --candidate artifacts/mutation/mutation-baseline-candidate.json \
+     --output-baseline eng/mutation-baseline.json \
+     --reviewed-by "<github-user>" \
+     --review-notes "Reviewed both HTML reports; documented meaningful survivors in the PR."
+   ```
+
+9. Commit `eng/mutation-baseline.json`. Do not copy the unreviewed candidate over it.
+10. Rerun normal CI and the mutation workflow in `verify` mode.
+11. Merge only when the reusable **Mutation quality gate** is green.
+
+The capture command does not bypass execution health or the policy score. It creates a `candidate`, not a recorded baseline. The separate acceptance command validates the candidate and records the human review attestation.
 
 ## Run locally
 
-Prerequisites are the .NET SDK selected by `global.json`, Python 3, and Git. From the repository root:
+From the repository root:
 
 ```bash
+dotnet tool restore
 dotnet restore TCJ.slnx
-dotnet build tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj -c Release --no-restore
-dotnet build tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj -c Release --no-restore
 
-dotnet tool install --tool-path .tools dotnet-stryker --version 4.16.0
+dotnet build tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj \
+  --configuration Release \
+  --no-restore
+
+dotnet build tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj \
+  --configuration Release \
+  --no-restore
 
 python3 -m unittest discover \
   --start-directory eng/tests \
   --pattern "test_*.py"
-python3 eng/verify-mutation-results.py validate-config
 
+python3 eng/verify-mutation-results.py validate-config
+```
+
+Prepare clean outputs and run both projects:
+
+```bash
 rm -rf artifacts/mutation
 mkdir -p artifacts/mutation/reports
 
-(
-  cd tests/TCJ.Core.Tests
-  ../../.tools/dotnet-stryker \
-    --config-file ../../stryker-config.json \
-    --project TCJ.Core.csproj \
-    --output ../../artifacts/mutation/reports/TCJ.Core \
-    --skip-version-check
-)
+python3 eng/run-mutation-testing.py --project TCJ.Core
+python3 eng/run-mutation-testing.py --project TCJ.DependencyInjection
+```
 
-(
-  cd tests/TCJ.DependencyInjection.Tests
-  ../../.tools/dotnet-stryker \
-    --config-file ../../stryker-config.json \
-    --project TCJ.DependencyInjection.csproj \
-    --output ../../artifacts/mutation/reports/TCJ.DependencyInjection \
-    --skip-version-check
-)
+For a normal recorded-baseline check:
 
+```bash
+python3 eng/verify-mutation-results.py validate-baseline
 python3 eng/verify-mutation-results.py verify
 ```
 
-On Windows, invoke `.tools\dotnet-stryker.exe` instead of `.tools/dotnet-stryker`. An exported source archive has no `.git` directory; configuration-only validation can use `--skip-git-check` there. Normal cloned repositories and CI must keep the Git tracking check enabled.
+For the first valid baseline candidate:
 
-Open each generated HTML report to inspect individual mutants. The JSON and Markdown summaries are intended for automation and pull-request review.
+```bash
+python3 eng/verify-mutation-results.py capture-baseline \
+  --candidate artifacts/mutation/mutation-baseline-candidate.json
+```
 
-## Read the results
+After reviewing the HTML reports, accept it explicitly:
+
+```bash
+python3 eng/verify-mutation-results.py accept-baseline \
+  --candidate artifacts/mutation/mutation-baseline-candidate.json \
+  --output-baseline eng/mutation-baseline.json \
+  --reviewed-by "<github-user>" \
+  --review-notes "Reviewed both HTML reports and documented survivors."
+```
+
+An exported source archive has no `.git` directory. Configuration-only validation may use:
+
+```bash
+python3 eng/verify-mutation-results.py validate-config --skip-git-check
+```
+
+Normal clones and CI must not skip Git tracking validation.
+
+## Generated outputs
+
+```text
+artifacts/mutation/MUTATION_SUMMARY.md
+artifacts/mutation/mutation-summary.json
+artifacts/mutation/mutation-baseline-candidate.json
+artifacts/mutation/reports/TCJ.Core/run-metadata.json
+artifacts/mutation/reports/TCJ.Core/stryker-console.log
+artifacts/mutation/reports/TCJ.Core/reports/mutation-report.html
+artifacts/mutation/reports/TCJ.Core/reports/mutation-report.json
+artifacts/mutation/reports/TCJ.DependencyInjection/run-metadata.json
+artifacts/mutation/reports/TCJ.DependencyInjection/stryker-console.log
+artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.html
+artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.json
+```
+
+Artifacts are retained for review but are not committed.
+
+## Interpret outcomes
 
 - **Killed:** a test detected the mutation.
-- **Survived:** tests executed the changed behavior but did not reject it. Add or strengthen an assertion when the mutation represents a real behavioral requirement.
-- **Timeout:** the mutation caused the test run to exceed its limit. Stryker counts this as detected, but recurring timeouts should still be investigated.
-- **No coverage:** no test executed the mutant. Add a test or document why the code is intentionally outside the current scope.
-- **Ignored:** Stryker or repository configuration excluded the mutant.
-- **Compile error:** the generated mutation could not produce a valid build and is excluded from the score.
+- **Survived:** the changed behavior was not rejected by the tests.
+- **Timeout:** the mutation caused a bounded timeout and counts as detected.
+- **No coverage:** no test exercised the mutant when coverage analysis is enabled.
+- **Ignored:** the mutation was intentionally excluded by Stryker.
+- **Compile error:** the generated mutant could not compile.
+- **Runtime error, pending, or not run:** the result is incomplete and is rejected by policy.
 
-A survived mutant is not automatically a production bug. It is evidence that the current tests do not distinguish the original behavior from that specific change. Review the affected code, decide whether the difference matters, and prefer a focused behavioral test over a broader exclusion.
+A survived mutant is not automatically a product bug. It is evidence that current assertions do not distinguish the original behavior from the mutation. Add a focused test when the difference matters. Do not lower the gate or add a broad exclusion merely to make CI green.
 
-## Exclusion policy
+## Changing scope or thresholds
 
-The baseline excludes generated files, build output, migrations, samples, smoke tests, assembly metadata, test projects, and files outside the selected production projects. Exclusions must be narrow and must describe code that cannot provide meaningful mutation feedback.
+A pull request that changes mutation scope, runner mode, ignored mutation types, or thresholds must include:
 
-When adding an exclusion:
+- old and new measured results;
+- report links or artifacts;
+- technical justification;
+- verifier tests;
+- documentation updates;
+- changelog entry;
+- a new reviewed baseline when result comparability changes.
 
-1. reproduce and review the mutant;
-2. explain why a focused test is not the correct solution;
-3. add the pattern to `eng/mutation-policy.json` and `stryker-config.json`;
-4. update this page or the pull-request description with the justification;
-5. run the verifier tests and configuration validation.
+Changing the Stryker version, test runner, coverage-analysis mode, or mutation targets invalidates score comparability and should normally produce a new baseline.
 
-Globally disabling a mutation type is discouraged because it can hide useful defects across unrelated code. Use file- or line-level exclusions when possible. If a global mutation type must be ignored, add it to `ignoredMutationTypes` and provide a matching technical reason in `ignoredMutationJustifications`; the verifier rejects unjustified entries.
+## Merge and release rule
 
-## Update the baseline
+Step 29 is complete only when:
 
-Do not lower the threshold only to make a run pass. First inspect survived and no-coverage mutants, add tests for meaningful behavior, and rerun both projects. When the score is stable and repeatable:
+- `eng/mutation-baseline.json` is recorded, not pending;
+- normal CI is green;
+- the reusable mutation quality gate is green;
+- the dedicated workflow is green;
+- HTML and JSON reports are available;
+- survived mutants have been reviewed;
+- release checklist and changelog are updated.
 
-1. update `minimumMutationScore` or `minimumTestedMutants` in `eng/mutation-policy.json`;
-2. keep the Stryker `thresholds.low` value aligned with the policy score;
-3. record the change in `CHANGELOG.md`;
-4. include the old score, new score, and reviewed report in the pull request;
-5. run `python3 eng/verify-mutation-results.py validate-config` and the complete mutation workflow.
-
-The weekly **Mutation testing** workflow catches test-effectiveness regressions even when no release is in progress. Pull requests and pushes that change the selected production or test projects trigger the same workflow, and the HTML/JSON reports are uploaded as artifacts.
+A merged pull request or a syntactically valid report does not by itself satisfy the Definition of Done.

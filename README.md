@@ -111,10 +111,13 @@ dotnet test TCJ.slnx -c Release --no-build \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
 python3 eng/verify-coverage.py verify
+python3 eng/verify-mutation-results.py validate-baseline
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
-NuGet packages and symbol packages are written to `artifacts/packages`. Restore audits direct and transitive dependencies, and Pack validates binary compatibility against the latest published TCJ packages. CI also enforces the repository line and branch coverage policy, publishes a merged coverage summary, and generates and verifies `artifacts/release/SHA256SUMS`; official tagged releases attach that manifest and signed GitHub provenance attestations to the package assets.
+A pending mutation baseline must be captured by the dedicated workflow, reviewed in both HTML reports, and accepted with `verify-mutation-results.py accept-baseline`. The raw candidate is deliberately not a valid baseline.
+
+NuGet packages and symbol packages are written to `artifacts/packages`. Restore audits direct and transitive dependencies, and Pack validates binary compatibility against the latest published TCJ packages. CI also enforces the repository line and branch coverage policy, requires the recorded mutation baseline and full mutation quality gate, publishes a merged coverage summary, and generates and verifies `artifacts/release/SHA256SUMS`; official tagged releases attach that manifest and signed GitHub provenance attestations to the package assets.
 
 ## Documentation map
 
@@ -132,6 +135,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Restore 
 - [Dependency and supply-chain security](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/dependency-security.md)
 - [Release integrity and build provenance](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/release-integrity.md)
 - [Code coverage quality gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/code-coverage.md)
+- [Mutation testing quality gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/mutation-testing.md)
 - [Contributing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md)
 - [Security policy](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SECURITY.md)
 - [Support](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SUPPORT.md)

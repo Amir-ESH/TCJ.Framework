@@ -11,6 +11,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Dependency review and NuGet Audit are green with the repository security policy unchanged.
 - [ ] Release-integrity configuration validation is green.
 - [ ] Line and branch coverage gates are green and the summary was reviewed.
+- [ ] The recorded mutation baseline is valid, the mutation quality gate is green, and survived mutants were reviewed.
 - [ ] Any compatibility suppression is minimal, reviewed, and described in the changelog.
 - [ ] The published-package smoke workflow is green for the previous release.
 
@@ -38,6 +39,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Use package-ID policy `existing`.
 - [ ] `Validate release candidate` succeeds.
 - [ ] Review the release-preflight coverage summary and Cobertura artifact.
+- [ ] Review the latest mutation summary plus both HTML/JSON mutation reports; do not release with a pending baseline.
 - [ ] Review five `.nupkg`, five `.snupkg`, `SHA256SUMS`, release notes, and the manifest.
 - [ ] Verify the release-candidate checksums before tagging.
 

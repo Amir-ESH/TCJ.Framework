@@ -183,6 +183,10 @@ StrykerOutput/
 .tools/
 !stryker-config.json
 !eng/mutation-policy.json
+!eng/mutation-baseline.json
+!eng/run-mutation-testing.py
+!eng/verify-mutation-results.py
+!.config/dotnet-tools.json
 
 # Visual Studio code coverage results
 *.coverage

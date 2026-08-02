@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "status": "pending",
+  "reason": "PR #52 was merged before a valid mutation baseline was produced. Workflow run 30757121640 is recorded as rejected evidence because coverage capture failed for both projects and all 524 tested mutants survived.",
+  "rejectedRun": {
+    "workflowRunId": 30757121640,
+    "sourceRevision": "04fa77cc926d4192a45975562a292e5fc5347185",
+    "strykerVersion": "4.16.0",
+    "observedMutationScore": 0.0,
+    "testedMutants": 524,
+    "killedMutants": 0,
+    "survivedMutants": 524,
+    "ignoredMutants": 152,
+    "compileErrorMutants": 25,
+    "rejectionReasons": [
+      "CoverageCaptureFailed",
+      "ZeroKilledMutants",
+      "DegenerateAllSurvivedResult",
+      "QualityGateFailed"
+    ]
+  },
+  "recordingInstructions": "Run the Mutation testing workflow with mode=capture-baseline, review the HTML reports and candidate JSON, then replace this file with the generated candidate and commit it before merging."
+}
