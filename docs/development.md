@@ -30,11 +30,11 @@ Pack locally:
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
-Packages are written to `artifacts/packages`. The Pack target also runs SDK package validation against the version in `eng/PackageValidation.props`.
+Packages are written to `artifacts/packages`. The Pack target also runs SDK package validation against the version in `eng/PackageValidation.props`. CI generates and verifies `artifacts/release/SHA256SUMS` for the complete package set; local contributors can run the same checks with `eng/release-integrity.py`.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates the dependency-security policy, audits direct and transitive packages during restore, builds, tests, packs, checks binary compatibility against the published package baseline, verifies the complete package set, and uploads test and NuGet artifacts.
+`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates dependency-security and release-integrity automation, audits direct and transitive packages during restore, builds, tests, packs, checks binary compatibility against the published package baseline, verifies the complete package set and its SHA-256 manifest, and uploads test and NuGet artifacts.
 
 `.github/workflows/dependency-review.yml` rejects pull requests that introduce moderate-or-higher vulnerable dependencies. `.github/workflows/dependency-audit.yml` performs a scheduled full restore audit so advisories published after the last code change are still detected.
 
@@ -110,3 +110,7 @@ Packable projects use the .NET SDK package validator. See [Public API compatibil
 ## Dependency security
 
 Repository restore policy is defined by `NuGet.Config` and `eng/DependencySecurity.props`. See [Dependency and supply-chain security](dependency-security.md) for audit thresholds, source mapping, scheduled checks, and advisory handling.
+
+## Release integrity
+
+`eng/release-integrity.py` validates the release workflow configuration and generates or verifies the package checksum manifest. Official tag builds additionally create GitHub artifact attestations. See [Release integrity and build provenance](release-integrity.md).

@@ -21,6 +21,7 @@ Describe the problem and the approach taken.
 - [ ] `dotnet build TCJ.slnx -c Release`
 - [ ] `dotnet test TCJ.slnx -c Release`
 - [ ] `dotnet pack TCJ.slnx -c Release --no-build` when packaging or release infrastructure changes
+- [ ] Release-integrity automation remains valid and package checksums pass
 - [ ] Documentation updated where required
 - [ ] No secrets or generated artifacts included
 

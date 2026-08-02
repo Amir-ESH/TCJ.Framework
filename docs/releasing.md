@@ -177,9 +177,12 @@ The release workflow performs these operations:
 3. creates and deeply inspects all primary and symbol packages;
 4. extracts release notes from the matching changelog section;
 5. pauses for the `nuget-production` environment approval;
-6. exchanges the GitHub OIDC token for a short-lived NuGet API key;
-7. publishes all packages and associated symbol packages;
-8. creates the GitHub pre-release and attaches `.nupkg` and `.snupkg` files.
+6. generates and verifies `SHA256SUMS` for all primary and symbol packages;
+7. creates signed GitHub build-provenance attestations for the packages and checksum manifest;
+8. pauses for the `nuget-production` environment approval;
+9. exchanges the GitHub OIDC token for a short-lived NuGet API key;
+10. re-verifies downloaded artifacts and publishes all packages and associated symbol packages;
+11. creates the GitHub pre-release and attaches `.nupkg`, `.snupkg`, and `SHA256SUMS` assets.
 
 `--skip-duplicate` allows a safe rerun after a partial NuGet.org outage. The immutable tag guarantees that reruns use the same source commit and package version.
 
@@ -202,6 +205,8 @@ If any package was published, increment the version, update `eng/Packaging.props
 6. run the **Published package smoke tests** workflow for the released version.
 
 The smoke workflow verifies NuGet registration metadata, public listing state, downloaded package contents, dependency restore, application build, and runtime registration on Linux and Windows.
+
+Verify the GitHub release checksum manifest and at least one artifact attestation after publication. The exact commands and the distinction between GitHub release assets and NuGet.org repository-signed packages are documented in [Release integrity and build provenance](release-integrity.md).
 
 Package validation details and the intentional-breaking-change process are documented in [Public API compatibility](api-compatibility.md).
 

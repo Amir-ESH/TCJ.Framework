@@ -57,6 +57,9 @@ jobs:
       - name: Verify dependency security policy
         run: python3 eng/verify-dependency-security.py
 
+      - name: Verify release integrity automation
+        run: python3 eng/release-integrity.py validate-config
+
       - name: Check NuGet package IDs
         run: >
           python3 eng/check-nuget-package-ids.py
@@ -108,6 +111,28 @@ jobs:
             --version "$version" \
             --output artifacts/release/RELEASE_NOTES.md
 
+      - name: Generate release candidate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          python3 eng/release-integrity.py write \
+            --version "$version" \
+            --package-directory artifacts/packages \
+            --checksums artifacts/release/SHA256SUMS
+
+      - name: Verify release candidate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          python3 eng/release-integrity.py verify \
+            --version "$version" \
+            --package-directory artifacts/packages \
+            --checksums artifacts/release/SHA256SUMS
+
       - name: Upload preflight test results
         if: always()
         uses: actions/upload-artifact@v7
@@ -124,6 +149,7 @@ jobs:
           path: |
             artifacts/packages/*
             artifacts/release/RELEASE_NOTES.md
+            artifacts/release/SHA256SUMS
             eng/release-manifest.json
           if-no-files-found: error
           retention-days: 30

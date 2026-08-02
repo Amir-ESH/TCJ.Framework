@@ -17,6 +17,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Repository-wide NuGet Audit policy for direct and transitive dependencies.
 - Pull-request dependency review and scheduled dependency-audit workflows.
 - Explicit NuGet.org package-source mapping and audit-source configuration.
+- SHA-256 manifests for complete primary and symbol package release sets.
+- Cryptographically signed GitHub build-provenance attestations for official release assets.
+- Release-integrity verification before artifact upload, NuGet publication, and GitHub Release creation.
 
 ### Changed
 
