@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import importlib.util
 import json
 import sys
@@ -35,15 +36,28 @@ def request_bytes(url: str, attempts: int = 3) -> bytes:
         url,
         headers={"User-Agent": "TCJ-Framework-published-package-verifier/1.0"},
     )
+
     last_error: Exception | None = None
+
     for attempt in range(1, attempts + 1):
         try:
             with urlopen(request, timeout=30) as response:
-                return response.read()
-        except (HTTPError, URLError, TimeoutError) as error:
+                payload = response.read()
+
+                # NuGet RegistrationsBaseUrl/3.6.0 returns gzip-compressed
+                # registration documents. urllib does not automatically
+                # decompress these responses.
+                if payload.startswith(b"\x1f\x8b"):
+                    payload = gzip.decompress(payload)
+
+                return payload
+
+        except (HTTPError, URLError, TimeoutError, gzip.BadGzipFile) as error:
             last_error = error
+
             if attempt < attempts:
                 time.sleep(attempt * 2)
+
     fail(f"Unable to fetch {url}: {last_error}")
 
 
