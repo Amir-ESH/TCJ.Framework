@@ -429,3 +429,7 @@ FodyWeavers.xsd
 *.msp
 
 *.zip
+
+# Python tooling caches
+__pycache__/
+*.py[cod]

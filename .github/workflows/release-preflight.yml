@@ -7,7 +7,7 @@ on:
         description: Expected NuGet.org state for the package IDs
         required: true
         type: choice
-        default: available
+        default: existing
         options:
           - available
           - existing
@@ -52,7 +52,7 @@ jobs:
           global-json-file: global.json
 
       - name: Verify release metadata
-        run: python3 eng/verify-release.py
+        run: python3 eng/verify-release.py --require-ready
 
       - name: Check NuGet package IDs
         run: >

@@ -38,7 +38,7 @@ jobs:
           global-json-file: global.json
 
       - name: Verify release metadata
-        run: python3 eng/verify-release.py
+        run: python3 eng/verify-release.py --require-ready
 
       - name: Validate release tag
         id: release-version
