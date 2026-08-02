@@ -12,7 +12,7 @@ A release is rejected unless all of the following are true:
 - the changelog contains a dated section for that version;
 - the tagged commit is reachable from `main`;
 - the repository dependency-security policy is intact and restore completes its direct/transitive NuGet audit;
-- restore, Release build, tests, and pack succeed;
+- restore, Release build, tests, coverage quality gate, and pack succeed;
 - the packed APIs remain compatible with the latest published TCJ baseline, except for reviewed suppressions;
 - exactly five `.nupkg` and five `.snupkg` files are produced;
 - each package contains the expected ID, version, repository metadata, MIT license expression, README, license file, assembly, and portable symbols.
@@ -144,9 +144,10 @@ The preflight workflow:
 2. verifies release metadata and the dated changelog section;
 3. queries NuGet.org for all five package IDs;
 4. validates dependency-security configuration and audits the complete restored graph;
-5. builds, tests, packs, and runs SDK API compatibility validation;
-6. inspects the actual `.nupkg` and `.snupkg` contents;
-7. uploads a release-candidate artifact and test results.
+5. builds, tests, merges Cobertura reports, and enforces line and branch coverage minimums;
+6. packs and runs SDK API compatibility validation;
+7. inspects the actual `.nupkg` and `.snupkg` contents;
+8. uploads the release candidate, test results, and coverage reports.
 
 Download and review the `release-candidate-*` artifact before tagging. The first publication cannot claim a package ID that already exists on NuGet.org under another owner.
 
@@ -173,7 +174,7 @@ A version containing a pre-release suffix, such as `-preview.1`, creates a GitHu
 The release workflow performs these operations:
 
 1. validates the tag, manifest, package version, and changelog;
-2. builds and tests the complete solution;
+2. builds, tests, and enforces the code coverage policy for the complete solution;
 3. creates and deeply inspects all primary and symbol packages;
 4. extracts release notes from the matching changelog section;
 5. pauses for the `nuget-production` environment approval;
@@ -211,3 +212,5 @@ Verify the GitHub release checksum manifest and at least one artifact attestatio
 Package validation details and the intentional-breaking-change process are documented in [Public API compatibility](api-compatibility.md).
 
 Dependency audit thresholds, source mapping, and advisory handling are documented in [Dependency and supply-chain security](dependency-security.md).
+
+Code coverage collection, thresholds, and merged-report semantics are documented in [Code coverage quality gate](code-coverage.md).
