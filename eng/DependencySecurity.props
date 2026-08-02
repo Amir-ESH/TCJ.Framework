@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- Audit direct and transitive dependencies during every restore. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>moderate</NuGetAuditLevel>
+
+    <!-- Fail when auditing is unavailable or a moderate-or-higher advisory is found. -->
+    <WarningsAsErrors>$(WarningsAsErrors);NU1900;NU1902;NU1903;NU1904;NU1905</WarningsAsErrors>
+  </PropertyGroup>
+</Project>

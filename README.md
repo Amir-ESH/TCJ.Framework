@@ -110,7 +110,7 @@ dotnet test TCJ.slnx -c Release --no-build
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
-NuGet packages and symbol packages are written to `artifacts/packages`. Pack also validates binary compatibility against the latest published TCJ packages.
+NuGet packages and symbol packages are written to `artifacts/packages`. Restore audits direct and transitive dependencies, and Pack validates binary compatibility against the latest published TCJ packages.
 
 ## Documentation map
 
@@ -125,6 +125,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Pack als
 - [Release checklist](https://github.com/Amir-ESH/TCJ.Framework/blob/main/RELEASE_CHECKLIST.md)
 - [Published-package validation](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/published-package-validation.md)
 - [Public API compatibility](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/api-compatibility.md)
+- [Dependency and supply-chain security](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/dependency-security.md)
 - [Contributing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md)
 - [Security policy](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SECURITY.md)
 - [Support](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SUPPORT.md)

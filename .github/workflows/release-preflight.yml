@@ -54,12 +54,15 @@ jobs:
       - name: Verify release metadata
         run: python3 eng/verify-release.py --require-ready
 
+      - name: Verify dependency security policy
+        run: python3 eng/verify-dependency-security.py
+
       - name: Check NuGet package IDs
         run: >
           python3 eng/check-nuget-package-ids.py
           --policy "${{ inputs.package_id_policy }}"
 
-      - name: Restore dependencies
+      - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
       - name: Build solution

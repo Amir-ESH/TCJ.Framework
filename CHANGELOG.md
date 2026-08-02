@@ -14,6 +14,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Automated verification of listed NuGet packages using the NuGet V3 registration and flat-container APIs.
 - Cross-platform smoke consumer that restores, builds, and runs all published TCJ packages from NuGet.org.
 - Weekly and manually triggered published-package smoke-test workflow.
+- Repository-wide NuGet Audit policy for direct and transitive dependencies.
+- Pull-request dependency review and scheduled dependency-audit workflows.
+- Explicit NuGet.org package-source mapping and audit-source configuration.
 
 ### Changed
 
