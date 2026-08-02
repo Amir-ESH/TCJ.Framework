@@ -12,6 +12,7 @@ A release is rejected unless all of the following are true:
 - the changelog contains a dated section for that version;
 - the tagged commit is reachable from `main`;
 - restore, Release build, tests, and pack succeed;
+- the packed APIs remain compatible with the latest published TCJ baseline, except for reviewed suppressions;
 - exactly five `.nupkg` and five `.snupkg` files are produced;
 - each package contains the expected ID, version, repository metadata, MIT license expression, README, license file, assembly, and portable symbols.
 
@@ -111,7 +112,7 @@ packages
 
 Normal development uses `status: development` and `releaseDate: null`. Both release workflows call `eng/verify-release.py --require-ready`, so publication is blocked until the manifest is explicitly finalized.
 
-`eng/verify-release.py` ensures the manifest, MSBuild version, package projects, changelog, documentation, and built packages agree.
+`eng/verify-release.py` ensures the manifests, MSBuild version, package-validation baseline, package projects, changelog, documentation, and built packages agree.
 
 ## Run release preflight
 
@@ -140,7 +141,7 @@ The preflight workflow:
 1. requires `main`;
 2. verifies release metadata and the dated changelog section;
 3. queries NuGet.org for all five package IDs;
-4. restores, builds, tests, and packs;
+4. restores, builds, tests, packs, and runs SDK API compatibility validation;
 5. inspects the actual `.nupkg` and `.snupkg` contents;
 6. uploads a release-candidate artifact and test results.
 
@@ -191,9 +192,12 @@ If any package was published, increment the version, update `eng/Packaging.props
 ## After publication
 
 1. update `eng/published-release.json` to the immutable version and tag that reached NuGet.org;
-2. increment `eng/Packaging.props` and `eng/release-manifest.json`;
-3. set the release manifest to `status: development` and `releaseDate: null`;
-4. add the first new entries under `[Unreleased]`;
-5. run the **Published package smoke tests** workflow for the released version.
+2. update `TCJPublishedPackageVersion` in `eng/PackageValidation.props` to that same version;
+3. increment `eng/Packaging.props` and `eng/release-manifest.json`;
+4. set the release manifest to `status: development` and `releaseDate: null`;
+5. add the first new entries under `[Unreleased]`;
+6. run the **Published package smoke tests** workflow for the released version.
 
 The smoke workflow verifies NuGet registration metadata, public listing state, downloaded package contents, dependency restore, application build, and runtime registration on Linux and Windows.
+
+Package validation details and the intentional-breaking-change process are documented in [Public API compatibility](api-compatibility.md).

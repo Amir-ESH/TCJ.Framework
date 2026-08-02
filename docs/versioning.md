@@ -16,7 +16,7 @@ Current development version:
 0.1.0-preview.2
 ```
 
-The mutable next-release state is stored in `eng/release-manifest.json`. The latest immutable public release is recorded separately in `eng/published-release.json`.
+The mutable next-release state is stored in `eng/release-manifest.json`. The latest immutable public release is recorded separately in `eng/published-release.json` and mirrored for MSBuild package validation in `eng/PackageValidation.props`.
 
 ## Release-manifest lifecycle
 
@@ -55,7 +55,7 @@ The corresponding Git tag includes a leading `v`, for example `v0.1.0-preview.2`
 
 ## Compatibility expectations
 
-Before `1.0.0`, minor and preview releases may contain breaking public API changes. Breaking changes must be documented in `CHANGELOG.md`, with migration guidance when practical.
+Before `1.0.0`, minor and preview releases may contain deliberately approved breaking public API changes. Normal CI still rejects accidental binary breaks by validating packed assemblies against the latest published package baseline. Breaking changes must be documented in `CHANGELOG.md`, include migration guidance when practical, and use only narrowly reviewed compatibility suppressions.
 
 After `1.0.0`, follow standard semantic-versioning expectations:
 
@@ -63,4 +63,4 @@ After `1.0.0`, follow standard semantic-versioning expectations:
 - minor: compatible features
 - major: breaking changes
 
-See [Release automation](releasing.md) and [Published-package validation](published-package-validation.md).
+See [Release automation](releasing.md), [Published-package validation](published-package-validation.md), and [Public API compatibility](api-compatibility.md).

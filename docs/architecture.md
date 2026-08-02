@@ -67,6 +67,5 @@ HTTP endpoint
 - Database migrations for consumer applications
 - Provider packages other than SQL Server
 - A distributed transaction abstraction
-- Automatic public API compatibility validation
 
-These boundaries are intentional for the preview and should be considered when designing applications on top of TCJ.
+Packable TCJ projects use SDK package validation to detect accidental binary-breaking API changes against the latest published baseline. The remaining boundaries are intentional for the preview and should be considered when designing applications on top of TCJ.

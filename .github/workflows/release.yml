@@ -91,7 +91,7 @@ jobs:
           --logger "trx;LogFileName=release-test-results.trx"
           --results-directory TestResults
 
-      - name: Pack release packages
+      - name: Pack and validate release packages
         run: >
           dotnet pack TCJ.slnx
           --configuration Release

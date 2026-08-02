@@ -8,6 +8,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- SDK package validation against the latest published TCJ package baseline.
+- CI enforcement for accidental binary-breaking public API changes.
+- Public API compatibility policy and maintainer workflow.
 - Automated verification of listed NuGet packages using the NuGet V3 registration and flat-container APIs.
 - Cross-platform smoke consumer that restores, builds, and runs all published TCJ packages from NuGet.org.
 - Weekly and manually triggered published-package smoke-test workflow.

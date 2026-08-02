@@ -11,7 +11,8 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 5. [Versioning and releases](versioning.md)
 6. [Release automation](releasing.md)
 7. [Published-package validation](published-package-validation.md)
-8. [First preview release notes](releases/0.1.0-preview.1.md)
+8. [Public API compatibility](api-compatibility.md)
+9. [First preview release notes](releases/0.1.0-preview.1.md)
 
 ## Package reference
 

@@ -65,7 +65,7 @@ jobs:
           --logger "trx;LogFileName=test-results.trx"
           --results-directory TestResults
 
-      - name: Pack NuGet packages
+      - name: Pack and validate NuGet packages
         run: >
           dotnet pack TCJ.slnx
           --configuration Release

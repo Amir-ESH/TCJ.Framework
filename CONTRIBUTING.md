@@ -40,6 +40,7 @@ Use prefixes such as `feature/`, `fix/`, `docs/`, `test/`, `build/`, and `chore/
 - Prefer explicit behavior over hidden conventions.
 - Keep `TCJ.Core` free from ASP.NET Core and EF Core dependencies.
 - Add or update XML documentation for public APIs.
+- Preserve binary compatibility with the published package baseline unless a breaking change is explicitly approved and documented.
 - Add tests for bug fixes and public behavior changes.
 - Update relevant pages under `docs/`.
 
@@ -56,7 +57,7 @@ test: cover current user resolution
 
 ## Automated validation
 
-Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check. Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
+Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check. The Pack phase includes SDK package validation against the latest published TCJ version and rejects accidental binary-breaking API changes. Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
 
 ## Pull requests
 
@@ -66,7 +67,7 @@ A pull request should explain:
 
 - the problem;
 - the chosen approach;
-- compatibility or migration impact;
+- compatibility or migration impact, including any `CPxxxx` suppression;
 - tests performed.
 
 By contributing, you agree that your contribution is licensed under the repository's MIT License.

@@ -29,11 +29,11 @@ Pack locally:
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
-Packages are written to `artifacts/packages`.
+Packages are written to `artifacts/packages`. The Pack target also runs SDK package validation against the version in `eng/PackageValidation.props`.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It restores, builds, tests, packs, verifies the complete package set, and uploads test and NuGet artifacts.
+`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It restores, builds, tests, packs, checks binary compatibility against the published package baseline, verifies the complete package set, and uploads test and NuGet artifacts.
 
 Release publication is isolated in `.github/workflows/release.yml` and is triggered only by `v*` tags. See [Release automation](releasing.md).
 
@@ -71,6 +71,8 @@ ci: add release workflow
 - The change is focused and described clearly.
 - Public behavior changes include tests.
 - Public API changes include documentation updates.
+- Package validation passes against the published API baseline.
+- Intentional compatibility suppressions are minimal, reviewed, and documented.
 - `dotnet build` succeeds in Release configuration.
 - `dotnet test` succeeds.
 - No secrets, generated outputs, or IDE user settings are committed.
@@ -97,3 +99,7 @@ TestResults/
 Normal pull requests target the version in `eng/Packaging.props` and `eng/release-manifest.json`. The manifest remains in `development` status with a null release date until a release candidate is frozen. CI validates this state and deeply inspects locally packed artifacts.
 
 The `smoke/TCJ.PublishedPackages.SmokeTest` project is intentionally outside `TCJ.slnx`; it validates immutable NuGet.org artifacts rather than repository project references. Run it through the **Published package smoke tests** workflow or follow [Published-package validation](published-package-validation.md).
+
+## Public API compatibility
+
+Packable projects use the .NET SDK package validator. See [Public API compatibility](api-compatibility.md) for the baseline lifecycle, breaking-change policy, and suppression workflow.
