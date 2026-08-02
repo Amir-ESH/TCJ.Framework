@@ -57,6 +57,15 @@ jobs:
       - name: Verify code coverage policy
         run: python3 eng/verify-coverage.py validate-config
 
+      - name: Verify mutation-testing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            --start-directory eng/tests \
+            --pattern "test_*.py"
+          python3 eng/verify-mutation-results.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 

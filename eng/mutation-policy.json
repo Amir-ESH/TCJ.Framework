@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "minimumMutationScore": 50.0,
+  "minimumTestedMutants": 20,
+  "projects": [
+    "TCJ.Core",
+    "TCJ.DependencyInjection"
+  ],
+  "excludedFilePatterns": [
+    "**/bin/**",
+    "**/obj/**",
+    "**/*.g.cs",
+    "**/*.g.i.cs",
+    "**/*.generated.cs",
+    "**/*.Generated.cs",
+    "**/*.Designer.cs",
+    "**/Migrations/**",
+    "**/AssemblyInfo.cs",
+    "**/GlobalUsings.g.cs",
+    "samples/**",
+    "smoke/**",
+    "tests/**"
+  ],
+  "ignoredMutationTypes": [],
+  "ignoredMutationJustifications": {},
+  "reportPaths": {
+    "reportsDirectory": "artifacts/mutation/reports",
+    "summaryJson": "artifacts/mutation/mutation-summary.json",
+    "summaryMarkdown": "artifacts/mutation/MUTATION_SUMMARY.md",
+    "projectReports": {
+      "TCJ.Core": "artifacts/mutation/reports/TCJ.Core/reports/mutation-report.json",
+      "TCJ.DependencyInjection": "artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.json"
+    }
+  }
+}

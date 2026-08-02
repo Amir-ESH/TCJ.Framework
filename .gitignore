@@ -177,6 +177,13 @@ coverage*.json
 coverage*.xml
 coverage*.info
 
+# Mutation testing
+StrykerOutput/
+**/StrykerOutput/
+.tools/
+!stryker-config.json
+!eng/mutation-policy.json
+
 # Visual Studio code coverage results
 *.coverage
 *.coveragexml
