@@ -90,3 +90,10 @@ TestResults/
 *.suo
 *.DotSettings.user
 ```
+
+
+## Release lifecycle during development
+
+Normal pull requests target the version in `eng/Packaging.props` and `eng/release-manifest.json`. The manifest remains in `development` status with a null release date until a release candidate is frozen. CI validates this state and deeply inspects locally packed artifacts.
+
+The `smoke/TCJ.PublishedPackages.SmokeTest` project is intentionally outside `TCJ.slnx`; it validates immutable NuGet.org artifacts rather than repository project references. Run it through the **Published package smoke tests** workflow or follow [Published-package validation](published-package-validation.md).

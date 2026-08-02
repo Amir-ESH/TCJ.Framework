@@ -102,11 +102,14 @@ eng/release-manifest.json
 For every new version, update these fields together:
 
 ```text
+status
 version
 tag
 releaseDate
 packages
 ```
+
+Normal development uses `status: development` and `releaseDate: null`. Both release workflows call `eng/verify-release.py --require-ready`, so publication is blocked until the manifest is explicitly finalized.
 
 `eng/verify-release.py` ensures the manifest, MSBuild version, package projects, changelog, documentation, and built packages agree.
 
@@ -124,13 +127,13 @@ Select branch:
 main
 ```
 
-For the first publication choose:
+For all releases after the first publication choose:
 
 ```text
-package-id-policy: available
+package-id-policy: existing
 ```
 
-For later releases choose `existing`. `report-only` reports the NuGet.org state without enforcing it.
+`available` is only for claiming package IDs during the first publication. `report-only` reports the NuGet.org state without enforcing it.
 
 The preflight workflow:
 
@@ -153,10 +156,10 @@ Create the annotated tag:
 git switch main
 git pull --ff-only
 
-git tag -a v0.1.0-preview.1 \
-  -m "TCJ Framework 0.1.0-preview.1"
+git tag -a v0.1.0-preview.2 \
+  -m "TCJ Framework 0.1.0-preview.2"
 
-git push origin v0.1.0-preview.1
+git push origin v0.1.0-preview.2
 ```
 
 A version containing a pre-release suffix, such as `-preview.1`, creates a GitHub pre-release automatically.
@@ -183,3 +186,14 @@ Do not move or recreate an existing public release tag with different content.
 If no packages were published, delete the failed tag, correct the release commit, and create the tag again.
 
 If any package was published, increment the version, update `eng/Packaging.props`, `eng/release-manifest.json`, and `CHANGELOG.md`, then publish a new tag. NuGet package versions are immutable.
+
+
+## After publication
+
+1. update `eng/published-release.json` to the immutable version and tag that reached NuGet.org;
+2. increment `eng/Packaging.props` and `eng/release-manifest.json`;
+3. set the release manifest to `status: development` and `releaseDate: null`;
+4. add the first new entries under `[Unreleased]`;
+5. run the **Published package smoke tests** workflow for the released version.
+
+The smoke workflow verifies NuGet registration metadata, public listing state, downloaded package contents, dependency restore, application build, and runtime registration on Linux and Windows.

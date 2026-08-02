@@ -1,6 +1,6 @@
 # TCJ Framework documentation
 
-This directory documents the public behavior of the current `0.1.0-preview.1` source tree. Because the framework is still in preview, treat these pages and the code as a versioned pair.
+This directory documents the public behavior of the current `0.1.0-preview.2` development source tree. Because the framework is still in preview, treat these pages and the code as a versioned pair.
 
 ## Start here
 
@@ -10,7 +10,8 @@ This directory documents the public behavior of the current `0.1.0-preview.1` so
 4. [Development workflow](development.md)
 5. [Versioning and releases](versioning.md)
 6. [Release automation](releasing.md)
-7. [First preview release notes](releases/0.1.0-preview.1.md)
+7. [Published-package validation](published-package-validation.md)
+8. [First preview release notes](releases/0.1.0-preview.1.md)
 
 ## Package reference
 
@@ -30,7 +31,7 @@ This directory documents the public behavior of the current `0.1.0-preview.1` so
 
 ## Important preview constraints
 
-- `0.1.0-preview.1` is a public preview; pin the exact version and review the changelog before upgrading.
+- `0.1.0-preview.1` is the latest public preview; the repository currently develops `0.1.0-preview.2`. Pin exact public versions and review the changelog before upgrading.
 - Public APIs may change before `1.0.0`.
 - Domain-event dispatch is explicit; `SaveChangesAsync` does not dispatch events automatically.
 - Soft deletion is explicit through `ISoftDeleteRepository`; calling `Remove` performs physical deletion.

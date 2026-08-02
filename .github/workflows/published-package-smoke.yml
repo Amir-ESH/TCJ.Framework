@@ -1,0 +1,115 @@
+name: Published package smoke tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Package version to verify; leave empty to use eng/published-release.json
+        required: false
+        type: string
+  schedule:
+    - cron: "17 5 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: published-package-smoke-${{ github.event.inputs.version || 'latest' }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  verify-publication:
+    name: Verify NuGet publication
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    outputs:
+      version: ${{ steps.package-version.outputs.value }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Resolve package version
+        id: package-version
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+
+          version="$REQUESTED_VERSION"
+          if [[ -z "$version" ]]; then
+            version="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          fi
+
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "Verifying published version $version"
+
+      - name: Verify listed packages and package contents
+        run: >
+          python3 eng/verify-published-packages.py
+          --version "${{ steps.package-version.outputs.value }}"
+          --wait-seconds 180
+          --interval-seconds 30
+
+      - name: Upload downloaded packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: verified-published-packages-${{ steps.package-version.outputs.value }}-${{ github.run_id }}
+          path: artifacts/published-packages/*.nupkg
+          if-no-files-found: error
+          retention-days: 7
+
+  consume-packages:
+    name: Consume packages (${{ matrix.os }})
+    needs: verify-publication
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Clear NuGet caches
+        run: dotnet nuget locals all --clear
+
+      - name: Restore published packages
+        run: >
+          dotnet restore
+          smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
+          --no-cache
+          --force
+          -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
+
+      - name: Build consumer
+        run: >
+          dotnet build
+          smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
+          --configuration Release
+          --no-restore
+          -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
+
+      - name: Run consumer
+        run: >
+          dotnet run
+          --project smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
+          --configuration Release
+          --no-build
+          -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
