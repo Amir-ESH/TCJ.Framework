@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "reportPattern": "TestResults/**/coverage.cobertura.xml",
+  "minimumLineCoverage": 15.0,
+  "minimumBranchCoverage": 10.0,
+  "minimumReportCount": 5,
+  "expectedPackages": [
+    "TCJ.Core",
+    "TCJ.DependencyInjection",
+    "TCJ.EntityFrameworkCore",
+    "TCJ.EntityFrameworkCore.SqlServer",
+    "TCJ.AspNetCore"
+  ]
+}
