@@ -27,6 +27,15 @@ dotnet test TCJ.slnx \
 python3 eng/verify-coverage.py verify
 ```
 
+Validate mutation-testing automation:
+
+```bash
+python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
+python3 eng/verify-mutation-results.py validate-config
+```
+
+Run the complete mutation baseline by following [Mutation testing quality gate](mutation-testing.md).
+
 Pack locally:
 
 ```bash
@@ -37,9 +46,11 @@ Packages are written to `artifacts/packages`. The Pack target also runs SDK pack
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates dependency-security, release-integrity, and coverage automation; audits direct and transitive packages during restore; builds; collects and enforces Cobertura line and branch coverage; packs; checks binary compatibility against the published package baseline; verifies the complete package set and its SHA-256 manifest; and uploads test, coverage, and NuGet artifacts.
+`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates dependency-security, release-integrity, coverage, and mutation-testing automation; audits direct and transitive packages during restore; builds; collects and enforces Cobertura line and branch coverage; packs; checks binary compatibility against the published package baseline; verifies the complete package set and its SHA-256 manifest; and uploads test, coverage, and NuGet artifacts.
 
 `.github/workflows/dependency-review.yml` rejects pull requests that introduce moderate-or-higher vulnerable dependencies. `.github/workflows/dependency-audit.yml` performs a scheduled full restore audit so advisories published after the last code change are still detected.
+
+`.github/workflows/mutation-testing.yml` runs weekly, manually, and after relevant production or test changes. It mutates `TCJ.Core` and `TCJ.DependencyInjection`, enforces the repository baseline, publishes a Markdown job summary, and uploads HTML and JSON reports.
 
 Release publication is isolated in `.github/workflows/release.yml` and is triggered only by `v*` tags. See [Release automation](releasing.md).
 
@@ -82,6 +93,7 @@ ci: add release workflow
 - `dotnet build` succeeds in Release configuration.
 - `dotnet test` succeeds.
 - The coverage quality gate passes and behavior changes include focused tests.
+- Relevant foundational changes pass the mutation quality gate and survived mutants are reviewed.
 - No secrets, generated outputs, or IDE user settings are committed.
 
 ## Generated and local-only paths
@@ -92,6 +104,8 @@ Do not commit:
 bin/
 obj/
 artifacts/
+StrykerOutput/
+.tools/
 TestResults/
 .vs/
 .idea/
@@ -122,3 +136,7 @@ Repository restore policy is defined by `NuGet.Config` and `eng/DependencySecuri
 ## Code coverage
 
 Coverage policy and merged-report behavior are documented in [Code coverage quality gate](code-coverage.md).
+
+## Mutation testing
+
+The initial Stryker.NET baseline, exclusions, local commands, and threshold-update process are documented in [Mutation testing quality gate](mutation-testing.md).

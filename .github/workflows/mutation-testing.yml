@@ -1,0 +1,184 @@
+name: Mutation testing
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "17 3 * * 1"
+
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "tests/TCJ.Core.Tests/**"
+      - "tests/TCJ.DependencyInjection.Tests/**"
+      - "eng/mutation-policy.json"
+      - "eng/verify-mutation-results.py"
+      - "eng/tests/test_verify_mutation_results.py"
+      - "stryker-config.json"
+      - ".github/workflows/mutation-testing.yml"
+
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "tests/TCJ.Core.Tests/**"
+      - "tests/TCJ.DependencyInjection.Tests/**"
+      - "eng/mutation-policy.json"
+      - "eng/verify-mutation-results.py"
+      - "eng/tests/test_verify_mutation_results.py"
+      - "stryker-config.json"
+      - ".github/workflows/mutation-testing.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-testing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+  STRYKER_VERSION: 4.16.0
+
+jobs:
+  mutation-testing:
+    name: Run mutation tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display .NET information
+        run: dotnet --info
+
+      - name: Restore and audit dependencies
+        run: dotnet restore TCJ.slnx
+
+      - name: Build production and test projects
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          dotnet build src/TCJ.Core/TCJ.Core.csproj \
+            --configuration Release \
+            --no-restore
+          dotnet build src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj \
+            --configuration Release \
+            --no-restore
+          dotnet build tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj \
+            --configuration Release \
+            --no-restore
+          dotnet build tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj \
+            --configuration Release \
+            --no-restore
+
+      - name: Install Stryker.NET
+        run: >
+          dotnet tool install
+          --tool-path .tools
+          dotnet-stryker
+          --version "$STRYKER_VERSION"
+
+      - name: Validate mutation-testing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 -m unittest discover \
+            --start-directory eng/tests \
+            --pattern "test_*.py"
+          python3 eng/verify-mutation-results.py validate-config
+
+      - name: Prepare mutation report directories
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/mutation
+          mkdir -p artifacts/mutation/reports
+
+      - name: Run TCJ.Core mutation tests
+        id: mutation-core
+        continue-on-error: true
+        working-directory: tests/TCJ.Core.Tests
+        run: >
+          ../../.tools/dotnet-stryker
+          --config-file ../../stryker-config.json
+          --project TCJ.Core.csproj
+          --output ../../artifacts/mutation/reports/TCJ.Core
+          --skip-version-check
+
+      - name: Run TCJ.DependencyInjection mutation tests
+        id: mutation-dependency-injection
+        continue-on-error: true
+        working-directory: tests/TCJ.DependencyInjection.Tests
+        run: >
+          ../../.tools/dotnet-stryker
+          --config-file ../../stryker-config.json
+          --project TCJ.DependencyInjection.csproj
+          --output ../../artifacts/mutation/reports/TCJ.DependencyInjection
+          --skip-version-check
+
+      - name: Verify mutation score
+        if: always()
+        shell: bash
+        env:
+          CORE_OUTCOME: ${{ steps.mutation-core.outcome }}
+          DEPENDENCY_INJECTION_OUTCOME: ${{ steps.mutation-dependency-injection.outcome }}
+        run: |
+          set +e
+
+          python3 eng/verify-mutation-results.py verify \
+            --summary artifacts/mutation/MUTATION_SUMMARY.md \
+            --json artifacts/mutation/mutation-summary.json
+          verification_status=$?
+
+          if [[ "$CORE_OUTCOME" != "success" ]]; then
+            echo "TCJ.Core Stryker run did not succeed: $CORE_OUTCOME" >&2
+            verification_status=1
+          fi
+
+          if [[ "$DEPENDENCY_INJECTION_OUTCOME" != "success" ]]; then
+            echo "TCJ.DependencyInjection Stryker run did not succeed: $DEPENDENCY_INJECTION_OUTCOME" >&2
+            verification_status=1
+          fi
+
+          exit "$verification_status"
+
+      - name: Publish mutation summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/mutation/MUTATION_SUMMARY.md ]]; then
+            cat artifacts/mutation/MUTATION_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "# TCJ mutation testing" >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo "Mutation summary was not generated. Review the workflow logs and uploaded reports." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload mutation reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-reports-${{ github.run_id }}
+          path: |
+            artifacts/mutation/mutation-summary.json
+            artifacts/mutation/MUTATION_SUMMARY.md
+            artifacts/mutation/reports/
+          if-no-files-found: warn
+          retention-days: 14
