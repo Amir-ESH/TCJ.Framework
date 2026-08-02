@@ -14,6 +14,7 @@ Thank you for helping improve TCJ Framework.
 ```bash
 git clone https://github.com/Amir-ESH/TCJ.Framework.git
 cd TCJ.Framework
+python3 eng/verify-dependency-security.py
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
 dotnet test TCJ.slnx -c Release --no-build
@@ -41,6 +42,7 @@ Use prefixes such as `feature/`, `fix/`, `docs/`, `test/`, `build/`, and `chore/
 - Keep `TCJ.Core` free from ASP.NET Core and EF Core dependencies.
 - Add or update XML documentation for public APIs.
 - Preserve binary compatibility with the published package baseline unless a breaking change is explicitly approved and documented.
+- Do not disable NuGet Audit, weaken the audit threshold, or add an unreviewed package source.
 - Add tests for bug fixes and public behavior changes.
 - Update relevant pages under `docs/`.
 
@@ -57,7 +59,7 @@ test: cover current user resolution
 
 ## Automated validation
 
-Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check. The Pack phase includes SDK package validation against the latest published TCJ version and rejects accidental binary-breaking API changes. Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
+Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check and dependency review. Restore audits the complete resolved NuGet graph and fails on moderate-or-higher known vulnerabilities or an unavailable audit source. The Pack phase includes SDK package validation against the latest published TCJ version and rejects accidental binary-breaking API changes. Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
 
 ## Pull requests
 

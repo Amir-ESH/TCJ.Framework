@@ -34,6 +34,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Validate dependency security policy
+        run: python3 eng/verify-dependency-security.py
+
       - name: Resolve package version
         id: package-version
         shell: bash

@@ -8,6 +8,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] `[Unreleased]` contains complete user-facing notes.
 - [ ] Public API changes and migration notes are documented.
 - [ ] Package validation is green against the version in `eng/PackageValidation.props`.
+- [ ] Dependency review and NuGet Audit are green with the repository security policy unchanged.
 - [ ] Any compatibility suppression is minimal, reviewed, and described in the changelog.
 - [ ] The published-package smoke workflow is green for the previous release.
 
@@ -27,6 +28,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] `Build, test and pack` is successful on the exact `main` commit.
 - [ ] The `nuget-production` environment and `NUGET_USER` variable still exist.
 - [ ] The NuGet.org Trusted Publishing policy still targets `release.yml` and `nuget-production`.
+- [ ] GitHub Dependency graph is enabled and the Dependency review workflow is active.
 
 ## Release candidate
 

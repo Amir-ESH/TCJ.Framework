@@ -35,3 +35,9 @@ Consumers remain responsible for:
 - dependency and platform patching;
 - logging and disclosure controls;
 - validating any custom error metadata returned to clients.
+
+## Dependency security automation
+
+Repository restores use NuGet Audit for direct and transitive dependencies. Moderate, high, and critical advisories block CI and release workflows. Pull requests also run GitHub Dependency Review, and a scheduled workflow re-audits the resolved graph when no source change has occurred. See [`docs/dependency-security.md`](docs/dependency-security.md).
+
+Do not publicly disclose an exploitable dependency path before a remediation plan is available. Report it through Private vulnerability reporting with the package ID, affected version, advisory identifier, reachable TCJ code path, and suggested fixed version.

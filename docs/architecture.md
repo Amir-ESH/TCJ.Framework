@@ -68,4 +68,4 @@ HTTP endpoint
 - Provider packages other than SQL Server
 - A distributed transaction abstraction
 
-Packable TCJ projects use SDK package validation to detect accidental binary-breaking API changes against the latest published baseline. The remaining boundaries are intentional for the preview and should be considered when designing applications on top of TCJ.
+Repository restore is restricted to the configured NuGet.org source and audits direct and transitive dependencies. Packable TCJ projects use SDK package validation to detect accidental binary-breaking API changes against the latest published baseline. The remaining boundaries are intentional for the preview and should be considered when designing applications on top of TCJ.

@@ -11,6 +11,7 @@ A release is rejected unless all of the following are true:
 - the tag version matches both `eng/Packaging.props` and `eng/release-manifest.json`;
 - the changelog contains a dated section for that version;
 - the tagged commit is reachable from `main`;
+- the repository dependency-security policy is intact and restore completes its direct/transitive NuGet audit;
 - restore, Release build, tests, and pack succeed;
 - the packed APIs remain compatible with the latest published TCJ baseline, except for reviewed suppressions;
 - exactly five `.nupkg` and five `.snupkg` files are produced;
@@ -41,6 +42,7 @@ actions/checkout@v6
 actions/setup-dotnet@v6
 actions/upload-artifact@v7
 actions/download-artifact@v8
+actions/dependency-review-action@v4
 ```
 
 ### Create the release environment
@@ -141,9 +143,10 @@ The preflight workflow:
 1. requires `main`;
 2. verifies release metadata and the dated changelog section;
 3. queries NuGet.org for all five package IDs;
-4. restores, builds, tests, packs, and runs SDK API compatibility validation;
-5. inspects the actual `.nupkg` and `.snupkg` contents;
-6. uploads a release-candidate artifact and test results.
+4. validates dependency-security configuration and audits the complete restored graph;
+5. builds, tests, packs, and runs SDK API compatibility validation;
+6. inspects the actual `.nupkg` and `.snupkg` contents;
+7. uploads a release-candidate artifact and test results.
 
 Download and review the `release-candidate-*` artifact before tagging. The first publication cannot claim a package ID that already exists on NuGet.org under another owner.
 
@@ -201,3 +204,5 @@ If any package was published, increment the version, update `eng/Packaging.props
 The smoke workflow verifies NuGet registration metadata, public listing state, downloaded package contents, dependency restore, application build, and runtime registration on Linux and Windows.
 
 Package validation details and the intentional-breaking-change process are documented in [Public API compatibility](api-compatibility.md).
+
+Dependency audit thresholds, source mapping, and advisory handling are documented in [Dependency and supply-chain security](dependency-security.md).

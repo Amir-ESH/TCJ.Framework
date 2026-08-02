@@ -48,7 +48,10 @@ jobs:
       - name: Verify development metadata
         run: python3 eng/verify-release.py
 
-      - name: Restore dependencies
+      - name: Verify dependency security policy
+        run: python3 eng/verify-dependency-security.py
+
+      - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
       - name: Build solution
