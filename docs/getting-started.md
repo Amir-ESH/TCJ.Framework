@@ -24,6 +24,8 @@ dotnet add package TCJ.AspNetCore --version 0.1.0-preview.1
 
 The sample continues to use project references so it always exercises the current repository source.
 
+The repository development version may be newer than the latest published preview. Consumer installation examples intentionally remain pinned to the latest verified NuGet.org release.
+
 ## 2. Define a DbContext
 
 The context must implement the read and write abstractions:

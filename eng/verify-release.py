@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate TCJ release metadata and, optionally, built NuGet packages."""
+"""Validate TCJ release lifecycle metadata and, optionally, built NuGet packages."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ SEMVER_PATTERN = re.compile(
     r"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?"
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
+RELEASE_STATUSES = {"development", "ready"}
 
 
 def fail(message: str) -> None:
@@ -34,6 +35,7 @@ def read_manifest(root: Path) -> dict[str, object]:
 
     required = {
         "schemaVersion",
+        "status",
         "version",
         "tag",
         "releaseDate",
@@ -44,8 +46,12 @@ def read_manifest(root: Path) -> dict[str, object]:
     if missing:
         fail(f"Release manifest is missing fields: {', '.join(missing)}")
 
-    if data["schemaVersion"] != 1:
-        fail("Unsupported release manifest schemaVersion.")
+    if data["schemaVersion"] != 2:
+        fail("Unsupported release manifest schemaVersion; expected 2.")
+
+    status = str(data["status"])
+    if status not in RELEASE_STATUSES:
+        fail("Manifest status must be 'development' or 'ready'.")
 
     version = str(data["version"])
     if not SEMVER_PATTERN.fullmatch(version):
@@ -54,13 +60,20 @@ def read_manifest(root: Path) -> dict[str, object]:
     if data["tag"] != f"v{version}":
         fail("Manifest tag must be the version prefixed with 'v'.")
 
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(data["releaseDate"])):
-        fail("Manifest releaseDate must use YYYY-MM-DD format.")
+    release_date = data["releaseDate"]
+    if status == "development":
+        if release_date is not None:
+            fail("A development manifest must set releaseDate to null.")
+    elif not isinstance(release_date, str) or not re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}", release_date
+    ):
+        fail("A ready manifest must use YYYY-MM-DD for releaseDate.")
 
     packages = data["packages"]
     if not isinstance(packages, list) or not packages:
         fail("Manifest packages must be a non-empty array.")
-
+    if not all(isinstance(item, str) and item.strip() for item in packages):
+        fail("Manifest package IDs must be non-empty strings.")
     if len(packages) != len(set(packages)):
         fail("Manifest package IDs must be unique.")
 
@@ -86,18 +99,15 @@ def read_project_package_ids(root: Path) -> list[str]:
     return package_ids
 
 
-def validate_changelog(root: Path, version: str, release_date: str) -> None:
+def validate_ready_changelog(root: Path, version: str, release_date: str) -> None:
     changelog = read_text(root / "CHANGELOG.md")
     heading = f"## [{version}] - {release_date}"
     if heading not in changelog:
         fail(f"CHANGELOG.md must contain the release heading: {heading}")
 
-    invalid = f"## [{version}] - Unreleased"
-    if invalid in changelog:
-        fail(f"CHANGELOG.md still marks {version} as Unreleased.")
-
     section_pattern = re.compile(
-        rf"^## \[{re.escape(version)}\] - {re.escape(release_date)}\n(?P<body>.*?)(?=^## |\Z)",
+        rf"^## \[{re.escape(version)}\] - {re.escape(release_date)}\n"
+        rf"(?P<body>.*?)(?=^## |^\[Unreleased\]:|\Z)",
         re.MULTILINE | re.DOTALL,
     )
     match = section_pattern.search(changelog)
@@ -105,8 +115,26 @@ def validate_changelog(root: Path, version: str, release_date: str) -> None:
         fail(f"CHANGELOG.md has no release notes for {version}.")
 
 
+def validate_development_changelog(root: Path) -> None:
+    changelog = read_text(root / "CHANGELOG.md")
+    section_pattern = re.compile(
+        r"^## \[Unreleased\]\n(?P<body>.*?)(?=^## |\Z)",
+        re.MULTILINE | re.DOTALL,
+    )
+    match = section_pattern.search(changelog)
+    if not match:
+        fail("CHANGELOG.md must contain an [Unreleased] section.")
+    body = match.group("body").strip()
+    if not body:
+        fail("CHANGELOG.md [Unreleased] must describe current development changes.")
+
+
 def validate_public_status_text(root: Path) -> None:
-    checked = [root / "README.md", root / "docs" / "README.md", root / "docs" / "getting-started.md"]
+    checked = [
+        root / "README.md",
+        root / "docs" / "README.md",
+        root / "docs" / "getting-started.md",
+    ]
     forbidden = (
         "nuget packages have not been published yet",
         "preview packages are not published yet",
@@ -116,7 +144,10 @@ def validate_public_status_text(root: Path) -> None:
         text = read_text(path).lower()
         for phrase in forbidden:
             if phrase in text:
-                fail(f"Release-ready documentation still says packages are unpublished: {path.relative_to(root)}")
+                fail(
+                    "Public documentation still says packages are unpublished: "
+                    f"{path.relative_to(root)}"
+                )
 
 
 def xml_metadata(nuspec_bytes: bytes) -> dict[str, str]:
@@ -251,13 +282,24 @@ def main() -> int:
         default=Path(__file__).resolve().parents[1],
     )
     parser.add_argument("--package-directory", type=Path)
+    parser.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="Fail unless the manifest is ready for an immutable public release.",
+    )
     args = parser.parse_args()
 
     root = args.repository_root.resolve()
     manifest = read_manifest(root)
+    status = str(manifest["status"])
     version = str(manifest["version"])
-    release_date = str(manifest["releaseDate"])
     package_ids = [str(item) for item in manifest["packages"]]
+
+    if args.require_ready and status != "ready":
+        fail(
+            "Release manifest is not ready. Set status to 'ready', add a releaseDate, "
+            "and move the version notes from [Unreleased] to a dated changelog section."
+        )
 
     packaging_version = read_msbuild_version(root)
     if packaging_version != version:
@@ -273,13 +315,20 @@ def main() -> int:
             f"Expected {sorted(package_ids)}, found {sorted(project_package_ids)}."
         )
 
-    validate_changelog(root, version, release_date)
+    if status == "ready":
+        validate_ready_changelog(root, version, str(manifest["releaseDate"]))
+    else:
+        validate_development_changelog(root)
+
     validate_public_status_text(root)
 
     if args.package_directory is not None:
         validate_packages(root, args.package_directory, manifest)
 
-    print(f"Release metadata verified: {manifest['tag']} ({release_date})")
+    if status == "ready":
+        print(f"Release metadata verified: {manifest['tag']} ({manifest['releaseDate']})")
+    else:
+        print(f"Development metadata verified: {version} (not release-ready)")
     for package_id in package_ids:
         print(f"  {package_id}")
     if args.package_directory is not None:

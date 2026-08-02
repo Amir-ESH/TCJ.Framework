@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Version>0.1.0-preview.1</Version>
+    <Version>0.1.0-preview.2</Version>
 
     <Authors>TCJ Contributors</Authors>
     <Company>TCJ</Company>
@@ -12,7 +12,7 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/Amir-ESH/TCJ.Framework</PackageProjectUrl>
-    <PackageReleaseNotes>First public preview of TCJ Framework. Public APIs may change before 1.0.0. Release notes: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.1</PackageReleaseNotes>
+    <PackageReleaseNotes>TCJ Framework preview release. Public APIs may change before 1.0.0. Changelog: https://github.com/Amir-ESH/TCJ.Framework/blob/main/CHANGELOG.md</PackageReleaseNotes>
 
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>

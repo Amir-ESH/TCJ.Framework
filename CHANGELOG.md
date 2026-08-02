@@ -6,6 +6,18 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+### Added
+
+- Automated verification of listed NuGet packages using the NuGet V3 registration and flat-container APIs.
+- Cross-platform smoke consumer that restores, builds, and runs all published TCJ packages from NuGet.org.
+- Weekly and manually triggered published-package smoke-test workflow.
+
+### Changed
+
+- Opened the next development cycle as `0.1.0-preview.2`.
+- Separated immutable published-release metadata from mutable next-release metadata.
+- Release preflight and tag publication now require an explicitly `ready` release manifest.
+
 ## [0.1.0-preview.1] - 2026-08-01
 
 ### Added

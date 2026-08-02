@@ -2,13 +2,44 @@
 
 TCJ Framework uses semantic versioning with pre-release identifiers during active development.
 
-## Current version
+## Published and development versions
+
+Latest published preview:
 
 ```text
 0.1.0-preview.1
 ```
 
-The shared package version is defined in `eng/Packaging.props` and mirrored in `eng/release-manifest.json` for release validation.
+Current development version:
+
+```text
+0.1.0-preview.2
+```
+
+The mutable next-release state is stored in `eng/release-manifest.json`. The latest immutable public release is recorded separately in `eng/published-release.json`.
+
+## Release-manifest lifecycle
+
+A development manifest uses:
+
+```json
+{
+  "status": "development",
+  "releaseDate": null
+}
+```
+
+This state is valid for normal CI and package creation, but release preflight and tag publication reject it.
+
+When a release candidate is finalized:
+
+1. move the completed notes from `[Unreleased]` to a dated version section in `CHANGELOG.md`;
+2. set `status` to `ready`;
+3. set `releaseDate` to the publication date;
+4. verify that `version`, `tag`, and `eng/Packaging.props` match;
+5. run `Release preflight` from `main`.
+
+After publication, copy the released values to `eng/published-release.json`, increment the development version, return the release manifest to `development`, and set `releaseDate` back to `null`.
 
 ## Preview versions
 
@@ -20,44 +51,16 @@ Preview releases use monotonically increasing identifiers:
 0.1.0-preview.3
 ```
 
-The corresponding Git tag includes a leading `v`:
-
-```text
-v0.1.0-preview.1
-```
-
-Do not reuse a published package version for different bits. Increment the preview number for every new publication.
-
-## When to create a release tag
-
-Create the tag only after:
-
-1. the release commit is on `main`;
-2. build, test, and pack checks succeed;
-3. the manual `Release preflight` workflow succeeds on `main`;
-4. package contents and Package IDs have been inspected;
-5. release notes and the changelog are updated;
-6. the `nuget-production` environment and NuGet.org Trusted Publishing policy are configured.
-
-The tag triggers `.github/workflows/release.yml`. The workflow validates that the tag version matches `eng/Packaging.props`, publishes through short-lived OIDC credentials, and creates the GitHub Release. See [Release automation](releasing.md).
-
-Example:
-
-```bash
-git switch main
-git pull --ff-only
-git tag -a v0.1.0-preview.1 -m "TCJ Framework 0.1.0-preview.1"
-git push origin v0.1.0-preview.1
-```
-
-Mark preview GitHub Releases as **Pre-release**.
+The corresponding Git tag includes a leading `v`, for example `v0.1.0-preview.2`. Never reuse a published package version or move a published tag.
 
 ## Compatibility expectations
 
-Before `1.0.0`, minor and preview releases may contain breaking public API changes. Breaking changes must be documented in `CHANGELOG.md` and migration guidance should be provided when practical.
+Before `1.0.0`, minor and preview releases may contain breaking public API changes. Breaking changes must be documented in `CHANGELOG.md`, with migration guidance when practical.
 
 After `1.0.0`, follow standard semantic-versioning expectations:
 
 - patch: compatible fixes
 - minor: compatible features
 - major: breaking changes
+
+See [Release automation](releasing.md) and [Published-package validation](published-package-validation.md).
