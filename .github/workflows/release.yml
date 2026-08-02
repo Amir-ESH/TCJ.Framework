@@ -20,6 +20,12 @@ jobs:
   build-and-pack:
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     timeout-minutes: 25
 
     outputs:
@@ -42,6 +48,9 @@ jobs:
 
       - name: Verify dependency security policy
         run: python3 eng/verify-dependency-security.py
+
+      - name: Verify release integrity automation
+        run: python3 eng/release-integrity.py validate-config
 
       - name: Validate release tag
         id: release-version
@@ -117,6 +126,28 @@ jobs:
           --version "${{ steps.release-version.outputs.value }}"
           --output artifacts/release/RELEASE_NOTES.md
 
+      - name: Generate release checksums
+        run: >
+          python3 eng/release-integrity.py write
+          --version "${{ steps.release-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --checksums artifacts/release/SHA256SUMS
+
+      - name: Verify release checksums
+        run: >
+          python3 eng/release-integrity.py verify
+          --version "${{ steps.release-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --checksums artifacts/release/SHA256SUMS
+
+      - name: Attest release packages and checksums
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+            artifacts/release/SHA256SUMS
+
       - name: Upload release packages
         uses: actions/upload-artifact@v7
         with:
@@ -129,7 +160,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-metadata-${{ steps.release-version.outputs.value }}
-          path: artifacts/release/RELEASE_NOTES.md
+          path: |
+            artifacts/release/RELEASE_NOTES.md
+            artifacts/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
 
@@ -178,6 +211,13 @@ jobs:
         run: >
           python3 eng/verify-release.py
           --package-directory artifacts/packages
+
+      - name: Verify downloaded release checksums
+        run: >
+          python3 eng/release-integrity.py verify
+          --version "${{ needs.build-and-pack.outputs.version }}"
+          --package-directory artifacts/packages
+          --checksums artifacts/release/SHA256SUMS
 
       - name: Validate NuGet publishing configuration
         shell: bash
@@ -233,7 +273,11 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
 
-          assets=(artifacts/packages/*.nupkg artifacts/packages/*.snupkg)
+          assets=(
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+            artifacts/release/SHA256SUMS
+          )
           release_args=(
             "$GITHUB_REF_NAME"
             "${assets[@]}"

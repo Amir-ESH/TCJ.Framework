@@ -41,3 +41,7 @@ Consumers remain responsible for:
 Repository restores use NuGet Audit for direct and transitive dependencies. Moderate, high, and critical advisories block CI and release workflows. Pull requests also run GitHub Dependency Review, and a scheduled workflow re-audits the resolved graph when no source change has occurred. See [`docs/dependency-security.md`](docs/dependency-security.md).
 
 Do not publicly disclose an exploitable dependency path before a remediation plan is available. Report it through Private vulnerability reporting with the package ID, affected version, advisory identifier, reachable TCJ code path, and suggested fixed version.
+
+## Release artifact integrity
+
+Official GitHub release assets include a `SHA256SUMS` manifest and GitHub artifact attestations produced by the tagged Release workflow. Consumers can verify the exact GitHub-hosted package files and their workflow provenance as described in [`docs/release-integrity.md`](docs/release-integrity.md). A missing or invalid checksum, unexpected signer workflow, or provenance mismatch should be reported privately before using the affected asset.

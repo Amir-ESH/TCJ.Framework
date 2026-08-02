@@ -51,6 +51,9 @@ jobs:
       - name: Verify dependency security policy
         run: python3 eng/verify-dependency-security.py
 
+      - name: Verify release integrity automation
+        run: python3 eng/release-integrity.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -103,6 +106,20 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Generate package checksums
+        run: >
+          python3 eng/release-integrity.py write
+          --version "${{ steps.package-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --checksums artifacts/release/SHA256SUMS
+
+      - name: Verify package checksums
+        run: >
+          python3 eng/release-integrity.py verify
+          --version "${{ steps.package-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --checksums artifacts/release/SHA256SUMS
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
@@ -116,6 +133,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: nuget-packages-${{ github.run_id }}
-          path: artifacts/packages/*
+          path: |
+            artifacts/packages/*
+            artifacts/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 7
