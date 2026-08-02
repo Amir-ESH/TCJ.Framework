@@ -23,7 +23,7 @@ SEMVER_PATTERN = _VALIDATOR.SEMVER_PATTERN
 validate_primary_package = _VALIDATOR.validate_primary_package
 
 DEFAULT_FLAT_CONTAINER = "https://api.nuget.org/v3-flatcontainer"
-DEFAULT_REGISTRATION = "https://api.nuget.org/v3/registration5-semver1"
+DEFAULT_REGISTRATION = "https://api.nuget.org/v3/registration5-gz-semver2"
 
 
 def fail(message: str) -> None:
