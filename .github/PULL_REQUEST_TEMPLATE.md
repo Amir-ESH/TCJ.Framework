@@ -21,7 +21,7 @@ Describe the problem and the approach taken.
 - [ ] `dotnet build TCJ.slnx -c Release`
 - [ ] `dotnet test TCJ.slnx -c Release`
 - [ ] Code coverage quality gate passes; new behavior has focused tests
-- [ ] Mutation configuration validation passes; relevant survived mutants were reviewed
+- [ ] The recorded mutation baseline is valid and the full mutation quality gate passes; relevant survived mutants were reviewed
 - [ ] `dotnet pack TCJ.slnx -c Release --no-build` when packaging or release infrastructure changes
 - [ ] Release-integrity automation remains valid and package checksums pass
 - [ ] Documentation updated where required

@@ -1,10 +1,50 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "strykerVersion": "4.16.0",
+  "testRunner": "mtp",
+  "coverageAnalysis": "off",
+  "baselinePath": "eng/mutation-baseline.json",
+  "requireRecordedBaseline": true,
   "minimumMutationScore": 50.0,
-  "minimumTestedMutants": 20,
+  "allowedBaselineScoreRegression": 0.0,
+  "minimumTestedMutants": 100,
+  "minimumKilledMutants": 10,
+  "minimumKilledMutantsPerProject": 1,
+  "maximumCompileErrorPercentage": 5.0,
+  "maximumRuntimeErrorMutants": 0,
   "projects": [
-    "TCJ.Core",
-    "TCJ.DependencyInjection"
+    {
+      "name": "TCJ.Core",
+      "sourceProject": "src/TCJ.Core/TCJ.Core.csproj",
+      "testProject": "tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj",
+      "minimumTestedMutants": 50,
+      "mutationTargets": [
+        "Entities/Entity.cs",
+        "Identifiers/GuidGenerator.cs",
+        "Results/CommonErrors.cs",
+        "Results/Result.cs",
+        "Results/ResultError.cs",
+        "Results/ResultOfT.cs"
+      ],
+      "reportPath": "artifacts/mutation/reports/TCJ.Core/reports/mutation-report.json",
+      "htmlReportPath": "artifacts/mutation/reports/TCJ.Core/reports/mutation-report.html",
+      "runMetadataPath": "artifacts/mutation/reports/TCJ.Core/run-metadata.json",
+      "consoleLogPath": "artifacts/mutation/reports/TCJ.Core/stryker-console.log"
+    },
+    {
+      "name": "TCJ.DependencyInjection",
+      "sourceProject": "src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj",
+      "testProject": "tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj",
+      "minimumTestedMutants": 20,
+      "mutationTargets": [
+        "DomainEvents/DomainEventDispatcher.cs",
+        "Extensions/ServiceCollectionExtensions.cs"
+      ],
+      "reportPath": "artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.json",
+      "htmlReportPath": "artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.html",
+      "runMetadataPath": "artifacts/mutation/reports/TCJ.DependencyInjection/run-metadata.json",
+      "consoleLogPath": "artifacts/mutation/reports/TCJ.DependencyInjection/stryker-console.log"
+    }
   ],
   "excludedFilePatterns": [
     "**/bin/**",
@@ -21,15 +61,22 @@
     "smoke/**",
     "tests/**"
   ],
+  "scopeNotes": [
+    "The first baseline intentionally mutates a reviewed subset of behavior inside TCJ.Core and TCJ.DependencyInjection instead of every source file.",
+    "DomainEventHandlerInvoker.cs is temporarily outside the initial target because Stryker.NET 4.16.0 entered safe mode and marked its pattern-variable mutations as compile errors in PR #52; it must be reconsidered when the runner or source shape changes.",
+    "Marker interfaces, option-only properties, generated files, migrations, samples, smoke tests, and test projects are not mutation targets."
+  ],
   "ignoredMutationTypes": [],
   "ignoredMutationJustifications": {},
   "reportPaths": {
     "reportsDirectory": "artifacts/mutation/reports",
     "summaryJson": "artifacts/mutation/mutation-summary.json",
     "summaryMarkdown": "artifacts/mutation/MUTATION_SUMMARY.md",
-    "projectReports": {
-      "TCJ.Core": "artifacts/mutation/reports/TCJ.Core/reports/mutation-report.json",
-      "TCJ.DependencyInjection": "artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.json"
-    }
-  }
+    "baselineCandidate": "artifacts/mutation/mutation-baseline-candidate.json"
+  },
+  "forbiddenRunnerLogMarkers": [
+    "test coverage capture failed",
+    "initial test run failed",
+    "no tests were found"
+  ]
 }

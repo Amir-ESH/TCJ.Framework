@@ -22,12 +22,15 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Release-integrity verification before artifact upload, NuGet publication, and GitHub Release creation.
 - Cross-package Cobertura coverage collection with enforced line and branch minimums.
 - Merged coverage summaries and raw-report artifacts for CI, preflight, and tagged releases.
+- Stryker.NET mutation testing for a controlled `TCJ.Core` and `TCJ.DependencyInjection` baseline.
+- Mutation execution-health validation, reviewed baseline capture, report hashing, and CI-enforced mutation gates.
 
 ### Changed
 
 - Opened the next development cycle as `0.1.0-preview.2`.
 - Separated immutable published-release metadata from mutable next-release metadata.
 - Release preflight and tag publication now require an explicitly `ready` release manifest.
+- The invalid all-survived mutation run from PR #52 is rejected and cannot be recorded as the Step 29 baseline.
 
 ## [0.1.0-preview.1] - 2026-08-01
 

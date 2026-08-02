@@ -6,32 +6,17 @@
       "json"
     ],
     "configuration": "Release",
+    "test-runner": "mtp",
     "mutation-level": "standard",
-    "coverage-analysis": "perTest",
+    "coverage-analysis": "off",
     "concurrency": 2,
-    "additional-timeout": 5000,
+    "additional-timeout": 10000,
     "thresholds": {
       "high": 80,
       "low": 50,
       "break": 0
     },
     "report-file-name": "mutation-report",
-    "ignore-mutations": [],
-    "mutate": [
-      "**/*.cs",
-      "!**/bin/**",
-      "!**/obj/**",
-      "!**/*.g.cs",
-      "!**/*.g.i.cs",
-      "!**/*.generated.cs",
-      "!**/*.Generated.cs",
-      "!**/*.Designer.cs",
-      "!**/Migrations/**",
-      "!**/AssemblyInfo.cs",
-      "!**/GlobalUsings.g.cs",
-      "!samples/**",
-      "!smoke/**",
-      "!tests/**"
-    ]
+    "ignore-mutations": []
   }
 }
