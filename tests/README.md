@@ -24,7 +24,9 @@ Run coverage:
 dotnet test TCJ.slnx \
   -c Release \
   --collect:"XPlat Code Coverage" \
-  --settings tests/coverlet.runsettings
+  --settings tests/coverlet.runsettings \
+  --results-directory TestResults
+python3 eng/verify-coverage.py verify
 ```
 
-Tests should focus on public behavior and high-risk integration boundaries. Bug fixes should include a regression test in the closest package-specific project.
+The verifier merges all package-specific Cobertura reports and enforces the repository thresholds from `eng/coverage-policy.json`. Tests should focus on public behavior and high-risk integration boundaries. Bug fixes should include a regression test in the closest package-specific project.

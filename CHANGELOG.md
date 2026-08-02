@@ -20,6 +20,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - SHA-256 manifests for complete primary and symbol package release sets.
 - Cryptographically signed GitHub build-provenance attestations for official release assets.
 - Release-integrity verification before artifact upload, NuGet publication, and GitHub Release creation.
+- Cross-package Cobertura coverage collection with enforced line and branch minimums.
+- Merged coverage summaries and raw-report artifacts for CI, preflight, and tagged releases.
 
 ### Changed
 

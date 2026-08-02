@@ -20,8 +20,11 @@ Run coverage:
 ```bash
 dotnet test TCJ.slnx \
   -c Release \
+  --no-build \
   --collect:"XPlat Code Coverage" \
-  --settings tests/coverlet.runsettings
+  --settings tests/coverlet.runsettings \
+  --results-directory TestResults
+python3 eng/verify-coverage.py verify
 ```
 
 Pack locally:
@@ -34,7 +37,7 @@ Packages are written to `artifacts/packages`. The Pack target also runs SDK pack
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates dependency-security and release-integrity automation, audits direct and transitive packages during restore, builds, tests, packs, checks binary compatibility against the published package baseline, verifies the complete package set and its SHA-256 manifest, and uploads test and NuGet artifacts.
+`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates dependency-security, release-integrity, and coverage automation; audits direct and transitive packages during restore; builds; collects and enforces Cobertura line and branch coverage; packs; checks binary compatibility against the published package baseline; verifies the complete package set and its SHA-256 manifest; and uploads test, coverage, and NuGet artifacts.
 
 `.github/workflows/dependency-review.yml` rejects pull requests that introduce moderate-or-higher vulnerable dependencies. `.github/workflows/dependency-audit.yml` performs a scheduled full restore audit so advisories published after the last code change are still detected.
 
@@ -78,6 +81,7 @@ ci: add release workflow
 - Intentional compatibility suppressions are minimal, reviewed, and documented.
 - `dotnet build` succeeds in Release configuration.
 - `dotnet test` succeeds.
+- The coverage quality gate passes and behavior changes include focused tests.
 - No secrets, generated outputs, or IDE user settings are committed.
 
 ## Generated and local-only paths
@@ -114,3 +118,7 @@ Repository restore policy is defined by `NuGet.Config` and `eng/DependencySecuri
 ## Release integrity
 
 `eng/release-integrity.py` validates the release workflow configuration and generates or verifies the package checksum manifest. Official tag builds additionally create GitHub artifact attestations. See [Release integrity and build provenance](release-integrity.md).
+
+## Code coverage
+
+Coverage policy and merged-report behavior are documented in [Code coverage quality gate](code-coverage.md).

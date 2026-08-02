@@ -10,6 +10,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Package validation is green against the version in `eng/PackageValidation.props`.
 - [ ] Dependency review and NuGet Audit are green with the repository security policy unchanged.
 - [ ] Release-integrity configuration validation is green.
+- [ ] Line and branch coverage gates are green and the summary was reviewed.
 - [ ] Any compatibility suppression is minimal, reviewed, and described in the changelog.
 - [ ] The published-package smoke workflow is green for the previous release.
 
@@ -36,6 +37,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Run **Actions → Release preflight → Run workflow** from `main`.
 - [ ] Use package-ID policy `existing`.
 - [ ] `Validate release candidate` succeeds.
+- [ ] Review the release-preflight coverage summary and Cobertura artifact.
 - [ ] Review five `.nupkg`, five `.snupkg`, `SHA256SUMS`, release notes, and the manifest.
 - [ ] Verify the release-candidate checksums before tagging.
 

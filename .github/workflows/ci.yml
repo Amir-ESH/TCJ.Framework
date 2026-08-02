@@ -28,7 +28,7 @@ jobs:
   build-test-pack:
     name: Build, test and pack
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
@@ -54,6 +54,9 @@ jobs:
       - name: Verify release integrity automation
         run: python3 eng/release-integrity.py validate-config
 
+      - name: Verify code coverage policy
+        run: python3 eng/verify-coverage.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -68,8 +71,24 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=test-results.trx"
           --results-directory TestResults
+
+      - name: Enforce code coverage quality gate
+        run: >
+          python3 eng/verify-coverage.py verify
+          --summary artifacts/coverage/COVERAGE_SUMMARY.md
+          --json artifacts/coverage/coverage-summary.json
+
+      - name: Publish code coverage summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/coverage/COVERAGE_SUMMARY.md ]]; then
+            cat artifacts/coverage/COVERAGE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Pack and validate NuGet packages
         run: >
@@ -126,6 +145,18 @@ jobs:
         with:
           name: test-results-${{ github.run_id }}
           path: TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload code coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ github.run_id }}
+          path: |
+            TestResults/**/coverage.cobertura.xml
+            artifacts/coverage/COVERAGE_SUMMARY.md
+            artifacts/coverage/coverage-summary.json
           if-no-files-found: warn
           retention-days: 7
 

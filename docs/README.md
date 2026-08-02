@@ -14,7 +14,8 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 8. [Public API compatibility](api-compatibility.md)
 9. [Dependency and supply-chain security](dependency-security.md)
 10. [Release integrity and build provenance](release-integrity.md)
-11. [First preview release notes](releases/0.1.0-preview.1.md)
+11. [Code coverage quality gate](code-coverage.md)
+12. [First preview release notes](releases/0.1.0-preview.1.md)
 
 ## Package reference
 
