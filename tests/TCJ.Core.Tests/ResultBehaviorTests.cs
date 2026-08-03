@@ -3,7 +3,7 @@ using TCJ.Core.Results;
 
 namespace TCJ.Core.Tests;
 
-public sealed class ResultBehaviorTests
+public sealed class ResultBehaviorTests// Mutation gate verification test
 {
     [Fact]
     public void Constructor_rejects_null_error_collection_and_null_entries()
