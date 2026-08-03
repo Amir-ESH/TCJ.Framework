@@ -112,10 +112,11 @@ dotnet test TCJ.slnx -c Release --no-build \
   --results-directory TestResults
 python3 eng/verify-coverage.py verify
 python3 eng/verify-mutation-results.py validate-config
+python3 eng/verify-performance-results.py validate-config
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
-NuGet packages and symbol packages are written to `artifacts/packages`. Restore audits direct and transitive dependencies, and Pack validates binary compatibility against the latest published TCJ packages. CI enforces line and branch coverage, while the dedicated **Mutation testing** workflow validates test effectiveness for the controlled `TCJ.Core` and `TCJ.DependencyInjection` scope. The first valid mutation run creates a candidate that must be reviewed and accepted before the recorded baseline can pass normal verification. CI also generates and verifies `artifacts/release/SHA256SUMS`; official tagged releases attach that manifest and signed GitHub provenance attestations to the package assets.
+NuGet packages and symbol packages are written to `artifacts/packages`. Restore audits direct and transitive dependencies, and Pack validates binary compatibility against the latest published TCJ packages. CI enforces line and branch coverage, while the dedicated **Mutation testing** workflow validates test effectiveness for the controlled `TCJ.Core` and `TCJ.DependencyInjection` scope. The dedicated **Performance benchmarks** workflow uses BenchmarkDotNet to record runtime and managed-allocation data and enforces only within-run ratios, avoiding unreliable absolute-time comparisons between different hosted runners. The first valid mutation run creates a candidate that must be reviewed and accepted before the recorded baseline can pass normal verification. CI also generates and verifies `artifacts/release/SHA256SUMS`; official tagged releases attach that manifest and signed GitHub provenance attestations to the package assets.
 
 ## Documentation map
 
@@ -134,6 +135,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Restore 
 - [Release integrity and build provenance](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/release-integrity.md)
 - [Code coverage quality gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/code-coverage.md)
 - [Mutation testing quality gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/mutation-testing.md)
+- [Performance benchmarking and regression gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/performance-benchmarks.md)
 - [Contributing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md)
 - [Security policy](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SECURITY.md)
 - [Support](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SUPPORT.md)

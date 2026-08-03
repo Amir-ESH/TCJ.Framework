@@ -23,6 +23,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Cross-package Cobertura coverage collection with enforced line and branch minimums.
 - Merged coverage summaries and raw-report artifacts for CI, preflight, and tagged releases.
 - Stryker.NET mutation testing for a controlled `TCJ.Core` and `TCJ.DependencyInjection` baseline, with HTML/JSON reports and a reviewed baseline-candidate workflow.
+- BenchmarkDotNet performance baselines for foundational Core and dependency-registration operations, with allocation diagnostics, within-run regression ratios, scheduled automation, and JSON/Markdown/CSV artifacts.
 
 ### Changed
 

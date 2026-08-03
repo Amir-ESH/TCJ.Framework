@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/TCJ.Benchmarks/TCJ.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/TCJ.Empty/TCJ.Empty.csproj" />
   </Folder>

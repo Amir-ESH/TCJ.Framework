@@ -145,6 +145,15 @@ def verify_workflows() -> None:
             ),
         )
     require_workflow_fragments(
+        ROOT / ".github" / "workflows" / "performance-benchmarks.yml",
+        (
+            "python3 eng/verify-dependency-security.py",
+            "dotnet restore TCJ.slnx --force-evaluate",
+            "BenchmarkDotNet",
+            "actions/upload-artifact@v7",
+        ),
+    )
+    require_workflow_fragments(
         ROOT / ".github" / "workflows" / "published-package-smoke.yml",
         (
             "python3 eng/verify-dependency-security.py",

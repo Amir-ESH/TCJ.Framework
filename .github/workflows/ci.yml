@@ -66,6 +66,9 @@ jobs:
             --pattern "test_*.py"
           python3 eng/verify-mutation-results.py validate-config
 
+      - name: Verify performance-benchmark configuration
+        run: python3 eng/verify-performance-results.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 

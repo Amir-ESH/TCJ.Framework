@@ -32,6 +32,7 @@ Validate mutation-testing automation:
 ```bash
 python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
 python3 eng/verify-mutation-results.py validate-config
+python3 eng/verify-performance-results.py validate-config
 ```
 
 A pending baseline is allowed during configuration validation. Run Stryker first, generate a candidate, review both HTML reports, and accept the candidate before normal mutation verification can pass.
@@ -139,6 +140,20 @@ Repository restore policy is defined by `NuGet.Config` and `eng/DependencySecuri
 ## Code coverage
 
 Coverage policy and merged-report behavior are documented in [Code coverage quality gate](code-coverage.md).
+
+## Performance benchmarks
+
+The benchmark project lives under `benchmarks/TCJ.Benchmarks` and uses BenchmarkDotNet with memory diagnostics and JSON, Markdown, and CSV exporters. Normal CI validates the benchmark configuration; the dedicated **Performance benchmarks** workflow runs a short benchmark job for relevant pull requests and a full job on its weekly schedule or through manual dispatch.
+
+Run the complete suite locally from the repository root:
+
+```bash
+dotnet run --project benchmarks/TCJ.Benchmarks/TCJ.Benchmarks.csproj \
+  --configuration Release -- --filter "*"
+python3 eng/verify-performance-results.py verify
+```
+
+Generated output belongs under `artifacts/performance/` and must not be committed. See [`performance-benchmarks.md`](performance-benchmarks.md) for filtering, baseline interpretation, ratio policy, and accepted-regression rules.
 
 ## Mutation testing
 
