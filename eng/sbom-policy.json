@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "format": "CycloneDX",
+  "specVersion": "1.6",
+  "fileExtension": ".cdx.json",
+  "generatorVersion": 1,
+  "repository": "Amir-ESH/TCJ.Framework",
+  "requiredPackages": [
+    "TCJ.Core",
+    "TCJ.DependencyInjection",
+    "TCJ.EntityFrameworkCore",
+    "TCJ.EntityFrameworkCore.SqlServer",
+    "TCJ.AspNetCore"
+  ],
+  "requireDirectDependencies": true,
+  "requireTransitiveDependencies": true,
+  "requireHashes": true,
+  "hashAlgorithm": "SHA-256",
+  "requireLicenses": true,
+  "requireRepositoryReference": true,
+  "requireCommitSha": true,
+  "requireReleaseVersion": true
+}

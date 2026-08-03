@@ -8,6 +8,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- CycloneDX JSON SBOM generation and strict verification for all five release packages, restored direct/transitive NuGet dependencies, licenses, hashes, repository metadata, and source provenance.
+- CI, release-preflight, and tagged-release integration that includes the SBOM in checksums, workflow artifacts, attestations, and GitHub Release assets.
+
 - SDK package validation against the latest published TCJ package baseline.
 - CI enforcement for accidental binary-breaking public API changes.
 - Public API compatibility policy and maintainer workflow.

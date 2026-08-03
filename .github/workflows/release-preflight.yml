@@ -66,6 +66,9 @@ jobs:
       - name: Verify architecture policy
         run: python3 eng/verify-architecture-policy.py validate-config
 
+      - name: Verify SBOM configuration
+        run: python3 eng/verify-sbom.py validate-config
+
       - name: Check NuGet package IDs
         run: >
           python3 eng/check-nuget-package-ids.py
@@ -132,6 +135,37 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Generate release SBOM
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          tag="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["tag"])')"
+          python3 eng/generate-sbom.py \
+            --version "$version" \
+            --package-directory artifacts/packages \
+            --output artifacts/sbom \
+            --commit-sha "$GITHUB_SHA" \
+            --release-tag "$tag"
+
+      - name: Verify release SBOM
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          python3 eng/verify-sbom.py verify \
+            --version "$version" \
+            --package-directory artifacts/packages \
+            --sbom "artifacts/sbom/TCJ.Framework.$version.cdx.json" \
+            --summary artifacts/sbom/SBOM_SUMMARY.md \
+            --json artifacts/sbom/sbom-summary.json
+
+      - name: Publish SBOM summary
+        if: always()
+        shell: bash
+        run: cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Create release notes preview
         shell: bash
         run: |
@@ -151,6 +185,7 @@ jobs:
           python3 eng/release-integrity.py write \
             --version "$version" \
             --package-directory artifacts/packages \
+            --sbom "artifacts/sbom/TCJ.Framework.$version.cdx.json" \
             --checksums artifacts/release/SHA256SUMS
 
       - name: Verify release candidate checksums
@@ -162,7 +197,20 @@ jobs:
           python3 eng/release-integrity.py verify \
             --version "$version" \
             --package-directory artifacts/packages \
+            --sbom "artifacts/sbom/TCJ.Framework.$version.cdx.json" \
             --checksums artifacts/release/SHA256SUMS
+
+      - name: Upload preflight SBOM reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-sbom-${{ github.run_id }}
+          path: |
+            artifacts/sbom/*.cdx.json
+            artifacts/sbom/SBOM_SUMMARY.md
+            artifacts/sbom/sbom-summary.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload preflight test results
         if: always()
@@ -193,6 +241,9 @@ jobs:
           name: release-candidate-${{ github.run_id }}
           path: |
             artifacts/packages/*
+            artifacts/sbom/*.cdx.json
+            artifacts/sbom/SBOM_SUMMARY.md
+            artifacts/sbom/sbom-summary.json
             artifacts/release/RELEASE_NOTES.md
             artifacts/release/SHA256SUMS
             eng/release-manifest.json

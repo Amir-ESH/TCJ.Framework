@@ -12,6 +12,7 @@ from pathlib import Path
 
 CHECKSUM_PATTERN = re.compile(r"^(?P<digest>[0-9a-f]{64}) [ *](?P<name>[^/\\]+)$")
 PACKAGE_SUFFIXES = (".nupkg", ".snupkg")
+SBOM_SUFFIX = ".cdx.json"
 
 
 def fail(message: str) -> None:
@@ -50,6 +51,10 @@ def expected_package_names(
     return sorted(names, key=str.casefold)
 
 
+def expected_sbom_name(version: str) -> str:
+    return f"TCJ.Framework.{version}{SBOM_SUFFIX}"
+
+
 def release_package_files(
     package_directory: Path,
     expected_names: list[str],
@@ -78,6 +83,37 @@ def release_package_files(
     return actual
 
 
+def resolve_sbom_file(sbom: Path | None, version: str) -> Path:
+    expected_name = expected_sbom_name(version)
+    resolved = sbom or Path("artifacts/sbom") / expected_name
+    if not resolved.is_file():
+        fail(f"Release SBOM does not exist: {resolved}")
+    if resolved.name != expected_name:
+        fail(f"Release SBOM must be named {expected_name}, found {resolved.name}.")
+    siblings = sorted(
+        path.name
+        for path in resolved.parent.glob(f"*{SBOM_SUFFIX}")
+        if path.is_file()
+    )
+    if siblings != [expected_name]:
+        fail(
+            "Release SBOM set is invalid; expected exactly "
+            f"{expected_name}, found: {', '.join(siblings) or 'none'}."
+        )
+    return resolved
+
+
+def release_files(
+    package_directory: Path,
+    expected_package_files: list[str],
+    sbom: Path | None,
+    version: str,
+) -> list[Path]:
+    files = release_package_files(package_directory, expected_package_files)
+    files.append(resolve_sbom_file(sbom, version))
+    return sorted(files, key=lambda item: item.name.casefold())
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -91,16 +127,17 @@ def write_checksums(
     package_directory: Path,
     output: Path,
     version: str | None,
+    sbom: Path | None,
 ) -> None:
     manifest = load_release_manifest(root)
     resolved_version = version or str(manifest["version"])
-    expected_names = expected_package_names(manifest, resolved_version)
-    package_files = release_package_files(package_directory, expected_names)
+    package_names = expected_package_names(manifest, resolved_version)
+    files = release_files(package_directory, package_names, sbom, resolved_version)
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    lines = [f"{sha256(path)} *{path.name}" for path in package_files]
+    lines = [f"{sha256(path)} *{path.name}" for path in files]
     output.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
-    print(f"Wrote {len(lines)} SHA-256 checksums to {output}.")
+    print(f"Wrote {len(lines)} SHA-256 checksums, including the release SBOM, to {output}.")
 
 
 def parse_checksums(path: Path) -> dict[str, str]:
@@ -125,11 +162,13 @@ def verify_checksums(
     package_directory: Path,
     checksums: Path,
     version: str | None,
+    sbom: Path | None,
 ) -> None:
     manifest = load_release_manifest(root)
     resolved_version = version or str(manifest["version"])
-    expected_names = expected_package_names(manifest, resolved_version)
-    package_files = release_package_files(package_directory, expected_names)
+    package_names = expected_package_names(manifest, resolved_version)
+    files = release_files(package_directory, package_names, sbom, resolved_version)
+    expected_names = sorted((path.name for path in files), key=str.casefold)
     entries = parse_checksums(checksums)
 
     if sorted(entries, key=str.casefold) != expected_names:
@@ -140,10 +179,10 @@ def verify_checksums(
             details.append(f"missing: {', '.join(missing)}")
         if unexpected:
             details.append(f"unexpected: {', '.join(unexpected)}")
-        fail("Checksum manifest package set is invalid (" + "; ".join(details) + ").")
+        fail("Checksum manifest release set is invalid (" + "; ".join(details) + ").")
 
     failures: list[str] = []
-    for path in package_files:
+    for path in files:
         actual = sha256(path)
         expected = entries[path.name]
         if actual != expected:
@@ -151,7 +190,7 @@ def verify_checksums(
     if failures:
         fail("Checksum verification failed:\n  - " + "\n  - ".join(failures))
 
-    print(f"Verified {len(package_files)} release package checksums.")
+    print(f"Verified {len(files)} release artifact checksums, including the SBOM.")
 
 
 def require_fragments(path: Path, fragments: tuple[str, ...]) -> None:
@@ -169,6 +208,14 @@ def validate_configuration(root: Path) -> None:
     preflight = root / ".github" / "workflows" / "release-preflight.yml"
     ci = root / ".github" / "workflows" / "ci.yml"
 
+    common = (
+        "python3 eng/release-integrity.py validate-config",
+        "python3 eng/release-integrity.py write",
+        "python3 eng/release-integrity.py verify",
+        "--sbom",
+        "artifacts/release/SHA256SUMS",
+        "artifacts/sbom/",
+    )
     require_fragments(
         release,
         (
@@ -176,30 +223,12 @@ def validate_configuration(root: Path) -> None:
             "attestations: write",
             "artifact-metadata: write",
             "uses: actions/attest@v4",
-            "python3 eng/release-integrity.py validate-config",
-            "python3 eng/release-integrity.py write",
-            "python3 eng/release-integrity.py verify",
-            "artifacts/release/SHA256SUMS",
-        ),
+            "artifacts/sbom/*.cdx.json",
+        )
+        + common,
     )
-    require_fragments(
-        preflight,
-        (
-            "python3 eng/release-integrity.py validate-config",
-            "python3 eng/release-integrity.py write",
-            "python3 eng/release-integrity.py verify",
-            "artifacts/release/SHA256SUMS",
-        ),
-    )
-    require_fragments(
-        ci,
-        (
-            "python3 eng/release-integrity.py validate-config",
-            "python3 eng/release-integrity.py write",
-            "python3 eng/release-integrity.py verify",
-            "artifacts/release/SHA256SUMS",
-        ),
-    )
+    require_fragments(preflight, common)
+    require_fragments(ci, common)
 
     for path in (ci, preflight):
         text = read_text(path)
@@ -209,7 +238,7 @@ def validate_configuration(root: Path) -> None:
                 f"workflow, not {path.relative_to(root)}."
             )
 
-    print("Release checksum and provenance automation is configured correctly.")
+    print("Release checksum, SBOM, and provenance automation is configured correctly.")
 
 
 def main() -> int:
@@ -231,6 +260,7 @@ def main() -> int:
             default=Path("artifacts/release/SHA256SUMS"),
         )
         child.add_argument("--version")
+        child.add_argument("--sbom", type=Path)
 
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -241,10 +271,11 @@ def main() -> int:
 
     package_directory = args.package_directory.resolve()
     checksums = args.checksums.resolve()
+    sbom = args.sbom.resolve() if args.sbom else None
     if args.command == "write":
-        write_checksums(root, package_directory, checksums, args.version)
+        write_checksums(root, package_directory, checksums, args.version, sbom)
     else:
-        verify_checksums(root, package_directory, checksums, args.version)
+        verify_checksums(root, package_directory, checksums, args.version, sbom)
     return 0
 
 

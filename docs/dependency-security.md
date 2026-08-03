@@ -60,3 +60,7 @@ dotnet restore TCJ.slnx --force-evaluate
 ```
 
 A successful restore confirms that the configured audit source was reachable and that no moderate-or-higher known vulnerability was reported for the resolved graph at that time. It is not a guarantee that dependencies contain no undiscovered vulnerabilities.
+
+## SBOM inventory
+
+NuGet Audit and Dependency Review identify known vulnerabilities, while the release CycloneDX SBOM records the exact dependency inventory, resolved versions, relationships, licenses, and hashes associated with the release artifacts. Use the SBOM during advisory triage to identify affected versions and paths, then evaluate reachability and impact separately. An SBOM is not a vulnerability scanner and does not replace scheduled audits. See [Software bill of materials](software-bill-of-materials.md).
