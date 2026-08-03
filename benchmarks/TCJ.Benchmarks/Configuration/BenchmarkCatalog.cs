@@ -22,8 +22,11 @@ internal static class BenchmarkCatalog
         Core("EnumerableExtensionBenchmarks", "BclConditionalWhere", "EnumerableWhereIf", baseline: true),
         Core("EnumerableExtensionBenchmarks", "TcjWhereIf", "EnumerableWhereIf"),
 
-        Core("DecimalExtensionBenchmarks", "BclRoundUp", "DecimalRoundUp", baseline: true),
-        Core("DecimalExtensionBenchmarks", "TcjRoundUp", "DecimalRoundUp"),
+        // RoundUp remains informational. The TCJ API performs decimal-place
+        // validation and a scale lookup that the prepared BCL expression does
+        // not, so their raw means are not a like-for-like regression ratio.
+        Core("DecimalExtensionBenchmarks", "BclRoundUp", baseline: true),
+        Core("DecimalExtensionBenchmarks", "TcjRoundUp"),
 
         DependencyInjection("DependencyDiscoveryBenchmarks", "DiscoverPublicConcreteTypes", baseline: true),
         DependencyInjection("DependencyDiscoveryBenchmarks", "ClassifyDependencyMarkers"),

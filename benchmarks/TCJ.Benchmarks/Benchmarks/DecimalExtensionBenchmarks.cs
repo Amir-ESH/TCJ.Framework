@@ -7,14 +7,21 @@ namespace TCJ.Benchmarks.Benchmarks;
 [BenchmarkCategory("TCJ.Core", "Extensions")]
 public class DecimalExtensionBenchmarks
 {
-    private const decimal Value = 1234.56781m;
-    private const decimal Scale = 10_000m;
+    private decimal _value;
+    private decimal _scale;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        _value = 1234.56781m;
+        _scale = 10_000m;
+    }
 
     [Benchmark(Baseline = true)]
     public decimal BclRoundUp()
-        => Math.Ceiling(Value * Scale) / Scale;
+        => Math.Ceiling(_value * _scale) / _scale;
 
     [Benchmark]
     public decimal TcjRoundUp()
-        => Value.RoundUp();
+        => _value.RoundUp();
 }

@@ -100,6 +100,8 @@ Every benchmark class declares one BenchmarkDotNet baseline method. A baseline g
 
 The blocking ratio gate is narrower: only methods listed in the generated `benchmark-manifest.json` with the same `comparisonGroup` are compared. These groups deliberately contain operations that should have equivalent work, such as a TCJ wrapper and its BCL equivalent or the three lifetime-registration paths. Operations such as Result creation and assembly discovery are still measured and reported, but they are not compared with an unrelated operation merely to manufacture a ratio.
 
+`DecimalExtensionBenchmarks` is intentionally informational rather than ratio-blocking. The TCJ `RoundUp` API validates the requested decimal-place range and resolves a scale from its lookup table, while the illustrative BCL expression uses a scale prepared before measurement. Both values remain useful measurements, but treating their ratio as a regression gate would compare different amounts of work.
+
 Each comparison group must contain exactly one baseline. Missing baselines, missing methods, or duplicate results fail verification.
 
 ## Reading the statistics
