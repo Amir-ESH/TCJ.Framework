@@ -146,4 +146,3 @@ Contributions are welcome through focused issues and pull requests. Read [`CONTR
 ## License
 
 TCJ Framework is licensed under the [MIT License](https://github.com/Amir-ESH/TCJ.Framework/blob/main/LICENSE.txt).
-
