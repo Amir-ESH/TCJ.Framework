@@ -33,6 +33,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Release preflight and tag publication now require an explicitly `ready` release manifest.
 - Mutation testing now uses the xUnit v3 MTP runner, validates execution health, and runs before baseline enforcement so the first baseline can be bootstrapped without a CI deadlock.
 - Architecture tests now ignore compiler-generated namespace artifacts, recognize the established `Check` guard extension container through policy, and safely inspect constructor and generic method signatures.
+- String performance comparisons now use a contract-equivalent BCL baseline, including null validation and runtime inputs, so microbenchmark ratios measure wrapper overhead instead of mismatched work.
 
 ## [0.1.0-preview.1] - 2026-08-01
 
