@@ -1,0 +1,154 @@
+name: Performance benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Benchmark execution mode
+        required: true
+        type: choice
+        default: full
+        options:
+          - short
+          - full
+
+  schedule:
+    - cron: "31 4 * * 1"
+
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "benchmarks/**"
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "eng/performance-policy.json"
+      - "eng/verify-performance-results.py"
+      - "eng/tests/test_verify_performance_results.py"
+      - ".github/workflows/performance-benchmarks.yml"
+      - "Directory.Packages.props"
+      - "TCJ.slnx"
+
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "benchmarks/**"
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "eng/performance-policy.json"
+      - "eng/verify-performance-results.py"
+      - "eng/tests/test_verify_performance_results.py"
+      - ".github/workflows/performance-benchmarks.yml"
+      - "Directory.Packages.props"
+      - "TCJ.slnx"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+  TCJ_BENCHMARK_MODE: ${{ github.event_name == 'pull_request' && 'short' || github.event.inputs.mode || 'full' }}
+
+jobs:
+  performance-benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display .NET information
+        run: dotnet --info
+
+      - name: Validate automation scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile eng/*.py
+          python3 -m unittest discover \
+            --start-directory eng/tests \
+            --pattern "test_*.py"
+
+      - name: Verify dependency-security policy
+        run: python3 eng/verify-dependency-security.py
+
+      - name: Validate performance configuration
+        run: python3 eng/verify-performance-results.py validate-config
+
+      - name: Restore and audit dependencies
+        run: dotnet restore TCJ.slnx --force-evaluate
+
+      - name: Build benchmark project in Release mode
+        run: >
+          dotnet build benchmarks/TCJ.Benchmarks/TCJ.Benchmarks.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Prepare performance report directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/performance BenchmarkDotNet.Artifacts
+          mkdir -p artifacts/performance/reports
+
+      - name: Run BenchmarkDotNet
+        run: >
+          dotnet run
+          --project benchmarks/TCJ.Benchmarks/TCJ.Benchmarks.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          --
+          --filter "*"
+
+      - name: Verify benchmark reports
+        if: always()
+        run: >
+          python3 eng/verify-performance-results.py verify
+          --reports artifacts/performance/reports
+          --summary artifacts/performance/PERFORMANCE_SUMMARY.md
+          --json artifacts/performance/performance-summary.json
+
+      - name: Publish performance summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/performance/PERFORMANCE_SUMMARY.md ]]; then
+            cat artifacts/performance/PERFORMANCE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "# TCJ performance benchmarks" >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo "No performance summary was generated. Review the benchmark logs." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload benchmark reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: performance-benchmarks-${{ github.run_id }}-${{ env.TCJ_BENCHMARK_MODE }}
+          path: |
+            artifacts/performance/PERFORMANCE_SUMMARY.md
+            artifacts/performance/performance-summary.json
+            artifacts/performance/reports/**/*.json
+            artifacts/performance/reports/**/*.md
+            artifacts/performance/reports/**/*.csv
+            artifacts/performance/reports/**/*.log
+          if-no-files-found: warn
+          retention-days: 30

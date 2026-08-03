@@ -81,6 +81,9 @@ dlldata.c
 
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
+artifacts/performance/
+!eng/performance-policy.json
+!eng/verify-performance-results.py
 
 # .NET Core
 project.lock.json

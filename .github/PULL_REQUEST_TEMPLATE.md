@@ -22,6 +22,11 @@ Describe the problem and the approach taken.
 - [ ] `dotnet test TCJ.slnx -c Release`
 - [ ] Code coverage quality gate passes; new behavior has focused tests
 - [ ] Mutation testing ran when applicable; the recorded baseline is valid and relevant survived mutants were reviewed
+- [ ] Performance benchmarks pass for performance-sensitive changes
+- [ ] No unexplained allocation regression is introduced
+- [ ] Benchmark exclusions are documented
+- [ ] Performance-policy changes include justification
+- [ ] Generated benchmark output is not committed
 - [ ] `dotnet pack TCJ.slnx -c Release --no-build` when packaging or release infrastructure changes
 - [ ] Release-integrity automation remains valid and package checksums pass
 - [ ] Documentation updated where required
