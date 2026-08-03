@@ -4,7 +4,7 @@
   "testRunner": "mtp",
   "coverageAnalysis": "off",
   "baselinePath": "eng/mutation-baseline.json",
-  "minimumMutationScore": 50.0,
+  "minimumMutationScore": 99.0,
   "allowedBaselineScoreRegression": 0.0,
   "minimumTestedMutants": 20,
   "minimumKilledMutants": 2,
