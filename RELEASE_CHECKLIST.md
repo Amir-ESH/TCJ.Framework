@@ -9,7 +9,8 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Public API changes and migration notes are documented.
 - [ ] Package validation is green against the version in `eng/PackageValidation.props`.
 - [ ] Dependency review and NuGet Audit are green with the repository security policy unchanged.
-- [ ] Release-integrity configuration validation is green.
+- [ ] Release-integrity and SBOM configuration validation are green.
+- [ ] SBOM policy still requires all five release packages, dependency coverage, hashes, licenses, repository identity, commit SHA, and release version.
 - [ ] Line and branch coverage gates are green and the summary was reviewed.
 - [ ] The mutation baseline is recorded, the mutation quality gate is green, and survived mutants were reviewed.
 - [ ] The latest full performance benchmark run is green and runtime/allocation regressions were reviewed.
@@ -45,16 +46,17 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Review the latest mutation summary and both HTML/JSON mutation reports.
 - [ ] Review the latest performance summary plus JSON, Markdown, CSV, and log artifacts.
 - [ ] Review the architecture-test summary and confirm no policy weakening was introduced.
-- [ ] Review five `.nupkg`, five `.snupkg`, `SHA256SUMS`, release notes, and the manifest.
-- [ ] Verify the release-candidate checksums before tagging.
+- [ ] Review five `.nupkg`, five `.snupkg`, the CycloneDX SBOM, `SHA256SUMS`, release notes, and the manifest.
+- [ ] Confirm all five TCJ packages, direct/transitive dependencies, hashes, licenses, repository metadata, and the source commit appear in the SBOM.
+- [ ] Verify the release-candidate checksums include the SBOM before tagging.
 
 ## Publish
 
 - [ ] Create the version tag on the verified `main` commit.
 - [ ] Approve the `nuget-production` deployment after validation succeeds.
 - [ ] Confirm all five versions are listed on NuGet.org.
-- [ ] Confirm the GitHub pre-release contains ten package assets and `SHA256SUMS`.
-- [ ] Confirm GitHub shows provenance attestations for the package assets.
+- [ ] Confirm the GitHub pre-release contains ten package assets, one versioned CycloneDX SBOM, and `SHA256SUMS`.
+- [ ] Confirm GitHub shows provenance attestations for the package assets, SBOM, and checksum manifest.
 - [ ] Verify at least one release asset with `gh attestation verify`.
 - [ ] Never move the tag or republish different bits with the same version.
 

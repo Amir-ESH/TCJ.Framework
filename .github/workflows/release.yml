@@ -58,6 +58,9 @@ jobs:
       - name: Verify architecture policy
         run: python3 eng/verify-architecture-policy.py validate-config
 
+      - name: Verify SBOM configuration
+        run: python3 eng/verify-sbom.py validate-config
+
       - name: Validate release tag
         id: release-version
         shell: bash
@@ -151,6 +154,36 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Generate release SBOM
+        run: >
+          python3 eng/generate-sbom.py
+          --version "${{ steps.release-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --output artifacts/sbom
+          --commit-sha "${{ github.sha }}"
+          --release-tag "${{ github.ref_name }}"
+
+      - name: Verify release SBOM
+        run: >
+          python3 eng/verify-sbom.py verify
+          --version "${{ steps.release-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.release-version.outputs.value }}.cdx.json"
+          --summary artifacts/sbom/SBOM_SUMMARY.md
+          --json artifacts/sbom/sbom-summary.json
+
+      - name: Publish SBOM summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/sbom/SBOM_SUMMARY.md ]]; then
+            cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "# TCJ software bill of materials" >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo "SBOM generation failed before a summary was produced. Review the generator step." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Extract release notes
         run: >
           python3 eng/extract-release-notes.py
@@ -162,6 +195,7 @@ jobs:
           python3 eng/release-integrity.py write
           --version "${{ steps.release-version.outputs.value }}"
           --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.release-version.outputs.value }}.cdx.json"
           --checksums artifacts/release/SHA256SUMS
 
       - name: Verify release checksums
@@ -169,14 +203,16 @@ jobs:
           python3 eng/release-integrity.py verify
           --version "${{ steps.release-version.outputs.value }}"
           --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.release-version.outputs.value }}.cdx.json"
           --checksums artifacts/release/SHA256SUMS
 
-      - name: Attest release packages and checksums
+      - name: Attest release packages, SBOM, and checksums
         uses: actions/attest@v4
         with:
           subject-path: |
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg
+            artifacts/sbom/*.cdx.json
             artifacts/release/SHA256SUMS
 
       - name: Upload release packages
@@ -194,6 +230,17 @@ jobs:
           path: |
             artifacts/release/RELEASE_NOTES.md
             artifacts/release/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload release SBOM
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-sbom-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/sbom/*.cdx.json
+            artifacts/sbom/SBOM_SUMMARY.md
+            artifacts/sbom/sbom-summary.json
           if-no-files-found: error
           retention-days: 30
 
@@ -240,6 +287,9 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore dependencies for SBOM re-verification
+        run: dotnet restore TCJ.slnx
+
       - name: Download release packages
         uses: actions/download-artifact@v8
         with:
@@ -252,16 +302,32 @@ jobs:
           name: release-metadata-${{ needs.build-and-pack.outputs.version }}
           path: artifacts/release
 
+      - name: Download release SBOM
+        uses: actions/download-artifact@v8
+        with:
+          name: release-sbom-${{ needs.build-and-pack.outputs.version }}
+          path: artifacts/sbom
+
       - name: Verify downloaded release candidate
         run: >
           python3 eng/verify-release.py
           --package-directory artifacts/packages
+
+      - name: Verify downloaded release SBOM
+        run: >
+          python3 eng/verify-sbom.py verify
+          --version "${{ needs.build-and-pack.outputs.version }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ needs.build-and-pack.outputs.version }}.cdx.json"
+          --summary artifacts/sbom/SBOM_SUMMARY.md
+          --json artifacts/sbom/sbom-summary.json
 
       - name: Verify downloaded release checksums
         run: >
           python3 eng/release-integrity.py verify
           --version "${{ needs.build-and-pack.outputs.version }}"
           --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ needs.build-and-pack.outputs.version }}.cdx.json"
           --checksums artifacts/release/SHA256SUMS
 
       - name: Validate NuGet publishing configuration
@@ -321,6 +387,7 @@ jobs:
           assets=(
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg
+            artifacts/sbom/*.cdx.json
             artifacts/release/SHA256SUMS
           )
           release_args=(

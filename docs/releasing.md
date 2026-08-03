@@ -15,9 +15,11 @@ A release is rejected unless all of the following are true:
 - restore, Release build, tests, coverage quality gate, and pack succeed;
 - the packed APIs remain compatible with the latest published TCJ baseline, except for reviewed suppressions;
 - exactly five `.nupkg` and five `.snupkg` files are produced;
-- each package contains the expected ID, version, repository metadata, MIT license expression, README, license file, assembly, and portable symbols.
+- each package contains the expected ID, version, repository metadata, MIT license expression, README, license file, assembly, and portable symbols;
+- one versioned CycloneDX JSON SBOM contains all five TCJ packages, restored direct/transitive dependencies, dependency relationships, licenses, hashes, repository identity, release metadata, and source commit;
+- `SHA256SUMS` covers all ten package files and the SBOM.
 
-After validation, the protected `nuget-production` environment publishes the packages to NuGet.org and creates a GitHub Release with package assets and notes extracted from `CHANGELOG.md`.
+After validation, the protected `nuget-production` environment publishes the packages to NuGet.org and creates a GitHub Release with package assets, the SBOM, checksums, and notes extracted from `CHANGELOG.md`. Step 32 requires no additional GitHub secret, environment, Ruleset, or permission change beyond the existing Release workflow attestation permissions.
 
 ## One-time GitHub configuration
 
@@ -147,7 +149,9 @@ The preflight workflow:
 5. builds, tests, merges Cobertura reports, and enforces line and branch coverage minimums;
 6. packs and runs SDK API compatibility validation;
 7. inspects the actual `.nupkg` and `.snupkg` contents;
-8. uploads the release candidate, test results, and coverage reports.
+8. generates and validates the CycloneDX SBOM from package metadata and restored production dependencies;
+9. includes the SBOM in `SHA256SUMS`;
+10. uploads the complete release candidate, SBOM summaries, test results, and coverage reports.
 
 Download and review the `release-candidate-*` artifact before tagging. The first publication cannot claim a package ID that already exists on NuGet.org under another owner.
 
@@ -176,14 +180,16 @@ The release workflow performs these operations:
 1. validates the tag, manifest, package version, and changelog;
 2. builds, tests, and enforces the code coverage policy for the complete solution;
 3. creates and deeply inspects all primary and symbol packages;
-4. extracts release notes from the matching changelog section;
-5. pauses for the `nuget-production` environment approval;
-6. generates and verifies `SHA256SUMS` for all primary and symbol packages;
-7. creates signed GitHub build-provenance attestations for the packages and checksum manifest;
-8. pauses for the `nuget-production` environment approval;
-9. exchanges the GitHub OIDC token for a short-lived NuGet API key;
-10. re-verifies downloaded artifacts and publishes all packages and associated symbol packages;
-11. creates the GitHub pre-release and attaches `.nupkg`, `.snupkg`, and `SHA256SUMS` assets.
+4. generates and strictly verifies the versioned CycloneDX JSON SBOM;
+5. extracts release notes from the matching changelog section;
+6. generates and verifies `SHA256SUMS` for all package files and the SBOM;
+7. creates signed GitHub build-provenance attestations for the packages, SBOM, and checksum manifest;
+8. transfers packages, release metadata, and SBOM to the protected publish job;
+9. restores dependency metadata and re-verifies the downloaded SBOM and checksums;
+10. pauses for the `nuget-production` environment approval;
+11. exchanges the GitHub OIDC token for a short-lived NuGet API key;
+12. publishes all packages and associated symbol packages;
+13. creates the GitHub pre-release and attaches `.nupkg`, `.snupkg`, the versioned `.cdx.json`, and `SHA256SUMS` assets.
 
 `--skip-duplicate` allows a safe rerun after a partial NuGet.org outage. The immutable tag guarantees that reruns use the same source commit and package version.
 
@@ -207,10 +213,13 @@ If any package was published, increment the version, update `eng/Packaging.props
 
 The smoke workflow verifies NuGet registration metadata, public listing state, downloaded package contents, dependency restore, application build, and runtime registration on Linux and Windows.
 
-Verify the GitHub release checksum manifest and at least one artifact attestation after publication. The exact commands and the distinction between GitHub release assets and NuGet.org repository-signed packages are documented in [Release integrity and build provenance](release-integrity.md).
+Verify the GitHub release checksum manifest, inspect the CycloneDX SBOM, and verify at least one package attestation plus the SBOM attestation after publication. The exact commands and the distinction between GitHub release assets and NuGet.org repository-signed packages are documented in [Release integrity and build provenance](release-integrity.md).
 
 Package validation details and the intentional-breaking-change process are documented in [Public API compatibility](api-compatibility.md).
 
 Dependency audit thresholds, source mapping, and advisory handling are documented in [Dependency and supply-chain security](dependency-security.md).
 
 Code coverage collection, thresholds, and merged-report semantics are documented in [Code coverage quality gate](code-coverage.md).
+
+
+SBOM generation, inspection, checksum, and provenance commands are documented in [Software bill of materials](software-bill-of-materials.md).

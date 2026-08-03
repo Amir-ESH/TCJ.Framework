@@ -85,6 +85,11 @@ artifacts/performance/
 !eng/performance-policy.json
 !eng/verify-performance-results.py
 
+# Software bill of materials
+artifacts/sbom/
+*.cdx.json
+!eng/sbom-policy.json
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json

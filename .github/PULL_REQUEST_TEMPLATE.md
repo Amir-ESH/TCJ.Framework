@@ -34,6 +34,14 @@ Describe the problem and the approach taken.
 - [ ] `architecture-policy` changes include justification
 - [ ] `dotnet pack TCJ.slnx -c Release --no-build` when packaging or release infrastructure changes
 - [ ] Release-integrity automation remains valid and package checksums pass
+- [ ] SBOM generation and verification succeed
+- [ ] All five release packages and symbol packages are represented
+- [ ] Package versions and dependency relationships match generated package metadata
+- [ ] Required package and dependency hashes are present
+- [ ] License metadata has been reviewed
+- [ ] `sbom-policy` changes include justification
+- [ ] Generated SBOM output is not committed
+- [ ] `SHA256SUMS` includes the versioned SBOM
 - [ ] Documentation updated where required
 - [ ] No secrets or generated artifacts included
 

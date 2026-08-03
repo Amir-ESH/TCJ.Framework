@@ -72,6 +72,9 @@ jobs:
       - name: Verify architecture policy
         run: python3 eng/verify-architecture-policy.py validate-config
 
+      - name: Verify SBOM configuration
+        run: python3 eng/verify-sbom.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -149,11 +152,42 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Generate CycloneDX SBOM
+        run: >
+          python3 eng/generate-sbom.py
+          --version "${{ steps.package-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --output artifacts/sbom
+          --commit-sha "${{ github.sha }}"
+          --release-tag "ci-${{ github.sha }}"
+
+      - name: Verify CycloneDX SBOM
+        run: >
+          python3 eng/verify-sbom.py verify
+          --version "${{ steps.package-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.package-version.outputs.value }}.cdx.json"
+          --summary artifacts/sbom/SBOM_SUMMARY.md
+          --json artifacts/sbom/sbom-summary.json
+
+      - name: Publish SBOM summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/sbom/SBOM_SUMMARY.md ]]; then
+            cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "# TCJ software bill of materials" >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo "SBOM generation failed before a summary was produced. Review the generator step." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Generate package checksums
         run: >
           python3 eng/release-integrity.py write
           --version "${{ steps.package-version.outputs.value }}"
           --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.package-version.outputs.value }}.cdx.json"
           --checksums artifacts/release/SHA256SUMS
 
       - name: Verify package checksums
@@ -161,7 +195,20 @@ jobs:
           python3 eng/release-integrity.py verify
           --version "${{ steps.package-version.outputs.value }}"
           --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.package-version.outputs.value }}.cdx.json"
           --checksums artifacts/release/SHA256SUMS
+
+      - name: Upload SBOM artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ github.run_id }}
+          path: |
+            artifacts/sbom/*.cdx.json
+            artifacts/sbom/SBOM_SUMMARY.md
+            artifacts/sbom/sbom-summary.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload test results
         if: always()
@@ -192,6 +239,7 @@ jobs:
           name: nuget-packages-${{ github.run_id }}
           path: |
             artifacts/packages/*
+            artifacts/sbom/*.cdx.json
             artifacts/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 7

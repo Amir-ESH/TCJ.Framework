@@ -34,6 +34,7 @@ python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
 python3 eng/verify-mutation-results.py validate-config
 python3 eng/verify-performance-results.py validate-config
 python3 eng/verify-architecture-policy.py validate-config
+python3 eng/verify-sbom.py validate-config
 ```
 
 A pending baseline is allowed during configuration validation. Run Stryker first, generate a candidate, review both HTML reports, and accept the candidate before normal mutation verification can pass.
@@ -46,7 +47,7 @@ Pack locally:
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
-Packages are written to `artifacts/packages`. The Pack target also runs SDK package validation against the version in `eng/PackageValidation.props`. CI generates and verifies `artifacts/release/SHA256SUMS` for the complete package set; local contributors can run the same checks with `eng/release-integrity.py`.
+Packages are written to `artifacts/packages`. The Pack target also runs SDK package validation against the version in `eng/PackageValidation.props`. CI generates and validates a CycloneDX SBOM under `artifacts/sbom/`, then generates and verifies `artifacts/release/SHA256SUMS` for the ten package files and SBOM. Local contributors can run the same checks with `eng/generate-sbom.py`, `eng/verify-sbom.py`, and `eng/release-integrity.py`.
 
 ## Continuous integration
 
@@ -138,7 +139,7 @@ Repository restore policy is defined by `NuGet.Config` and `eng/DependencySecuri
 
 ## Release integrity
 
-`eng/release-integrity.py` validates the release workflow configuration and generates or verifies the package checksum manifest. Official tag builds additionally create GitHub artifact attestations. See [Release integrity and build provenance](release-integrity.md).
+`eng/release-integrity.py` validates the release workflow configuration and generates or verifies the checksum manifest covering packages and the versioned CycloneDX SBOM. `eng/generate-sbom.py` and `eng/verify-sbom.py` inventory and validate release packages and restored production dependencies. Official tag builds additionally create GitHub artifact attestations for packages, SBOM, and checksums. See [Release integrity and build provenance](release-integrity.md) and [Software bill of materials](software-bill-of-materials.md).
 
 ## Code coverage
 
