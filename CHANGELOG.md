@@ -37,6 +37,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Mutation testing now uses the xUnit v3 MTP runner, validates execution health, and runs before baseline enforcement so the first baseline can be bootstrapped without a CI deadlock.
 - Architecture tests now ignore compiler-generated namespace artifacts, recognize the established `Check` guard extension container through policy, and safely inspect constructor and generic method signatures.
 - String performance comparisons now use a contract-equivalent BCL baseline, including null validation and runtime inputs, so microbenchmark ratios measure wrapper overhead instead of mismatched work.
+- SBOM generation now selects the `net10.0` dependency group for TCJ packages and treats the restored `project.assets.json` graph as authoritative for external multi-target NuGet packages.
 
 ## [0.1.0-preview.1] - 2026-08-01
 

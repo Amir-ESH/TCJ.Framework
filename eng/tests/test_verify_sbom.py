@@ -13,7 +13,7 @@ ENG = Path(__file__).resolve().parents[1]
 if str(ENG) not in sys.path:
     sys.path.insert(0, str(ENG))
 
-from sbom_common import build_sbom, nuget_purl, write_json  # noqa: E402
+from sbom_common import build_sbom, nuget_purl, parse_nuspec_xml, write_json  # noqa: E402
 
 
 def load_script(name: str, filename: str):
@@ -211,6 +211,55 @@ class Fixture:
         )
 
 
+
+
+class NuspecParsingTests(unittest.TestCase):
+    def test_target_framework_group_is_selected_without_cross_framework_conflict(self):
+        metadata = parse_nuspec_xml(
+            """<?xml version=\"1.0\"?>
+<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">
+  <metadata>
+    <id>Multi.Target.Package</id>
+    <version>1.0.0</version>
+    <authors>Example</authors>
+    <license type=\"expression\">MIT</license>
+    <dependencies>
+      <group targetFramework=\"net8.0\">
+        <dependency id=\"Shared.Dependency\" version=\"[1.0.0]\" />
+      </group>
+      <group targetFramework=\".NETCoreApp,Version=v10.0\">
+        <dependency id=\"Shared.Dependency\" version=\"[2.0.0]\" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
+""",
+            "multi-target.nuspec",
+            dependency_target_framework="net10.0",
+        )
+        self.assertEqual({"Shared.Dependency": "[2.0.0]"}, metadata.dependencies)
+
+    def test_conflicting_ranges_inside_selected_group_still_fail(self):
+        xml = """<?xml version=\"1.0\"?>
+<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">
+  <metadata>
+    <id>Invalid.Package</id>
+    <version>1.0.0</version>
+    <authors>Example</authors>
+    <license type=\"expression\">MIT</license>
+    <dependencies>
+      <group targetFramework=\"net10.0\">
+        <dependency id=\"Shared.Dependency\" version=\"[1.0.0]\" />
+        <dependency id=\"Shared.Dependency\" version=\"[2.0.0]\" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
+"""
+        with self.assertRaisesRegex(ValueError, "inside the selected 'net10.0' group"):
+            parse_nuspec_xml(xml, "invalid.nuspec")
+
+
 class VerifySbomTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -218,6 +267,47 @@ class VerifySbomTests(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_external_multitarget_nuspec_uses_restored_graph(self):
+        nuspec_path = (
+            self.fixture.cache
+            / "direct.package"
+            / "1.0.0"
+            / "direct.package.nuspec"
+        )
+        nuspec_path.write_text(
+            """<?xml version=\"1.0\"?>
+<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">
+  <metadata>
+    <id>Direct.Package</id>
+    <version>1.0.0</version>
+    <authors>TCJ Contributors</authors>
+    <license type=\"expression\">MIT</license>
+    <projectUrl>https://example.test/Direct.Package</projectUrl>
+    <dependencies>
+      <group targetFramework=\"net8.0\">
+        <dependency id=\"Transitive.Package\" version=\"[1.0.0]\" />
+      </group>
+      <group targetFramework=\"net10.0\">
+        <dependency id=\"Transitive.Package\" version=\"[2.0.0]\" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
+""",
+            encoding="utf-8",
+        )
+        sbom = build_sbom(
+            root=self.fixture.root,
+            policy=self.fixture.policy,
+            version=VERSION,
+            package_directory=self.fixture.package_directory,
+            commit_sha=COMMIT,
+            release_tag=f"v{VERSION}",
+        )
+        write_json(self.fixture.sbom_path, sbom)
+        summary = self.fixture.verify(sbom)
+        self.assertEqual("PASS", summary["status"])
 
     def test_valid_sbom_passes(self):
         summary = self.fixture.verify()

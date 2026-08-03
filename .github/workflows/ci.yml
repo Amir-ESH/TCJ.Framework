@@ -162,7 +162,6 @@ jobs:
           --release-tag "ci-${{ github.sha }}"
 
       - name: Verify CycloneDX SBOM
-        if: always()
         run: >
           python3 eng/verify-sbom.py verify
           --version "${{ steps.package-version.outputs.value }}"
@@ -174,7 +173,14 @@ jobs:
       - name: Publish SBOM summary
         if: always()
         shell: bash
-        run: cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          if [[ -f artifacts/sbom/SBOM_SUMMARY.md ]]; then
+            cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "# TCJ software bill of materials" >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo "SBOM generation failed before a summary was produced. Review the generator step." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Generate package checksums
         run: >

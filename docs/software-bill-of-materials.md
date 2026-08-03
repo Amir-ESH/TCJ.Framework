@@ -34,7 +34,7 @@ The SBOM contains library components for:
 
 Each primary TCJ `.nupkg` is represented by its TCJ library component and SHA-256 hash. Each `.snupkg` is represented as a file component with its own hash and a relationship to the corresponding TCJ package.
 
-Direct TCJ package relationships are read from the generated `.nuspec` metadata inside each `.nupkg`. Exact external versions and transitive relationships are read from the production projects' `obj/project.assets.json` files after `dotnet restore`. Package hashes and license metadata are read from the locally restored NuGet cache. The dependency graph is therefore derived from generated and restored package metadata rather than copied from a handwritten diagram.
+Direct TCJ package relationships are read from the `net10.0` dependency group in the generated `.nuspec` metadata inside each `.nupkg`. Exact external versions and transitive relationships are read from the production projects' `obj/project.assets.json` files after `dotnet restore`. External `.nuspec` files are used only for descriptive metadata such as license, author, project URL, and repository URL because multi-target packages may legitimately declare different version ranges for different target frameworks. Package hashes are read from the locally restored NuGet cache. The dependency graph is therefore derived from generated and restored package metadata rather than copied from a handwritten diagram.
 
 ## Policy
 

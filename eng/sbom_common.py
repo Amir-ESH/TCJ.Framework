@@ -115,7 +115,91 @@ class NuspecMetadata:
     dependencies: dict[str, str | None]
 
 
-def parse_nuspec_xml(data: bytes | str, source: str) -> NuspecMetadata:
+def _normalize_target_framework(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().casefold().replace(" ", "")
+    if not normalized:
+        return None
+
+    long_form = re.fullmatch(
+        r"\.(netcoreapp|netstandard),version=v(.+)",
+        normalized,
+    )
+    if long_form:
+        family, version = long_form.groups()
+        prefix = "net" if family == "netcoreapp" else "netstandard"
+        return prefix + version
+
+    if normalized.startswith(".netcoreapp"):
+        return "net" + normalized[len(".netcoreapp"):]
+    if normalized.startswith(".netstandard"):
+        return "netstandard" + normalized[len(".netstandard"):]
+    return normalized
+
+
+def _dependency_elements(
+    dependency_root: ET.Element,
+    *,
+    source: str,
+    target_framework: str | None,
+) -> list[ET.Element]:
+    direct = [
+        child
+        for child in dependency_root
+        if local_name(child.tag) == "dependency"
+    ]
+    if direct:
+        return direct
+
+    groups = [
+        child
+        for child in dependency_root
+        if local_name(child.tag) == "group"
+    ]
+    if not groups:
+        return []
+
+    normalized_target = _normalize_target_framework(target_framework)
+    matching = [
+        group
+        for group in groups
+        if _normalize_target_framework(group.attrib.get("targetFramework")) == normalized_target
+    ]
+    if not matching:
+        matching = [
+            group
+            for group in groups
+            if _normalize_target_framework(group.attrib.get("targetFramework")) is None
+        ]
+    if not matching:
+        available = sorted(
+            {
+                group.attrib.get("targetFramework", "<unspecified>")
+                for group in groups
+            },
+            key=str.casefold,
+        )
+        fail(
+            f"NuGet metadata in {source} has no dependency group for "
+            f"{target_framework!r}; available groups: {', '.join(available)}."
+        )
+
+    return [
+        element
+        for group in matching
+        for element in group
+        if local_name(element.tag) == "dependency"
+    ]
+
+
+def parse_nuspec_xml(
+    data: bytes | str,
+    source: str,
+    *,
+    include_dependencies: bool = True,
+    dependency_target_framework: str | None = "net10.0",
+) -> NuspecMetadata:
     try:
         root = ET.fromstring(data)
     except ET.ParseError as error:
@@ -143,10 +227,12 @@ def parse_nuspec_xml(data: bytes | str, source: str) -> NuspecMetadata:
     repository = first_child(metadata, "repository")
     dependencies: dict[str, str | None] = {}
     dependency_root = first_child(metadata, "dependencies")
-    if dependency_root is not None:
-        for element in dependency_root.iter():
-            if local_name(element.tag) != "dependency":
-                continue
+    if include_dependencies and dependency_root is not None:
+        for element in _dependency_elements(
+            dependency_root,
+            source=source,
+            target_framework=dependency_target_framework,
+        ):
             dependency_id = element.attrib.get("id", "").strip()
             if not dependency_id:
                 fail(f"NuGet dependency without an id in {source}")
@@ -158,7 +244,8 @@ def parse_nuspec_xml(data: bytes | str, source: str) -> NuspecMetadata:
             )
             if previous is not None and dependencies[previous] != version_value:
                 fail(
-                    f"NuGet dependency {dependency_id} has conflicting version ranges in {source}."
+                    f"NuGet dependency {dependency_id} has conflicting version ranges "
+                    f"inside the selected {dependency_target_framework!r} group in {source}."
                 )
             dependencies[dependency_id] = version_value
 
@@ -176,7 +263,11 @@ def parse_nuspec_xml(data: bytes | str, source: str) -> NuspecMetadata:
     )
 
 
-def read_nupkg_metadata(path: Path) -> NuspecMetadata:
+def read_nupkg_metadata(
+    path: Path,
+    *,
+    dependency_target_framework: str | None = "net10.0",
+) -> NuspecMetadata:
     if not path.is_file():
         fail(f"NuGet package does not exist: {path}")
     try:
@@ -187,15 +278,29 @@ def read_nupkg_metadata(path: Path) -> NuspecMetadata:
             )
             if not nuspec_names:
                 fail(f"NuGet package does not contain a .nuspec file: {path}")
-            return parse_nuspec_xml(archive.read(nuspec_names[0]), str(path))
+            return parse_nuspec_xml(
+                archive.read(nuspec_names[0]),
+                str(path),
+                dependency_target_framework=dependency_target_framework,
+            )
     except zipfile.BadZipFile as error:
         fail(f"Invalid NuGet package archive {path}: {error}")
 
 
-def read_nuspec_file(path: Path) -> NuspecMetadata:
+def read_nuspec_file(
+    path: Path,
+    *,
+    include_dependencies: bool = True,
+    dependency_target_framework: str | None = "net10.0",
+) -> NuspecMetadata:
     if not path.is_file():
         fail(f"NuGet metadata file does not exist: {path}")
-    return parse_nuspec_xml(path.read_bytes(), str(path))
+    return parse_nuspec_xml(
+        path.read_bytes(),
+        str(path),
+        include_dependencies=include_dependencies,
+        dependency_target_framework=dependency_target_framework,
+    )
 
 
 def license_entries(metadata: NuspecMetadata) -> list[dict[str, object]]:
@@ -525,7 +630,11 @@ def build_sbom(
     external_metadata: dict[tuple[str, str], NuspecMetadata] = {}
     for pair in sorted(assets.dependencies, key=lambda item: (item[0].casefold(), item[1])):
         nupkg_path, nuspec_path = assets.package_files[pair]
-        metadata = read_nuspec_file(nuspec_path)
+        # The restored net10.0 graph in project.assets.json is authoritative for
+        # dependency relationships. External .nuspec files are read only for
+        # descriptive metadata because they may contain different dependency
+        # ranges for other target frameworks.
+        metadata = read_nuspec_file(nuspec_path, include_dependencies=False)
         if metadata.package_id.casefold() != pair[0].casefold() or metadata.version != pair[1]:
             fail(f"NuGet cache metadata mismatch for {pair[0]} {pair[1]}.")
         external_metadata[pair] = metadata
