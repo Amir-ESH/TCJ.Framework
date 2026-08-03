@@ -13,6 +13,7 @@
     <Project Path="src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/TCJ.Architecture.Tests/TCJ.Architecture.Tests.csproj" />
     <Project Path="tests/TCJ.AspNetCore.Tests/TCJ.AspNetCore.Tests.csproj" />
     <Project Path="tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj" />
     <Project Path="tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj" />

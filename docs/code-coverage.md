@@ -10,13 +10,13 @@ The repository policy lives in [`eng/coverage-policy.json`](../eng/coverage-poli
 {
   "minimumLineCoverage": 15.0,
   "minimumBranchCoverage": 10.0,
-  "minimumReportCount": 5
+  "minimumReportCount": 6
 }
 ```
 
 These deliberately conservative initial minimums protect the preview codebase from losing broad test execution while the suite grows. Raise them only after the current default branch is measured and the higher value is demonstrated to pass consistently. Lowering either threshold requires an explicit explanation in the pull request.
 
-The expected package list must remain identical to `eng/release-manifest.json`. The expected report count must remain identical to the number of package-specific test projects.
+The expected package list must remain identical to `eng/release-manifest.json`. The expected report count must remain identical to the number of test projects included in `TCJ.slnx`.
 
 ## Collection
 
@@ -53,7 +53,7 @@ python3 eng/verify-coverage.py verify
 
 The verifier discovers `TestResults/**/coverage.cobertura.xml`, merges duplicate source lines across test projects using the highest observed hit count, and computes branch coverage from Cobertura condition data. It fails when:
 
-- fewer than five reports exist;
+- fewer than six reports exist;
 - any TCJ production package is absent from the reports;
 - no production or branch data exists;
 - line or branch coverage is below policy;

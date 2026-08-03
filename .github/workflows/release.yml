@@ -55,6 +55,9 @@ jobs:
       - name: Verify code coverage policy
         run: python3 eng/verify-coverage.py validate-config
 
+      - name: Verify architecture policy
+        run: python3 eng/verify-architecture-policy.py validate-config
+
       - name: Validate release tag
         id: release-version
         shell: bash
@@ -107,6 +110,15 @@ jobs:
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=release-test-results.trx"
           --results-directory TestResults
+
+      - name: Generate architecture-test summary
+        run: >
+          python3 eng/verify-architecture-policy.py write-summary
+          --output artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md
+
+      - name: Publish architecture-test summary
+        shell: bash
+        run: cat artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Enforce code coverage quality gate
         run: >
@@ -190,7 +202,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-test-results-${{ github.run_id }}
-          path: TestResults/**/*.trx
+          path: |
+            TestResults/**/*.trx
+            artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md
           if-no-files-found: warn
           retention-days: 30
 

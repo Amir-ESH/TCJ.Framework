@@ -13,6 +13,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Line and branch coverage gates are green and the summary was reviewed.
 - [ ] The mutation baseline is recorded, the mutation quality gate is green, and survived mutants were reviewed.
 - [ ] The latest full performance benchmark run is green and runtime/allocation regressions were reviewed.
+- [ ] Architecture policy validation and all `Category=Architecture` tests are green.
 - [ ] Any compatibility suppression is minimal, reviewed, and described in the changelog.
 - [ ] The published-package smoke workflow is green for the previous release.
 
@@ -43,6 +44,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Review the release-preflight coverage summary and Cobertura artifact.
 - [ ] Review the latest mutation summary and both HTML/JSON mutation reports.
 - [ ] Review the latest performance summary plus JSON, Markdown, CSV, and log artifacts.
+- [ ] Review the architecture-test summary and confirm no policy weakening was introduced.
 - [ ] Review five `.nupkg`, five `.snupkg`, `SHA256SUMS`, release notes, and the manifest.
 - [ ] Verify the release-candidate checksums before tagging.
 

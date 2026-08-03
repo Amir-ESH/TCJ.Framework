@@ -20,6 +20,7 @@ python3 eng/verify-coverage.py validate-config
 python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
 python3 eng/verify-mutation-results.py validate-config
 python3 eng/verify-performance-results.py validate-config
+python3 eng/verify-architecture-policy.py validate-config
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
 dotnet test TCJ.slnx -c Release --no-build \
@@ -60,6 +61,8 @@ Use prefixes such as `feature/`, `fix/`, `docs/`, `test/`, `build/`, and `chore/
 - Do not lower mutation thresholds, accept an unreviewed candidate, or add broad mutation exclusions merely to make CI green.
 - Do not raise performance thresholds, remove benchmark categories, or exclude regressions without a documented technical justification.
 - Never commit `BenchmarkDotNet.Artifacts/` or `artifacts/performance/`.
+- Treat `eng/architecture-policy.json` as executable design documentation; dependency-direction changes require architectural justification.
+- Do not weaken, suppress, or broadly exclude architecture rules merely to make CI green.
 - Update relevant pages under `docs/`.
 
 ## Commit messages
@@ -75,7 +78,7 @@ test: cover current user resolution
 
 ## Automated validation
 
-Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check and dependency review. Restore audits the complete resolved NuGet graph and fails on moderate-or-higher known vulnerabilities or an unavailable audit source. The Pack phase includes SDK package validation against the latest published TCJ version and rejects accidental binary-breaking API changes. CI also enforces the line and branch coverage policy and verifies the complete package checksum manifest. The separate `Mutation testing / Run mutation tests` check must pass for mutation-relevant changes; during the one-time baseline bootstrap, a candidate must be reviewed and committed before normal verification can pass. The separate `Performance benchmarks / Run benchmarks` workflow executes a short job for relevant pull requests and full jobs for scheduled or manual runs; it blocks ratios above the repository policy while preserving raw measurements for historical review. Trusted provenance attestations are created only by the official tagged Release workflow. Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
+Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check and dependency review. Restore audits the complete resolved NuGet graph and fails on moderate-or-higher known vulnerabilities or an unavailable audit source. The Pack phase includes SDK package validation against the latest published TCJ version and rejects accidental binary-breaking API changes. CI also enforces the line and branch coverage policy and verifies the complete package checksum manifest. The separate `Mutation testing / Run mutation tests` check must pass for mutation-relevant changes; during the one-time baseline bootstrap, a candidate must be reviewed and committed before normal verification can pass. The separate `Performance benchmarks / Run benchmarks` workflow executes a short job for relevant pull requests and full jobs for scheduled or manual runs; it preserves within-run measurements and policy results for review. Architecture tests run inside the normal solution test command and enforce module dependency directions, namespace ownership, and public API boundaries from `eng/architecture-policy.json`. Trusted provenance attestations are created only by the official tagged Release workflow. Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
 
 ## Pull requests
 
@@ -86,6 +89,7 @@ A pull request should explain:
 - the problem;
 - the chosen approach;
 - compatibility or migration impact, including any `CPxxxx` suppression;
-- tests performed.
+- tests performed;
+- architecture-policy and documentation changes when module boundaries are intentionally changed.
 
 By contributing, you agree that your contribution is licensed under the repository's MIT License.

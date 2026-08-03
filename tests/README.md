@@ -8,6 +8,7 @@ TCJ.DependencyInjection.Tests
 TCJ.EntityFrameworkCore.Tests
 TCJ.EntityFrameworkCore.SqlServer.Tests
 TCJ.AspNetCore.Tests
+TCJ.Architecture.Tests
 ```
 
 The suite uses xUnit v3, Microsoft.NET.Test.Sdk, the Visual Studio runner adapter, and Coverlet collection settings shared through `TestProject.props`.
@@ -30,6 +31,20 @@ python3 eng/verify-coverage.py verify
 ```
 
 The verifier merges all package-specific Cobertura reports and enforces the repository thresholds from `eng/coverage-policy.json`. Tests should focus on public behavior and high-risk integration boundaries. Bug fixes should include a regression test in the closest package-specific project.
+
+## Architecture tests
+
+`TCJ.Architecture.Tests` references all five production projects for inspection and enforces the dependency graph, forbidden infrastructure references, namespace ownership, public API boundaries, and stable naming/visibility rules declared in `eng/architecture-policy.json`.
+
+Run only the architecture category:
+
+```bash
+dotnet test tests/TCJ.Architecture.Tests/TCJ.Architecture.Tests.csproj \
+  -c Release \
+  -- --filter-trait "Category=Architecture"
+```
+
+Failures identify the assembly or type, the unexpected dependency or namespace, the expected rule, and the policy/documentation that must be updated for an intentional architecture change.
 
 ## Mutation testing
 
