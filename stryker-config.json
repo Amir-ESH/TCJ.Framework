@@ -14,10 +14,10 @@
     "disable-mix-mutants": true,
     "additional-timeout": 10000,
     "thresholds": {
-      "high": 80,
-      "low": 50,
-      "break": 0
-    },
+  "high": 99,
+  "low": 99,
+  "break": 0
+},
     "report-file-name": "mutation-report",
     "ignore-mutations": []
   }
