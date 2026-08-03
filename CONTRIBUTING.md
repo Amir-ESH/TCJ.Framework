@@ -17,8 +17,8 @@ cd TCJ.Framework
 python3 eng/verify-dependency-security.py
 python3 eng/release-integrity.py validate-config
 python3 eng/verify-coverage.py validate-config
+python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
 python3 eng/verify-mutation-results.py validate-config
-python3 eng/verify-mutation-results.py validate-baseline
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
 dotnet test TCJ.slnx -c Release --no-build \
@@ -28,7 +28,7 @@ dotnet test TCJ.slnx -c Release --no-build \
 python3 eng/verify-coverage.py verify
 ```
 
-When a new mutation baseline is required, capture a candidate, review both HTML reports, then run `verify-mutation-results.py accept-baseline` with reviewer identity and review notes. Never rename or copy an unreviewed candidate directly to `eng/mutation-baseline.json`.
+For the first mutation baseline, run the dedicated workflow in `capture-baseline` mode, review both HTML reports, and accept the generated candidate with reviewer identity and notes. A pending baseline must not be used as a precondition that prevents Stryker from running; the complete process is documented in [`docs/mutation-testing.md`](docs/mutation-testing.md).
 
 The Product API sample requires SQL Server. Its default Development configuration uses LocalDB on Windows.
 
@@ -56,7 +56,7 @@ Use prefixes such as `feature/`, `fix/`, `docs/`, `test/`, `build/`, and `chore/
 - Do not weaken checksum or attestation enforcement in the tagged Release workflow.
 - Add focused tests for bug fixes and public behavior changes.
 - Do not weaken coverage thresholds or exclusions without a documented technical reason.
-- Do not lower the mutation gate, replace a measured baseline with a guessed value, or ignore survived mutants without a reviewed technical justification.
+- Do not lower mutation thresholds, accept an unreviewed candidate, or add broad mutation exclusions merely to make CI green.
 - Update relevant pages under `docs/`.
 
 ## Commit messages
@@ -72,7 +72,7 @@ test: cover current user resolution
 
 ## Automated validation
 
-Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check and dependency review. Restore audits the complete resolved NuGet graph and fails on moderate-or-higher known vulnerabilities or an unavailable audit source. The Pack phase includes SDK package validation against the latest published TCJ version and rejects accidental binary-breaking API changes. CI also enforces line and branch coverage, requires a recorded mutation baseline, executes the reusable mutation quality gate, and verifies the complete package checksum manifest. Trusted provenance attestations are created only by the official tagged Release workflow. Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
+Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check and dependency review. Restore audits the complete resolved NuGet graph and fails on moderate-or-higher known vulnerabilities or an unavailable audit source. The Pack phase includes SDK package validation against the latest published TCJ version and rejects accidental binary-breaking API changes. CI also enforces the line and branch coverage policy and verifies the complete package checksum manifest. The separate `Mutation testing / Run mutation tests` check must pass for mutation-relevant changes; during the one-time baseline bootstrap, a candidate must be reviewed and committed before normal verification can pass. Trusted provenance attestations are created only by the official tagged Release workflow. Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
 
 ## Pull requests
 

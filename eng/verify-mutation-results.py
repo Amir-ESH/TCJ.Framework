@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate TCJ mutation configuration, report health, baseline, and quality gates."""
+"""Validate TCJ mutation configuration, execution health, baseline, and score gates."""
 
 from __future__ import annotations
 
@@ -14,21 +14,19 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
-REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_POLICY = REPOSITORY_ROOT / "eng/mutation-policy.json"
-DEFAULT_BASELINE = REPOSITORY_ROOT / "eng/mutation-baseline.json"
-DEFAULT_STRYKER_CONFIG = REPOSITORY_ROOT / "stryker-config.json"
-DEFAULT_TOOL_MANIFEST = REPOSITORY_ROOT / ".config/dotnet-tools.json"
-DEFAULT_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/mutation-testing.yml"
-DEFAULT_CI_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/ci.yml"
-DEFAULT_TEST_PROPS = REPOSITORY_ROOT / "tests/TestProject.props"
-DEFAULT_SUMMARY = REPOSITORY_ROOT / "artifacts/mutation/MUTATION_SUMMARY.md"
-DEFAULT_JSON = REPOSITORY_ROOT / "artifacts/mutation/mutation-summary.json"
-DEFAULT_CANDIDATE = REPOSITORY_ROOT / "artifacts/mutation/mutation-baseline-candidate.json"
+ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_POLICY = ROOT / "eng/mutation-policy.json"
+DEFAULT_BASELINE = ROOT / "eng/mutation-baseline.json"
+DEFAULT_CONFIG = ROOT / "stryker-config.json"
+DEFAULT_TOOL_MANIFEST = ROOT / ".config/dotnet-tools.json"
+DEFAULT_WORKFLOW = ROOT / ".github/workflows/mutation-testing.yml"
+DEFAULT_TEST_PROPS = ROOT / "tests/TestProject.props"
+DEFAULT_SUMMARY = ROOT / "artifacts/mutation/MUTATION_SUMMARY.md"
+DEFAULT_JSON = ROOT / "artifacts/mutation/mutation-summary.json"
+DEFAULT_CANDIDATE = ROOT / "artifacts/mutation/mutation-baseline-candidate.json"
 
-REQUIRED_PROJECTS = ("TCJ.Core", "TCJ.DependencyInjection")
+REQUIRED_PROJECTS = {"TCJ.Core", "TCJ.DependencyInjection"}
 REQUIRED_REPORTERS = {"html", "json"}
-TERMINAL_VALID_STATUSES = {"killed", "survived", "timeout", "no_coverage", "ignored", "compile_error"}
 STATUS_NAMES = {
     "killed": "killed",
     "survived": "survived",
@@ -42,32 +40,17 @@ STATUS_NAMES = {
     "notrun": "not_run",
 }
 
-REQUIRED_WORKFLOW_FRAGMENTS = (
-    "name: Mutation testing",
-    "workflow_call:",
-    "workflow_dispatch:",
-    "capture-baseline",
-    "schedule:",
-    "name: Run mutation tests",
-    "dotnet tool restore",
-    "run-mutation-testing.py",
-    "verify-mutation-results.py",
-    "Upload mutation reports",
-    "mutation-baseline-candidate.json",
-)
-REQUIRED_CI_FRAGMENTS = (
-    "Detect mutation-testing changes",
-    "Mutation quality gate",
-    "uses: ./.github/workflows/mutation-testing.yml",
-    "mode: verify",
-    "needs: [mutation-scope, mutation-testing]",
-    "needs.mutation-testing.result == 'skipped'",
-    "validate-baseline",
-)
-
 
 class MutationError(RuntimeError):
-    """Raised when mutation policy, reports, or repository configuration are invalid."""
+    pass
+
+
+@dataclass(frozen=True)
+class SourceExclusion:
+    file: str
+    declaration_contains: str
+    comment: str
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -75,35 +58,34 @@ class ProjectPolicy:
     name: str
     source_project: str
     test_project: str
-    minimum_tested_mutants: int
+    minimum_tested: int
     mutation_targets: tuple[str, ...]
     report_path: str
     html_report_path: str
-    run_metadata_path: str
-    console_log_path: str
+    metadata_path: str
+    log_path: str
 
 
 @dataclass(frozen=True)
-class MutationPolicy:
+class Policy:
     path: Path
     stryker_version: str
     test_runner: str
     coverage_analysis: str
     baseline_path: str
-    require_recorded_baseline: bool
-    minimum_mutation_score: float
-    allowed_baseline_score_regression: float
-    minimum_tested_mutants: int
-    minimum_killed_mutants: int
-    minimum_killed_mutants_per_project: int
+    minimum_score: float
+    allowed_regression: float
+    minimum_tested: int
+    minimum_killed: int
+    minimum_killed_per_project: int
     maximum_compile_error_percentage: float
-    maximum_runtime_error_mutants: int
+    maximum_runtime_errors: int
     projects: tuple[ProjectPolicy, ...]
-    excluded_file_patterns: tuple[str, ...]
-    scope_notes: tuple[str, ...]
-    ignored_mutation_types: tuple[str, ...]
-    ignored_mutation_justifications: dict[str, str]
-    forbidden_runner_log_markers: tuple[str, ...]
+    exclusions: tuple[str, ...]
+    ignored_types: tuple[str, ...]
+    ignored_justifications: dict[str, str]
+    forbidden_log_markers: tuple[str, ...]
+    source_exclusions: tuple[SourceExclusion, ...]
     reports_directory: str
     summary_json: str
     summary_markdown: str
@@ -111,25 +93,19 @@ class MutationPolicy:
 
 
 @dataclass(frozen=True)
-class MutationBaseline:
+class Baseline:
     path: Path
     status: str
     data: dict[str, Any]
 
     @property
-    def is_recorded(self) -> bool:
-        return self.status == "recorded"
-
-    @property
-    def mutation_score(self) -> float | None:
+    def score(self) -> float | None:
         value = self.data.get("mutationScore")
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            return None
-        return float(value)
+        return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
 
 @dataclass
-class MutationCounts:
+class Counts:
     killed: int = 0
     survived: int = 0
     timeout: int = 0
@@ -140,13 +116,13 @@ class MutationCounts:
     pending: int = 0
     not_run: int = 0
 
-    def add(self, other: "MutationCounts") -> None:
-        for field_name in self.__dataclass_fields__:
-            setattr(self, field_name, getattr(self, field_name) + getattr(other, field_name))
+    def add(self, other: "Counts") -> None:
+        for field in self.__dataclass_fields__:
+            setattr(self, field, getattr(self, field) + getattr(other, field))
 
     @property
     def total(self) -> int:
-        return sum(getattr(self, field_name) for field_name in self.__dataclass_fields__)
+        return sum(getattr(self, field) for field in self.__dataclass_fields__)
 
     @property
     def tested(self) -> int:
@@ -157,12 +133,12 @@ class MutationCounts:
         return self.killed + self.timeout
 
     @property
-    def score_denominator(self) -> int:
-        return self.killed + self.timeout + self.survived + self.no_coverage
+    def denominator(self) -> int:
+        return self.killed + self.survived + self.timeout + self.no_coverage
 
     @property
-    def mutation_score(self) -> float:
-        return 0.0 if self.score_denominator == 0 else self.detected * 100.0 / self.score_denominator
+    def score(self) -> float:
+        return 0.0 if self.denominator == 0 else self.detected * 100.0 / self.denominator
 
     @property
     def compile_error_percentage(self) -> float:
@@ -182,61 +158,34 @@ class MutationCounts:
             "runtimeErrorMutants": self.runtime_error,
             "pendingMutants": self.pending,
             "notRunMutants": self.not_run,
-            "mutationScore": round(self.mutation_score, 2),
+            "mutationScore": round(self.score, 2),
         }
-
-
-@dataclass(frozen=True)
-class RunMetadata:
-    path: str
-    source_revision: str
-    stryker_version: str
-    test_runner: str
-    coverage_analysis: str
-    status: str
-    exit_code: int
-    report_sha256: str
-    policy_sha256: str
-    console_log_path: str
-    console_log_sha256: str
 
 
 @dataclass(frozen=True)
 class ProjectResult:
     policy: ProjectPolicy
-    counts: MutationCounts
-    test_count: int
-    report_sha256: str
-    metadata: RunMetadata
+    counts: Counts
+    report_hash: str
+    source_revision: str
     health_failures: tuple[str, ...]
 
 
 @dataclass(frozen=True)
-class VerificationResult:
+class Result:
     projects: tuple[ProjectResult, ...]
-    totals: MutationCounts
+    totals: Counts
+    health_failures: tuple[str, ...]
     policy_score_passed: bool
     baseline_score_passed: bool
-    mutant_count_passed: bool
-    killed_count_passed: bool
-    health_failures: tuple[str, ...]
-    baseline_status: str
+    tested_passed: bool
+    killed_passed: bool
     effective_minimum_score: float
+    baseline_status: str
 
     @property
     def health_passed(self) -> bool:
         return not self.health_failures
-
-    @property
-    def passed(self) -> bool:
-        return (
-            self.health_passed
-            and self.policy_score_passed
-            and self.baseline_score_passed
-            and self.mutant_count_passed
-            and self.killed_count_passed
-            and self.baseline_status == "recorded"
-        )
 
 
 def fail(message: str) -> None:
@@ -245,6 +194,20 @@ def fail(message: str) -> None:
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def read_object(path: Path, description: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        fail(f"{description} is missing: {path}")
+    except json.JSONDecodeError as error:
+        fail(f"{description} is malformed JSON at {path}: {error}")
+    except OSError as error:
+        fail(f"Unable to read {description} at {path}: {error}")
+    if not isinstance(value, dict):
+        fail(f"{description} must contain a JSON object: {path}")
+    return value
 
 
 def sha256_file(path: Path) -> str:
@@ -258,510 +221,331 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def read_json_object(path: Path, description: str) -> dict[str, Any]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        fail(f"{description} is missing: {path}")
-    except OSError as error:
-        fail(f"Unable to read {description} at {path}: {error}")
-    except json.JSONDecodeError as error:
-        fail(f"{description} is malformed JSON at {path}: {error}")
-    if not isinstance(data, dict):
-        fail(f"{description} must contain a JSON object: {path}")
-    return data
+def require_string(data: dict[str, Any], key: str, description: str = "Policy") -> str:
+    value = data.get(key)
+    if not isinstance(value, str) or not value.strip():
+        fail(f"{description} property '{key}' must be a non-empty string.")
+    return value.strip()
 
 
 def require_number(data: dict[str, Any], key: str, minimum: float, maximum: float) -> float:
     value = data.get(key)
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
         fail(f"Policy property '{key}' must be a finite number.")
-    number = float(value)
-    if number < minimum or number > maximum:
+    value = float(value)
+    if value < minimum or value > maximum:
         fail(f"Policy property '{key}' must be between {minimum} and {maximum}.")
-    return number
+    return value
 
 
 def require_integer(data: dict[str, Any], key: str, minimum: int = 0) -> int:
     value = data.get(key)
     if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
-        fail(f"Policy property '{key}' must be an integer greater than or equal to {minimum}.")
+        fail(f"Policy property '{key}' must be an integer >= {minimum}.")
     return value
 
 
-def require_bool(data: dict[str, Any], key: str) -> bool:
-    value = data.get(key)
-    if not isinstance(value, bool):
-        fail(f"Policy property '{key}' must be a boolean.")
-    return value
-
-
-def require_string(data: dict[str, Any], key: str) -> str:
-    value = data.get(key)
-    if not isinstance(value, str) or not value.strip():
-        fail(f"Policy property '{key}' must be a non-empty string.")
-    return value.strip()
-
-
-def require_sha256(data: dict[str, Any], key: str, description: str) -> str:
-    value = data.get(key)
-    if (
-        not isinstance(value, str)
-        or len(value) != 64
-        or any(character not in "0123456789abcdef" for character in value.lower())
-    ):
-        fail(f"{description} property '{key}' must be a SHA-256 hex digest.")
-    return value.lower()
-
-
-def require_non_negative_count(data: dict[str, Any], key: str, description: str) -> int:
-    value = data.get(key)
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        fail(f"{description} property '{key}' must be a non-negative integer.")
-    return value
-
-
-def require_string_list(data: dict[str, Any], key: str, allow_empty: bool = False) -> tuple[str, ...]:
+def require_list(data: dict[str, Any], key: str, allow_empty: bool = False) -> tuple[str, ...]:
     value = data.get(key)
     if not isinstance(value, list) or (not allow_empty and not value):
-        fail(f"Policy property '{key}' must be {'an' if allow_empty else 'a non-empty'} array.")
+        fail(f"Policy property '{key}' must be a {'possibly empty' if allow_empty else 'non-empty'} array.")
     if any(not isinstance(item, str) or not item.strip() for item in value):
-        fail(f"Policy property '{key}' must contain only non-empty strings.")
+        fail(f"Policy property '{key}' must contain non-empty strings.")
     return tuple(item.strip() for item in value)
 
 
-def validate_repository_relative_path(value: Any, description: str) -> str:
+def relative_path(value: Any, description: str) -> str:
     if not isinstance(value, str) or not value.strip():
         fail(f"{description} must be a non-empty repository-relative path.")
-    normalized = value.replace("\\", "/").strip()
-    path = PurePosixPath(normalized)
+    path = PurePosixPath(value.replace("\\", "/").strip())
     if path.is_absolute() or ".." in path.parts:
         fail(f"{description} must stay inside the repository: {value}")
     return str(path)
 
 
-def load_project_policy(data: dict[str, Any], index: int) -> ProjectPolicy:
-    prefix = f"projects[{index}]"
-    name = require_string(data, "name")
-    source = validate_repository_relative_path(data.get("sourceProject"), f"{prefix}.sourceProject")
-    test = validate_repository_relative_path(data.get("testProject"), f"{prefix}.testProject")
-    minimum_tested = require_integer(data, "minimumTestedMutants", minimum=1)
-    targets = require_string_list(data, "mutationTargets")
+def project_policy(data: dict[str, Any], index: int) -> ProjectPolicy:
+    targets = require_list(data, "mutationTargets")
     if any(target.startswith("!") for target in targets):
-        fail(f"{prefix}.mutationTargets must contain positive include patterns only.")
-    if "**/*.cs" in targets or "**/*" in targets:
-        fail(f"{prefix}.mutationTargets is too broad for the controlled Step 29 baseline.")
-    report = validate_repository_relative_path(data.get("reportPath"), f"{prefix}.reportPath")
-    html = validate_repository_relative_path(data.get("htmlReportPath"), f"{prefix}.htmlReportPath")
-    metadata = validate_repository_relative_path(data.get("runMetadataPath"), f"{prefix}.runMetadataPath")
-    console_log = validate_repository_relative_path(data.get("consoleLogPath"), f"{prefix}.consoleLogPath")
-    return ProjectPolicy(name, source, test, minimum_tested, targets, report, html, metadata, console_log)
+        fail(f"projects[{index}].mutationTargets must contain positive include patterns only.")
+    return ProjectPolicy(
+        name=require_string(data, "name"),
+        source_project=relative_path(data.get("sourceProject"), f"projects[{index}].sourceProject"),
+        test_project=relative_path(data.get("testProject"), f"projects[{index}].testProject"),
+        minimum_tested=require_integer(data, "minimumTestedMutants", 1),
+        mutation_targets=targets,
+        report_path=relative_path(data.get("reportPath"), f"projects[{index}].reportPath"),
+        html_report_path=relative_path(data.get("htmlReportPath"), f"projects[{index}].htmlReportPath"),
+        metadata_path=relative_path(data.get("runMetadataPath"), f"projects[{index}].runMetadataPath"),
+        log_path=relative_path(data.get("consoleLogPath"), f"projects[{index}].consoleLogPath"),
+    )
 
 
-def load_policy(path: Path) -> MutationPolicy:
-    data = read_json_object(path, "Mutation policy")
+
+def source_exclusions(data: dict[str, Any]) -> tuple[SourceExclusion, ...]:
+    raw = data.get("sourceLevelExclusions")
+    if not isinstance(raw, list):
+        fail("sourceLevelExclusions must be a JSON array.")
+    exclusions: list[SourceExclusion] = []
+    seen: set[str] = set()
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict):
+            fail(f"sourceLevelExclusions[{index}] must be an object.")
+        file = relative_path(item.get("file"), f"sourceLevelExclusions[{index}].file")
+        declaration = require_string(item, "declarationContains", f"sourceLevelExclusions[{index}]")
+        comment = require_string(item, "comment", f"sourceLevelExclusions[{index}]")
+        reason = require_string(item, "reason", f"sourceLevelExclusions[{index}]")
+        if not comment.startswith("// Stryker disable once all:"):
+            fail(f"sourceLevelExclusions[{index}].comment must be a narrow Stryker disable-once marker with a reason.")
+        if file in seen:
+            fail(f"sourceLevelExclusions contains duplicate file '{file}'.")
+        seen.add(file)
+        exclusions.append(SourceExclusion(file, declaration, comment, reason))
+    return tuple(exclusions)
+
+def load_policy(path: Path) -> Policy:
+    data = read_object(path, "Mutation policy")
     if data.get("schemaVersion") != 2:
         fail("Mutation policy schemaVersion must be 2.")
-
-    projects_data = data.get("projects")
-    if not isinstance(projects_data, list) or not projects_data:
-        fail("Mutation policy projects must be a non-empty array.")
-    projects = tuple(load_project_policy(item, index) if isinstance(item, dict) else fail(f"projects[{index}] must be an object.") for index, item in enumerate(projects_data))
-    names = tuple(project.name for project in projects)
-    if len(set(names)) != len(names):
+    raw_projects = data.get("projects")
+    if not isinstance(raw_projects, list) or not raw_projects or any(not isinstance(x, dict) for x in raw_projects):
+        fail("Mutation policy projects must be a non-empty array of objects.")
+    projects = tuple(project_policy(item, i) for i, item in enumerate(raw_projects))
+    names = {project.name for project in projects}
+    if len(names) != len(projects):
         fail("Mutation project names must be unique.")
-    for required in REQUIRED_PROJECTS:
-        if required not in names:
-            fail(f"Mutation policy must include initial project '{required}'.")
+    missing = REQUIRED_PROJECTS - names
+    if missing:
+        fail("Mutation policy is missing required projects: " + ", ".join(sorted(missing)))
 
-    ignored_types = require_string_list(data, "ignoredMutationTypes", allow_empty=True)
-    justifications_data = data.get("ignoredMutationJustifications")
-    if not isinstance(justifications_data, dict):
-        fail("ignoredMutationJustifications must be an object.")
-    justifications: dict[str, str] = {}
-    for key, value in justifications_data.items():
-        if not isinstance(key, str) or not key.strip() or not isinstance(value, str) or not value.strip():
-            fail("Ignored mutation justifications require non-empty string keys and values.")
-        justifications[key.strip()] = value.strip()
-    if set(ignored_types) != set(justifications):
+    ignored = require_list(data, "ignoredMutationTypes", allow_empty=True)
+    reasons = data.get("ignoredMutationJustifications")
+    if not isinstance(reasons, dict) or any(
+        not isinstance(key, str) or not key.strip() or not isinstance(value, str) or not value.strip()
+        for key, value in reasons.items()
+    ):
+        fail("ignoredMutationJustifications must contain non-empty string keys and values.")
+    normalized_reasons = {str(key).strip(): str(value).strip() for key, value in reasons.items()}
+    if set(ignored) != set(normalized_reasons):
         fail("Every ignored mutation type must have exactly one justification.")
 
     paths = data.get("reportPaths")
     if not isinstance(paths, dict):
-        fail("reportPaths must be an object.")
+        fail("reportPaths must be a JSON object.")
 
-    return MutationPolicy(
+    return Policy(
         path=path,
         stryker_version=require_string(data, "strykerVersion"),
-        test_runner=require_string(data, "testRunner"),
+        test_runner=require_string(data, "testRunner").lower(),
         coverage_analysis=require_string(data, "coverageAnalysis"),
-        baseline_path=validate_repository_relative_path(data.get("baselinePath"), "baselinePath"),
-        require_recorded_baseline=require_bool(data, "requireRecordedBaseline"),
-        minimum_mutation_score=require_number(data, "minimumMutationScore", 0.0, 100.0),
-        allowed_baseline_score_regression=require_number(data, "allowedBaselineScoreRegression", 0.0, 100.0),
-        minimum_tested_mutants=require_integer(data, "minimumTestedMutants", 1),
-        minimum_killed_mutants=require_integer(data, "minimumKilledMutants", 1),
-        minimum_killed_mutants_per_project=require_integer(data, "minimumKilledMutantsPerProject", 1),
-        maximum_compile_error_percentage=require_number(data, "maximumCompileErrorPercentage", 0.0, 100.0),
-        maximum_runtime_error_mutants=require_integer(data, "maximumRuntimeErrorMutants", 0),
+        baseline_path=relative_path(data.get("baselinePath"), "baselinePath"),
+        minimum_score=require_number(data, "minimumMutationScore", 0, 100),
+        allowed_regression=require_number(data, "allowedBaselineScoreRegression", 0, 100),
+        minimum_tested=require_integer(data, "minimumTestedMutants", 1),
+        minimum_killed=require_integer(data, "minimumKilledMutants", 1),
+        minimum_killed_per_project=require_integer(data, "minimumKilledMutantsPerProject", 1),
+        maximum_compile_error_percentage=require_number(data, "maximumCompileErrorPercentage", 0, 100),
+        maximum_runtime_errors=require_integer(data, "maximumRuntimeErrorMutants", 0),
         projects=projects,
-        excluded_file_patterns=require_string_list(data, "excludedFilePatterns"),
-        scope_notes=require_string_list(data, "scopeNotes"),
-        ignored_mutation_types=ignored_types,
-        ignored_mutation_justifications=justifications,
-        forbidden_runner_log_markers=require_string_list(data, "forbiddenRunnerLogMarkers"),
-        reports_directory=validate_repository_relative_path(paths.get("reportsDirectory"), "reportPaths.reportsDirectory"),
-        summary_json=validate_repository_relative_path(paths.get("summaryJson"), "reportPaths.summaryJson"),
-        summary_markdown=validate_repository_relative_path(paths.get("summaryMarkdown"), "reportPaths.summaryMarkdown"),
-        baseline_candidate=validate_repository_relative_path(paths.get("baselineCandidate"), "reportPaths.baselineCandidate"),
+        exclusions=require_list(data, "excludedFilePatterns"),
+        ignored_types=ignored,
+        ignored_justifications=normalized_reasons,
+        forbidden_log_markers=require_list(data, "forbiddenRunnerLogMarkers"),
+        source_exclusions=source_exclusions(data),
+        reports_directory=relative_path(paths.get("reportsDirectory"), "reportPaths.reportsDirectory"),
+        summary_json=relative_path(paths.get("summaryJson"), "reportPaths.summaryJson"),
+        summary_markdown=relative_path(paths.get("summaryMarkdown"), "reportPaths.summaryMarkdown"),
+        baseline_candidate=relative_path(paths.get("baselineCandidate"), "reportPaths.baselineCandidate"),
     )
 
 
-def validate_recorded_counts(data: dict[str, Any], description: str) -> MutationCounts:
-    counts = MutationCounts(
-        killed=require_non_negative_count(data, "killedMutants", description),
-        survived=require_non_negative_count(data, "survivedMutants", description),
-        timeout=require_non_negative_count(data, "timeoutMutants", description),
-        no_coverage=require_non_negative_count(data, "noCoverageMutants", description),
-        ignored=require_non_negative_count(data, "ignoredMutants", description),
-        compile_error=require_non_negative_count(data, "compileErrorMutants", description),
-        runtime_error=require_non_negative_count(data, "runtimeErrorMutants", description),
-        pending=require_non_negative_count(data, "pendingMutants", description),
-        not_run=require_non_negative_count(data, "notRunMutants", description),
-    )
-    total = require_non_negative_count(data, "totalMutants", description)
-    tested = require_non_negative_count(data, "testedMutants", description)
-    if total != counts.total:
-        fail(f"{description} totalMutants does not match its status counts.")
-    if tested != counts.tested:
-        fail(f"{description} testedMutants does not match killed + survived + timeout.")
-    compile_percentage = data.get("compileErrorPercentage")
-    if (
-        isinstance(compile_percentage, bool)
-        or not isinstance(compile_percentage, (int, float))
-        or abs(float(compile_percentage) - round(counts.compile_error_percentage, 2)) > 0.011
-    ):
-        fail(f"{description} compileErrorPercentage does not match its mutant counts.")
-    score = data.get("mutationScore")
-    if isinstance(score, bool) or not isinstance(score, (int, float)) or not 0 <= float(score) <= 100:
-        fail(f"{description} mutationScore must be between 0 and 100.")
-    if abs(float(score) - round(counts.mutation_score, 2)) > 0.011:
-        fail(f"{description} mutationScore does not match its mutant counts.")
-    return counts
-
-
-def validate_baseline_projects(
-    projects: Any,
-    policy: MutationPolicy,
-    *,
-    description: str,
-) -> tuple[dict[str, Any], ...]:
-    if not isinstance(projects, list) or len(projects) != len(policy.projects):
-        fail(f"{description} projects must exactly match policy projects.")
-    project_by_name = {project.name: project for project in policy.projects}
-    validated: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for item in projects:
-        if not isinstance(item, dict):
-            fail(f"{description} project entries must be objects.")
-        name = item.get("name")
-        if not isinstance(name, str) or name not in project_by_name or name in seen:
-            fail(f"{description} projects must exactly match policy projects.")
-        seen.add(name)
-        counts = validate_recorded_counts(item, f"{description} project '{name}'")
-        require_sha256(item, "reportSha256", f"{description} project '{name}'")
-        if counts.tested < project_by_name[name].minimum_tested_mutants:
-            fail(f"{description} project '{name}' has too few tested mutants.")
-        if counts.killed < policy.minimum_killed_mutants_per_project:
-            fail(f"{description} project '{name}' has too few killed mutants.")
-        if counts.compile_error_percentage > policy.maximum_compile_error_percentage + 1e-9:
-            fail(f"{description} project '{name}' exceeds the compile-error policy.")
-        if counts.runtime_error > policy.maximum_runtime_error_mutants or counts.pending or counts.not_run:
-            fail(f"{description} project '{name}' contains incomplete or runtime-error mutants.")
-        validated.append(item)
-    if seen != set(project_by_name):
-        fail(f"{description} projects must exactly match policy projects.")
-    return tuple(validated)
-
-
-def load_baseline(path: Path, policy: MutationPolicy) -> MutationBaseline:
-    data = read_json_object(path, "Mutation baseline")
+def load_baseline(path: Path, policy: Policy) -> Baseline:
+    data = read_object(path, "Mutation baseline")
     if data.get("schemaVersion") != 1:
         fail("Mutation baseline schemaVersion must be 1.")
     status = data.get("status")
     if status not in {"pending", "recorded"}:
         fail("Mutation baseline status must be 'pending' or 'recorded'.")
     if status == "pending":
-        reason = data.get("reason")
-        if not isinstance(reason, str) or not reason.strip():
-            fail("A pending mutation baseline must explain why it is pending.")
-        return MutationBaseline(path, status, data)
+        require_string(data, "reason", "Mutation baseline")
+        return Baseline(path, status, data)
 
-    required_strings = (
-        "recordedAtUtc",
-        "reviewedAtUtc",
-        "reviewedBy",
-        "reviewNotes",
-        "sourceRevision",
-        "strykerVersion",
-        "testRunner",
-        "coverageAnalysis",
+    for key in (
+        "recordedAtUtc", "reviewedAtUtc", "reviewedBy", "reviewNotes", "sourceRevision",
+        "strykerVersion", "testRunner", "coverageAnalysis", "reportSetSha256"
+    ):
+        require_string(data, key, "Recorded mutation baseline")
+    if data["strykerVersion"] != policy.stryker_version:
+        fail("Recorded baseline Stryker version does not match policy.")
+    if data["testRunner"].lower() != policy.test_runner or data["coverageAnalysis"] != policy.coverage_analysis:
+        fail("Recorded baseline runner settings do not match policy.")
+    if data.get("survivedMutantsReviewed") is not True:
+        fail("Recorded baseline must attest that survived mutants were reviewed.")
+    score = data.get("mutationScore")
+    if isinstance(score, bool) or not isinstance(score, (int, float)) or not 0 <= float(score) <= 100:
+        fail("Recorded baseline mutationScore must be between 0 and 100.")
+    if float(score) + 1e-9 < policy.minimum_score:
+        fail("Recorded baseline mutationScore is below policy.")
+    return Baseline(path, status, data)
+
+
+def validate_git_tracking(root: Path, paths: Iterable[Path]) -> None:
+    inside = subprocess.run(
+        ["git", "rev-parse", "--is-inside-work-tree"], cwd=root, text=True, capture_output=True, check=False
     )
-    for key in required_strings:
-        if not isinstance(data.get(key), str) or not data[key].strip():
-            fail(f"Recorded mutation baseline property '{key}' must be a non-empty string.")
-    if data["strykerVersion"] != policy.stryker_version:
-        fail("Recorded mutation baseline Stryker version does not match policy.")
-    if data["testRunner"] != policy.test_runner or data["coverageAnalysis"] != policy.coverage_analysis:
-        fail("Recorded mutation baseline runner configuration does not match policy.")
-    if data.get("reviewRequired") is not False or data.get("survivedMutantsReviewed") is not True:
-        fail("Recorded mutation baseline must contain an explicit survived-mutant review attestation.")
-    require_sha256(data, "reportSetSha256", "Recorded mutation baseline")
-    counts = validate_recorded_counts(data, "Recorded mutation baseline")
-    if counts.mutation_score + 1e-9 < policy.minimum_mutation_score:
-        fail("Recorded mutation baseline score is below the repository policy.")
-    if counts.tested < policy.minimum_tested_mutants:
-        fail("Recorded mutation baseline has too few tested mutants.")
-    if counts.killed < policy.minimum_killed_mutants:
-        fail("Recorded mutation baseline has too few killed mutants.")
-    if counts.compile_error_percentage > policy.maximum_compile_error_percentage + 1e-9:
-        fail("Recorded mutation baseline exceeds the compile-error policy.")
-    if counts.runtime_error > policy.maximum_runtime_error_mutants or counts.pending or counts.not_run:
-        fail("Recorded mutation baseline contains incomplete or runtime-error mutants.")
-    validate_baseline_projects(data.get("projects"), policy, description="Recorded mutation baseline")
-    return MutationBaseline(path, status, data)
-
-
-def load_baseline_candidate(path: Path, policy: MutationPolicy) -> dict[str, Any]:
-    data = read_json_object(path, "Mutation baseline candidate")
-    if data.get("schemaVersion") != 1 or data.get("status") != "candidate":
-        fail("Mutation baseline candidate must use schemaVersion 1 and status 'candidate'.")
-    for key in ("generatedAtUtc", "sourceRevision", "strykerVersion", "testRunner", "coverageAnalysis"):
-        if not isinstance(data.get(key), str) or not data[key].strip():
-            fail(f"Mutation baseline candidate property '{key}' must be a non-empty string.")
-    if data["strykerVersion"] != policy.stryker_version:
-        fail("Mutation baseline candidate Stryker version does not match policy.")
-    if data["testRunner"] != policy.test_runner or data["coverageAnalysis"] != policy.coverage_analysis:
-        fail("Mutation baseline candidate runner configuration does not match policy.")
-    if data.get("reviewRequired") is not True or data.get("survivedMutantsReviewed") is not False:
-        fail("Mutation baseline candidate must remain unreviewed until explicitly accepted.")
-    require_sha256(data, "reportSetSha256", "Mutation baseline candidate")
-    counts = validate_recorded_counts(data, "Mutation baseline candidate")
-    if counts.mutation_score + 1e-9 < policy.minimum_mutation_score:
-        fail("Mutation baseline candidate score is below the repository policy.")
-    if counts.tested < policy.minimum_tested_mutants or counts.killed < policy.minimum_killed_mutants:
-        fail("Mutation baseline candidate does not meet aggregate mutant-count policy.")
-    if counts.compile_error_percentage > policy.maximum_compile_error_percentage + 1e-9:
-        fail("Mutation baseline candidate exceeds the compile-error policy.")
-    if counts.runtime_error > policy.maximum_runtime_error_mutants or counts.pending or counts.not_run:
-        fail("Mutation baseline candidate contains incomplete or runtime-error mutants.")
-    validate_baseline_projects(data.get("projects"), policy, description="Mutation baseline candidate")
-    return data
-
-
-def accept_baseline_candidate(
-    candidate_path: Path,
-    output_path: Path,
-    policy: MutationPolicy,
-    reviewed_by: str,
-    review_notes: str,
-) -> dict[str, Any]:
-    if not reviewed_by.strip():
-        fail("--reviewed-by is required when accepting a baseline.")
-    if not review_notes.strip():
-        fail("--review-notes is required when accepting a baseline.")
-    candidate = load_baseline_candidate(candidate_path, policy)
-    baseline = dict(candidate)
-    baseline.update({
-        "status": "recorded",
-        "recordedAtUtc": utc_now(),
-        "reviewedAtUtc": utc_now(),
-        "reviewedBy": reviewed_by.strip(),
-        "reviewNotes": review_notes.strip(),
-        "reviewRequired": False,
-        "survivedMutantsReviewed": True,
-    })
-    baseline.pop("generatedAtUtc", None)
-    baseline.pop("reviewInstructions", None)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8", newline="\n")
-    load_baseline(output_path, policy)
-    return baseline
-
-
-def validate_git_tracking(repository_root: Path, paths: Iterable[Path]) -> None:
-    if not (repository_root / ".git").exists():
-        fail("Git metadata is unavailable; use --skip-git-check only for an exported source archive.")
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        fail("Git metadata is unavailable; use --skip-git-check only for exported source archives.")
     for path in paths:
-        relative = path.resolve().relative_to(repository_root.resolve())
-        ignored = subprocess.run(["git", "check-ignore", "-q", "--", str(relative)], cwd=repository_root, check=False)
+        try:
+            relative = path.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            fail(f"Required mutation file must stay inside the repository: {path}")
+        ignored = subprocess.run(["git", "check-ignore", "-q", "--", relative], cwd=root, check=False)
         if ignored.returncode == 0:
             fail(f"Required mutation file is ignored by Git: {relative}")
-        tracked = subprocess.run(["git", "ls-files", "--error-unmatch", "--", str(relative)], cwd=repository_root, text=True, capture_output=True, check=False)
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "--", relative], cwd=root, text=True, capture_output=True, check=False
+        )
         if tracked.returncode != 0:
             fail(f"Required mutation file is not tracked by Git: {relative}")
 
 
 def validate_configuration(
-    repository_root: Path,
+    root: Path,
     policy_path: Path,
     baseline_path: Path,
-    stryker_config_path: Path,
+    config_path: Path,
     tool_manifest_path: Path,
     workflow_path: Path,
-    ci_workflow_path: Path,
     test_props_path: Path,
     check_git: bool,
-) -> tuple[MutationPolicy, MutationBaseline]:
+) -> tuple[Policy, Baseline]:
     policy = load_policy(policy_path)
     baseline = load_baseline(baseline_path, policy)
 
-    config = read_json_object(stryker_config_path, "Stryker configuration").get("stryker-config")
+    config = read_object(config_path, "Stryker configuration").get("stryker-config")
     if not isinstance(config, dict):
-        fail("Stryker configuration must contain a stryker-config object.")
+        fail("Stryker configuration must contain a 'stryker-config' object.")
     reporters = config.get("reporters")
-    if not isinstance(reporters, list) or not REQUIRED_REPORTERS.issubset({str(item).lower() for item in reporters}):
+    if not isinstance(reporters, list) or not REQUIRED_REPORTERS.issubset({str(x).lower() for x in reporters}):
         fail("Stryker configuration must enable HTML and JSON reporters.")
-    if config.get("test-runner") != policy.test_runner:
-        fail("Stryker test-runner must match mutation policy.")
-    if config.get("coverage-analysis") != policy.coverage_analysis:
-        fail("Stryker coverage-analysis must match mutation policy.")
-    if policy.test_runner != "mtp":
-        fail("Step 29 remediation requires the MTP runner for the repository's xUnit v3 tests.")
-    if policy.coverage_analysis != "off":
-        fail("Step 29 remediation requires coverage-analysis=off until optimized capture is proven valid.")
+    if str(config.get("test-runner", "")).lower() != policy.test_runner or policy.test_runner != "mtp":
+        fail("Stryker must use the MTP runner for the repository's xUnit v3 tests.")
+    if config.get("coverage-analysis") != policy.coverage_analysis or policy.coverage_analysis != "off":
+        fail("Stryker coverage-analysis must remain 'off' until optimized capture is proven trustworthy.")
+    if config.get("concurrency") != 1:
+        fail("Stryker concurrency must be 1 while the MTP runner reuses test hosts.")
+    if config.get("disable-mix-mutants") is not True:
+        fail("Stryker disable-mix-mutants must be true for the initial MTP baseline.")
     thresholds = config.get("thresholds")
     if not isinstance(thresholds, dict) or thresholds.get("break") != 0:
-        fail("Stryker break threshold must remain 0; the repository verifier owns the aggregate gate.")
+        fail("Stryker break threshold must remain 0; the repository verifier owns the gate.")
+    if float(thresholds.get("low", -1)) != policy.minimum_score:
+        fail("Stryker low threshold must match minimumMutationScore.")
+    if "project" in config or "mutate" in config:
+        fail("Shared Stryker config must not hard-code a project or mutation scope.")
+    ignored = config.get("ignore-mutations", [])
+    if tuple(ignored) != policy.ignored_types:
+        fail("Stryker ignore-mutations must exactly match policy.")
 
-    tool_manifest = read_json_object(tool_manifest_path, ".NET tool manifest")
-    tool = tool_manifest.get("tools", {}).get("dotnet-stryker") if isinstance(tool_manifest.get("tools"), dict) else None
+    manifest = read_object(tool_manifest_path, ".NET tool manifest")
+    tools = manifest.get("tools")
+    tool = tools.get("dotnet-stryker") if isinstance(tools, dict) else None
     if not isinstance(tool, dict) or tool.get("version") != policy.stryker_version:
-        fail("The local dotnet-stryker tool version must match mutation policy.")
+        fail("Pinned dotnet-stryker version must match policy.")
 
-    workflow_text = workflow_path.read_text(encoding="utf-8")
-    for fragment in REQUIRED_WORKFLOW_FRAGMENTS:
-        if fragment not in workflow_text:
+    props = test_props_path.read_text(encoding="utf-8")
+    for required in (
+        "<OutputType>Exe</OutputType>",
+        "<UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>",
+    ):
+        if required not in props:
+            fail(f"tests/TestProject.props is missing required MTP setting: {required}")
+
+    workflow = workflow_path.read_text(encoding="utf-8")
+    required_workflow_fragments = (
+        "name: Mutation testing",
+        "workflow_dispatch:",
+        "schedule:",
+        "pull_request:",
+        "push:",
+        "name: Run mutation tests",
+        "Run TCJ.Core mutation tests",
+        "Run TCJ.DependencyInjection mutation tests",
+        "mutation-baseline-candidate.json",
+        "Upload mutation reports",
+    )
+    for fragment in required_workflow_fragments:
+        if fragment not in workflow:
             fail(f"Mutation workflow is missing required fragment: {fragment}")
-    ci_text = ci_workflow_path.read_text(encoding="utf-8")
-    for fragment in REQUIRED_CI_FRAGMENTS:
-        if fragment not in ci_text:
-            fail(f"CI workflow is missing required mutation gate fragment: {fragment}")
-    props_text = test_props_path.read_text(encoding="utf-8")
-    if "<UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>" not in props_text:
-        fail("tests/TestProject.props must enable the Microsoft Testing Platform runner.")
+    if "Require a recorded baseline" in workflow:
+        fail("Mutation workflow must not stop before Stryker runs when the baseline is pending.")
+    if "pull_request:\n    paths:" in workflow or "pull_request:\r\n    paths:" in workflow:
+        fail("A required mutation workflow must not use a top-level pull_request paths filter.")
 
-    expected_paths = {project.report_path for project in policy.projects}
-    if len(expected_paths) != len(policy.projects):
-        fail("Project report paths must be unique.")
+
+    for exclusion in policy.source_exclusions:
+        source_path = root / exclusion.file
+        if not source_path.is_file():
+            fail(f"Source-level mutation exclusion file is missing: {exclusion.file}")
+        source_text = source_path.read_text(encoding="utf-8")
+        marker = exclusion.comment + "\n    " + exclusion.declaration_contains
+        if marker not in source_text:
+            fail(
+                "Source-level mutation exclusion is missing or no longer immediately precedes its "
+                f"documented declaration: {exclusion.file}"
+            )
+
     for project in policy.projects:
         for relative in (project.source_project, project.test_project):
-            if not (repository_root / relative).is_file():
+            if not (root / relative).is_file():
                 fail(f"Configured project file is missing: {relative}")
 
     if check_git:
-        tracked = [
-            policy_path,
-            baseline_path,
-            stryker_config_path,
-            tool_manifest_path,
-            workflow_path,
-            ci_workflow_path,
-            test_props_path,
-            repository_root / "eng/run-mutation-testing.py",
-            Path(__file__).resolve(),
-        ]
-        validate_git_tracking(repository_root, tracked)
+        validate_git_tracking(
+            root,
+            (
+                policy_path, baseline_path, config_path, tool_manifest_path, workflow_path,
+                test_props_path, root / "eng/run-mutation-testing.py", Path(__file__).resolve(),
+                *(root / exclusion.file for exclusion in policy.source_exclusions),
+            ),
+        )
     return policy, baseline
 
 
-def normalize_status(value: Any, report_path: Path) -> str:
+def normalize_status(value: Any, path: Path) -> str:
     if not isinstance(value, str) or not value.strip():
-        fail(f"A mutant in {report_path} has no valid status.")
-    normalized = "".join(character for character in value.lower() if character.isalnum())
-    if normalized not in STATUS_NAMES:
-        fail(f"Unsupported mutant status '{value}' in {report_path}.")
-    return STATUS_NAMES[normalized]
+        fail(f"A mutant in {path} has no valid status.")
+    key = "".join(character for character in value.lower() if character.isalnum())
+    if key not in STATUS_NAMES:
+        fail(f"Unsupported mutant status '{value}' in {path}.")
+    return STATUS_NAMES[key]
 
 
-def report_identifies_project(data: dict[str, Any], project: str) -> bool:
+def report_identifies_project(data: dict[str, Any], name: str) -> bool:
     root = data.get("projectRoot")
-    if isinstance(root, str) and PurePosixPath(root.replace("\\", "/").rstrip("/")).name.lower() == project.lower():
+    if isinstance(root, str) and PurePosixPath(root.replace("\\", "/").rstrip("/")).name.lower() == name.lower():
         return True
     files = data.get("files")
     if isinstance(files, dict):
-        return any(project.lower() in {part.lower() for part in PurePosixPath(str(name).replace("\\", "/")).parts} for name in files)
+        return any(name.lower() in {part.lower() for part in PurePosixPath(str(path).replace("\\", "/")).parts} for path in files)
     return False
 
 
-def parse_run_metadata(
-    repository_root: Path,
-    path: Path,
-    project: ProjectPolicy,
-    policy: MutationPolicy,
-    report_path: Path,
-) -> RunMetadata:
-    data = read_json_object(path, f"Run metadata for {project.name}")
-    if data.get("schemaVersion") != 1 or data.get("project") != project.name:
-        fail(f"Run metadata does not identify project '{project.name}': {path}")
-    required = (
-        "sourceRevision", "strykerVersion", "testRunner", "coverageAnalysis", "status",
-        "reportSha256", "policySha256", "consoleLogPath", "consoleLogSha256"
-    )
-    for key in required:
-        if not isinstance(data.get(key), str) or not data[key].strip():
-            fail(f"Run metadata property '{key}' is invalid for {project.name}.")
-    exit_code = data.get("exitCode")
-    if isinstance(exit_code, bool) or not isinstance(exit_code, int):
-        fail(f"Run metadata exitCode is invalid for {project.name}.")
-    if data["strykerVersion"] != policy.stryker_version:
-        fail(f"Stryker version mismatch for {project.name}.")
-    if data["testRunner"] != policy.test_runner or data["coverageAnalysis"] != policy.coverage_analysis:
-        fail(f"Runner configuration mismatch for {project.name}.")
-    actual_hash = sha256_file(report_path)
-    if data["reportSha256"] != actual_hash:
-        fail(f"Run metadata report hash mismatch for {project.name}.")
-    if data["policySha256"] != sha256_file(policy.path):
-        fail(f"Run metadata policy hash mismatch for {project.name}.")
-    if data["consoleLogPath"] != project.console_log_path:
-        fail(f"Run metadata console-log path mismatch for {project.name}.")
-    console_log_path = repository_root / project.console_log_path
-    if data["consoleLogSha256"] != sha256_file(console_log_path):
-        fail(f"Run metadata console-log hash mismatch for {project.name}.")
-    return RunMetadata(
-        str(path), data["sourceRevision"], data["strykerVersion"], data["testRunner"],
-        data["coverageAnalysis"], data["status"], exit_code, data["reportSha256"], data["policySha256"],
-        data["consoleLogPath"], data["consoleLogSha256"]
-    )
-
-
-def parse_report(repository_root: Path, project: ProjectPolicy, policy: MutationPolicy) -> ProjectResult:
-    report_path = repository_root / project.report_path
-    data = read_json_object(report_path, f"Stryker report for {project.name}")
-    schema_version = data.get("schemaVersion")
-    if str(schema_version) != "2":
+def parse_project(root: Path, project: ProjectPolicy, policy: Policy) -> ProjectResult:
+    report_path = root / project.report_path
+    data = read_object(report_path, f"Stryker report for {project.name}")
+    if str(data.get("schemaVersion")) != "2":
         fail(f"Stryker report schemaVersion must be 2 for {project.name}.")
     if not report_identifies_project(data, project.name):
         fail(f"Stryker report does not identify configured project '{project.name}': {report_path}")
-
-    test_files = data.get("testFiles")
-    if not isinstance(test_files, dict) or not test_files:
-        fail(f"Stryker report for '{project.name}' contains no testFiles metadata.")
-    test_count = 0
-    for test_file in test_files.values():
-        if not isinstance(test_file, dict) or not isinstance(test_file.get("tests"), list):
-            fail(f"Stryker report for '{project.name}' contains malformed test metadata.")
-        test_count += len(test_file["tests"])
-    if test_count == 0:
-        fail(f"Stryker report for '{project.name}' discovered zero tests.")
-
     files = data.get("files")
     if not isinstance(files, dict) or not files:
-        fail(f"Stryker report for '{project.name}' contains no source files.")
-    counts = MutationCounts()
+        fail(f"Stryker report for {project.name} has no source files.")
+
+    counts = Counts()
     for file_name, file_data in files.items():
         if not isinstance(file_name, str) or not isinstance(file_data, dict):
-            fail(f"Stryker report for '{project.name}' contains an invalid file entry.")
+            fail(f"Stryker report for {project.name} contains an invalid file entry.")
         mutants = file_data.get("mutants")
         if not isinstance(mutants, list):
             fail(f"Stryker report file '{file_name}' has no mutants array.")
@@ -771,113 +555,117 @@ def parse_report(repository_root: Path, project: ProjectPolicy, policy: Mutation
             field = normalize_status(mutant.get("status"), report_path)
             setattr(counts, field, getattr(counts, field) + 1)
     if counts.total == 0:
-        fail(f"Stryker report for '{project.name}' contains no mutants.")
+        fail(f"Stryker report for {project.name} contains no mutants.")
+    if not (root / project.html_report_path).is_file():
+        fail(f"Expected HTML report is missing for {project.name}: {project.html_report_path}")
 
-    if not (repository_root / project.html_report_path).is_file():
-        fail(f"Expected HTML mutation report is missing for {project.name}: {project.html_report_path}")
-    metadata = parse_run_metadata(
-        repository_root, repository_root / project.run_metadata_path, project, policy, report_path
-    )
+    metadata_path = root / project.metadata_path
+    metadata = read_object(metadata_path, f"Run metadata for {project.name}")
+    if metadata.get("schemaVersion") != 1 or metadata.get("project") != project.name:
+        fail(f"Run metadata does not identify project {project.name}.")
+    if metadata.get("status") != "success" or metadata.get("exitCode") != 0:
+        metadata_failure = True
+    else:
+        metadata_failure = False
+    if metadata.get("strykerVersion") != policy.stryker_version:
+        fail(f"Stryker version mismatch for {project.name}.")
+    if str(metadata.get("testRunner", "")).lower() != policy.test_runner or metadata.get("coverageAnalysis") != policy.coverage_analysis:
+        fail(f"Runner settings mismatch for {project.name}.")
+    report_hash = sha256_file(report_path)
+    if metadata.get("reportSha256") != report_hash:
+        fail(f"Run metadata report hash mismatch for {project.name}.")
+    if metadata.get("policySha256") != sha256_file(policy.path):
+        fail(f"Run metadata policy hash mismatch for {project.name}.")
+    log_path = root / project.log_path
+    log_hash = sha256_file(log_path)
+    if metadata.get("consoleLogPath") != project.log_path or metadata.get("consoleLogSha256") != log_hash:
+        fail(f"Run metadata console-log hash mismatch for {project.name}.")
 
     failures: list[str] = []
-    console_text = (repository_root / project.console_log_path).read_text(encoding="utf-8", errors="replace").lower()
-    for marker in policy.forbidden_runner_log_markers:
-        if marker.lower() in console_text:
+    log_text = log_path.read_text(encoding="utf-8", errors="replace").lower()
+    for marker in policy.forbidden_log_markers:
+        if marker.lower() in log_text:
             failures.append(f"{project.name}: runner log contains invalid-execution marker '{marker}'")
-    if metadata.status != "success" or metadata.exit_code != 0:
+    if metadata_failure:
         failures.append(f"{project.name}: Stryker runner did not complete successfully")
-    if counts.tested < project.minimum_tested_mutants:
-        failures.append(f"{project.name}: tested mutants {counts.tested} < {project.minimum_tested_mutants}")
-    if counts.killed < policy.minimum_killed_mutants_per_project:
-        failures.append(f"{project.name}: killed mutants {counts.killed} < {policy.minimum_killed_mutants_per_project}")
+    if counts.tested < project.minimum_tested:
+        failures.append(f"{project.name}: tested mutants {counts.tested} < {project.minimum_tested}")
+    if counts.killed < policy.minimum_killed_per_project:
+        failures.append(f"{project.name}: killed mutants {counts.killed} < {policy.minimum_killed_per_project}")
     if counts.tested > 0 and counts.killed == 0 and counts.survived == counts.tested:
-        failures.append(f"{project.name}: degenerate all-survived result is not a valid baseline")
+        failures.append(f"{project.name}: degenerate all-survived result is invalid")
     if counts.compile_error_percentage > policy.maximum_compile_error_percentage + 1e-9:
         failures.append(
             f"{project.name}: compile-error rate {counts.compile_error_percentage:.2f}% > "
             f"{policy.maximum_compile_error_percentage:.2f}%"
         )
-    if counts.runtime_error > policy.maximum_runtime_error_mutants:
-        failures.append(f"{project.name}: runtime-error mutants {counts.runtime_error} exceed policy")
+    if counts.runtime_error > policy.maximum_runtime_errors:
+        failures.append(f"{project.name}: runtime-error mutants exceed policy")
     if counts.pending or counts.not_run:
         failures.append(f"{project.name}: pending or not-run mutants make the result incomplete")
-    return ProjectResult(project, counts, test_count, sha256_file(report_path), metadata, tuple(failures))
+
+    revision = metadata.get("sourceRevision")
+    if not isinstance(revision, str) or not revision:
+        fail(f"Run metadata sourceRevision is invalid for {project.name}.")
+    return ProjectResult(project, counts, report_hash, revision, tuple(failures))
 
 
-def effective_minimum_score(policy: MutationPolicy, baseline: MutationBaseline) -> float:
-    if not baseline.is_recorded or baseline.mutation_score is None:
-        return policy.minimum_mutation_score
-    return max(policy.minimum_mutation_score, baseline.mutation_score - policy.allowed_baseline_score_regression)
-
-
-def collect_results(policy: MutationPolicy, baseline: MutationBaseline, repository_root: Path) -> VerificationResult:
-    projects = tuple(parse_report(repository_root, project, policy) for project in policy.projects)
-    totals = MutationCounts()
-    health_failures: list[str] = []
-    source_revisions = set()
+def collect(root: Path, policy: Policy, baseline: Baseline) -> Result:
+    projects = tuple(parse_project(root, project, policy) for project in policy.projects)
+    totals = Counts()
+    failures: list[str] = []
+    revisions: set[str] = set()
     for project in projects:
         totals.add(project.counts)
-        health_failures.extend(project.health_failures)
-        source_revisions.add(project.metadata.source_revision)
-    if len(source_revisions) != 1:
-        health_failures.append("Project reports were not produced from the same source revision")
-
-    minimum_score = effective_minimum_score(policy, baseline)
-    return VerificationResult(
+        failures.extend(project.health_failures)
+        revisions.add(project.source_revision)
+    if len(revisions) != 1:
+        failures.append("Project reports were produced from different source revisions")
+    effective = policy.minimum_score
+    if baseline.status == "recorded" and baseline.score is not None:
+        effective = max(effective, baseline.score - policy.allowed_regression)
+    return Result(
         projects=projects,
         totals=totals,
-        policy_score_passed=totals.mutation_score + 1e-9 >= policy.minimum_mutation_score,
-        baseline_score_passed=totals.mutation_score + 1e-9 >= minimum_score,
-        mutant_count_passed=totals.tested >= policy.minimum_tested_mutants,
-        killed_count_passed=totals.killed >= policy.minimum_killed_mutants,
-        health_failures=tuple(health_failures),
+        health_failures=tuple(failures),
+        policy_score_passed=totals.score + 1e-9 >= policy.minimum_score,
+        baseline_score_passed=totals.score + 1e-9 >= effective,
+        tested_passed=totals.tested >= policy.minimum_tested,
+        killed_passed=totals.killed >= policy.minimum_killed,
+        effective_minimum_score=effective,
         baseline_status=baseline.status,
-        effective_minimum_score=minimum_score,
     )
 
 
-def status_label(value: bool) -> str:
+def status(value: bool) -> str:
     return "PASS" if value else "FAIL"
 
 
-def render_markdown(result: VerificationResult, policy: MutationPolicy, mode: str) -> str:
+def render_markdown(result: Result, policy: Policy, mode: str) -> str:
     totals = result.totals
-    baseline_ready = result.baseline_status == "recorded" or mode == "capture-baseline"
     overall = (
         result.health_passed
         and result.policy_score_passed
-        and result.mutant_count_passed
-        and result.killed_count_passed
-        and (result.baseline_score_passed if mode == "verify" else True)
-        and baseline_ready
+        and result.tested_passed
+        and result.killed_passed
+        and (result.baseline_score_passed if result.baseline_status == "recorded" else mode == "capture-baseline")
     )
     lines = [
         "# TCJ mutation testing",
         "",
         f"**Mode:** {mode}",
-        f"**Overall status:** {status_label(overall)}",
+        f"**Overall status:** {status(overall)}",
         f"**Baseline status:** {result.baseline_status}",
-        "",
-        "## Result health",
-        "",
-        f"- Execution health: **{status_label(result.health_passed)}**",
-        f"- Killed mutants: **{totals.killed}**",
-        f"- Compile-error rate: **{totals.compile_error_percentage:.2f}%**",
-    ]
-    if result.health_failures:
-        lines.extend(["", "### Health failures", ""])
-        lines.extend(f"- {item}" for item in result.health_failures)
-
-    lines.extend([
         "",
         "## Quality gate",
         "",
         "| Gate | Actual | Required | Status |",
         "| --- | ---: | ---: | :---: |",
-        f"| Mutation score | {totals.mutation_score:.2f}% | {policy.minimum_mutation_score:.2f}% | {status_label(result.policy_score_passed)} |",
-        f"| Recorded-baseline floor | {totals.mutation_score:.2f}% | {result.effective_minimum_score:.2f}% | {status_label(result.baseline_score_passed)} |",
-        f"| Tested mutants | {totals.tested} | {policy.minimum_tested_mutants} | {status_label(result.mutant_count_passed)} |",
-        f"| Killed mutants | {totals.killed} | {policy.minimum_killed_mutants} | {status_label(result.killed_count_passed)} |",
+        f"| Execution health | {'healthy' if result.health_passed else 'invalid'} | healthy | {status(result.health_passed)} |",
+        f"| Mutation score | {totals.score:.2f}% | {policy.minimum_score:.2f}% | {status(result.policy_score_passed)} |",
+        f"| Recorded baseline floor | {totals.score:.2f}% | {result.effective_minimum_score:.2f}% | {status(result.baseline_score_passed)} |",
+        f"| Tested mutants | {totals.tested} | {policy.minimum_tested} | {status(result.tested_passed)} |",
+        f"| Killed mutants | {totals.killed} | {policy.minimum_killed} | {status(result.killed_passed)} |",
         "",
         "## Mutant outcomes",
         "",
@@ -895,52 +683,50 @@ def render_markdown(result: VerificationResult, policy: MutationPolicy, mode: st
         "",
         "## Project results",
         "",
-        "| Project | Tests | Score | Tested | Killed | Survived | Compile errors | Health |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: |",
-    ])
+        "| Project | Score | Tested | Killed | Survived | Compile errors | Health |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | :---: |",
+    ]
     for project in result.projects:
         counts = project.counts
         lines.append(
-            f"| {project.policy.name} | {project.test_count} | {counts.mutation_score:.2f}% | "
-            f"{counts.tested} | {counts.killed} | {counts.survived} | {counts.compile_error} | "
-            f"{status_label(not project.health_failures)} |"
+            f"| {project.policy.name} | {counts.score:.2f}% | {counts.tested} | {counts.killed} | "
+            f"{counts.survived} | {counts.compile_error} | {status(not project.health_failures)} |"
         )
-    lines.extend([
-        "",
-        "A result with zero killed mutants or an all-survived outcome is rejected as an invalid execution, even if its JSON schema is valid.",
-        "Survived mutants must be reviewed in the HTML reports before a recorded baseline is committed.",
-        "",
-    ])
+    if result.health_failures:
+        lines.extend(["", "## Execution-health failures", ""])
+        lines.extend(f"- {failure}" for failure in result.health_failures)
+    if result.baseline_status == "pending":
+        lines.extend([
+            "",
+            "A valid baseline candidate is generated only after all execution-health and policy gates pass. "
+            "Review both HTML reports, accept the candidate, and commit `eng/mutation-baseline.json`.",
+        ])
+    lines.extend(["", "Survived mutants must be reviewed before accepting a baseline.", ""])
     return "\n".join(lines)
 
 
-def render_json(result: VerificationResult, policy: MutationPolicy, mode: str) -> dict[str, Any]:
+def render_json(result: Result, policy: Policy, mode: str) -> dict[str, Any]:
     return {
         "schemaVersion": 2,
         "generatedAtUtc": utc_now(),
         "mode": mode,
-        "status": "pass" if (
-            result.health_passed
-            and result.policy_score_passed
-            and result.mutant_count_passed
-            and result.killed_count_passed
-            and (result.baseline_score_passed if mode == "verify" else True)
-            and (result.baseline_status == "recorded" or mode == "capture-baseline")
-        ) else "fail",
         "baselineStatus": result.baseline_status,
-        "minimumMutationScore": policy.minimum_mutation_score,
+        "status": "pass" if (
+            result.health_passed and result.policy_score_passed and result.tested_passed and result.killed_passed
+            and (result.baseline_score_passed if result.baseline_status == "recorded" else mode == "capture-baseline")
+        ) else "fail",
+        "minimumMutationScore": policy.minimum_score,
         "effectiveMinimumMutationScore": round(result.effective_minimum_score, 2),
-        "minimumTestedMutants": policy.minimum_tested_mutants,
-        "minimumKilledMutants": policy.minimum_killed_mutants,
+        "minimumTestedMutants": policy.minimum_tested,
+        "minimumKilledMutants": policy.minimum_killed,
         "healthFailures": list(result.health_failures),
         "totals": result.totals.as_dict(),
         "projects": [
             {
                 "name": project.policy.name,
                 "reportPath": project.policy.report_path,
-                "reportSha256": project.report_sha256,
-                "sourceRevision": project.metadata.source_revision,
-                "testCount": project.test_count,
+                "reportSha256": project.report_hash,
+                "sourceRevision": project.source_revision,
                 "healthFailures": list(project.health_failures),
                 **project.counts.as_dict(),
             }
@@ -949,7 +735,7 @@ def render_json(result: VerificationResult, policy: MutationPolicy, mode: str) -
     }
 
 
-def write_outputs(result: VerificationResult, policy: MutationPolicy, mode: str, summary_path: Path, json_path: Path) -> None:
+def write_outputs(result: Result, policy: Policy, mode: str, summary_path: Path, json_path: Path) -> None:
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(render_markdown(result, policy, mode), encoding="utf-8", newline="\n")
@@ -959,91 +745,137 @@ def write_outputs(result: VerificationResult, policy: MutationPolicy, mode: str,
 def report_set_hash(projects: tuple[ProjectResult, ...]) -> str:
     digest = hashlib.sha256()
     for project in sorted(projects, key=lambda item: item.policy.name):
-        digest.update(project.policy.name.encode("utf-8"))
+        digest.update(project.policy.name.encode())
         digest.update(b"\0")
-        digest.update(project.report_sha256.encode("ascii"))
+        digest.update(project.report_hash.encode())
         digest.update(b"\n")
     return digest.hexdigest()
 
 
-def write_baseline_candidate(result: VerificationResult, policy: MutationPolicy, path: Path) -> None:
-    source_revisions = {project.metadata.source_revision for project in result.projects}
-    source_revision = next(iter(source_revisions)) if len(source_revisions) == 1 else "inconsistent"
-    totals = result.totals.as_dict()
+def write_candidate(result: Result, policy: Policy, path: Path) -> None:
+    revisions = {project.source_revision for project in result.projects}
     candidate = {
         "schemaVersion": 1,
         "status": "candidate",
         "generatedAtUtc": utc_now(),
-        "sourceRevision": source_revision,
+        "sourceRevision": next(iter(revisions)),
         "strykerVersion": policy.stryker_version,
         "testRunner": policy.test_runner,
         "coverageAnalysis": policy.coverage_analysis,
-        **totals,
+        **result.totals.as_dict(),
         "reportSetSha256": report_set_hash(result.projects),
         "projects": [
-            {
-                "name": project.policy.name,
-                **project.counts.as_dict(),
-                "reportSha256": project.report_sha256,
-            }
+            {"name": project.policy.name, **project.counts.as_dict(), "reportSha256": project.report_hash}
             for project in result.projects
         ],
         "reviewRequired": True,
         "survivedMutantsReviewed": False,
-        "reviewInstructions": (
-            "Review every survived mutant in both HTML reports, then run the accept-baseline command "
-            "with reviewer identity and review notes. Do not copy this candidate over eng/mutation-baseline.json."
-        ),
+        "reviewInstructions": "Review both HTML reports, then use accept-baseline with reviewer identity and notes.",
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(candidate, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
-def gate_failures(result: VerificationResult, policy: MutationPolicy, mode: str) -> list[str]:
+def validate_candidate(path: Path, policy: Policy) -> dict[str, Any]:
+    data = read_object(path, "Mutation baseline candidate")
+    if data.get("schemaVersion") != 1 or data.get("status") != "candidate":
+        fail("Mutation baseline candidate must use schemaVersion 1 and status 'candidate'.")
+    if data.get("reviewRequired") is not True or data.get("survivedMutantsReviewed") is not False:
+        fail("Mutation baseline candidate must remain unreviewed until explicitly accepted.")
+    if data.get("strykerVersion") != policy.stryker_version:
+        fail("Candidate Stryker version does not match policy.")
+    if str(data.get("testRunner", "")).lower() != policy.test_runner or data.get("coverageAnalysis") != policy.coverage_analysis:
+        fail("Candidate runner settings do not match policy.")
+    score = data.get("mutationScore")
+    if isinstance(score, bool) or not isinstance(score, (int, float)) or float(score) + 1e-9 < policy.minimum_score:
+        fail("Candidate mutation score is below policy.")
+    killed = data.get("killedMutants")
+    tested = data.get("testedMutants")
+    if not isinstance(killed, int) or killed < policy.minimum_killed:
+        fail("Candidate killed-mutant count is below policy.")
+    if not isinstance(tested, int) or tested < policy.minimum_tested:
+        fail("Candidate tested-mutant count is below policy.")
+    return data
+
+
+def accept_candidate(candidate_path: Path, output_path: Path, policy: Policy, reviewed_by: str, notes: str) -> dict[str, Any]:
+    if not reviewed_by.strip():
+        fail("--reviewed-by is required when accepting a baseline.")
+    if not notes.strip():
+        fail("--review-notes is required when accepting a baseline.")
+    candidate = validate_candidate(candidate_path, policy)
+    accepted = dict(candidate)
+    accepted.update({
+        "status": "recorded",
+        "recordedAtUtc": utc_now(),
+        "reviewedAtUtc": utc_now(),
+        "reviewedBy": reviewed_by.strip(),
+        "reviewNotes": notes.strip(),
+        "reviewRequired": False,
+        "survivedMutantsReviewed": True,
+    })
+    accepted.pop("generatedAtUtc", None)
+    accepted.pop("reviewInstructions", None)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(accepted, indent=2) + "\n", encoding="utf-8", newline="\n")
+    load_baseline(output_path, policy)
+    return accepted
+
+
+def gate_failures(result: Result, policy: Policy, mode: str) -> list[str]:
     failures = list(result.health_failures)
     if not result.policy_score_passed:
-        failures.append(f"mutation score {result.totals.mutation_score:.2f}% is below {policy.minimum_mutation_score:.2f}%")
-    if mode == "verify" and not result.baseline_score_passed:
-        failures.append(f"mutation score {result.totals.mutation_score:.2f}% is below recorded baseline floor {result.effective_minimum_score:.2f}%")
-    if not result.mutant_count_passed:
-        failures.append(f"tested mutant count {result.totals.tested} is below {policy.minimum_tested_mutants}")
-    if not result.killed_count_passed:
-        failures.append(f"killed mutant count {result.totals.killed} is below {policy.minimum_killed_mutants}")
-    if mode == "verify" and policy.require_recorded_baseline and result.baseline_status != "recorded":
-        failures.append("mutation baseline is pending; capture, review, and commit a real baseline before merging")
+        failures.append(f"mutation score {result.totals.score:.2f}% is below {policy.minimum_score:.2f}%")
+    if not result.tested_passed:
+        failures.append(f"tested mutant count {result.totals.tested} is below {policy.minimum_tested}")
+    if not result.killed_passed:
+        failures.append(f"killed mutant count {result.totals.killed} is below {policy.minimum_killed}")
+    if result.baseline_status == "recorded" and not result.baseline_score_passed:
+        failures.append(
+            f"mutation score {result.totals.score:.2f}% is below recorded baseline floor "
+            f"{result.effective_minimum_score:.2f}%"
+        )
+    if mode == "verify" and result.baseline_status == "pending":
+        failures.append(
+            "mutation baseline is pending; a valid candidate was generated. Review and accept it, commit "
+            "eng/mutation-baseline.json, then rerun CI"
+        )
     return failures
 
 
 def execute_gate(
-    policy: MutationPolicy,
-    baseline: MutationBaseline,
-    repository_root: Path,
+    root: Path,
+    policy: Policy,
+    baseline: Baseline,
+    mode: str,
     summary_path: Path,
     json_path: Path,
-    mode: str,
-    candidate_path: Path | None = None,
-) -> VerificationResult:
-    result = collect_results(policy, baseline, repository_root)
+    candidate_path: Path,
+) -> Result:
+    result = collect(root, policy, baseline)
     write_outputs(result, policy, mode, summary_path, json_path)
+    preliminary_failures = gate_failures(result, policy, "capture-baseline")
+    if not preliminary_failures:
+        write_candidate(result, policy, candidate_path)
     failures = gate_failures(result, policy, mode)
-    if not failures and mode == "capture-baseline":
-        assert candidate_path is not None
-        write_baseline_candidate(result, policy, candidate_path)
     if failures:
         fail("; ".join(failures))
     return result
 
 
+def resolve(path: Path, root: Path) -> Path:
+    return path if path.is_absolute() else root / path
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("validate-config", "validate-baseline", "verify", "capture-baseline", "accept-baseline"))
-    parser.add_argument("--repository-root", type=Path, default=REPOSITORY_ROOT)
+    parser.add_argument("--repository-root", type=Path, default=ROOT)
     parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
     parser.add_argument("--baseline", type=Path, default=DEFAULT_BASELINE)
-    parser.add_argument("--stryker-config", type=Path, default=DEFAULT_STRYKER_CONFIG)
+    parser.add_argument("--stryker-config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--tool-manifest", type=Path, default=DEFAULT_TOOL_MANIFEST)
     parser.add_argument("--workflow", type=Path, default=DEFAULT_WORKFLOW)
-    parser.add_argument("--ci-workflow", type=Path, default=DEFAULT_CI_WORKFLOW)
     parser.add_argument("--test-props", type=Path, default=DEFAULT_TEST_PROPS)
     parser.add_argument("--summary", type=Path, default=DEFAULT_SUMMARY)
     parser.add_argument("--json", type=Path, default=DEFAULT_JSON)
@@ -1055,46 +887,41 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def resolve(path: Path, root: Path) -> Path:
-    return path if path.is_absolute() else root / path
-
-
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     root = args.repository_root.resolve()
-    paths = {name: resolve(getattr(args, name), root).resolve() for name in (
-        "policy", "baseline", "stryker_config", "tool_manifest", "workflow", "ci_workflow", "test_props", "summary", "json", "candidate"
-    )}
+    paths = {
+        name: resolve(getattr(args, name), root).resolve()
+        for name in (
+            "policy", "baseline", "stryker_config", "tool_manifest", "workflow", "test_props",
+            "summary", "json", "candidate", "output_baseline"
+        )
+    }
     try:
         policy, baseline = validate_configuration(
             root,
             paths["policy"], paths["baseline"], paths["stryker_config"], paths["tool_manifest"],
-            paths["workflow"], paths["ci_workflow"], paths["test_props"], check_git=not args.skip_git_check,
+            paths["workflow"], paths["test_props"], check_git=not args.skip_git_check,
         )
         if args.command == "validate-config":
-            print(f"Mutation-testing configuration validation succeeded; baseline status={baseline.status}.")
+            print(f"Mutation-testing configuration is valid; baseline status={baseline.status}.")
         elif args.command == "validate-baseline":
-            if policy.require_recorded_baseline and not baseline.is_recorded:
-                fail("Mutation baseline is pending and cannot satisfy the merge gate.")
-            print(f"Recorded mutation baseline is valid: score={baseline.mutation_score:.2f}%.")
+            if baseline.status != "recorded":
+                fail("Mutation baseline is pending. Run Stryker, review the generated candidate, and accept it.")
+            print(f"Recorded mutation baseline is valid: score={baseline.score:.2f}%.")
         elif args.command == "accept-baseline":
-            output_baseline = resolve(args.output_baseline, root).resolve()
-            accepted = accept_baseline_candidate(
-                paths["candidate"],
-                output_baseline,
-                policy,
-                args.reviewed_by or "",
-                args.review_notes or "",
+            accepted = accept_candidate(
+                paths["candidate"], paths["output_baseline"], policy,
+                args.reviewed_by or "", args.review_notes or "",
             )
-            print(
-                f"Mutation baseline accepted: score={accepted['mutationScore']:.2f}%, "
-                f"reviewedBy={accepted['reviewedBy']}."
-            )
+            print(f"Mutation baseline accepted: score={accepted['mutationScore']:.2f}%.")
         else:
             mode = "capture-baseline" if args.command == "capture-baseline" else "verify"
-            result = execute_gate(policy, baseline, root, paths["summary"], paths["json"], mode, paths["candidate"])
+            result = execute_gate(
+                root, policy, baseline, mode, paths["summary"], paths["json"], paths["candidate"]
+            )
             print(
-                f"Mutation {mode} passed: score={result.totals.mutation_score:.2f}%, "
+                f"Mutation {mode} passed: score={result.totals.score:.2f}%, "
                 f"tested={result.totals.tested}, killed={result.totals.killed}."
             )
     except (MutationError, OSError, subprocess.SubprocessError, ValueError) as error:

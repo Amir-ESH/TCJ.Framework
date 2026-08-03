@@ -34,6 +34,8 @@ python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
 python3 eng/verify-mutation-results.py validate-config
 ```
 
+A pending baseline is allowed during configuration validation. Run Stryker first, generate a candidate, review both HTML reports, and accept the candidate before normal mutation verification can pass.
+
 Run the complete mutation baseline by following [Mutation testing quality gate](mutation-testing.md).
 
 Pack locally:
@@ -50,7 +52,7 @@ Packages are written to `artifacts/packages`. The Pack target also runs SDK pack
 
 `.github/workflows/dependency-review.yml` rejects pull requests that introduce moderate-or-higher vulnerable dependencies. `.github/workflows/dependency-audit.yml` performs a scheduled full restore audit so advisories published after the last code change are still detected.
 
-`.github/workflows/mutation-testing.yml` runs weekly, manually, and after relevant production or test changes. It mutates `TCJ.Core` and `TCJ.DependencyInjection`, enforces the repository baseline, publishes a Markdown job summary, and uploads HTML and JSON reports.
+`.github/workflows/mutation-testing.yml` always creates the stable `Mutation testing / Run mutation tests` check for pull requests and pushes, then uses an internal scope detector to avoid expensive work for unrelated changes. It also runs weekly and manually. The workflow uses xUnit v3 through MTP, runs Stryker before enforcing baseline state, publishes a Markdown summary, and uploads HTML, JSON, metadata, logs, and the first-baseline candidate.
 
 Release publication is isolated in `.github/workflows/release.yml` and is triggered only by `v*` tags. See [Release automation](releasing.md).
 
@@ -94,6 +96,7 @@ ci: add release workflow
 - `dotnet test` succeeds.
 - The coverage quality gate passes and behavior changes include focused tests.
 - Relevant foundational changes pass the mutation quality gate and survived mutants are reviewed.
+- A generated mutation candidate is accepted only through the documented review command; pending baselines are never used to skip Stryker execution.
 - No secrets, generated outputs, or IDE user settings are committed.
 
 ## Generated and local-only paths
