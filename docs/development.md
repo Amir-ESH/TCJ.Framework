@@ -33,6 +33,7 @@ Validate mutation-testing automation:
 python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
 python3 eng/verify-mutation-results.py validate-config
 python3 eng/verify-performance-results.py validate-config
+python3 eng/verify-architecture-policy.py validate-config
 ```
 
 A pending baseline is allowed during configuration validation. Run Stryker first, generate a candidate, review both HTML reports, and accept the candidate before normal mutation verification can pass.
@@ -49,7 +50,7 @@ Packages are written to `artifacts/packages`. The Pack target also runs SDK pack
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates dependency-security, release-integrity, coverage, and mutation-testing automation; audits direct and transitive packages during restore; builds; collects and enforces Cobertura line and branch coverage; packs; checks binary compatibility against the published package baseline; verifies the complete package set and its SHA-256 manifest; and uploads test, coverage, and NuGet artifacts.
+`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates dependency-security, release-integrity, coverage, mutation-testing, performance, and architecture-policy automation; audits direct and transitive packages during restore; builds; collects and enforces Cobertura line and branch coverage; packs; checks binary compatibility against the published package baseline; verifies the complete package set and its SHA-256 manifest; and uploads test, coverage, and NuGet artifacts.
 
 `.github/workflows/dependency-review.yml` rejects pull requests that introduce moderate-or-higher vulnerable dependencies. `.github/workflows/dependency-audit.yml` performs a scheduled full restore audit so advisories published after the last code change are still detected.
 
@@ -95,6 +96,8 @@ ci: add release workflow
 - Intentional compatibility suppressions are minimal, reviewed, and documented.
 - `dotnet build` succeeds in Release configuration.
 - `dotnet test` succeeds.
+- `python3 eng/verify-architecture-policy.py validate-config` succeeds.
+- Architecture tests pass and any module dependency change is documented.
 - The coverage quality gate passes and behavior changes include focused tests.
 - Relevant foundational changes pass the mutation quality gate and survived mutants are reviewed.
 - A generated mutation candidate is accepted only through the documented review command; pending baselines are never used to skip Stryker execution.
@@ -154,6 +157,19 @@ python3 eng/verify-performance-results.py verify
 ```
 
 Generated output belongs under `artifacts/performance/` and must not be committed. See [`performance-benchmarks.md`](performance-benchmarks.md) for filtering, baseline interpretation, ratio policy, and accepted-regression rules.
+
+## Architecture tests
+
+The architecture-test project is part of `TCJ.slnx`, so normal CI, release preflight, and tagged release tests execute it automatically. Run the category explicitly while changing package boundaries:
+
+```bash
+python3 eng/verify-architecture-policy.py validate-config
+dotnet test tests/TCJ.Architecture.Tests/TCJ.Architecture.Tests.csproj \
+  -c Release \
+  -- --filter-trait "Category=Architecture"
+```
+
+The approved graph and change process are documented in [`architecture-tests.md`](architecture-tests.md).
 
 ## Mutation testing
 

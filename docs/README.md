@@ -17,7 +17,8 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 11. [Code coverage quality gate](code-coverage.md)
 12. [Mutation testing quality gate](mutation-testing.md)
 13. [Performance benchmarking and regression gate](performance-benchmarks.md)
-14. [First preview release notes](releases/0.1.0-preview.1.md)
+14. [Architecture tests and module dependency rules](architecture-tests.md)
+15. [First preview release notes](releases/0.1.0-preview.1.md)
 
 ## Package reference
 

@@ -7,13 +7,26 @@ namespace TCJ.Benchmarks.Benchmarks;
 [BenchmarkCategory("TCJ.Core", "Extensions")]
 public class StringExtensionBenchmarks
 {
-    private const string Value = "api/products/";
+    private string _value = null!;
+    private char _suffix;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        _value = "api/products/";
+        _suffix = '/';
+    }
 
     [Benchmark(Baseline = true)]
     public string BclEnsureEndsWith()
-        => Value.EndsWith('/') ? Value : string.Concat(Value, "/");
+    {
+        ArgumentNullException.ThrowIfNull(_value);
+        return _value.EndsWith(_suffix)
+            ? _value
+            : string.Concat(_value, _suffix.ToString());
+    }
 
     [Benchmark]
     public string TcjEnsureEndsWith()
-        => Value.EnsureEndsWith('/');
+        => _value.EnsureEndsWith(_suffix);
 }

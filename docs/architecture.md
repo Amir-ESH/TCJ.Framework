@@ -69,3 +69,18 @@ HTTP endpoint
 - A distributed transaction abstraction
 
 Repository restore is restricted to the configured NuGet.org source and audits direct and transitive dependencies. Packable TCJ projects use SDK package validation to detect accidental binary-breaking API changes against the latest published baseline. The remaining boundaries are intentional for the preview and should be considered when designing applications on top of TCJ.
+
+## Executable architecture policy
+
+The approved package graph, namespace roots, forbidden infrastructure prefixes, and public option allowlist are versioned in [`eng/architecture-policy.json`](../eng/architecture-policy.json). The `TCJ.Architecture.Tests` project checks both production project references and compiled assembly metadata, detects cycles, validates namespace ownership, and rejects infrastructure leakage through public APIs.
+
+Run the policy validator and focused test category with:
+
+```bash
+python3 eng/verify-architecture-policy.py validate-config
+dotnet test tests/TCJ.Architecture.Tests/TCJ.Architecture.Tests.csproj \
+  -c Release \
+  -- --filter-trait "Category=Architecture"
+```
+
+See [Architecture tests and module dependency rules](architecture-tests.md) for the complete dependency graph and change process.

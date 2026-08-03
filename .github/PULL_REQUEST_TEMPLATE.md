@@ -27,6 +27,11 @@ Describe the problem and the approach taken.
 - [ ] Benchmark exclusions are documented
 - [ ] Performance-policy changes include justification
 - [ ] Generated benchmark output is not committed
+- [ ] Architecture tests pass and module boundaries remain valid
+- [ ] No new circular dependency is introduced
+- [ ] New project references and dependency-direction changes are documented
+- [ ] Infrastructure types do not leak into lower-level public APIs
+- [ ] `architecture-policy` changes include justification
 - [ ] `dotnet pack TCJ.slnx -c Release --no-build` when packaging or release infrastructure changes
 - [ ] Release-integrity automation remains valid and package checksums pass
 - [ ] Documentation updated where required

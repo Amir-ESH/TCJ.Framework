@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "documentation": "docs/architecture-tests.md",
+  "assemblies": {
+    "TCJ.Core": [],
+    "TCJ.DependencyInjection": [
+      "TCJ.Core"
+    ],
+    "TCJ.EntityFrameworkCore": [
+      "TCJ.Core",
+      "TCJ.DependencyInjection"
+    ],
+    "TCJ.EntityFrameworkCore.SqlServer": [
+      "TCJ.Core",
+      "TCJ.DependencyInjection",
+      "TCJ.EntityFrameworkCore"
+    ],
+    "TCJ.AspNetCore": [
+      "TCJ.Core",
+      "TCJ.DependencyInjection"
+    ]
+  },
+  "projectPaths": {
+    "TCJ.Core": "src/TCJ.Core/TCJ.Core.csproj",
+    "TCJ.DependencyInjection": "src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj",
+    "TCJ.EntityFrameworkCore": "src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
+    "TCJ.EntityFrameworkCore.SqlServer": "src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
+    "TCJ.AspNetCore": "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj"
+  },
+  "namespaceRoots": {
+    "TCJ.Core": "TCJ.Core",
+    "TCJ.DependencyInjection": "TCJ.DependencyInjection",
+    "TCJ.EntityFrameworkCore": "TCJ.EntityFrameworkCore",
+    "TCJ.EntityFrameworkCore.SqlServer": "TCJ.EntityFrameworkCore.SqlServer",
+    "TCJ.AspNetCore": "TCJ.AspNetCore"
+  },
+  "forbiddenDependencyPrefixes": {
+    "TCJ.Core": [
+      "Microsoft.AspNetCore",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient"
+    ],
+    "TCJ.DependencyInjection": [
+      "Microsoft.AspNetCore",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient"
+    ],
+    "TCJ.EntityFrameworkCore": [
+      "Microsoft.EntityFrameworkCore.SqlServer",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "Microsoft.AspNetCore"
+    ],
+    "TCJ.EntityFrameworkCore.SqlServer": [
+      "Microsoft.AspNetCore"
+    ],
+    "TCJ.AspNetCore": [
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient"
+    ]
+  },
+  "forbiddenPublicApiTypePrefixes": {
+    "TCJ.Core": [
+      "Microsoft.AspNetCore",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient"
+    ],
+    "TCJ.DependencyInjection": [
+      "Microsoft.AspNetCore",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient"
+    ],
+    "TCJ.EntityFrameworkCore": [
+      "Microsoft.EntityFrameworkCore.SqlServer",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "Microsoft.AspNetCore"
+    ],
+    "TCJ.EntityFrameworkCore.SqlServer": [
+      "Microsoft.AspNetCore"
+    ],
+    "TCJ.AspNetCore": [
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient"
+    ]
+  },
+  "approvedExtensionContainers": [
+    "TCJ.Core.Guards.Check"
+  ],
+  "approvedPublicOptionTypes": [
+    "TCJ.AspNetCore.Options.TcjAspNetCoreOptions",
+    "TCJ.DependencyInjection.Registration.TcjDependencyInjectionOptions",
+    "TCJ.EntityFrameworkCore.SqlServer.Options.TcjSqlServerOptions"
+  ]
+}

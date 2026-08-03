@@ -102,6 +102,8 @@ The blocking ratio gate is narrower: only methods listed in the generated `bench
 
 `DecimalExtensionBenchmarks` is intentionally informational rather than ratio-blocking. The TCJ `RoundUp` API validates the requested decimal-place range and resolves a scale from its lookup table, while the illustrative BCL expression uses a scale prepared before measurement. Both values remain useful measurements, but treating their ratio as a regression gate would compare different amounts of work.
 
+`StringExtensionBenchmarks` remains ratio-blocking, but its BCL baseline mirrors the public `EnsureEndsWith` contract: it performs the same null validation, uses runtime instance fields, and follows the same present/missing-suffix branches. This prevents a sub-nanosecond guard cost or compile-time constant folding from being mistaken for a framework regression.
+
 Each comparison group must contain exactly one baseline. Missing baselines, missing methods, or duplicate results fail verification.
 
 ## Reading the statistics
