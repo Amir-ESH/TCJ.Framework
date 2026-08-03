@@ -90,6 +90,9 @@
       "System.Data.SqlClient"
     ]
   },
+  "approvedExtensionContainers": [
+    "TCJ.Core.Guards.Check"
+  ],
   "approvedPublicOptionTypes": [
     "TCJ.AspNetCore.Options.TcjAspNetCoreOptions",
     "TCJ.DependencyInjection.Registration.TcjDependencyInjectionOptions",

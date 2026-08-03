@@ -32,6 +32,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Separated immutable published-release metadata from mutable next-release metadata.
 - Release preflight and tag publication now require an explicitly `ready` release manifest.
 - Mutation testing now uses the xUnit v3 MTP runner, validates execution health, and runs before baseline enforcement so the first baseline can be bootstrapped without a CI deadlock.
+- Architecture tests now ignore compiler-generated namespace artifacts, recognize the established `Check` guard extension container through policy, and safely inspect constructor and generic method signatures.
 
 ## [0.1.0-preview.1] - 2026-08-01
 

@@ -13,6 +13,9 @@ public sealed class NamingAndVisibilityArchitectureTests
     public void Extension_method_containers_are_static_and_end_with_Extensions()
     {
         var violations = new List<string>();
+        var approvedNonConventionalNames = Policy.ApprovedExtensionContainers
+            .ToHashSet(StringComparer.Ordinal);
+        var actualExtensionContainers = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var (assemblyName, assembly) in ProductionAssemblies.All.OrderBy(pair => pair.Key))
         {
@@ -27,10 +30,15 @@ public sealed class NamingAndVisibilityArchitectureTests
                     continue;
                 }
 
-                if (!type.Name.EndsWith("Extensions", StringComparison.Ordinal))
+                var fullName = type.FullName ?? type.Name;
+                actualExtensionContainers.Add(fullName);
+
+                if (!type.Name.EndsWith("Extensions", StringComparison.Ordinal)
+                    && !approvedNonConventionalNames.Contains(fullName))
                 {
                     violations.Add(
-                        $"Extension container '{type.FullName}' in assembly '{assemblyName}' must end with 'Extensions'.");
+                        $"Extension container '{fullName}' in assembly '{assemblyName}' must end with 'Extensions' " +
+                        "or be explicitly listed in approvedExtensionContainers.");
                 }
 
                 if (!(type.IsAbstract && type.IsSealed))
@@ -39,6 +47,12 @@ public sealed class NamingAndVisibilityArchitectureTests
                         $"Extension container '{type.FullName}' in assembly '{assemblyName}' must be static.");
                 }
             }
+        }
+
+        foreach (var approvedName in approvedNonConventionalNames.Except(actualExtensionContainers))
+        {
+            violations.Add(
+                $"Approved extension container '{approvedName}' was not found as a production extension container.");
         }
 
         Assert.True(

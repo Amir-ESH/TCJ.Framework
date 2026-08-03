@@ -47,6 +47,7 @@ class ArchitecturePolicy:
     namespace_roots: dict[str, str]
     forbidden_dependency_prefixes: dict[str, tuple[str, ...]]
     forbidden_public_api_type_prefixes: dict[str, tuple[str, ...]]
+    approved_extension_containers: tuple[str, ...]
     approved_public_option_types: tuple[str, ...]
 
 
@@ -96,6 +97,18 @@ def require_string_map(value: Any, description: str) -> dict[str, str]:
             fail(f"{description}.{key} must be a non-empty string.")
         result[key.strip()] = item.strip()
     return result
+
+
+def require_string_list(value: Any, description: str, *, allow_empty: bool = False) -> tuple[str, ...]:
+    if not isinstance(value, list) or (not allow_empty and not value):
+        qualifier = "possibly empty" if allow_empty else "non-empty"
+        fail(f"{description} must be a {qualifier} array.")
+    if any(not isinstance(item, str) or not item.strip() for item in value):
+        fail(f"{description} must contain non-empty strings.")
+    normalized = tuple(item.strip() for item in value)
+    if len(normalized) != len(set(normalized)):
+        fail(f"{description} must not contain duplicates.")
+    return normalized
 
 
 def require_string_list_map(
@@ -184,14 +197,14 @@ def load_policy(path: Path = DEFAULT_POLICY) -> ArchitecturePolicy:
         allow_empty_lists=False,
     )
 
-    approved_options = raw.get("approvedPublicOptionTypes")
-    if not isinstance(approved_options, list) or not approved_options:
-        fail("approvedPublicOptionTypes must be a non-empty array.")
-    if any(not isinstance(item, str) or not item.strip() for item in approved_options):
-        fail("approvedPublicOptionTypes must contain non-empty strings.")
-    normalized_options = tuple(item.strip() for item in approved_options)
-    if len(normalized_options) != len(set(normalized_options)):
-        fail("approvedPublicOptionTypes must not contain duplicates.")
+    normalized_extension_containers = require_string_list(
+        raw.get("approvedExtensionContainers"),
+        "approvedExtensionContainers",
+    )
+    normalized_options = require_string_list(
+        raw.get("approvedPublicOptionTypes"),
+        "approvedPublicOptionTypes",
+    )
 
     for mapping, description in (
         (assemblies, "assemblies"),
@@ -228,14 +241,18 @@ def load_policy(path: Path = DEFAULT_POLICY) -> ArchitecturePolicy:
                 f"namespaceRoots.{assembly} must be '{assembly}', found '{root_namespace}'."
             )
 
-    for option_type in normalized_options:
-        if not any(
-            option_type == root or option_type.startswith(root + ".")
-            for root in namespace_roots.values()
-        ):
-            fail(
-                f"approvedPublicOptionTypes contains '{option_type}', which is outside known TCJ namespaces."
-            )
+    for description, type_names in (
+        ("approvedExtensionContainers", normalized_extension_containers),
+        ("approvedPublicOptionTypes", normalized_options),
+    ):
+        for type_name in type_names:
+            if not any(
+                type_name == root or type_name.startswith(root + ".")
+                for root in namespace_roots.values()
+            ):
+                fail(
+                    f"{description} contains '{type_name}', which is outside known TCJ namespaces."
+                )
 
     return ArchitecturePolicy(
         documentation=documentation,
@@ -244,6 +261,7 @@ def load_policy(path: Path = DEFAULT_POLICY) -> ArchitecturePolicy:
         namespace_roots=namespace_roots,
         forbidden_dependency_prefixes=forbidden_dependencies,
         forbidden_public_api_type_prefixes=forbidden_api,
+        approved_extension_containers=normalized_extension_containers,
         approved_public_option_types=normalized_options,
     )
 

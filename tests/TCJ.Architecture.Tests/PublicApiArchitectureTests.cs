@@ -40,6 +40,16 @@ public sealed class PublicApiArchitectureTests
             ArchitectureFailure.Format("public API infrastructure boundaries", violations));
     }
 
+
+    [Fact]
+    public void Public_API_inspector_handles_constructor_and_generic_method_signatures()
+    {
+        var referencedTypes = PublicApiInspector.GetReferencedTypes(typeof(PublicApiInspectorFixture));
+
+        Assert.Contains(typeof(Uri), referencedTypes);
+        Assert.Contains(typeof(Stream), referencedTypes);
+    }
+
     [Fact]
     public void Public_interfaces_do_not_expose_TCJ_implementation_classes()
     {
@@ -83,5 +93,19 @@ public sealed class PublicApiArchitectureTests
         Assert.True(
             violations.Count == 0,
             ArchitectureFailure.Format("abstractions must not depend on TCJ concrete implementations", violations));
+    }
+
+    private sealed class PublicApiInspectorFixture
+    {
+        public PublicApiInspectorFixture(Uri value)
+        {
+            Value = value;
+        }
+
+        public Uri Value { get; }
+
+        public T Echo<T>(T value)
+            where T : Stream
+            => value;
     }
 }

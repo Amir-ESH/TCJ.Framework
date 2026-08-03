@@ -88,6 +88,16 @@ class ArchitecturePolicyVerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.ArchitecturePolicyError, "ignored by Git"):
             MODULE.validate_configuration(self.root, self.policy_path, check_git=True)
 
+    def test_missing_approved_extension_containers_fails(self) -> None:
+        policy = self._read_policy()
+        policy.pop("approvedExtensionContainers")
+        self._write_policy(policy)
+        with self.assertRaisesRegex(
+            MODULE.ArchitecturePolicyError,
+            "approvedExtensionContainers must be a non-empty array",
+        ):
+            MODULE.validate_configuration(self.root, self.policy_path, check_git=False)
+
     def test_summary_contains_dependency_graph(self) -> None:
         policy = MODULE.validate_configuration(self.root, self.policy_path, check_git=False)
         summary = MODULE.build_summary(policy)
@@ -140,6 +150,7 @@ class ArchitecturePolicyVerifierTests(unittest.TestCase):
                 assembly: ["Forbidden.PublicApi"]
                 for assembly in MODULE.REQUIRED_ASSEMBLIES
             },
+            "approvedExtensionContainers": ["TCJ.Core.Guards.Check"],
             "approvedPublicOptionTypes": ["TCJ.AspNetCore.Options.TcjAspNetCoreOptions"],
         }
         self._write_policy(policy)

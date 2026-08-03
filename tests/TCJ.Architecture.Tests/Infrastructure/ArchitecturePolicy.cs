@@ -21,6 +21,8 @@ internal sealed class ArchitecturePolicy
 
     public required Dictionary<string, string[]> ForbiddenPublicApiTypePrefixes { get; init; }
 
+    public required string[] ApprovedExtensionContainers { get; init; }
+
     public required string[] ApprovedPublicOptionTypes { get; init; }
 
     public static ArchitecturePolicy Load()

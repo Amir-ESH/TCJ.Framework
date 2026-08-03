@@ -59,7 +59,7 @@ TCJ.EntityFrameworkCore.SqlServer.*
 TCJ.AspNetCore.*
 ```
 
-A type compiled into one package cannot be declared under another package root. Types under an `Internal` namespace cannot be public. Test-only namespaces and test-fixture naming are rejected in production assemblies.
+A type compiled into one package cannot be declared under another package root. Compiler-generated implementation types, including generated regular-expression runners and collection-expression helpers, are excluded because they do not represent source-owned package namespaces. Types under an `Internal` namespace cannot be public. Test-only namespaces and test-fixture naming are rejected in production assemblies.
 
 ## Public API boundaries
 
@@ -79,7 +79,7 @@ This complements package compatibility validation: API compatibility detects acc
 
 The initial suite enforces only patterns already established by the repository:
 
-- containers with extension methods are static and end with `Extensions`;
+- containers with extension methods are static and end with `Extensions`; established fluent guard containers such as `TCJ.Core.Guards.Check` are explicit policy exceptions in `approvedExtensionContainers`;
 - public option types are explicitly listed in `approvedPublicOptionTypes`;
 - repository interfaces use the `I` prefix;
 - SQL Server-specific types remain in `TCJ.EntityFrameworkCore.SqlServer`;

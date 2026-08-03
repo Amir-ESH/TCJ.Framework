@@ -14,7 +14,10 @@ internal static class PublicApiInspector
             AddType(interfaceType, references);
         }
 
-        AddGenericParameterConstraints(publicType.GetGenericArguments(), references);
+        if (publicType.IsGenericType)
+        {
+            AddGenericParameterConstraints(publicType.GetGenericArguments(), references);
+        }
 
         const BindingFlags flags = BindingFlags.Public
             | BindingFlags.Instance
@@ -24,14 +27,16 @@ internal static class PublicApiInspector
         foreach (var constructor in publicType.GetConstructors(flags))
         {
             AddParameters(constructor.GetParameters(), references);
-            AddGenericParameterConstraints(constructor.GetGenericArguments(), references);
         }
 
         foreach (var method in publicType.GetMethods(flags))
         {
             AddType(method.ReturnType, references);
             AddParameters(method.GetParameters(), references);
-            AddGenericParameterConstraints(method.GetGenericArguments(), references);
+            if (method.IsGenericMethod)
+            {
+                AddGenericParameterConstraints(method.GetGenericArguments(), references);
+            }
         }
 
         foreach (var property in publicType.GetProperties(flags))

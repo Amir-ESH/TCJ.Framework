@@ -76,8 +76,25 @@ public sealed class NamespaceArchitectureTests
     }
 
     private static bool IsSourceDeclaredType(Type type)
-        => !type.Name.StartsWith('<')
-            && !type.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false);
+    {
+        if (type.Namespace?.StartsWith(
+                "System.Text.RegularExpressions.Generated",
+                StringComparison.Ordinal) == true)
+        {
+            return false;
+        }
+
+        for (Type? current = type; current is not null; current = current.DeclaringType)
+        {
+            if (current.Name.StartsWith('<')
+                || current.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static bool HasNamespaceSegment(string? value, string segment)
         => value?.Split('.').Contains(segment, StringComparer.Ordinal) == true;
