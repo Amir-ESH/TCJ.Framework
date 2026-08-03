@@ -2,6 +2,7 @@
   "stryker-config": {
     "reporters": [
       "dots",
+      "cleartext",
       "html",
       "json"
     ],
@@ -9,7 +10,8 @@
     "test-runner": "mtp",
     "mutation-level": "standard",
     "coverage-analysis": "off",
-    "concurrency": 2,
+    "concurrency": 1,
+    "disable-mix-mutants": true,
     "additional-timeout": 10000,
     "thresholds": {
       "high": 80,

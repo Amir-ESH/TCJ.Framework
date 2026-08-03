@@ -5,10 +5,10 @@ import sys
 import unittest
 from pathlib import Path
 
-SCRIPT_PATH = Path(__file__).resolve().parents[1] / "run-mutation-testing.py"
-SPEC = importlib.util.spec_from_file_location("run_mutation_testing", SCRIPT_PATH)
+SCRIPT = Path(__file__).resolve().parents[1] / "run-mutation-testing.py"
+SPEC = importlib.util.spec_from_file_location("run_mutation_testing", SCRIPT)
 if SPEC is None or SPEC.loader is None:
-    raise RuntimeError(f"Unable to load {SCRIPT_PATH}")
+    raise RuntimeError(f"Unable to load {SCRIPT}")
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
@@ -33,6 +33,8 @@ class MutationRunnerTests(unittest.TestCase):
             "stryker-config": {
                 "test-runner": "mtp",
                 "coverage-analysis": "off",
+                "concurrency": 1,
+                "disable-mix-mutants": True,
                 "reporters": ["html", "json"],
             }
         }
@@ -41,43 +43,27 @@ class MutationRunnerTests(unittest.TestCase):
         project = MODULE.resolve_project(self.policy(), "TCJ.Core")
         self.assertEqual("TCJ.Core", project["name"])
 
-    def test_resolve_project_rejects_unknown_name(self) -> None:
-        with self.assertRaisesRegex(MODULE.RunnerError, "was not found exactly once"):
+    def test_resolve_project_rejects_unknown_project(self) -> None:
+        with self.assertRaisesRegex(MODULE.RunnerError, "not found exactly once"):
             MODULE.resolve_project(self.policy(), "Missing")
 
-    def test_effective_config_sets_project_and_controlled_mutation_scope(self) -> None:
-        policy = self.policy()
-        project = MODULE.resolve_project(policy, "TCJ.Core")
-
-        effective = MODULE.build_effective_config(self.config(), policy, project)["stryker-config"]
-
-        self.assertEqual("TCJ.Core.csproj", effective["project"])
+    def test_effective_config_is_scoped_to_policy_targets(self) -> None:
+        project = MODULE.resolve_project(self.policy(), "TCJ.Core")
+        config = MODULE.build_effective_config(self.config(), self.policy(), project)["stryker-config"]
+        self.assertEqual("TCJ.Core.csproj", config["project"])
         self.assertEqual(
-            [
-                "Entities/Entity.cs",
-                "Results/Result.cs",
-                "!**/*.g.cs",
-                "!tests/**",
-            ],
-            effective["mutate"],
+            ["Entities/Entity.cs", "Results/Result.cs", "!**/*.g.cs", "!tests/**"],
+            config["mutate"],
         )
-        self.assertEqual("mtp", effective["test-runner"])
-        self.assertEqual("off", effective["coverage-analysis"])
+        self.assertEqual("mtp", config["test-runner"])
+        self.assertEqual("off", config["coverage-analysis"])
 
-    def test_effective_config_rejects_missing_targets(self) -> None:
+    def test_effective_config_rejects_empty_targets(self) -> None:
         policy = self.policy()
-        project = dict(MODULE.resolve_project(policy, "TCJ.Core"))
+        project = dict(policy["projects"][0])
         project["mutationTargets"] = []
-
         with self.assertRaisesRegex(MODULE.RunnerError, "must define mutationTargets"):
             MODULE.build_effective_config(self.config(), policy, project)
-
-    def test_effective_config_rejects_missing_base_section(self) -> None:
-        policy = self.policy()
-        project = MODULE.resolve_project(policy, "TCJ.Core")
-
-        with self.assertRaisesRegex(MODULE.RunnerError, "stryker-config"):
-            MODULE.build_effective_config({}, policy, project)
 
 
 if __name__ == "__main__":

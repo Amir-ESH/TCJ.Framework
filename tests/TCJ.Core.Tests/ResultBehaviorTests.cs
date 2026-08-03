@@ -158,18 +158,13 @@ public sealed class ResultBehaviorTests
     {
         var calls = new List<string>();
 
-        Result.Success().Switch(
-            () => calls.Add("success"),
-            _ => calls.Add("failure"));
+        Result.Success().Switch(() => calls.Add("success"), _ => calls.Add("failure"));
         Result.Failure(CommonErrors.Failure("failed")).Switch(
-            () => calls.Add("success"),
-            _ => calls.Add("failure"));
+            () => calls.Add("success"), _ => calls.Add("failure"));
         Result.Success(3).Switch(
-            value => calls.Add($"value:{value}"),
-            _ => calls.Add("generic-failure"));
+            value => calls.Add($"value:{value}"), _ => calls.Add("generic-failure"));
         Result.Failure<int>(CommonErrors.Failure("failed")).Switch(
-            value => calls.Add($"value:{value}"),
-            _ => calls.Add("generic-failure"));
+            value => calls.Add($"value:{value}"), _ => calls.Add("generic-failure"));
 
         Assert.Equal(new[] { "success", "failure", "value:3", "generic-failure" }, calls);
     }

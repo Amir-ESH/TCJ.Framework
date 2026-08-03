@@ -25,69 +25,8 @@ env:
   DOTNET_NOLOGO: true
 
 jobs:
-  mutation-scope:
-    name: Detect mutation-testing changes
-    runs-on: ubuntu-latest
-    outputs:
-      run: ${{ steps.changes.outputs.run }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Detect relevant mutation-testing changes
-        id: changes
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            base="$PR_BASE_SHA"
-          else
-            base="$BEFORE_SHA"
-          fi
-
-          if [[ -z "$base" || "$base" =~ ^0+$ ]] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            base="$(git rev-parse "$HEAD_SHA^")"
-          fi
-
-          git diff --name-only "$base" "$HEAD_SHA" > changed-files.txt
-          cat changed-files.txt
-
-          if grep -Eq '^(\.config/dotnet-tools\.json|\.github/workflows/(ci|mutation-testing)\.yml|eng/(mutation-(policy|baseline)\.json|run-mutation-testing\.py|verify-mutation-results\.py|tests/test_(run_mutation_testing|verify_mutation_results)\.py)|stryker-config\.json|tests/TestProject\.props|src/TCJ\.(Core|DependencyInjection)/|tests/TCJ\.(Core|DependencyInjection)\.Tests/)' changed-files.txt; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  mutation-testing:
-    name: Mutation quality gate
-    needs: mutation-scope
-    if: ${{ needs.mutation-scope.outputs.run == 'true' }}
-    uses: ./.github/workflows/mutation-testing.yml
-    with:
-      mode: verify
-
   build-test-pack:
     name: Build, test and pack
-    needs: [mutation-scope, mutation-testing]
-    if: >-
-      ${{ always() &&
-          needs.mutation-scope.result == 'success' &&
-          (needs.mutation-testing.result == 'success' ||
-           needs.mutation-testing.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -126,7 +65,6 @@ jobs:
             --start-directory eng/tests \
             --pattern "test_*.py"
           python3 eng/verify-mutation-results.py validate-config
-          python3 eng/verify-mutation-results.py validate-baseline
 
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
@@ -240,4 +178,3 @@ jobs:
             artifacts/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 7
-

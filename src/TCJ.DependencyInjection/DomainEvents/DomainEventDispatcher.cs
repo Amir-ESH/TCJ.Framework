@@ -16,6 +16,7 @@ namespace TCJ.DependencyInjection.DomainEvents;
 /// </remarks>
 public sealed class DomainEventDispatcher : IDomainEventDispatcher
 {
+    // Stryker disable once all: MTP 4.16 reuses the test host; mutating this process-wide cache can contaminate later mutant sessions.
     private static readonly ConcurrentDictionary<Type, ObjectFactory> InvokerFactories = new();
 
     private readonly IServiceProvider _serviceProvider;

@@ -15,6 +15,7 @@ namespace TCJ.DependencyInjection.Extensions;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    // Stryker disable once all: MTP 4.16 reuses the test host; mutating this process-wide registration table can contaminate later mutant sessions.
     private static readonly DependencyLifetimeDefinition[] LifetimeDefinitions =
     [
         new(typeof(ITransientDependency), ServiceLifetime.Transient, RegisterAsSelf: false),

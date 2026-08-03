@@ -111,13 +111,11 @@ dotnet test TCJ.slnx -c Release --no-build \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
 python3 eng/verify-coverage.py verify
-python3 eng/verify-mutation-results.py validate-baseline
+python3 eng/verify-mutation-results.py validate-config
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
-A pending mutation baseline must be captured by the dedicated workflow, reviewed in both HTML reports, and accepted with `verify-mutation-results.py accept-baseline`. The raw candidate is deliberately not a valid baseline.
-
-NuGet packages and symbol packages are written to `artifacts/packages`. Restore audits direct and transitive dependencies, and Pack validates binary compatibility against the latest published TCJ packages. CI also enforces the repository line and branch coverage policy, requires the recorded mutation baseline and full mutation quality gate, publishes a merged coverage summary, and generates and verifies `artifacts/release/SHA256SUMS`; official tagged releases attach that manifest and signed GitHub provenance attestations to the package assets.
+NuGet packages and symbol packages are written to `artifacts/packages`. Restore audits direct and transitive dependencies, and Pack validates binary compatibility against the latest published TCJ packages. CI enforces line and branch coverage, while the dedicated **Mutation testing** workflow validates test effectiveness for the controlled `TCJ.Core` and `TCJ.DependencyInjection` scope. The first valid mutation run creates a candidate that must be reviewed and accepted before the recorded baseline can pass normal verification. CI also generates and verifies `artifacts/release/SHA256SUMS`; official tagged releases attach that manifest and signed GitHub provenance attestations to the package assets.
 
 ## Documentation map
 

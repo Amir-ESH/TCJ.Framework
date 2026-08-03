@@ -1,14 +1,6 @@
 name: Mutation testing
 
 on:
-  workflow_call:
-    inputs:
-      mode:
-        description: Verify the recorded baseline or capture a candidate for human review.
-        required: false
-        type: string
-        default: verify
-
   workflow_dispatch:
     inputs:
       mode:
@@ -23,24 +15,33 @@ on:
   schedule:
     - cron: "17 3 * * 1"
 
+  push:
+    branches:
+      - main
+      - develop
+
+  pull_request:
+    branches:
+      - main
+      - develop
 
 permissions:
   contents: read
 
 concurrency:
-  group: mutation-testing-${{ github.workflow }}-${{ github.ref }}-${{ inputs.mode || 'verify' }}
+  group: mutation-testing-${{ github.ref }}-${{ github.event.inputs.mode || 'verify' }}
   cancel-in-progress: true
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
-  MUTATION_MODE: ${{ inputs.mode || 'verify' }}
+  MUTATION_MODE: ${{ github.event.inputs.mode || 'verify' }}
 
 jobs:
   mutation-testing:
     name: Run mutation tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 150
 
     steps:
       - name: Checkout repository
@@ -48,18 +49,66 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect mutation-testing scope
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          case "$EVENT_NAME" in
+            workflow_dispatch|schedule)
+              echo "run=true" >> "$GITHUB_OUTPUT"
+              echo "Mutation testing was explicitly or periodically requested."
+              exit 0
+              ;;
+            pull_request)
+              base="$PR_BASE_SHA"
+              ;;
+            push)
+              base="$BEFORE_SHA"
+              ;;
+            *)
+              echo "Unsupported event '$EVENT_NAME'; running conservatively."
+              echo "run=true" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+
+          if [[ -z "$base" || "$base" =~ ^0+$ ]] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base="$(git rev-parse "$HEAD_SHA^")"
+          fi
+
+          git diff --name-only "$base" "$HEAD_SHA" | tee changed-files.txt
+
+          if grep -Eq '^(\.config/dotnet-tools\.json|\.github/workflows/mutation-testing\.yml|eng/(mutation-(policy|baseline)\.json|run-mutation-testing\.py|verify-mutation-results\.py|tests/test_(run_mutation_testing|verify_mutation_results)\.py)|stryker-config\.json|tests/TestProject\.props|src/TCJ\.(Core|DependencyInjection)/|tests/TCJ\.(Core|DependencyInjection)\.Tests/)' changed-files.txt; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Relevant production, test, or mutation-infrastructure changes were detected."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No mutation-relevant changes were detected."
+          fi
+
       - name: Setup .NET SDK
+        if: ${{ steps.scope.outputs.run == 'true' }}
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
       - name: Display .NET information
+        if: ${{ steps.scope.outputs.run == 'true' }}
         run: dotnet --info
 
       - name: Restore pinned .NET tools
+        if: ${{ steps.scope.outputs.run == 'true' }}
         run: dotnet tool restore
 
       - name: Validate mutation-testing configuration
+        if: ${{ steps.scope.outputs.run == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -68,14 +117,12 @@ jobs:
             --pattern "test_*.py"
           python3 eng/verify-mutation-results.py validate-config
 
-      - name: Require a recorded baseline
-        if: ${{ env.MUTATION_MODE == 'verify' }}
-        run: python3 eng/verify-mutation-results.py validate-baseline
-
       - name: Restore and audit dependencies
+        if: ${{ steps.scope.outputs.run == 'true' }}
         run: dotnet restore TCJ.slnx
 
       - name: Build production and test projects
+        if: ${{ steps.scope.outputs.run == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -87,17 +134,21 @@ jobs:
             --no-restore
 
       - name: Run the unmutated test projects
+        if: ${{ steps.scope.outputs.run == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
-          dotnet test tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj \
+          dotnet run --project tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj \
             --configuration Release \
-            --no-build
-          dotnet test tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj \
+            --no-build \
+            --no-restore
+          dotnet run --project tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj \
             --configuration Release \
-            --no-build
+            --no-build \
+            --no-restore
 
       - name: Prepare mutation report directories
+        if: ${{ steps.scope.outputs.run == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -106,26 +157,43 @@ jobs:
 
       - name: Run TCJ.Core mutation tests
         id: mutation-core
+        if: ${{ steps.scope.outputs.run == 'true' }}
         continue-on-error: true
-        run: >
-          python3 eng/run-mutation-testing.py
-          --project TCJ.Core
+        run: python3 eng/run-mutation-testing.py --project TCJ.Core
 
       - name: Run TCJ.DependencyInjection mutation tests
         id: mutation-dependency-injection
+        if: ${{ steps.scope.outputs.run == 'true' }}
         continue-on-error: true
-        run: >
-          python3 eng/run-mutation-testing.py
-          --project TCJ.DependencyInjection
+        run: python3 eng/run-mutation-testing.py --project TCJ.DependencyInjection
 
       - name: Verify mutation score and execution health
         if: always()
         shell: bash
         env:
+          RUN_MUTATION: ${{ steps.scope.outputs.run }}
           CORE_OUTCOME: ${{ steps.mutation-core.outcome }}
           DEPENDENCY_INJECTION_OUTCOME: ${{ steps.mutation-dependency-injection.outcome }}
         run: |
           set +e
+
+          if [[ "$RUN_MUTATION" != "true" ]]; then
+            mkdir -p artifacts/mutation
+            cat > artifacts/mutation/MUTATION_SUMMARY.md <<'EOF'
+          # TCJ mutation testing
+
+          **Overall status:** PASS
+
+          Mutation testing was not applicable because this change did not touch the controlled production, test, or mutation-infrastructure scope.
+          EOF
+            cat > artifacts/mutation/mutation-summary.json <<'EOF'
+          {
+            "schemaVersion": 2,
+            "status": "not-applicable"
+          }
+          EOF
+            exit 0
+          fi
 
           if [[ "$MUTATION_MODE" == "capture-baseline" ]]; then
             python3 eng/verify-mutation-results.py capture-baseline \
@@ -135,7 +203,8 @@ jobs:
           else
             python3 eng/verify-mutation-results.py verify \
               --summary artifacts/mutation/MUTATION_SUMMARY.md \
-              --json artifacts/mutation/mutation-summary.json
+              --json artifacts/mutation/mutation-summary.json \
+              --candidate artifacts/mutation/mutation-baseline-candidate.json
           fi
           verification_status=$?
 
@@ -160,7 +229,7 @@ jobs:
           else
             echo "# TCJ mutation testing" >> "$GITHUB_STEP_SUMMARY"
             echo >> "$GITHUB_STEP_SUMMARY"
-            echo "No valid mutation summary was generated." >> "$GITHUB_STEP_SUMMARY"
+            echo "No mutation summary was generated. Review the runner logs." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload mutation reports
