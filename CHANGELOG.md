@@ -6,8 +6,16 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+- Fixed reproducibility verification to support valid modern `.snupkg` files that contain portable PDBs and Source Link metadata without physical `src/**/*.cs` entries; optional source entries remain fully compared when present.
+- Canonicalized isolated reproducibility build roots so generated source paths no longer change portable PDBs or deterministic assemblies.
+- Fixed reproducibility verification for NuGet core-properties parts that legitimately omit the optional `dcterms:created` value or register `.psmdcp` through a `[Content_Types].xml` default declaration.
+- Fixed SBOM generation for multi-targeted NuGet packages whose dependency version ranges legitimately differ between target-framework groups, while retaining conflict detection inside each individual group.
+- Prevented SBOM verification from masking an earlier generation failure.
+
 ### Added
 
+- Reproducible NuGet package verification for all five primary and symbol packages using two isolated builds, semantic content comparison, focused difference reports, and a dedicated scheduled/manual/pull-request workflow.
+- Release-preflight and tagged-release enforcement that promotes only a verified package set before SBOM generation, checksums, attestations, and publication.
 - CycloneDX JSON SBOM generation and strict verification for all five release packages, restored direct/transitive NuGet dependencies, licenses, hashes, repository metadata, and source provenance.
 - CI, release-preflight, and tagged-release integration that includes the SBOM in checksums, workflow artifacts, attestations, and GitHub Release assets.
 
@@ -37,7 +45,6 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Mutation testing now uses the xUnit v3 MTP runner, validates execution health, and runs before baseline enforcement so the first baseline can be bootstrapped without a CI deadlock.
 - Architecture tests now ignore compiler-generated namespace artifacts, recognize the established `Check` guard extension container through policy, and safely inspect constructor and generic method signatures.
 - String performance comparisons now use a contract-equivalent BCL baseline, including null validation and runtime inputs, so microbenchmark ratios measure wrapper overhead instead of mismatched work.
-- SBOM generation now selects the `net10.0` dependency group for TCJ packages and treats the restored `project.assets.json` graph as authoritative for external multi-target NuGet packages.
 
 ## [0.1.0-preview.1] - 2026-08-01
 

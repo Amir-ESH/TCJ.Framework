@@ -15,11 +15,12 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 9. [Dependency and supply-chain security](dependency-security.md)
 10. [Release integrity and build provenance](release-integrity.md)
 11. [Software bill of materials](software-bill-of-materials.md)
-12. [Code coverage quality gate](code-coverage.md)
-13. [Mutation testing quality gate](mutation-testing.md)
-14. [Performance benchmarking and regression gate](performance-benchmarks.md)
-15. [Architecture tests and module dependency rules](architecture-tests.md)
-16. [First preview release notes](releases/0.1.0-preview.1.md)
+12. [Reproducible NuGet package builds](reproducible-builds.md)
+13. [Code coverage quality gate](code-coverage.md)
+14. [Mutation testing quality gate](mutation-testing.md)
+15. [Performance benchmarking and regression gate](performance-benchmarks.md)
+16. [Architecture tests and module dependency rules](architecture-tests.md)
+17. [First preview release notes](releases/0.1.0-preview.1.md)
 
 ## Package reference
 

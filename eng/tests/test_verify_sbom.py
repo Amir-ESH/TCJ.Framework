@@ -38,6 +38,53 @@ VERSION = "1.2.3-preview.1"
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
+class NuspecParsingTests(unittest.TestCase):
+    def test_target_specific_dependency_ranges_are_supported(self):
+        metadata = parse_nuspec_xml(
+            '''<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.Data.SqlClient</id>
+    <version>6.1.1</version>
+    <dependencies>
+      <group targetFramework=".NETFramework4.6.2">
+        <dependency id="Microsoft.Bcl.Cryptography" version="[8.0.0, )" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Microsoft.Bcl.Cryptography" version="[9.0.4, )" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="Microsoft.Bcl.Cryptography" version="[8.0.0, )" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
+''',
+            "Microsoft.Data.SqlClient.6.1.1.nuspec",
+        )
+        self.assertEqual(("Microsoft.Bcl.Cryptography",), metadata.dependencies)
+
+    def test_conflicting_ranges_inside_same_dependency_group_fail(self):
+        with self.assertRaisesRegex(ValueError, "inside dependency group"):
+            parse_nuspec_xml(
+                '''<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Broken.Package</id>
+    <version>1.0.0</version>
+    <dependencies>
+      <group targetFramework="net10.0">
+        <dependency id="Example" version="[1.0.0]" />
+        <dependency id="example" version="[2.0.0]" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
+''',
+                "broken.nuspec",
+            )
+
+
 class Fixture:
     def __init__(self, root: Path):
         self.root = root
@@ -211,55 +258,6 @@ class Fixture:
         )
 
 
-
-
-class NuspecParsingTests(unittest.TestCase):
-    def test_target_framework_group_is_selected_without_cross_framework_conflict(self):
-        metadata = parse_nuspec_xml(
-            """<?xml version=\"1.0\"?>
-<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">
-  <metadata>
-    <id>Multi.Target.Package</id>
-    <version>1.0.0</version>
-    <authors>Example</authors>
-    <license type=\"expression\">MIT</license>
-    <dependencies>
-      <group targetFramework=\"net8.0\">
-        <dependency id=\"Shared.Dependency\" version=\"[1.0.0]\" />
-      </group>
-      <group targetFramework=\".NETCoreApp,Version=v10.0\">
-        <dependency id=\"Shared.Dependency\" version=\"[2.0.0]\" />
-      </group>
-    </dependencies>
-  </metadata>
-</package>
-""",
-            "multi-target.nuspec",
-            dependency_target_framework="net10.0",
-        )
-        self.assertEqual({"Shared.Dependency": "[2.0.0]"}, metadata.dependencies)
-
-    def test_conflicting_ranges_inside_selected_group_still_fail(self):
-        xml = """<?xml version=\"1.0\"?>
-<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">
-  <metadata>
-    <id>Invalid.Package</id>
-    <version>1.0.0</version>
-    <authors>Example</authors>
-    <license type=\"expression\">MIT</license>
-    <dependencies>
-      <group targetFramework=\"net10.0\">
-        <dependency id=\"Shared.Dependency\" version=\"[1.0.0]\" />
-        <dependency id=\"Shared.Dependency\" version=\"[2.0.0]\" />
-      </group>
-    </dependencies>
-  </metadata>
-</package>
-"""
-        with self.assertRaisesRegex(ValueError, "inside the selected 'net10.0' group"):
-            parse_nuspec_xml(xml, "invalid.nuspec")
-
-
 class VerifySbomTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -267,47 +265,6 @@ class VerifySbomTests(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
-
-    def test_external_multitarget_nuspec_uses_restored_graph(self):
-        nuspec_path = (
-            self.fixture.cache
-            / "direct.package"
-            / "1.0.0"
-            / "direct.package.nuspec"
-        )
-        nuspec_path.write_text(
-            """<?xml version=\"1.0\"?>
-<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">
-  <metadata>
-    <id>Direct.Package</id>
-    <version>1.0.0</version>
-    <authors>TCJ Contributors</authors>
-    <license type=\"expression\">MIT</license>
-    <projectUrl>https://example.test/Direct.Package</projectUrl>
-    <dependencies>
-      <group targetFramework=\"net8.0\">
-        <dependency id=\"Transitive.Package\" version=\"[1.0.0]\" />
-      </group>
-      <group targetFramework=\"net10.0\">
-        <dependency id=\"Transitive.Package\" version=\"[2.0.0]\" />
-      </group>
-    </dependencies>
-  </metadata>
-</package>
-""",
-            encoding="utf-8",
-        )
-        sbom = build_sbom(
-            root=self.fixture.root,
-            policy=self.fixture.policy,
-            version=VERSION,
-            package_directory=self.fixture.package_directory,
-            commit_sha=COMMIT,
-            release_tag=f"v{VERSION}",
-        )
-        write_json(self.fixture.sbom_path, sbom)
-        summary = self.fixture.verify(sbom)
-        self.assertEqual("PASS", summary["status"])
 
     def test_valid_sbom_passes(self):
         summary = self.fixture.verify()

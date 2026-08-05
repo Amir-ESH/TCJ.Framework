@@ -34,6 +34,7 @@ python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
 python3 eng/verify-mutation-results.py validate-config
 python3 eng/verify-performance-results.py validate-config
 python3 eng/verify-architecture-policy.py validate-config
+python3 eng/verify-reproducible-build.py validate-config
 python3 eng/verify-sbom.py validate-config
 ```
 
@@ -51,7 +52,7 @@ Packages are written to `artifacts/packages`. The Pack target also runs SDK pack
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates dependency-security, release-integrity, coverage, mutation-testing, performance, and architecture-policy automation; audits direct and transitive packages during restore; builds; collects and enforces Cobertura line and branch coverage; packs; checks binary compatibility against the published package baseline; verifies the complete package set and its SHA-256 manifest; and uploads test, coverage, and NuGet artifacts.
+`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main` or `develop`. It validates dependency-security, release-integrity, coverage, mutation-testing, performance, architecture-policy, SBOM, and reproducibility automation; audits direct and transitive packages during restore; builds; collects and enforces Cobertura line and branch coverage; packs; checks binary compatibility against the published package baseline; verifies the complete package set and its SHA-256 manifest; and uploads test, coverage, and NuGet artifacts.
 
 `.github/workflows/dependency-review.yml` rejects pull requests that introduce moderate-or-higher vulnerable dependencies. `.github/workflows/dependency-audit.yml` performs a scheduled full restore audit so advisories published after the last code change are still detected.
 
@@ -175,3 +176,8 @@ The approved graph and change process are documented in [`architecture-tests.md`
 ## Mutation testing
 
 The initial Stryker.NET baseline, exclusions, local commands, and threshold-update process are documented in [Mutation testing quality gate](mutation-testing.md).
+
+
+## Reproducible package builds
+
+Run `python3 eng/verify-reproducible-build.py validate-config` before changing packaging, SDK, Source Link, deterministic build properties, or release workflows. The dedicated workflow creates isolated Build A and Build B trees under `artifacts/reproducibility/`, packs all five `.nupkg` and `.snupkg` files twice, and compares the extracted payload plus assemblies, PDBs, Source Link, XML documentation, sources, and NuGet metadata. Use [Reproducible NuGet package builds](reproducible-builds.md) for the full local command sequence, normalization policy, and difference-report investigation process.

@@ -21,6 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  CI: true
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
 
@@ -28,7 +29,7 @@ jobs:
   preflight:
     name: Validate release candidate
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 55
 
     steps:
       - name: Require the main branch
@@ -69,10 +70,21 @@ jobs:
       - name: Verify SBOM configuration
         run: python3 eng/verify-sbom.py validate-config
 
+      - name: Validate reproducibility policy
+        run: python3 eng/verify-reproducible-build.py validate-config
+
       - name: Check NuGet package IDs
         run: >
           python3 eng/check-nuget-package-ids.py
           --policy "${{ inputs.package_id_policy }}"
+
+      - name: Read release version
+        id: release-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
 
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
@@ -116,11 +128,120 @@ jobs:
             cat artifacts/coverage/COVERAGE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Pack and validate release candidate
+      - name: Clean previous reproducibility outputs
+        run: rm -rf artifacts/reproducibility artifacts/packages
+
+      - name: Run isolated Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-a"
+          dotnet restore TCJ.slnx \
+            --force-evaluate \
+            --artifacts-path "$root" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build TCJ.slnx \
+            --configuration Release \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Pack Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-a"
+          mkdir -p "$root/packages"
+          dotnet pack TCJ.slnx \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:PackageOutputPath="$root/packages" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Run isolated Build B
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-b"
+          dotnet restore TCJ.slnx \
+            --force-evaluate \
+            --artifacts-path "$root" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build TCJ.slnx \
+            --configuration Release \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Pack Build B
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-b"
+          mkdir -p "$root/packages"
+          dotnet pack TCJ.slnx \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:PackageOutputPath="$root/packages" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Compare reproducible release candidate builds
         run: >
-          dotnet pack TCJ.slnx
-          --configuration Release
-          --no-build
+          python3 eng/verify-reproducible-build.py compare
+          --version "${{ steps.release-version.outputs.value }}"
+          --build-a artifacts/reproducibility/build-a/packages
+          --build-b artifacts/reproducibility/build-b/packages
+          --output artifacts/reproducibility/report
+
+      - name: Publish reproducibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md ]]; then
+            cat artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload reproducibility reports and package builds
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-reproducibility-${{ github.run_id }}
+          path: |
+            artifacts/reproducibility/build-a/packages/*
+            artifacts/reproducibility/build-b/packages/*
+            artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md
+            artifacts/reproducibility/report/reproducibility-summary.json
+            artifacts/reproducibility/report/differences/*
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Promote verified Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/packages
+          mkdir -p artifacts/packages
+          cp artifacts/reproducibility/build-a/packages/* artifacts/packages/
 
       - name: Verify package set
         shell: bash
@@ -167,9 +288,8 @@ jobs:
           if [[ -f artifacts/sbom/SBOM_SUMMARY.md ]]; then
             cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "# TCJ software bill of materials" >> "$GITHUB_STEP_SUMMARY"
-            echo >> "$GITHUB_STEP_SUMMARY"
-            echo "SBOM generation failed before a summary was produced. Review the generator step." >> "$GITHUB_STEP_SUMMARY"
+            echo "## SBOM" >> "$GITHUB_STEP_SUMMARY"
+            echo "SBOM generation or verification did not complete. Inspect the first failed SBOM step above." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Create release notes preview

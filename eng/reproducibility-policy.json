@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "requiredPackages": [
+    "TCJ.Core",
+    "TCJ.DependencyInjection",
+    "TCJ.EntityFrameworkCore",
+    "TCJ.EntityFrameworkCore.SqlServer",
+    "TCJ.AspNetCore"
+  ],
+  "comparePackageContents": true,
+  "compareSymbolPackageContents": true,
+  "requireAssemblyEquality": true,
+  "requirePortablePdbEquality": true,
+  "requireXmlDocumentationEquality": true,
+  "requireSourceLinkEquality": true,
+  "requireNuspecEquality": true,
+  "requireNuGetMetadataEquality": true,
+  "reportArchiveByteEquality": true,
+  "requireArchiveByteEquality": false,
+  "requiredContentPatterns": {
+    "nupkg": [
+      "_rels/.rels",
+      "[Content_Types].xml",
+      "*.nuspec",
+      "lib/**/*.dll",
+      "lib/**/*.xml",
+      "package/services/metadata/core-properties/*.psmdcp"
+    ],
+    "snupkg": [
+      "_rels/.rels",
+      "[Content_Types].xml",
+      "*.nuspec",
+      "lib/**/*.pdb",
+      "package/services/metadata/core-properties/*.psmdcp"
+    ]
+  },
+  "approvedContainerNormalizations": [
+    {
+      "id": "nuget-core-properties-created",
+      "description": "Normalize only the dcterms:created value in the NuGet OPC core-properties part. The original values remain visible in the report."
+    },
+    {
+      "id": "nuget-core-properties-part-name",
+      "description": "Canonicalize only the generated OPC core-properties part name in the ZIP path, root relationship, and [Content_Types].xml override. Package payload paths remain exact."
+    }
+  ]
+}

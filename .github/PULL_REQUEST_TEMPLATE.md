@@ -4,7 +4,7 @@ Describe the problem and the approach taken.
 
 ## Changes
 
-- 
+-
 
 ## Compatibility
 
@@ -33,6 +33,15 @@ Describe the problem and the approach taken.
 - [ ] Infrastructure types do not leak into lower-level public APIs
 - [ ] `architecture-policy` changes include justification
 - [ ] `dotnet pack TCJ.slnx -c Release --no-build` when packaging or release infrastructure changes
+- [ ] Deterministic-build configuration remains enabled
+- [ ] Independent package builds are reproducible
+- [ ] Assemblies match between independent builds
+- [ ] Portable PDBs match between independent builds
+- [ ] Source Link metadata matches
+- [ ] NuGet package metadata matches
+- [ ] New reproducibility normalization rules are narrow, documented, tested, and justified
+- [ ] Generated reproducibility artifacts are not committed
+- [ ] The official release uses the verified package set
 - [ ] Release-integrity automation remains valid and package checksums pass
 - [ ] SBOM generation and verification succeed
 - [ ] All five release packages and symbol packages are represented
@@ -47,4 +56,4 @@ Describe the problem and the approach taken.
 
 ## Related issue
 
-Closes #
+Refs #

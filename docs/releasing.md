@@ -147,11 +147,12 @@ The preflight workflow:
 3. queries NuGet.org for all five package IDs;
 4. validates dependency-security configuration and audits the complete restored graph;
 5. builds, tests, merges Cobertura reports, and enforces line and branch coverage minimums;
-6. packs and runs SDK API compatibility validation;
-7. inspects the actual `.nupkg` and `.snupkg` contents;
-8. generates and validates the CycloneDX SBOM from package metadata and restored production dependencies;
-9. includes the SBOM in `SHA256SUMS`;
-10. uploads the complete release candidate, SBOM summaries, test results, and coverage reports.
+6. creates isolated Build A and Build B outputs and packs all five primary and symbol packages from each;
+7. compares extracted package contents, assemblies, portable PDBs, Source Link, XML documentation, sources, and NuGet metadata;
+8. promotes the exact verified Build A package set and runs SDK API compatibility/package inspection against it;
+9. generates and validates the CycloneDX SBOM from the verified package metadata and restored production dependencies;
+10. includes the SBOM in `SHA256SUMS`;
+11. uploads both reproducibility build sets, comparison reports, the complete release candidate, SBOM summaries, test results, and coverage reports.
 
 Download and review the `release-candidate-*` artifact before tagging. The first publication cannot claim a package ID that already exists on NuGet.org under another owner.
 
@@ -179,17 +180,19 @@ The release workflow performs these operations:
 
 1. validates the tag, manifest, package version, and changelog;
 2. builds, tests, and enforces the code coverage policy for the complete solution;
-3. creates and deeply inspects all primary and symbol packages;
-4. generates and strictly verifies the versioned CycloneDX JSON SBOM;
-5. extracts release notes from the matching changelog section;
-6. generates and verifies `SHA256SUMS` for all package files and the SBOM;
-7. creates signed GitHub build-provenance attestations for the packages, SBOM, and checksum manifest;
-8. transfers packages, release metadata, and SBOM to the protected publish job;
-9. restores dependency metadata and re-verifies the downloaded SBOM and checksums;
-10. pauses for the `nuget-production` environment approval;
-11. exchanges the GitHub OIDC token for a short-lived NuGet API key;
-12. publishes all packages and associated symbol packages;
-13. creates the GitHub pre-release and attaches `.nupkg`, `.snupkg`, the versioned `.cdx.json`, and `SHA256SUMS` assets.
+3. creates two isolated builds of all primary and symbol packages;
+4. blocks on unexplained package-content, assembly, PDB, Source Link, XML documentation, source, or NuGet metadata differences;
+5. promotes the exact verified Build A package set and deeply inspects it;
+6. generates and strictly verifies the versioned CycloneDX JSON SBOM from that verified set;
+7. extracts release notes from the matching changelog section;
+8. generates and verifies `SHA256SUMS` for the verified package files and the SBOM;
+9. creates signed GitHub build-provenance attestations for the verified packages, SBOM, and checksum manifest;
+10. transfers packages, release metadata, and SBOM to the protected publish job;
+11. restores dependency metadata and re-verifies the downloaded SBOM and checksums;
+12. pauses for the `nuget-production` environment approval;
+13. exchanges the GitHub OIDC token for a short-lived NuGet API key;
+14. publishes all packages and associated symbol packages;
+15. creates the GitHub pre-release and attaches `.nupkg`, `.snupkg`, the versioned `.cdx.json`, and `SHA256SUMS` assets.
 
 `--skip-duplicate` allows a safe rerun after a partial NuGet.org outage. The immutable tag guarantees that reruns use the same source commit and package version.
 
@@ -223,3 +226,6 @@ Code coverage collection, thresholds, and merged-report semantics are documented
 
 
 SBOM generation, inspection, checksum, and provenance commands are documented in [Software bill of materials](software-bill-of-materials.md).
+
+
+Reproducibility commands, isolation rules, approved container normalization, and report interpretation are documented in [Reproducible NuGet package builds](reproducible-builds.md).

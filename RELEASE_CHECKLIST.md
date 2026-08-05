@@ -9,7 +9,8 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Public API changes and migration notes are documented.
 - [ ] Package validation is green against the version in `eng/PackageValidation.props`.
 - [ ] Dependency review and NuGet Audit are green with the repository security policy unchanged.
-- [ ] Release-integrity and SBOM configuration validation are green.
+- [ ] Release-integrity, SBOM, and reproducibility configuration validation are green.
+- [ ] Deterministic compilation, portable PDBs, CI metadata, Source Link, and repository path mapping remain enabled centrally.
 - [ ] SBOM policy still requires all five release packages, dependency coverage, hashes, licenses, repository identity, commit SHA, and release version.
 - [ ] Line and branch coverage gates are green and the summary was reviewed.
 - [ ] The mutation baseline is recorded, the mutation quality gate is green, and survived mutants were reviewed.
@@ -36,6 +37,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] The NuGet.org Trusted Publishing policy still targets `release.yml` and `nuget-production`.
 - [ ] GitHub Dependency graph is enabled and the Dependency review workflow is active.
 - [ ] The `Mutation testing / Run mutation tests` check is required for `develop` and `main`, with no administrator bypass.
+- [ ] The latest `Reproducible builds / Compare package builds` run is green for the exact release source and SDK.
 
 ## Release candidate
 
@@ -46,13 +48,18 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Review the latest mutation summary and both HTML/JSON mutation reports.
 - [ ] Review the latest performance summary plus JSON, Markdown, CSV, and log artifacts.
 - [ ] Review the architecture-test summary and confirm no policy weakening was introduced.
+- [ ] Review `REPRODUCIBILITY_SUMMARY.md`, both five-package build sets, and any focused difference reports.
+- [ ] Confirm assemblies, portable PDBs, Source Link metadata, XML documentation, NuSpec metadata, and extracted package contents match.
+- [ ] Confirm any raw archive-only warning is explained by an approved container normalization.
+- [ ] Confirm the release candidate under `artifacts/packages` is the promoted verified Build A set.
 - [ ] Review five `.nupkg`, five `.snupkg`, the CycloneDX SBOM, `SHA256SUMS`, release notes, and the manifest.
 - [ ] Confirm all five TCJ packages, direct/transitive dependencies, hashes, licenses, repository metadata, and the source commit appear in the SBOM.
 - [ ] Verify the release-candidate checksums include the SBOM before tagging.
 
 ## Publish
 
-- [ ] Create the version tag on the verified `main` commit.
+- [ ] Create the version tag on the reproducibility-verified `main` commit.
+- [ ] Confirm the tag workflow completes reproducibility comparison before checksums, SBOM generation, attestation, or publication.
 - [ ] Approve the `nuget-production` deployment after validation succeeds.
 - [ ] Confirm all five versions are listed on NuGet.org.
 - [ ] Confirm the GitHub pre-release contains ten package assets, one versioned CycloneDX SBOM, and `SHA256SUMS`.

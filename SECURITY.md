@@ -45,3 +45,8 @@ Do not publicly disclose an exploitable dependency path before a remediation pla
 ## Release artifact integrity
 
 Official GitHub release assets include a CycloneDX JSON software bill of materials, a `SHA256SUMS` manifest covering the packages and SBOM, and GitHub artifact attestations produced by the tagged Release workflow. The SBOM inventories package versions, dependency relationships, licenses, hashes, repository identity, and the source commit; it complements rather than replaces vulnerability scanning. Consumers can verify the exact GitHub-hosted files and workflow provenance as described in [`docs/software-bill-of-materials.md`](docs/software-bill-of-materials.md) and [`docs/release-integrity.md`](docs/release-integrity.md). A missing package, incomplete SBOM, invalid checksum, unexpected signer workflow, or provenance mismatch should be reported privately before using the affected asset.
+
+
+## Reproducible release packages
+
+Release preflight and tagged publication build all five primary packages and all five symbol packages twice in isolated output/intermediate directories. The verifier compares assemblies, portable PDBs, embedded Source Link metadata, XML documentation, source files, NuSpec/repository metadata, and all extracted package contents. Unexplained semantic differences block release publication. Raw ZIP differences are warnings only when extracted contents match and the difference is limited to the documented NuGet container metadata rules. The official workflow promotes one verified build before generating the SBOM, checksums, attestations, and release artifacts. See [`docs/reproducible-builds.md`](docs/reproducible-builds.md).
