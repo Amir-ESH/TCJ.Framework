@@ -40,6 +40,7 @@ FORBIDDEN_PROJECT_PROPERTIES = {
     "EmbedUntrackedSources",
     "DeterministicSourcePaths",
     "PathMap",
+    "ReproducibleBuildRoot",
 }
 
 
@@ -328,6 +329,21 @@ def validate_configuration(root: Path = ROOT, *, check_git: bool = True) -> Poli
     path_maps = property_values(central, "PathMap")
     if not any("$(MSBuildThisFileDirectory)=/_/" in value for value, _ in path_maps):
         fail("Directory.Build.props must normalize repository source paths with PathMap.")
+    isolated_maps = [
+        (value, condition)
+        for value, condition in path_maps
+        if "$(ReproducibleBuildRoot)" in value
+    ]
+    if not any(
+        value.startswith("$(ReproducibleBuildRoot)=/_/artifacts/reproducibility/build,")
+        and "$(MSBuildThisFileDirectory)=/_/" in value
+        and "ReproducibleBuildRoot" in condition
+        for value, condition in isolated_maps
+    ):
+        fail(
+            "Directory.Build.props must map ReproducibleBuildRoot to one canonical path "
+            "before the repository PathMap so isolated generated sources remain deterministic."
+        )
     ci_values = property_values(central, "ContinuousIntegrationBuild")
     if not any(value.casefold() == "true" and "CI" in condition for value, condition in ci_values):
         fail("Directory.Build.props must enable ContinuousIntegrationBuild when CI is true.")
@@ -406,6 +422,21 @@ def validate_configuration(root: Path = ROOT, *, check_git: bool = True) -> Poli
             "uses: actions/upload-artifact@v7",
         ),
     )
+    isolated_workflows = (
+        dedicated,
+        root / ".github/workflows/release-preflight.yml",
+        root / ".github/workflows/release.yml",
+    )
+    for workflow in isolated_workflows:
+        workflow_text = read_text(workflow)
+        expected_path_map_arguments = 6
+        actual_path_map_arguments = workflow_text.count('-p:ReproducibleBuildRoot="$root"')
+        if actual_path_map_arguments != expected_path_map_arguments:
+            fail(
+                f"{workflow.relative_to(root)} must pass ReproducibleBuildRoot to all six "
+                f"isolated restore/build/pack commands; found {actual_path_map_arguments}."
+            )
+
     for workflow in (root / ".github/workflows/release-preflight.yml", root / ".github/workflows/release.yml"):
         require_fragments(
             workflow,
@@ -1155,7 +1186,21 @@ def compare_package_sets(root: Path, policy: Policy, version: str, build_a: Path
         summary.status = "FAIL"
     write_summary(output, summary)
     if summary.status == "FAIL":
-        detail = summary.errors[0] if summary.errors else "Blocking package differences were detected."
+        if summary.errors:
+            detail = summary.errors[0]
+        else:
+            blocking = [item for item in summary.differences if item.get("blocking")]
+            preview = "; ".join(
+                f"{item['package']}.{item['package_type']}:{item['path']} ({item['category']})"
+                for item in blocking[:5]
+            )
+            remainder = len(blocking) - 5
+            suffix = f"; plus {remainder} more" if remainder > 0 else ""
+            detail = (
+                "Blocking package differences were detected: "
+                f"{preview}{suffix}. See {relative_or_absolute(output / SUMMARY_NAME, root)} "
+                "and the differences directory."
+            )
         fail(detail)
     return summary
 

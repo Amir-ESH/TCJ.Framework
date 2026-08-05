@@ -140,6 +140,7 @@ jobs:
             --force-evaluate \
             --artifacts-path "$root" \
             -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
             -p:RepositoryCommit="$GITHUB_SHA"
           dotnet build TCJ.slnx \
             --configuration Release \
@@ -147,6 +148,7 @@ jobs:
             --artifacts-path "$root" \
             -p:Version="${{ steps.release-version.outputs.value }}" \
             -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
             -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Pack Build A
@@ -163,6 +165,7 @@ jobs:
             -p:PackageOutputPath="$root/packages" \
             -p:Version="${{ steps.release-version.outputs.value }}" \
             -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
             -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Run isolated Build B
@@ -174,6 +177,7 @@ jobs:
             --force-evaluate \
             --artifacts-path "$root" \
             -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
             -p:RepositoryCommit="$GITHUB_SHA"
           dotnet build TCJ.slnx \
             --configuration Release \
@@ -181,6 +185,7 @@ jobs:
             --artifacts-path "$root" \
             -p:Version="${{ steps.release-version.outputs.value }}" \
             -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
             -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Pack Build B
@@ -197,6 +202,7 @@ jobs:
             -p:PackageOutputPath="$root/packages" \
             -p:Version="${{ steps.release-version.outputs.value }}" \
             -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
             -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Compare reproducible release candidate builds

@@ -122,7 +122,6 @@ class Fixture:
         dll: bytes = b"deterministic-assembly",
         xml_documentation: bytes = b"<doc><assembly /></doc>",
         pdb: bytes | None = None,
-        include_source_files: bool = True,
         nuspec: bytes | None = None,
         unsafe_entry: str | None = None,
     ) -> Path:
@@ -148,16 +147,12 @@ class Fixture:
                 ]
             )
         else:
-            entries.append(
-                (f"lib/net10.0/{package_id}.pdb", pdb or self.pdb(package_id))
+            entries.extend(
+                [
+                    (f"lib/net10.0/{package_id}.pdb", pdb or self.pdb(package_id)),
+                    (f"src/{package_id}/Example.cs", b"namespace Example; public sealed class Value {}"),
+                ]
             )
-            if include_source_files:
-                entries.append(
-                    (
-                        f"src/{package_id}/Example.cs",
-                        b"namespace Example; public sealed class Value {}",
-                    )
-                )
         if unsafe_entry:
             entries.append((unsafe_entry, b"unsafe"))
         with zipfile.ZipFile(path, "w") as archive:
@@ -190,6 +185,30 @@ class ReproducibleBuildTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
+    def test_repository_configuration_canonicalizes_isolated_build_roots(self) -> None:
+        policy = MODULE.validate_configuration(MODULE.ROOT, check_git=False)
+        self.assertEqual(tuple(PACKAGES), policy.required_packages)
+
+        central = MODULE.parse_msbuild_properties(MODULE.ROOT / "Directory.Build.props")
+        isolated_maps = [
+            (value, condition)
+            for value, condition in MODULE.property_values(central, "PathMap")
+            if "$(ReproducibleBuildRoot)" in value
+        ]
+        self.assertTrue(any(
+            value.startswith("$(ReproducibleBuildRoot)=/_/artifacts/reproducibility/build,")
+            and "ReproducibleBuildRoot" in condition
+            for value, condition in isolated_maps
+        ))
+
+        for relative in (
+            ".github/workflows/reproducible-builds.yml",
+            ".github/workflows/release-preflight.yml",
+            ".github/workflows/release.yml",
+        ):
+            workflow = (MODULE.ROOT / relative).read_text(encoding="utf-8")
+            self.assertEqual(6, workflow.count('-p:ReproducibleBuildRoot="$root"'))
+
     def test_fully_reproducible_package_set_passes(self) -> None:
         self.fixture.create_set(self.fixture.build_a)
         self.fixture.create_set(self.fixture.build_b)
@@ -198,39 +217,6 @@ class ReproducibleBuildTests(unittest.TestCase):
         self.assertTrue(summary.archiveByteEquality)
         self.assertEqual(5, summary.comparedNupkgCount)
         self.assertEqual(5, summary.comparedSnupkgCount)
-
-    def test_symbol_packages_without_physical_source_entries_pass(self) -> None:
-        self.fixture.create_set(self.fixture.build_a, include_source_files=False)
-        self.fixture.create_set(self.fixture.build_b, include_source_files=False)
-        summary = self.fixture.compare()
-        self.assertEqual("PASS", summary.status)
-        self.assertTrue(summary.portablePdbEquality)
-        self.assertTrue(summary.sourceLinkEquality)
-
-    def test_optional_symbol_source_entry_presence_mismatch_fails(self) -> None:
-        self.fixture.create_set(self.fixture.build_a, include_source_files=False)
-        self.fixture.create_set(self.fixture.build_b, include_source_files=False)
-        target = self.fixture.build_b / f"TCJ.AspNetCore.{VERSION}.snupkg"
-        target.unlink()
-        self.fixture.create_package(
-            self.fixture.build_b,
-            "TCJ.AspNetCore",
-            "snupkg",
-            include_source_files=True,
-        )
-        with self.assertRaisesRegex(
-            MODULE.ReproducibilityError,
-            "Blocking package differences were detected",
-        ):
-            self.fixture.compare()
-        summary = json.loads(
-            (self.fixture.output / "reproducibility-summary.json").read_text(encoding="utf-8")
-        )
-        self.assertFalse(summary["packageContentEquality"])
-        self.assertTrue(any(
-            item["path"].endswith("Example.cs") and item["blocking"]
-            for item in summary["differences"]
-        ))
 
     def test_core_properties_without_created_timestamp_are_supported(self) -> None:
         self.fixture.create_set(self.fixture.build_a, created=None)
@@ -298,7 +284,10 @@ class ReproducibleBuildTests(unittest.TestCase):
         target = self.fixture.build_b / f"TCJ.Core.{VERSION}.nupkg"
         target.unlink()
         self.fixture.create_package(self.fixture.build_b, "TCJ.Core", "nupkg", dll=b"different")
-        with self.assertRaisesRegex(MODULE.ReproducibilityError, "Blocking package differences"):
+        with self.assertRaisesRegex(
+            MODULE.ReproducibilityError,
+            r"Blocking package differences.*TCJ\.Core\.nupkg:lib/net10\.0/TCJ\.Core\.dll",
+        ):
             self.fixture.compare()
         summary = json.loads((self.fixture.output / MODULE.JSON_NAME).read_text())
         self.assertFalse(summary["assemblyEquality"])

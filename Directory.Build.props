@@ -12,6 +12,7 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <DeterministicSourcePaths>true</DeterministicSourcePaths>
     <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
+    <PathMap Condition="'$(ReproducibleBuildRoot)' != ''">$(ReproducibleBuildRoot)=/_/artifacts/reproducibility/build,$(MSBuildThisFileDirectory)=/_/</PathMap>
 
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
