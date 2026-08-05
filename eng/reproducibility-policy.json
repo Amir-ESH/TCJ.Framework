@@ -31,7 +31,6 @@
       "[Content_Types].xml",
       "*.nuspec",
       "lib/**/*.pdb",
-      "src/**/*.cs",
       "package/services/metadata/core-properties/*.psmdcp"
     ]
   },

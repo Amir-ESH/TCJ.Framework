@@ -50,7 +50,7 @@ The skip option is only for exported archives. CI intentionally performs the Git
 
 Production projects inherit these settings. Project-level overrides of deterministic compilation, PDB format, CI metadata, source embedding, or path mapping are rejected by configuration validation.
 
-`eng/Packaging.props` keeps repository metadata and includes source files in `.snupkg` output. The same `RepositoryCommit` is passed to both builds so Source Link and NuGet repository metadata identify the same commit.
+`eng/Packaging.props` keeps repository metadata and creates portable-PDB `.snupkg` files. The modern symbol-package format may omit physical `src/**/*.cs` entries; source retrieval is instead described by Source Link metadata embedded in each portable PDB. The same `RepositoryCommit` is passed to both builds so Source Link and NuGet repository metadata identify the same commit.
 
 ## Run the full comparison locally
 
@@ -131,12 +131,14 @@ Blocking comparisons include:
 - portable PDB bytes;
 - embedded Source Link document mappings;
 - XML documentation;
-- source files in symbol packages;
+- any physical source entries when a generated symbol package contains them;
 - NuSpec metadata, dependencies, repository URL, and repository commit;
 - OPC relationship and content-type metadata;
 - every other extracted payload file.
 
 A difference in any blocking category fails verification. Binary reports contain hashes, sizes, and the first differing byte offset rather than dumping binary contents.
+
+A `.snupkg` is required to contain its portable PDBs, but physical source files are not required by the modern NuGet symbol-package format. Source Link document mappings are extracted from every PDB and compared as a blocking check. When a symbol package does include `src/**/*.cs` or another additional payload entry, that entry remains part of the complete extracted file-set comparison, so a content or presence mismatch still fails verification.
 
 ## Raw archives and narrow normalization
 
@@ -147,7 +149,7 @@ Only two normalization rule families are approved:
 1. replace the `dcterms:created` value in the NuGet core-properties part with a deterministic comparison value;
 2. canonicalize the generated core-properties part name consistently in the ZIP entry, root relationship identifier/target, and the matching `[Content_Types].xml` override when NuGet emits a part-specific override. The equally valid `Default Extension="psmdcp"` representation contains no generated part name and is validated without rewriting.
 
-The original values from both builds remain visible in the JSON and Markdown reports. Raw archive warnings also identify the first changed ZIP entry order or entry timestamp when present. No DLL, PDB, Source Link, NuSpec, XML documentation, source file, dependency metadata, repository commit, generated compiler identifier, or package payload path is normalized.
+The original values from both builds remain visible in the JSON and Markdown reports. Raw archive warnings also identify the first changed ZIP entry order or entry timestamp when present. No DLL, PDB, Source Link, NuSpec, XML documentation, optional physical source entry, dependency metadata, repository commit, generated compiler identifier, or package payload path is normalized.
 
 A proposed normalization rule must be narrow, deterministic, documented here, added to `eng/reproducibility-policy.json`, and covered by a failing-then-passing fixture test. Broad XML, binary, path, or timestamp suppression is not acceptable.
 

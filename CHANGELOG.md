@@ -6,6 +6,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+- Fixed reproducibility verification to support valid modern `.snupkg` files that contain portable PDBs and Source Link metadata without physical `src/**/*.cs` entries; optional source entries remain fully compared when present.
 - Canonicalized isolated reproducibility build roots so generated source paths no longer change portable PDBs or deterministic assemblies.
 - Fixed reproducibility verification for NuGet core-properties parts that legitimately omit the optional `dcterms:created` value or register `.psmdcp` through a `[Content_Types].xml` default declaration.
 - Fixed SBOM generation for multi-targeted NuGet packages whose dependency version ranges legitimately differ between target-framework groups, while retaining conflict detection inside each individual group.

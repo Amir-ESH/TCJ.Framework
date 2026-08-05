@@ -122,6 +122,7 @@ class Fixture:
         dll: bytes = b"deterministic-assembly",
         xml_documentation: bytes = b"<doc><assembly /></doc>",
         pdb: bytes | None = None,
+        include_source_files: bool = True,
         nuspec: bytes | None = None,
         unsafe_entry: str | None = None,
     ) -> Path:
@@ -147,12 +148,16 @@ class Fixture:
                 ]
             )
         else:
-            entries.extend(
-                [
-                    (f"lib/net10.0/{package_id}.pdb", pdb or self.pdb(package_id)),
-                    (f"src/{package_id}/Example.cs", b"namespace Example; public sealed class Value {}"),
-                ]
+            entries.append(
+                (f"lib/net10.0/{package_id}.pdb", pdb or self.pdb(package_id))
             )
+            if include_source_files:
+                entries.append(
+                    (
+                        f"src/{package_id}/Example.cs",
+                        b"namespace Example; public sealed class Value {}",
+                    )
+                )
         if unsafe_entry:
             entries.append((unsafe_entry, b"unsafe"))
         with zipfile.ZipFile(path, "w") as archive:
@@ -217,6 +222,39 @@ class ReproducibleBuildTests(unittest.TestCase):
         self.assertTrue(summary.archiveByteEquality)
         self.assertEqual(5, summary.comparedNupkgCount)
         self.assertEqual(5, summary.comparedSnupkgCount)
+
+    def test_symbol_packages_without_physical_source_entries_pass(self) -> None:
+        self.fixture.create_set(self.fixture.build_a, include_source_files=False)
+        self.fixture.create_set(self.fixture.build_b, include_source_files=False)
+        summary = self.fixture.compare()
+        self.assertEqual("PASS", summary.status)
+        self.assertTrue(summary.portablePdbEquality)
+        self.assertTrue(summary.sourceLinkEquality)
+
+    def test_optional_symbol_source_entry_presence_mismatch_fails(self) -> None:
+        self.fixture.create_set(self.fixture.build_a, include_source_files=False)
+        self.fixture.create_set(self.fixture.build_b, include_source_files=False)
+        target = self.fixture.build_b / f"TCJ.AspNetCore.{VERSION}.snupkg"
+        target.unlink()
+        self.fixture.create_package(
+            self.fixture.build_b,
+            "TCJ.AspNetCore",
+            "snupkg",
+            include_source_files=True,
+        )
+        with self.assertRaisesRegex(
+            MODULE.ReproducibilityError,
+            "Blocking package differences",
+        ):
+            self.fixture.compare()
+        summary = json.loads(
+            (self.fixture.output / "reproducibility-summary.json").read_text(encoding="utf-8")
+        )
+        self.assertFalse(summary["packageContentEquality"])
+        self.assertTrue(any(
+            item["path"].endswith("Example.cs") and item["blocking"]
+            for item in summary["differences"]
+        ))
 
     def test_core_properties_without_created_timestamp_are_supported(self) -> None:
         self.fixture.create_set(self.fixture.build_a, created=None)
