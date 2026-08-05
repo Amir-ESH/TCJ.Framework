@@ -6,6 +6,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+- Fixed reproducibility verification for NuGet core-properties parts that legitimately omit the optional `dcterms:created` value, and prevented SBOM verification from masking an earlier generation failure.
+
 ### Added
 
 - Reproducible NuGet package verification for all five primary and symbol packages using two isolated builds, semantic content comparison, focused difference reports, and a dedicated scheduled/manual/pull-request workflow.

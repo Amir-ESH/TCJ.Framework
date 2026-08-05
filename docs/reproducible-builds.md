@@ -198,3 +198,5 @@ The official release then validates the promoted set, generates its SBOM and che
 ## SDK and compiler changes
 
 Compiler and SDK versions can change assembly metadata, portable PDBs, Source Link encoding, and package layout. `global.json` pins the SDK entry point for both builds. Any SDK change requires a successful fresh double build and explicit review of resulting package-layout or metadata changes; deterministic settings must not be weakened to preserve an old output.
+
+The optional OPC `dcterms:created` property is normalized only when present. A package that omits this optional property is valid and is compared unchanged; a presence mismatch between Build A and Build B remains blocking.

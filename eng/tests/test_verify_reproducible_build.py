@@ -76,10 +76,15 @@ class Fixture:
 '''.encode()
 
     @staticmethod
-    def core_properties(created: str) -> bytes:
+    def core_properties(created: str | None) -> bytes:
+        created_element = (
+            f'<dcterms:created xsi:type="dcterms:W3CDTF">{created}</dcterms:created>'
+            if created is not None
+            else ""
+        )
         return f'''<?xml version="1.0" encoding="utf-8"?>
 <coreProperties xmlns="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <dcterms:created xsi:type="dcterms:W3CDTF">{created}</dcterms:created>
+  {created_element}
 </coreProperties>
 '''.encode()
 
@@ -105,7 +110,7 @@ class Fixture:
         package_type: str,
         *,
         zip_timestamp: tuple[int, int, int, int, int, int] = (2026, 1, 1, 0, 0, 0),
-        created: str = "2026-01-01T00:00:00Z",
+        created: str | None = "2026-01-01T00:00:00Z",
         core_name: str = "11111111-1111-1111-1111-111111111111.psmdcp",
         relationship_id: str = "R123",
         dll: bytes = b"deterministic-assembly",
@@ -179,6 +184,22 @@ class ReproducibleBuildTests(unittest.TestCase):
         self.assertTrue(summary.archiveByteEquality)
         self.assertEqual(5, summary.comparedNupkgCount)
         self.assertEqual(5, summary.comparedSnupkgCount)
+
+    def test_core_properties_without_created_timestamp_are_supported(self) -> None:
+        self.fixture.create_set(self.fixture.build_a, created=None)
+        self.fixture.create_set(self.fixture.build_b, created=None)
+        summary = self.fixture.compare()
+        self.assertEqual("PASS", summary.status)
+        self.assertFalse(any(
+            item["rule"] == "nuget-core-properties-created"
+            for item in summary.normalizedContainerDifferences
+        ))
+
+    def test_created_timestamp_presence_mismatch_is_blocking(self) -> None:
+        self.fixture.create_set(self.fixture.build_a, created=None)
+        self.fixture.create_set(self.fixture.build_b, created="2026-01-01T00:00:00Z")
+        with self.assertRaisesRegex(MODULE.ReproducibilityError, "Blocking package differences"):
+            self.fixture.compare()
 
     def test_equivalent_contents_with_different_zip_metadata_passes_with_warning(self) -> None:
         self.fixture.create_set(

@@ -452,15 +452,28 @@ def parse_identity(entries: dict[str, bytes], archive: Path) -> tuple[str, str]:
 
 
 def normalize_core_properties(data: bytes) -> tuple[bytes, str | None]:
+    try:
+        ET.fromstring(data)
+    except ET.ParseError as error:
+        fail(f"Invalid NuGet core-properties XML: {error}")
+
     pattern = re.compile(
         rb"(<(?:[A-Za-z_][\w.-]*:)?created\b[^>]*>)(.*?)(</(?:[A-Za-z_][\w.-]*:)?created\s*>)",
         re.DOTALL,
     )
     match = pattern.search(data)
     if not match:
-        fail("NuGet core-properties metadata is missing dcterms:created.")
+        # OPC core properties are optional. Newer NuGet writers may emit a
+        # core-properties part without dcterms:created, which is already free
+        # of the package-creation timestamp that this rule normalizes.
+        return data, None
+
     original = match.group(2).decode("utf-8", errors="replace").strip()
     normalized = data[: match.start(2)] + b"1970-01-01T00:00:00Z" + data[match.end(2) :]
+    try:
+        ET.fromstring(normalized)
+    except ET.ParseError as error:
+        fail(f"Normalized NuGet core-properties XML is invalid: {error}")
     return normalized, original
 
 
@@ -639,15 +652,16 @@ def load_package(path: Path, policy: Policy, expected_version: str) -> PackageAr
     core_path = core_paths[0]
     core_bytes, created_value = normalize_core_properties(entries.pop(core_path))
     entries[CANONICAL_CORE_PROPERTIES_PATH] = core_bytes
-    normalizations.append(
-        NormalizationEvent(
-            package=package_id,
-            package_type=package_type,
-            rule="nuget-core-properties-created",
-            path=core_path,
-            detail=f"original dcterms:created={created_value}",
+    if created_value is not None:
+        normalizations.append(
+            NormalizationEvent(
+                package=package_id,
+                package_type=package_type,
+                rule="nuget-core-properties-created",
+                path=core_path,
+                detail=f"original dcterms:created={created_value}",
+            )
         )
-    )
     if core_path != CANONICAL_CORE_PROPERTIES_PATH:
         normalizations.append(
             NormalizationEvent(

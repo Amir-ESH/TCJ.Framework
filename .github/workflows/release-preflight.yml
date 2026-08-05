@@ -264,7 +264,6 @@ jobs:
             --release-tag "$tag"
 
       - name: Verify release SBOM
-        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -279,7 +278,13 @@ jobs:
       - name: Publish SBOM summary
         if: always()
         shell: bash
-        run: cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          if [[ -f artifacts/sbom/SBOM_SUMMARY.md ]]; then
+            cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## SBOM" >> "$GITHUB_STEP_SUMMARY"
+            echo "SBOM generation or verification did not complete. Inspect the first failed SBOM step above." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Create release notes preview
         shell: bash
