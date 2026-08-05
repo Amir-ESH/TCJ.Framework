@@ -6,7 +6,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
-- Fixed reproducibility verification for NuGet core-properties parts that legitimately omit the optional `dcterms:created` value, and prevented SBOM verification from masking an earlier generation failure.
+- Fixed reproducibility verification for NuGet core-properties parts that legitimately omit the optional `dcterms:created` value or register `.psmdcp` through a `[Content_Types].xml` default declaration.
+- Fixed SBOM generation for multi-targeted NuGet packages whose dependency version ranges legitimately differ between target-framework groups, while retaining conflict detection inside each individual group.
+- Prevented SBOM verification from masking an earlier generation failure.
 
 ### Added
 

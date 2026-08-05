@@ -67,11 +67,16 @@ class Fixture:
 '''.encode()
 
     @staticmethod
-    def content_types(core_name: str) -> bytes:
+    def content_types(core_name: str, *, use_default: bool = False) -> bytes:
+        core_declaration = (
+            '<Default Extension="psmdcp" ContentType="application/vnd.openxmlformats-package.core-properties+xml" />'
+            if use_default
+            else f'<Override PartName="/package/services/metadata/core-properties/{core_name}" ContentType="application/vnd.openxmlformats-package.core-properties+xml" />'
+        )
         return f'''<?xml version="1.0" encoding="utf-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" />
-  <Override PartName="/package/services/metadata/core-properties/{core_name}" ContentType="application/vnd.openxmlformats-package.core-properties+xml" />
+  {core_declaration}
 </Types>
 '''.encode()
 
@@ -112,6 +117,7 @@ class Fixture:
         zip_timestamp: tuple[int, int, int, int, int, int] = (2026, 1, 1, 0, 0, 0),
         created: str | None = "2026-01-01T00:00:00Z",
         core_name: str = "11111111-1111-1111-1111-111111111111.psmdcp",
+        use_default_content_type: bool = False,
         relationship_id: str = "R123",
         dll: bytes = b"deterministic-assembly",
         xml_documentation: bytes = b"<doc><assembly /></doc>",
@@ -123,7 +129,10 @@ class Fixture:
         path = directory / f"{package_id}.{VERSION}{suffix}"
         entries: list[tuple[str, bytes]] = [
             ("_rels/.rels", self.relationships(core_name, relationship_id)),
-            ("[Content_Types].xml", self.content_types(core_name)),
+            (
+                "[Content_Types].xml",
+                self.content_types(core_name, use_default=use_default_content_type),
+            ),
             (f"{package_id}.nuspec", nuspec or self.nuspec(package_id)),
             (
                 f"package/services/metadata/core-properties/{core_name}",
@@ -192,6 +201,22 @@ class ReproducibleBuildTests(unittest.TestCase):
         self.assertEqual("PASS", summary.status)
         self.assertFalse(any(
             item["rule"] == "nuget-core-properties-created"
+            for item in summary.normalizedContainerDifferences
+        ))
+
+    def test_default_psmdcp_content_type_declaration_is_supported(self) -> None:
+        self.fixture.create_set(
+            self.fixture.build_a,
+            use_default_content_type=True,
+        )
+        self.fixture.create_set(
+            self.fixture.build_b,
+            use_default_content_type=True,
+        )
+        summary = self.fixture.compare()
+        self.assertEqual("PASS", summary.status)
+        self.assertFalse(any(
+            item["path"].endswith("[Content_Types].xml")
             for item in summary.normalizedContainerDifferences
         ))
 

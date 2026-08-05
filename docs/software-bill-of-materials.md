@@ -36,6 +36,8 @@ Each primary TCJ `.nupkg` is represented by its TCJ library component and SHA-25
 
 Direct TCJ package relationships are read from the generated `.nuspec` metadata inside each `.nupkg`. Exact external versions and transitive relationships are read from the production projects' `obj/project.assets.json` files after `dotnet restore`. Package hashes and license metadata are read from the locally restored NuGet cache. The dependency graph is therefore derived from generated and restored package metadata rather than copied from a handwritten diagram.
 
+Multi-targeted NuGet packages may declare different version ranges for the same dependency in different NuSpec target-framework groups. The SBOM parser accepts those framework-specific declarations because `project.assets.json` is the source of truth for the version actually restored for TCJ's target framework. Conflicting duplicate ranges inside the same NuSpec dependency group remain invalid and fail generation.
+
 ## Policy
 
 [`eng/sbom-policy.json`](../eng/sbom-policy.json) defines:

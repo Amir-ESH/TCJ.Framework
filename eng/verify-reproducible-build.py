@@ -28,6 +28,7 @@ SUMMARY_NAME = "REPRODUCIBILITY_SUMMARY.md"
 JSON_NAME = "reproducibility-summary.json"
 CORE_PROPERTIES_PREFIX = "package/services/metadata/core-properties/"
 CANONICAL_CORE_PROPERTIES_PATH = CORE_PROPERTIES_PREFIX + "core-properties.psmdcp"
+CORE_PROPERTIES_CONTENT_TYPE = "application/vnd.openxmlformats-package.core-properties+xml"
 REQUIRED_NORMALIZATIONS = {
     "nuget-core-properties-created",
     "nuget-core-properties-part-name",
@@ -526,25 +527,58 @@ def normalize_relationships(data: bytes) -> tuple[bytes, str]:
     return normalized, f"Id={original_id}, Target={original_target}"
 
 
-def normalize_content_types(data: bytes) -> tuple[bytes, str]:
+def normalize_content_types(data: bytes) -> tuple[bytes, str | None]:
     try:
         root = ET.fromstring(data)
     except ET.ParseError as error:
         fail(f"Invalid package content-types XML: {error}")
 
-    matches: list[ET.Element] = []
+    overrides: list[ET.Element] = []
+    defaults: list[ET.Element] = []
     for element in root.iter():
-        if local_name(element.tag) != "Override":
-            continue
-        part_name = element.attrib.get("PartName", "")
-        if part_name.lstrip("/").casefold().startswith(CORE_PROPERTIES_PREFIX):
-            matches.append(element)
-    if len(matches) != 1:
-        fail(f"Package content types must reference exactly one NuGet core-properties part; found {len(matches)}.")
+        element_name = local_name(element.tag)
+        content_type = element.attrib.get("ContentType", "").casefold()
+        if element_name == "Override":
+            part_name = element.attrib.get("PartName", "")
+            if (
+                part_name.lstrip("/").casefold().startswith(CORE_PROPERTIES_PREFIX)
+                or content_type == CORE_PROPERTIES_CONTENT_TYPE
+            ):
+                overrides.append(element)
+        elif element_name == "Default":
+            extension = element.attrib.get("Extension", "").lstrip(".").casefold()
+            if extension == "psmdcp" or content_type == CORE_PROPERTIES_CONTENT_TYPE:
+                defaults.append(element)
 
-    original = matches[0].attrib.get("PartName", "")
+    declaration_count = len(overrides) + len(defaults)
+    if declaration_count != 1:
+        fail(
+            "Package content types must declare exactly one NuGet core-properties "
+            f"content type; found {declaration_count}."
+        )
+
+    if defaults:
+        declaration = defaults[0]
+        extension = declaration.attrib.get("Extension", "").lstrip(".").casefold()
+        content_type = declaration.attrib.get("ContentType", "").casefold()
+        if extension != "psmdcp" or content_type != CORE_PROPERTIES_CONTENT_TYPE:
+            fail(
+                "NuGet core-properties default content type must use Extension=\"psmdcp\" "
+                f"and ContentType=\"{CORE_PROPERTIES_CONTENT_TYPE}\"."
+            )
+        # NuGet commonly registers all .psmdcp parts through a Default entry.
+        # This representation contains no generated part name and therefore
+        # requires no content-types normalization.
+        return data, None
+
+    original = overrides[0].attrib.get("PartName", "")
+    content_type = overrides[0].attrib.get("ContentType", "").casefold()
     if not original:
-        fail("NuGet core-properties content type must contain PartName.")
+        fail("NuGet core-properties content type override must contain PartName.")
+    if content_type != CORE_PROPERTIES_CONTENT_TYPE:
+        fail(
+            "NuGet core-properties content type override has an unexpected ContentType."
+        )
     normalized = replace_xml_attribute(
         data,
         "PartName",
@@ -693,15 +727,16 @@ def load_package(path: Path, policy: Policy, expected_version: str) -> PackageAr
         fail(f"{path.name} is missing [Content_Types].xml.")
     content_types, content_type_detail = normalize_content_types(entries[content_types_path])
     entries[content_types_path] = content_types
-    normalizations.append(
-        NormalizationEvent(
-            package=package_id,
-            package_type=package_type,
-            rule="nuget-core-properties-part-name",
-            path=content_types_path,
-            detail=f"original core-properties PartName={content_type_detail}",
+    if content_type_detail is not None:
+        normalizations.append(
+            NormalizationEvent(
+                package=package_id,
+                package_type=package_type,
+                rule="nuget-core-properties-part-name",
+                path=content_types_path,
+                detail=f"original core-properties PartName={content_type_detail}",
+            )
         )
-    )
 
     source_links: dict[str, Any] = {}
     for entry, data in entries.items():

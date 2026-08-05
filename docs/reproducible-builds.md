@@ -140,10 +140,10 @@ A difference in any blocking category fails verification. Binary reports contain
 
 The verifier reports full `.nupkg` and `.snupkg` SHA-256 equality separately from extracted-content equality. Raw ZIP bytes can differ because ZIP entry timestamps and NuGet OPC core-properties metadata are container details rather than package payload semantics.
 
-Only two normalization rules are approved:
+Only two normalization rule families are approved:
 
 1. replace the `dcterms:created` value in the NuGet core-properties part with a deterministic comparison value;
-2. canonicalize the generated core-properties part name consistently in the ZIP entry, root relationship identifier/target, and `[Content_Types].xml` override.
+2. canonicalize the generated core-properties part name consistently in the ZIP entry, root relationship identifier/target, and the matching `[Content_Types].xml` override when NuGet emits a part-specific override. The equally valid `Default Extension="psmdcp"` representation contains no generated part name and is validated without rewriting.
 
 The original values from both builds remain visible in the JSON and Markdown reports. Raw archive warnings also identify the first changed ZIP entry order or entry timestamp when present. No DLL, PDB, Source Link, NuSpec, XML documentation, source file, dependency metadata, repository commit, generated compiler identifier, or package payload path is normalized.
 

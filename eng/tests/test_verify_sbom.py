@@ -13,7 +13,7 @@ ENG = Path(__file__).resolve().parents[1]
 if str(ENG) not in sys.path:
     sys.path.insert(0, str(ENG))
 
-from sbom_common import build_sbom, nuget_purl, write_json  # noqa: E402
+from sbom_common import build_sbom, nuget_purl, parse_nuspec_xml, write_json  # noqa: E402
 
 
 def load_script(name: str, filename: str):
@@ -36,6 +36,53 @@ PACKAGES = [
 ]
 VERSION = "1.2.3-preview.1"
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
+
+
+class NuspecParsingTests(unittest.TestCase):
+    def test_target_specific_dependency_ranges_are_supported(self):
+        metadata = parse_nuspec_xml(
+            '''<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.Data.SqlClient</id>
+    <version>6.1.1</version>
+    <dependencies>
+      <group targetFramework=".NETFramework4.6.2">
+        <dependency id="Microsoft.Bcl.Cryptography" version="[8.0.0, )" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Microsoft.Bcl.Cryptography" version="[9.0.4, )" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="Microsoft.Bcl.Cryptography" version="[8.0.0, )" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
+''',
+            "Microsoft.Data.SqlClient.6.1.1.nuspec",
+        )
+        self.assertEqual(("Microsoft.Bcl.Cryptography",), metadata.dependencies)
+
+    def test_conflicting_ranges_inside_same_dependency_group_fail(self):
+        with self.assertRaisesRegex(ValueError, "inside dependency group"):
+            parse_nuspec_xml(
+                '''<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Broken.Package</id>
+    <version>1.0.0</version>
+    <dependencies>
+      <group targetFramework="net10.0">
+        <dependency id="Example" version="[1.0.0]" />
+        <dependency id="example" version="[2.0.0]" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
+''',
+                "broken.nuspec",
+            )
 
 
 class Fixture:

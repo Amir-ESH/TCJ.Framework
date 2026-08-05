@@ -112,7 +112,50 @@ class NuspecMetadata:
     project_url: str | None
     repository_url: str | None
     repository_commit: str | None
-    dependencies: dict[str, str | None]
+    dependencies: tuple[str, ...]
+
+
+def dependency_ids(dependency_root: ET.Element | None, source: str) -> tuple[str, ...]:
+    if dependency_root is None:
+        return ()
+
+    names: dict[str, str] = {}
+    ranges_by_scope: dict[str, dict[str, str | None]] = {}
+
+    def add(scope: str, element: ET.Element) -> None:
+        dependency_id = element.attrib.get("id", "").strip()
+        if not dependency_id:
+            fail(f"NuGet dependency without an id in {source}")
+
+        key = dependency_id.casefold()
+        version_value = element.attrib.get("version")
+        scoped = ranges_by_scope.setdefault(scope, {})
+        if key in scoped and scoped[key] != version_value:
+            fail(
+                f"NuGet dependency {dependency_id} has conflicting version ranges "
+                f"inside dependency group {scope!r} in {source}."
+            )
+        scoped[key] = version_value
+        names.setdefault(key, dependency_id)
+
+    ungrouped_scope = "<ungrouped>"
+    group_index = 0
+    for child in dependency_root:
+        child_name = local_name(child.tag)
+        if child_name == "dependency":
+            add(ungrouped_scope, child)
+            continue
+        if child_name != "group":
+            continue
+
+        group_index += 1
+        target_framework = child.attrib.get("targetFramework", "").strip()
+        scope = target_framework or f"<group-{group_index}>"
+        for dependency in child:
+            if local_name(dependency.tag) == "dependency":
+                add(scope, dependency)
+
+    return tuple(sorted(names.values(), key=str.casefold))
 
 
 def parse_nuspec_xml(data: bytes | str, source: str) -> NuspecMetadata:
@@ -141,26 +184,7 @@ def parse_nuspec_xml(data: bytes | str, source: str) -> NuspecMetadata:
             license_name = f"License file: {license_value}"
 
     repository = first_child(metadata, "repository")
-    dependencies: dict[str, str | None] = {}
-    dependency_root = first_child(metadata, "dependencies")
-    if dependency_root is not None:
-        for element in dependency_root.iter():
-            if local_name(element.tag) != "dependency":
-                continue
-            dependency_id = element.attrib.get("id", "").strip()
-            if not dependency_id:
-                fail(f"NuGet dependency without an id in {source}")
-            key = dependency_id.casefold()
-            version_value = element.attrib.get("version")
-            previous = next(
-                (item for item in dependencies if item.casefold() == key),
-                None,
-            )
-            if previous is not None and dependencies[previous] != version_value:
-                fail(
-                    f"NuGet dependency {dependency_id} has conflicting version ranges in {source}."
-                )
-            dependencies[dependency_id] = version_value
+    dependencies = dependency_ids(first_child(metadata, "dependencies"), source)
 
     return NuspecMetadata(
         package_id=package_id,
