@@ -1,6 +1,6 @@
 # TCJ Framework
 
-> **Latest published preview:** `0.1.0-preview.1`  
+> **Latest published preview:** `0.1.0-preview.1`
 > **Current development version:** `0.1.0-preview.2`
 
 [![CI](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/ci.yml)
@@ -115,10 +115,11 @@ python3 eng/verify-mutation-results.py validate-config
 python3 eng/verify-performance-results.py validate-config
 python3 eng/verify-architecture-policy.py validate-config
 python3 eng/verify-sbom.py validate-config
+python3 eng/verify-reproducible-build.py validate-config
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
-NuGet packages and symbol packages are written to `artifacts/packages`. Restore audits direct and transitive dependencies, and Pack validates binary compatibility against the latest published TCJ packages. CI enforces line and branch coverage, while the dedicated **Mutation testing** workflow validates test effectiveness for the controlled `TCJ.Core` and `TCJ.DependencyInjection` scope. The dedicated **Performance benchmarks** workflow uses BenchmarkDotNet to record runtime and managed-allocation data and enforces only within-run ratios, avoiding unreliable absolute-time comparisons between different hosted runners. The solution also contains deterministic architecture tests that enforce the approved package graph, namespace ownership, and public API infrastructure boundaries. The first valid mutation run creates a candidate that must be reviewed and accepted before the recorded baseline can pass normal verification. CI also generates and validates a CycloneDX JSON software bill of materials, includes it in `artifacts/release/SHA256SUMS`, and uploads the SBOM summary. Official tagged releases attest the packages, SBOM, and checksum manifest and attach all of them to the GitHub Release.
+NuGet packages and symbol packages are written to `artifacts/packages`. Restore audits direct and transitive dependencies, and Pack validates binary compatibility against the latest published TCJ packages. CI enforces line and branch coverage, while the dedicated **Mutation testing** workflow validates test effectiveness for the controlled `TCJ.Core` and `TCJ.DependencyInjection` scope. The dedicated **Performance benchmarks** workflow uses BenchmarkDotNet to record runtime and managed-allocation data and enforces only within-run ratios, avoiding unreliable absolute-time comparisons between different hosted runners. The solution also contains deterministic architecture tests that enforce the approved package graph, namespace ownership, and public API infrastructure boundaries. The first valid mutation run creates a candidate that must be reviewed and accepted before the recorded baseline can pass normal verification. CI also generates and validates a CycloneDX JSON software bill of materials, includes it in `artifacts/release/SHA256SUMS`, and uploads the SBOM summary. The dedicated **Reproducible builds** workflow creates two isolated package builds and compares assemblies, portable PDBs, Source Link, XML documentation, NuSpec metadata, source files, and extracted package contents. Release preflight and official tagged releases promote only a verified package set before SBOM generation, checksums, attestation, NuGet publication, and GitHub Release creation.
 
 ## Documentation map
 
@@ -135,6 +136,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Restore 
 - [Public API compatibility](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/api-compatibility.md)
 - [Dependency and supply-chain security](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/dependency-security.md)
 - [Release integrity and build provenance](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/release-integrity.md)
+- [Reproducible NuGet package builds](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/reproducible-builds.md)
 - [Software bill of materials](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/software-bill-of-materials.md)
 - [Code coverage quality gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/code-coverage.md)
 - [Mutation testing quality gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/mutation-testing.md)

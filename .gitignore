@@ -90,6 +90,11 @@ artifacts/sbom/
 *.cdx.json
 !eng/sbom-policy.json
 
+# Reproducible package verification
+artifacts/reproducibility/
+!eng/reproducibility-policy.json
+!eng/verify-reproducible-build.py
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json

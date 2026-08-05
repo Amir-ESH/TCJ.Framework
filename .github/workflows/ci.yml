@@ -21,6 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  CI: true
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
 
@@ -74,6 +75,9 @@ jobs:
 
       - name: Verify SBOM configuration
         run: python3 eng/verify-sbom.py validate-config
+
+      - name: Validate reproducibility policy
+        run: python3 eng/verify-reproducible-build.py validate-config
 
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
@@ -162,6 +166,7 @@ jobs:
           --release-tag "ci-${{ github.sha }}"
 
       - name: Verify CycloneDX SBOM
+        if: always()
         run: >
           python3 eng/verify-sbom.py verify
           --version "${{ steps.package-version.outputs.value }}"
@@ -173,14 +178,7 @@ jobs:
       - name: Publish SBOM summary
         if: always()
         shell: bash
-        run: |
-          if [[ -f artifacts/sbom/SBOM_SUMMARY.md ]]; then
-            cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "# TCJ software bill of materials" >> "$GITHUB_STEP_SUMMARY"
-            echo >> "$GITHUB_STEP_SUMMARY"
-            echo "SBOM generation failed before a summary was produced. Review the generator step." >> "$GITHUB_STEP_SUMMARY"
-          fi
+        run: cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate package checksums
         run: >

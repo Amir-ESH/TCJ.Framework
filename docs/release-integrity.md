@@ -1,12 +1,12 @@
 # Release integrity and build provenance
 
-TCJ release assets are protected by three complementary controls:
+TCJ release assets are protected by four complementary controls:
 
 1. a deterministic `SHA256SUMS` manifest for the exact packages and SBOM attached to the GitHub release;
 2. a CycloneDX JSON software bill of materials describing release packages, dependencies, licenses, hashes, repository identity, and source commit;
 3. a cryptographically signed GitHub artifact attestation binding those files to the tagged Release workflow, repository, source commit, and build environment.
 
-Checksums answer whether bytes changed. The SBOM answers what components and relationships are represented. Attestations answer where and how the files were produced.
+Checksums answer whether bytes changed. The SBOM answers what components and relationships are represented. Reproducibility answers whether the trusted inputs can create equivalent package contents again. Attestations answer where and how the files were produced.
 
 ## Release output
 
