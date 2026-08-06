@@ -243,8 +243,21 @@ def validate_central_xml_docs() -> None:
         fail("GenerateDocumentationFile must be enabled centrally in Directory.Build.props.")
 
 
-def validate_git_tracking() -> None:
-    for path in (POLICY_PATH, DOCFX_CONFIG_PATH, TOOL_MANIFEST_PATH):
+def validate_git_tracking(policy: dict) -> None:
+    required_sources = {
+        POLICY_PATH,
+        DOCFX_CONFIG_PATH,
+        TOOL_MANIFEST_PATH,
+        ROOT / "docs" / "index.md",
+        ROOT / "docs" / "toc.yml",
+        ROOT / "docs" / "packages" / "index.md",
+    }
+    required_sources.update(ROOT / page for page in policy["packagePages"].values())
+    required_sources.update(ROOT / item["path"] for item in policy["selectedExamples"])
+
+    for path in sorted(required_sources):
+        if not path.is_file():
+            fail(f"Required documentation source does not exist: {path.relative_to(ROOT)}")
         if git_ignored(path):
             fail(f"Required documentation source is ignored by Git: {path.relative_to(ROOT)}")
         if not git_tracked(path):
@@ -949,7 +962,7 @@ def command_validate_config(_: argparse.Namespace) -> int:
     validate_tool_manifest(policy)
     validate_docfx_config(policy)
     validate_central_xml_docs()
-    validate_git_tracking()
+    validate_git_tracking(policy)
     validate_workflow_integration()
     validate_examples(policy)
     items = parse_csharp_apis(policy)
@@ -970,7 +983,7 @@ def command_verify(args: argparse.Namespace) -> int:
     validate_tool_manifest(policy)
     validate_docfx_config(policy)
     validate_central_xml_docs()
-    validate_git_tracking()
+    validate_git_tracking(policy)
     validate_workflow_integration()
     validate_examples(policy)
 

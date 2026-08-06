@@ -1,0 +1,21 @@
+# TCJ.Core
+
+`TCJ.Core` contains framework-neutral domain primitives: results, structured errors, entities, domain events, guards, identifiers, current-user abstractions, and common extensions.
+
+## Install
+
+```bash
+dotnet add package TCJ.Core --version 0.1.0-preview.2
+```
+
+- **Target framework:** `net10.0`
+- **Main namespaces:** `TCJ.Core.Results`, `TCJ.Core.Entities`, `TCJ.Core.DomainEvents`, `TCJ.Core.Guards`, `TCJ.Core.Identifiers`
+- **Primary entry points:** `Result`, `Result<T>`, `ResultError`, `Entity<TKey>`, `IDomainEventDispatcher`, `Check`
+
+```csharp
+Result<int> result = int.TryParse(input, out int value)
+    ? Result.Success(value)
+    : Result.Failure<int>(CommonErrors.Validation("A number is required."));
+```
+
+Related guides: [Result and HTTP](../guides/results-and-http.md), [Domain events](../guides/domain-events.md), and the [generated API reference](../api/index.md).

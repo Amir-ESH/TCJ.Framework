@@ -162,6 +162,67 @@ class DocumentationVerifierTests(unittest.TestCase):
                     MODULE.compile_snippets(policy, output, "Release")
                 self.assertTrue((output / "snippets" / "build.log").is_file())
 
+
+    def test_git_tracking_rejects_ignored_package_landing_page(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            required = [
+                root / ".config" / "dotnet-tools.json",
+                root / "docfx" / "docfx.json",
+                root / "eng" / "documentation-policy.json",
+                root / "docs" / "index.md",
+                root / "docs" / "toc.yml",
+                root / "docs" / "packages" / "index.md",
+                root / "docs" / "packages" / "tcj-core.md",
+                root / "docs" / "examples.md",
+            ]
+            for path in required:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("content\n", encoding="utf-8")
+            policy = {
+                "packagePages": {"TCJ.Core": "docs/packages/tcj-core.md"},
+                "selectedExamples": [{"id": "example", "area": "Example", "path": "docs/examples.md"}],
+            }
+            ignored = root / "docs" / "packages" / "tcj-core.md"
+            with mock.patch.object(MODULE, "ROOT", root), \
+                 mock.patch.object(MODULE, "POLICY_PATH", root / "eng" / "documentation-policy.json"), \
+                 mock.patch.object(MODULE, "DOCFX_CONFIG_PATH", root / "docfx" / "docfx.json"), \
+                 mock.patch.object(MODULE, "TOOL_MANIFEST_PATH", root / ".config" / "dotnet-tools.json"), \
+                 mock.patch.object(MODULE, "BASELINE_PATH", root / "eng" / "documentation-baseline.json"), \
+                 mock.patch.object(MODULE, "git_ignored", side_effect=lambda path: path == ignored), \
+                 mock.patch.object(MODULE, "git_tracked", return_value=True):
+                with self.assertRaisesRegex(MODULE.DocumentationError, "ignored by Git: docs/packages/tcj-core.md"):
+                    MODULE.validate_git_tracking(policy)
+
+    def test_git_tracking_accepts_tracked_package_landing_pages(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            required = [
+                root / ".config" / "dotnet-tools.json",
+                root / "docfx" / "docfx.json",
+                root / "eng" / "documentation-policy.json",
+                root / "docs" / "index.md",
+                root / "docs" / "toc.yml",
+                root / "docs" / "packages" / "index.md",
+                root / "docs" / "packages" / "tcj-core.md",
+                root / "docs" / "examples.md",
+            ]
+            for path in required:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("content\n", encoding="utf-8")
+            policy = {
+                "packagePages": {"TCJ.Core": "docs/packages/tcj-core.md"},
+                "selectedExamples": [{"id": "example", "area": "Example", "path": "docs/examples.md"}],
+            }
+            with mock.patch.object(MODULE, "ROOT", root), \
+                 mock.patch.object(MODULE, "POLICY_PATH", root / "eng" / "documentation-policy.json"), \
+                 mock.patch.object(MODULE, "DOCFX_CONFIG_PATH", root / "docfx" / "docfx.json"), \
+                 mock.patch.object(MODULE, "TOOL_MANIFEST_PATH", root / ".config" / "dotnet-tools.json"), \
+                 mock.patch.object(MODULE, "BASELINE_PATH", root / "eng" / "documentation-baseline.json"), \
+                 mock.patch.object(MODULE, "git_ignored", return_value=False), \
+                 mock.patch.object(MODULE, "git_tracked", return_value=True):
+                MODULE.validate_git_tracking(policy)
+
     def test_api_page_counter_excludes_toc_and_xref(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
