@@ -1,0 +1,69 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": [
+            "src/TCJ.Core/TCJ.Core.csproj",
+            "src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj",
+            "src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
+            "src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
+            "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj"
+          ],
+          "src": ".."
+        }
+      ],
+      "dest": "../artifacts/documentation/api",
+      "properties": {
+        "Configuration": "Release",
+        "TargetFramework": "net10.0",
+        "ContinuousIntegrationBuild": "true"
+      },
+      "disableGitFeatures": false,
+      "namespaceLayout": "Nested",
+      "memberLayout": "SamePage"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": ["**/*.yml"],
+        "src": "../artifacts/documentation/api",
+        "dest": "api"
+      },
+      {
+        "files": ["**/*.md", "toc.yml"],
+        "src": "../docs"
+      }
+    ],
+    "resource": [
+      {
+        "files": ["**/images/**"],
+        "src": "../docs"
+      }
+    ],
+    "output": "../artifacts/documentation/site",
+    "template": ["default", "modern"],
+    "globalMetadata": {
+      "_appName": "TCJ Framework",
+      "_appTitle": "TCJ Framework API Reference",
+      "_appFooter": "TCJ Framework documentation",
+      "_enableSearch": true,
+      "_gitContribute": {
+        "repo": "https://github.com/Amir-ESH/TCJ.Framework",
+        "branch": "develop"
+      },
+      "_gitUrlPattern": "github",
+      "repositoryUrl": "https://github.com/Amir-ESH/TCJ.Framework",
+      "packageVersion": "0.1.0-preview.2"
+    },
+    "sitemap": {
+      "baseUrl": "https://amir-esh.github.io/TCJ.Framework/"
+    }
+  },
+  "rules": {
+    "InvalidHref": "error",
+    "InvalidInputFile": "error",
+    "DuplicateUids": "error"
+  }
+}

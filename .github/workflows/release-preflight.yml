@@ -29,7 +29,7 @@ jobs:
   preflight:
     name: Validate release candidate
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 75
 
     steps:
       - name: Require the main branch
@@ -52,6 +52,9 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore repository tools
+        run: dotnet tool restore
+
       - name: Verify release metadata
         run: python3 eng/verify-release.py --require-ready
 
@@ -72,6 +75,9 @@ jobs:
 
       - name: Validate reproducibility policy
         run: python3 eng/verify-reproducible-build.py validate-config
+
+      - name: Validate documentation policy
+        run: python3 eng/verify-documentation.py validate-config
 
       - name: Check NuGet package IDs
         run: >
@@ -94,6 +100,67 @@ jobs:
           dotnet build TCJ.slnx
           --configuration Release
           --no-restore
+
+      - name: Generate release-candidate API metadata
+        run: >
+          dotnet docfx metadata docfx/docfx.json
+          --noRestore
+          --warningsAsErrors
+          --property "Version=${{ steps.release-version.outputs.value }};RepositoryCommit=${{ github.sha }}"
+
+      - name: Build release-candidate documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          dotnet docfx build docfx/docfx.json \
+            --warningsAsErrors \
+            --metadata "packageVersion=${{ steps.release-version.outputs.value }}" \
+            --metadata "sourceCommit=${{ github.sha }}" \
+            --metadata "releaseTag=preflight-${{ github.sha }}" \
+            --metadata "documentationBuildDate=$build_date"
+
+      - name: Verify release-candidate documentation
+        run: >
+          python3 eng/verify-documentation.py verify
+          --configuration Release
+          --build-root src
+          --api-root artifacts/documentation/api
+          --output artifacts/documentation
+          --version "${{ steps.release-version.outputs.value }}"
+          --commit-sha "${{ github.sha }}"
+          --release-tag "preflight-${{ github.sha }}"
+
+      - name: Archive release-candidate documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd artifacts/documentation
+          zip -qr "TCJ.Framework.Documentation.${{ steps.release-version.outputs.value }}.zip" site
+
+      - name: Publish documentation summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/documentation/DOCUMENTATION_SUMMARY.md ]]; then
+            cat artifacts/documentation/DOCUMENTATION_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload documentation-site artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: documentation-site-${{ github.run_id }}
+          path: |
+            artifacts/documentation/site/**
+            artifacts/documentation/api/**
+            artifacts/documentation/DOCUMENTATION_SUMMARY.md
+            artifacts/documentation/documentation-summary.json
+            artifacts/documentation/missing-documentation.json
+            artifacts/documentation/broken-links.json
+            artifacts/documentation/TCJ.Framework.Documentation.*.zip
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Run tests
         run: >

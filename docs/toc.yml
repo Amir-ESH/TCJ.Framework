@@ -1,0 +1,43 @@
+- name: Home
+  href: index.md
+- name: Getting Started
+  href: getting-started.md
+- name: Packages
+  href: packages/index.md
+  items:
+  - name: TCJ.Core
+    href: packages/tcj-core.md
+  - name: TCJ.DependencyInjection
+    href: packages/tcj-dependencyinjection.md
+  - name: TCJ.EntityFrameworkCore
+    href: packages/tcj-entityframeworkcore.md
+  - name: TCJ.EntityFrameworkCore.SqlServer
+    href: packages/tcj-entityframeworkcore-sqlserver.md
+  - name: TCJ.AspNetCore
+    href: packages/tcj-aspnetcore.md
+- name: Guides
+  items:
+  - name: Result and HTTP
+    href: guides/results-and-http.md
+  - name: Specifications and repositories
+    href: guides/specifications-and-repositories.md
+  - name: Domain events
+    href: guides/domain-events.md
+  - name: Auditing and soft delete
+    href: guides/auditing-soft-delete-rowversion.md
+  - name: Data seeding
+    href: guides/data-seeding.md
+  - name: Validated examples
+    href: examples.md
+- name: Architecture
+  href: architecture.md
+- name: Security
+  href: security.md
+- name: Release Process
+  href: releasing.md
+- name: API Reference
+  href: api/index.md
+- name: Documentation Authoring
+  href: documentation-authoring.md
+- name: Contributing
+  href: contributing.md

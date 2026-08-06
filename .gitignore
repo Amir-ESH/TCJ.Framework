@@ -458,3 +458,12 @@ FodyWeavers.xsd
 # Python tooling caches
 __pycache__/
 *.py[cod]
+
+# Generated API reference documentation
+artifacts/documentation/
+_site/
+docfx/api/*.yml
+!docfx/docfx.json
+!eng/documentation-policy.json
+!eng/documentation-baseline.json
+!eng/verify-documentation.py

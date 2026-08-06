@@ -14,6 +14,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Automated DocFX API reference generation and a policy-backed documentation quality gate for all five public packages, including measured coverage, explicit baseline debt, validated examples, link checks, and CI/release artifacts.
 - Reproducible NuGet package verification for all five primary and symbol packages using two isolated builds, semantic content comparison, focused difference reports, and a dedicated scheduled/manual/pull-request workflow.
 - Release-preflight and tagged-release enforcement that promotes only a verified package set before SBOM generation, checksums, attestations, and publication.
 - CycloneDX JSON SBOM generation and strict verification for all five release packages, restored direct/transitive NuGet dependencies, licenses, hashes, repository metadata, and source provenance.

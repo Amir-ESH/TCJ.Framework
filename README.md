@@ -24,6 +24,25 @@ TCJ Framework is a modular foundation for building .NET 10 applications with exp
 | `TCJ.EntityFrameworkCore.SqlServer` | SQL Server registration options and rowversion conventions. |
 | `TCJ.AspNetCore` | Current-user resolution, Result-to-HTTP mapping, Problem Details, and centralized exception handling. |
 
+## API reference and documentation quality
+
+The repository builds a DocFX site from the five production projects and the conceptual documentation under [`docs/`](docs/README.md). The documentation gate measures public API coverage, rejects new undocumented APIs, validates XML references and internal links, and compiles selected consumer examples.
+
+Start with the [documentation home](docs/index.md), browse the [package landing pages](docs/packages/index.md), or read the [documentation authoring guide](docs/documentation-authoring.md).
+
+Local validation:
+
+```bash
+dotnet tool restore
+dotnet build TCJ.slnx --configuration Release
+dotnet docfx metadata docfx/docfx.json --warningsAsErrors
+dotnet docfx build docfx/docfx.json --warningsAsErrors
+python3 eng/verify-documentation.py verify \
+  --configuration Release \
+  --build-root src \
+  --api-root artifacts/documentation/api
+```
+
 ## Requirements
 
 - .NET SDK `10.0.100` or a compatible SDK selected by [`global.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/main/global.json)

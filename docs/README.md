@@ -45,3 +45,13 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 - Domain-event dispatch is explicit; `SaveChangesAsync` does not dispatch events automatically.
 - Soft deletion is explicit through `ISoftDeleteRepository`; calling `Remove` performs physical deletion.
 - The sample uses `EnsureCreatedAsync` for local demonstration and is not a migration strategy for production.
+
+## Generated API reference
+
+- [Documentation site home](index.md)
+- [Package landing pages](packages/index.md)
+- [API reference entry point](api/index.md)
+- [Validated consumer examples](examples.md)
+- [Documentation authoring and baseline maintenance](documentation-authoring.md)
+
+The generated `artifacts/documentation/api/` and `artifacts/documentation/site/` directories are workflow outputs and must not be committed.

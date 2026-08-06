@@ -99,3 +99,24 @@ A pull request should explain:
 - reproducibility-policy or normalization justification when build/package comparison behavior changes.
 
 By contributing, you agree that your contribution is licensed under the repository's MIT License.
+
+## API documentation changes
+
+Public API changes must include useful XML documentation for types and members, matching `<param>` and `<typeparam>` elements, and `<returns>` for non-void results. Important consumer-facing behavior should also have a validated example or a linked conceptual guide.
+
+The existing debt is recorded explicitly in `eng/documentation-baseline.json`. New APIs must not be added to that baseline merely to make CI pass; baseline additions require a reason and milestone, stale entries fail validation, and improvements should remove entries.
+
+Run the repository-pinned DocFX tool and quality gate before opening a pull request:
+
+```bash
+dotnet tool restore
+dotnet build TCJ.slnx --configuration Release
+dotnet docfx metadata docfx/docfx.json --warningsAsErrors
+dotnet docfx build docfx/docfx.json --warningsAsErrors
+python3 eng/verify-documentation.py verify \
+  --configuration Release \
+  --build-root src \
+  --api-root artifacts/documentation/api
+```
+
+See [`docs/documentation-authoring.md`](docs/documentation-authoring.md) for XML IDs, `cref`, examples, local preview, baseline maintenance, and versioned site metadata.

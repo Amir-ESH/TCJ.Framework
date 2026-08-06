@@ -181,3 +181,22 @@ The initial Stryker.NET baseline, exclusions, local commands, and threshold-upda
 ## Reproducible package builds
 
 Run `python3 eng/verify-reproducible-build.py validate-config` before changing packaging, SDK, Source Link, deterministic build properties, or release workflows. The dedicated workflow creates isolated Build A and Build B trees under `artifacts/reproducibility/`, packs all five `.nupkg` and `.snupkg` files twice, and compares the extracted payload plus assemblies, PDBs, Source Link, XML documentation, sources, and NuGet metadata. Use [Reproducible NuGet package builds](reproducible-builds.md) for the full local command sequence, normalization policy, and difference-report investigation process.
+
+## Documentation validation
+
+Restore and invoke the repository-pinned DocFX tool rather than a global installation:
+
+```bash
+dotnet tool restore
+python3 eng/verify-documentation.py validate-config
+dotnet build TCJ.slnx --configuration Release
+dotnet docfx metadata docfx/docfx.json --warningsAsErrors
+dotnet docfx build docfx/docfx.json --warningsAsErrors
+python3 eng/verify-documentation.py verify \
+  --configuration Release \
+  --build-root src \
+  --api-root artifacts/documentation/api \
+  --output artifacts/documentation
+```
+
+The verifier writes coverage, baseline, missing-documentation, broken-link, snippet, and generated-page results under `artifacts/documentation/`. See [Documentation authoring](documentation-authoring.md) before changing XML comments, package pages, selected examples, or the baseline.

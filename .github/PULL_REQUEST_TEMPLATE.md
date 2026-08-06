@@ -51,6 +51,15 @@ Describe the problem and the approach taken.
 - [ ] `sbom-policy` changes include justification
 - [ ] Generated SBOM output is not committed
 - [ ] `SHA256SUMS` includes the versioned SBOM
+- [ ] New public APIs include XML documentation
+- [ ] Public API parameters, type parameters, and return values are documented
+- [ ] Required package and getting-started examples compile
+- [ ] Conceptual and package documentation is updated
+- [ ] Internal documentation links are valid
+- [ ] DocFX metadata and site builds succeed
+- [ ] Public API documentation coverage does not regress
+- [ ] Documentation baseline changes are narrow and justified
+- [ ] Generated documentation output is not committed
 - [ ] Documentation updated where required
 - [ ] No secrets or generated artifacts included
 

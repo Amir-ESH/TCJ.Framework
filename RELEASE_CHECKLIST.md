@@ -76,3 +76,16 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Start a fresh `[Unreleased]` section.
 - [ ] Run **Published package smoke tests** for the new public version.
 - [ ] Verify Source Link from at least one package in a consumer debugger.
+
+## API documentation
+
+- [ ] `dotnet tool restore` restores the pinned DocFX version.
+- [ ] `python3 eng/verify-documentation.py validate-config` passes.
+- [ ] DocFX metadata is generated for all five production packages.
+- [ ] The documentation site builds with warnings treated as errors.
+- [ ] Public API documentation coverage meets the measured policy threshold.
+- [ ] No new missing summary, parameter, type-parameter, or return documentation is outside the approved baseline.
+- [ ] Unresolved `cref` references and broken internal links are zero.
+- [ ] Required C# examples compile against the release-candidate source.
+- [ ] `DOCUMENTATION_SUMMARY.md` and the Pages-ready site archive are present in workflow artifacts.
+- [ ] The tagged release attaches the documentation ZIP generated from the same commit.

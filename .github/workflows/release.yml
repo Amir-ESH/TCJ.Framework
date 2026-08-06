@@ -27,7 +27,7 @@ jobs:
       id-token: write
       attestations: write
       artifact-metadata: write
-    timeout-minutes: 55
+    timeout-minutes: 75
 
     outputs:
       version: ${{ steps.release-version.outputs.value }}
@@ -43,6 +43,9 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
+
+      - name: Restore repository tools
+        run: dotnet tool restore
 
       - name: Verify release metadata
         run: python3 eng/verify-release.py --require-ready
@@ -64,6 +67,9 @@ jobs:
 
       - name: Validate reproducibility policy
         run: python3 eng/verify-reproducible-build.py validate-config
+
+      - name: Validate documentation policy
+        run: python3 eng/verify-documentation.py validate-config
 
       - name: Validate release tag
         id: release-version
@@ -107,6 +113,68 @@ jobs:
           dotnet build TCJ.slnx
           --configuration Release
           --no-restore
+
+      - name: Generate tagged API metadata
+        run: >
+          dotnet docfx metadata docfx/docfx.json
+          --noRestore
+          --warningsAsErrors
+          --property "Version=${{ steps.release-version.outputs.value }};RepositoryCommit=${{ github.sha }}"
+
+      - name: Build tagged documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          dotnet docfx build docfx/docfx.json \
+            --warningsAsErrors \
+            --metadata "packageVersion=${{ steps.release-version.outputs.value }}" \
+            --metadata "sourceCommit=${{ github.sha }}" \
+            --metadata "releaseTag=${{ github.ref_name }}" \
+            --metadata "documentationBuildDate=$build_date"
+
+      - name: Verify tagged documentation
+        run: >
+          python3 eng/verify-documentation.py verify
+          --configuration Release
+          --build-root src
+          --api-root artifacts/documentation/api
+          --output artifacts/documentation
+          --version "${{ steps.release-version.outputs.value }}"
+          --commit-sha "${{ github.sha }}"
+          --release-tag "${{ github.ref_name }}"
+
+      - name: Archive tagged documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cd artifacts/documentation
+          zip -qr "$GITHUB_WORKSPACE/artifacts/release/TCJ.Framework.Documentation.${{ steps.release-version.outputs.value }}.zip" site
+
+      - name: Publish documentation summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/documentation/DOCUMENTATION_SUMMARY.md ]]; then
+            cat artifacts/documentation/DOCUMENTATION_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload release-documentation artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-documentation-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/documentation/site/**
+            artifacts/documentation/api/**
+            artifacts/documentation/DOCUMENTATION_SUMMARY.md
+            artifacts/documentation/documentation-summary.json
+            artifacts/documentation/missing-documentation.json
+            artifacts/documentation/broken-links.json
+            artifacts/release/TCJ.Framework.Documentation.*.zip
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Run tests
         run: >
@@ -329,6 +397,7 @@ jobs:
             artifacts/packages/*.snupkg
             artifacts/sbom/*.cdx.json
             artifacts/release/SHA256SUMS
+            artifacts/release/TCJ.Framework.Documentation.*.zip
 
       - name: Upload release packages
         uses: actions/upload-artifact@v7
@@ -345,6 +414,7 @@ jobs:
           path: |
             artifacts/release/RELEASE_NOTES.md
             artifacts/release/SHA256SUMS
+            artifacts/release/TCJ.Framework.Documentation.*.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -504,6 +574,7 @@ jobs:
             artifacts/packages/*.snupkg
             artifacts/sbom/*.cdx.json
             artifacts/release/SHA256SUMS
+            artifacts/release/TCJ.Framework.Documentation.*.zip
           )
           release_args=(
             "$GITHUB_REF_NAME"
