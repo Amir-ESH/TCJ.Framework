@@ -28,14 +28,25 @@ public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
         _timeProvider = timeProvider;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Applies audit values immediately before Entity Framework Core saves tracked changes.
+    /// </summary>
+    /// <param name="eventData">Contextual information for the current save operation.</param>
+    /// <param name="result">The current interception result.</param>
+    /// <returns>The interception result returned by the base interceptor.</returns>
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
         ApplyAuditValues(eventData.Context);
         return base.SavingChanges(eventData, result);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Applies audit values immediately before Entity Framework Core asynchronously saves tracked changes.
+    /// </summary>
+    /// <param name="eventData">Contextual information for the current save operation.</param>
+    /// <param name="result">The current interception result.</param>
+    /// <param name="cancellationToken">A token used to cancel the asynchronous operation.</param>
+    /// <returns>A value task containing the interception result returned by the base interceptor.</returns>
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
                                                                           InterceptionResult<int> result,
                                                                           CancellationToken cancellationToken = default)

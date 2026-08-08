@@ -6,6 +6,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+- Fixed DocFX metadata generation for EF Core save interceptors by replacing inherited external XML comments that produced unresolved `DbContext.SaveChanges` cref values.
+- Refined mutation-test scope detection so repository-tool changes trigger Stryker only when the pinned `dotnet-stryker` definition actually changes.
+
 - Fixed Git ignore rules so documentation package landing pages remain tracked and documentation validation verifies their Git status.
 
 - Fixed reproducibility verification to support valid modern `.snupkg` files that contain portable PDBs and Source Link metadata without physical `src/**/*.cs` entries; optional source entries remain fully compared when present.
