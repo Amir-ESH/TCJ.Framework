@@ -26,7 +26,12 @@ env:
   DOTNET_NOLOGO: true
 
 jobs:
+  sqlserver-integration:
+    name: SQL Server integration gate
+    uses: ./.github/workflows/sqlserver-integration.yml
+
   preflight:
+    needs: sqlserver-integration
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -167,6 +172,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
+          --filter "Category!=SqlServer"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=preflight-test-results.trx"

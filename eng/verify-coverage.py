@@ -36,6 +36,7 @@ class CoveragePolicy:
     minimum_branch_coverage: float
     minimum_report_count: int
     expected_packages: tuple[str, ...]
+    excluded_test_projects: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,7 @@ def load_policy(path: Path) -> CoveragePolicy:
         "minimumBranchCoverage",
         "minimumReportCount",
         "expectedPackages",
+        "excludedTestProjects",
     }
     missing = sorted(required.difference(data))
     if missing:
@@ -104,12 +106,25 @@ def load_policy(path: Path) -> CoveragePolicy:
     if any(not item for item in normalized_packages) or len(set(normalized_packages)) != len(normalized_packages):
         fail("expectedPackages must contain unique, non-empty package IDs.")
 
+    excluded = data["excludedTestProjects"]
+    if not isinstance(excluded, list):
+        fail("excludedTestProjects must be an array.")
+    normalized_excluded = tuple(str(item).strip().replace("\\", "/") for item in excluded)
+    if any(not item or Path(item).is_absolute() or ".." in Path(item).parts for item in normalized_excluded):
+        fail("excludedTestProjects must contain safe repository-relative paths.")
+    if len(set(normalized_excluded)) != len(normalized_excluded):
+        fail("excludedTestProjects must not contain duplicates.")
+    for relative in normalized_excluded:
+        if not (REPOSITORY_ROOT / relative).is_file():
+            fail(f"excludedTestProjects entry does not exist: {relative}")
+
     return CoveragePolicy(
         report_pattern=report_pattern,
         minimum_line_coverage=minimum_line,
         minimum_branch_coverage=minimum_branch,
         minimum_report_count=minimum_report_count,
         expected_packages=normalized_packages,
+        excluded_test_projects=normalized_excluded,
     )
 
 
@@ -129,10 +144,15 @@ def validate_config(policy: CoveragePolicy) -> None:
     if manifest_packages != policy.expected_packages:
         fail("coverage-policy expectedPackages must match release-manifest packages in order.")
 
-    test_projects = sorted(REPOSITORY_ROOT.glob(TEST_PROJECT_PATTERN))
+    all_test_projects = sorted(REPOSITORY_ROOT.glob(TEST_PROJECT_PATTERN))
+    test_projects = [
+        project
+        for project in all_test_projects
+        if project.relative_to(REPOSITORY_ROOT).as_posix() not in policy.excluded_test_projects
+    ]
     if len(test_projects) != policy.minimum_report_count:
         fail(
-            "minimumReportCount must match the number of test projects: "
+            "minimumReportCount must match the number of coverage-participating test projects: "
             f"expected {len(test_projects)}, found {policy.minimum_report_count}."
         )
 
@@ -165,6 +185,7 @@ def validate_config(policy: CoveragePolicy) -> None:
     required_fragments = (
         'python3 eng/verify-coverage.py validate-config',
         '--collect:"XPlat Code Coverage"',
+        '--filter "Category!=SqlServer"',
         '--settings tests/coverlet.runsettings',
         'python3 eng/verify-coverage.py verify',
         'artifacts/coverage/COVERAGE_SUMMARY.md',

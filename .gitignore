@@ -476,3 +476,7 @@ docfx/api/*.yml
 !eng/documentation-policy.json
 !eng/documentation-baseline.json
 !eng/verify-documentation.py
+
+# SQL Server integration test output
+TestResults/SqlServerIntegration/
+artifacts/sqlserver-integration/

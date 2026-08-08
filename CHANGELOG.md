@@ -23,6 +23,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Real SQL Server integration coverage through Testcontainers, including isolated migrated databases, repository/transaction/auditing/storage/concurrency scenarios, sanitized diagnostics, and policy verification.
+- Dedicated SQL Server integration CI plus release-preflight and tagged-release enforcement for relevant database changes.
 - Automated DocFX API reference generation and a policy-backed documentation quality gate for all five public packages, including measured coverage, explicit baseline debt, validated examples, link checks, and CI/release artifacts.
 - Reproducible NuGet package verification for all five primary and symbol packages using two isolated builds, semantic content comparison, focused difference reports, and a dedicated scheduled/manual/pull-request workflow.
 - Release-preflight and tagged-release enforcement that promotes only a verified package set before SBOM generation, checksums, attestations, and publication.

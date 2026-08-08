@@ -173,7 +173,7 @@ app.MapGet("/api/products/{id:guid}",
 ```bash
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer"
 ```
 
 Continue with the [package reference](README.md#package-reference) and the [Product API sample](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/samples/TCJ.Empty/README.md).

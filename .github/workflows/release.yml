@@ -18,7 +18,12 @@ env:
   DOTNET_NOLOGO: true
 
 jobs:
+  sqlserver-integration:
+    name: SQL Server integration gate
+    uses: ./.github/workflows/sqlserver-integration.yml
+
   build-and-pack:
+    needs: sqlserver-integration
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -181,6 +186,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
+          --filter "Category!=SqlServer"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=release-test-results.trx"

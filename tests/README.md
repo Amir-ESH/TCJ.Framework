@@ -7,6 +7,7 @@ TCJ.Core.Tests
 TCJ.DependencyInjection.Tests
 TCJ.EntityFrameworkCore.Tests
 TCJ.EntityFrameworkCore.SqlServer.Tests
+TCJ.EntityFrameworkCore.SqlServer.IntegrationTests
 TCJ.AspNetCore.Tests
 TCJ.Architecture.Tests
 ```
@@ -16,7 +17,7 @@ The suite uses xUnit v3, Microsoft.NET.Test.Sdk, the Visual Studio runner adapte
 Run all tests:
 
 ```bash
-dotnet test TCJ.slnx -c Release
+dotnet test TCJ.slnx -c Release --filter "Category!=SqlServer"
 ```
 
 Run coverage:
@@ -24,6 +25,7 @@ Run coverage:
 ```bash
 dotnet test TCJ.slnx \
   -c Release \
+  --filter "Category!=SqlServer" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
@@ -51,3 +53,21 @@ Failures identify the assembly or type, the unexpected dependency or namespace, 
 `TCJ.Core.Tests` and `TCJ.DependencyInjection.Tests` are the first mutation-testing test projects. Stryker uses the Microsoft Testing Platform runner for xUnit v3 and mutates only the controlled production files listed in `eng/mutation-policy.json`; test code is never mutated.
 
 The verifier rejects missing reports, runner failures, mismatched hashes, excessive compile errors, incomplete statuses, zero-killed/all-survived executions, and score regressions. A pending baseline does not prevent Stryker from running: a valid run produces a candidate, which becomes a recorded baseline only after both HTML reports are reviewed and `accept-baseline` records reviewer identity and notes. See [`docs/mutation-testing.md`](../docs/mutation-testing.md).
+
+## Real SQL Server integration tests
+
+`TCJ.EntityFrameworkCore.SqlServer.IntegrationTests` validates the SQL Server package against a pinned disposable Testcontainers database. Docker with Linux-container support is required; no external database or permanent database password is used.
+
+```bash
+python3 eng/verify-sqlserver-integration.py validate-config
+dotnet test tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj \
+  -c Release \
+  --filter "Category=SqlServer" \
+  --logger "trx;LogFileName=sqlserver-integration.trx" \
+  --results-directory TestResults/SqlServerIntegration
+python3 eng/verify-sqlserver-integration.py verify \
+  --results TestResults/SqlServerIntegration \
+  --output artifacts/sqlserver-integration
+```
+
+See [`docs/sqlserver-integration-testing.md`](../docs/sqlserver-integration-testing.md) for the full lifecycle and diagnostics policy.
