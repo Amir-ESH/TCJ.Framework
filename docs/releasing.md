@@ -249,3 +249,7 @@ Reproducibility commands, isolation rules, approved container normalization, and
 Release preflight builds DocFX metadata and the complete site from the release-candidate commit, runs the documentation quality gate, and uploads the site, reports, and a versioned ZIP. The tag workflow repeats the process from the exact tagged commit before NuGet publication, attests the documentation archive, and attaches it to the GitHub Release.
 
 Confirm that the documentation summary reports all five packages, the configured coverage threshold, zero unresolved references, zero broken links, successful required snippets, and generated API pages. Documentation created from another commit must not be substituted for the tagged artifact.
+
+## Upgrade compatibility gate
+
+Release preflight and the official tag workflow run all six upgrade scenarios from the version in `eng/published-release.json` to the version in `eng/release-manifest.json` using the exact promoted candidate packages. Undocumented behavior changes, dependency downgrades, source-tree changes, or incomplete guided migrations block release. After NuGet publication, the published-package workflow reruns Core, ASP.NET Core, and FullStack upgrade paths with the target restored from NuGet.org. See [package upgrade testing](package-upgrade-testing.md) and the [current migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md).

@@ -35,6 +35,10 @@
   href: aspnetcore-integration-testing.md
 - name: Package Consumer Compatibility
   href: package-consumer-compatibility.md
+- name: Package Upgrade Testing
+  href: package-upgrade-testing.md
+- name: Migration 0.1.0-preview.1 to 0.1.0-preview.2
+  href: migrations/0.1.0-preview.1-to-0.1.0-preview.2.md
 - name: Security
   href: security.md
 - name: Release Process

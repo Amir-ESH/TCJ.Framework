@@ -94,6 +94,9 @@ jobs:
       - name: Validate package consumer compatibility configuration
         run: python3 eng/verify-consumer-compatibility.py validate-config
 
+      - name: Validate package upgrade compatibility configuration
+        run: python3 eng/verify-upgrade-compatibility.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 

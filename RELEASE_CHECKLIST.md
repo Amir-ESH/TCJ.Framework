@@ -98,6 +98,19 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] After publication, Core, ASP.NET Core, and full-stack consumers restore the released version from NuGet.org.
 - [ ] No generated `artifacts/compatibility/` or compatibility `bin`/`obj` output is committed.
 
+## Package upgrade compatibility
+
+- [ ] `eng/published-release.json` identifies the supported upgrade baseline.
+- [ ] `eng/release-manifest.json` identifies the exact release-candidate target.
+- [ ] All six direct upgrade scenarios restore, build, and run without source changes unless an approved breaking change explicitly requires migration.
+- [ ] Baseline TCJ packages are verified as NuGet.org restores and target TCJ packages are verified as exact candidate-feed restores.
+- [ ] Dependency diffs contain no downgrade, missing runtime asset, or unexplained target-framework change.
+- [ ] Normalized runtime behavior has no unexpected regression.
+- [ ] `eng/breaking-changes.json` and the version-specific migration guide agree.
+- [ ] Guided migration patches pass when required.
+- [ ] Release-preflight upgrade reports are archived.
+- [ ] Post-publication Core, ASP.NET Core, and FullStack upgrades pass with the target restored from NuGet.org.
+
 ## API documentation
 
 - [ ] `dotnet tool restore` restores the pinned DocFX version.

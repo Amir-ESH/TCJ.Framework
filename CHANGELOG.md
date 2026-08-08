@@ -23,6 +23,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Automated package upgrade compatibility from the published baseline to the release candidate, including six clean-room scenarios, source-tree stability, dependency/behavior diffs, persisted-data validation, migration guidance, release gates, and post-publication revalidation.
 - Clean-room NuGet package consumer compatibility across Linux, Windows, and macOS, with six package-only applications, isolated restore/source verification, package/symbol/Source Link validation, release gates, and published-package consumer reuse.
 - Cross-platform ASP.NET Core end-to-end integration coverage using an in-memory TestServer, deterministic authentication, request-scope/current-user isolation, Problem Details and exception behavior, cancellation, sanitized diagnostics, policy verification, and release gating.
 - Real SQL Server integration coverage through Testcontainers, including isolated migrated databases, repository/transaction/auditing/storage/concurrency scenarios, sanitized diagnostics, and policy verification.

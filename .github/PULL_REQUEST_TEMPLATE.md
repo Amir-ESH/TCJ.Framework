@@ -95,6 +95,17 @@ Describe the problem and the approach taken.
 - [ ] Generated package-consumer compatibility output is not committed
 - [ ] Compatibility-policy changes are explicit and justified
 
+- [ ] Baseline upgrade consumers restore from NuGet.org
+- [ ] Target upgrade consumers restore from the release-candidate package feed
+- [ ] Baseline and target TCJ package versions and sources are verified
+- [ ] Direct package upgrades pass without source changes
+- [ ] Dependency graph changes are reviewed and no downgrade occurs
+- [ ] Normalized runtime behavior remains compatible
+- [ ] Breaking changes are declared and migration guidance is complete
+- [ ] Required migration patches are explicit and pass guided validation
+- [ ] Generated package-upgrade compatibility output is not committed
+- [ ] Upgrade-compatibility policy changes are explicit and justified
+
 ## Related issue
 
 Refs #

@@ -175,10 +175,13 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Restore 
 - [Architecture tests and module dependency rules](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/architecture-tests.md)
 - [ASP.NET Core end-to-end integration testing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/aspnetcore-integration-testing.md)
 - [Package consumer compatibility](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/package-consumer-compatibility.md)
+- [Package upgrade testing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/package-upgrade-testing.md)
+- [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
 - [Contributing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md)
 - [Security policy](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SECURITY.md)
 - [Support](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SUPPORT.md)
 - [Changelog](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CHANGELOG.md)
+
 
 ## Contributing
 

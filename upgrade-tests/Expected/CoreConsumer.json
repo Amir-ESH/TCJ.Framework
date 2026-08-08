@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "scenario": "CoreConsumer",
+  "checks": {
+    "resultSuccess": true,
+    "resultFailure": true,
+    "guard": true,
+    "stringExtension": true,
+    "weekend": true,
+    "guidAvailable": true,
+    "timeProviderAvailable": true
+  }
+}

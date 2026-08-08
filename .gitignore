@@ -95,6 +95,13 @@ artifacts/reproducibility/
 !eng/reproducibility-policy.json
 !eng/verify-reproducible-build.py
 
+# Package upgrade compatibility
+artifacts/upgrade-compatibility/
+upgrade-tests/**/bin/
+upgrade-tests/**/obj/
+!eng/upgrade-compatibility-policy.json
+!eng/breaking-changes.json
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json

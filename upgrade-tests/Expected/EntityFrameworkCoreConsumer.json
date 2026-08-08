@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "scenario": "EntityFrameworkCoreConsumer",
+  "checks": {
+    "repositorySaved": true,
+    "auditingApplied": true,
+    "specificationMatched": true,
+    "softDeleteFiltered": true,
+    "modelCreated": true,
+    "persistedDataCompatible": true
+  }
+}

@@ -97,6 +97,9 @@ jobs:
       - name: Validate package consumer compatibility configuration
         run: python3 eng/verify-consumer-compatibility.py validate-config
 
+      - name: Validate package upgrade compatibility configuration
+        run: python3 eng/verify-upgrade-compatibility.py validate-config
+
       - name: Check NuGet package IDs
         run: >
           python3 eng/check-nuget-package-ids.py
@@ -384,6 +387,61 @@ jobs:
           if [[ -f artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md ]]; then
             cat artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Prepare exact release-candidate upgrade feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/upgrade-compatibility
+          mkdir -p artifacts/upgrade-compatibility/target/packages
+          cp artifacts/packages/* artifacts/upgrade-compatibility/target/packages/
+          for package in artifacts/upgrade-compatibility/target/packages/*; do
+            source="artifacts/packages/$(basename "$package")"
+            cmp --silent "$source" "$package" || { echo "Upgrade feed package differs from promoted release candidate: $package" >&2; exit 1; }
+          done
+
+      - name: Run release-candidate upgrade compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          python3 upgrade-tests/scripts/run-upgrade-tests.py \
+            --baseline-version "$baseline" \
+            --target-version "${{ steps.release-version.outputs.value }}" \
+            --target-packages artifacts/upgrade-compatibility/target/packages \
+            --output artifacts/upgrade-compatibility \
+            --commit-sha "$GITHUB_SHA"
+
+      - name: Verify release-candidate upgrade compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          python3 eng/verify-upgrade-compatibility.py verify \
+            --baseline-version "$baseline" \
+            --target-version "${{ steps.release-version.outputs.value }}" \
+            --target-packages artifacts/upgrade-compatibility/target/packages \
+            --results artifacts/upgrade-compatibility/results \
+            --output artifacts/upgrade-compatibility/report
+
+      - name: Publish release-candidate upgrade compatibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload release-candidate upgrade compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-upgrade-compatibility-${{ github.run_id }}
+          path: |
+            artifacts/upgrade-compatibility/results/**
+            artifacts/upgrade-compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Generate release SBOM
         shell: bash
