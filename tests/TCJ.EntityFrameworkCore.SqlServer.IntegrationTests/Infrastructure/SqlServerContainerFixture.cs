@@ -5,6 +5,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using TCJ.Core.Security;
 using TCJ.EntityFrameworkCore.SqlServer.Extensions;
@@ -113,6 +116,11 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
         {
             using IServiceScope scope = services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<SqlServerTestDbContext>();
+            if (context.Database.HasPendingModelChanges())
+            {
+                await WriteMigrationModelDiagnosticsAsync(context).ConfigureAwait(false);
+            }
+
             await context.Database.MigrateAsync().ConfigureAwait(false);
             Interlocked.Increment(ref _migratedDatabaseCount);
             await WriteRuntimeSummaryAsync().ConfigureAwait(false);
@@ -291,6 +299,31 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
         {
             await File.WriteAllTextAsync(
                 Path.Combine(_diagnosticsDirectory, "sqlserver-error-log-collection-error.log"),
+                Sanitize(exception.ToString())).ConfigureAwait(false);
+        }
+    }
+
+    private async Task WriteMigrationModelDiagnosticsAsync(SqlServerTestDbContext context)
+    {
+        try
+        {
+            IDesignTimeModel designTimeModel = context.GetService<IDesignTimeModel>();
+            IMigrationsAssembly migrationsAssembly = context.GetService<IMigrationsAssembly>();
+            string currentModel = designTimeModel.Model.ToDebugString(MetadataDebugStringOptions.LongDefault);
+            string snapshotModel = migrationsAssembly.ModelSnapshot?.Model.ToDebugString(MetadataDebugStringOptions.LongDefault)
+                                   ?? "<missing migration snapshot>";
+
+            await File.WriteAllTextAsync(
+                Path.Combine(_diagnosticsDirectory, "migration-current-model.log"),
+                Sanitize(currentModel)).ConfigureAwait(false);
+            await File.WriteAllTextAsync(
+                Path.Combine(_diagnosticsDirectory, "migration-snapshot-model.log"),
+                Sanitize(snapshotModel)).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(_diagnosticsDirectory, "migration-model-diagnostics-error.log"),
                 Sanitize(exception.ToString())).ConfigureAwait(false);
         }
     }
