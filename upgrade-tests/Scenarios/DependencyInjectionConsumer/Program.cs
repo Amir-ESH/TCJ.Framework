@@ -8,6 +8,8 @@ namespace TcjUpgrade.DependencyInjectionConsumer;
 
 public static class Program
 {
+    private static readonly JsonSerializerOptions BehaviorJsonOptions = new() { WriteIndented = true };
+
     public static async Task Main()
     {
         var services = new ServiceCollection();
@@ -49,7 +51,7 @@ public static class Program
         string path = Environment.GetEnvironmentVariable("TCJ_UPGRADE_BEHAVIOR_PATH")
             ?? throw new InvalidOperationException("TCJ_UPGRADE_BEHAVIOR_PATH is required.");
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? throw new InvalidOperationException("Behavior path has no directory."));
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(value, BehaviorJsonOptions));
     }
 }
 

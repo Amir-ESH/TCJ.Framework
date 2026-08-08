@@ -11,6 +11,8 @@ namespace TcjUpgrade.SqlServerConsumer;
 
 public static class Program
 {
+    private static readonly JsonSerializerOptions BehaviorJsonOptions = new() { WriteIndented = true };
+
     private const string ConnectionString = "Server=127.0.0.1,1433;Database=TcjUpgrade;Integrated Security=True;Encrypt=False;TrustServerCertificate=True";
 
     public static async Task Main()
@@ -55,7 +57,7 @@ public static class Program
         string path = Environment.GetEnvironmentVariable("TCJ_UPGRADE_BEHAVIOR_PATH")
             ?? throw new InvalidOperationException("TCJ_UPGRADE_BEHAVIOR_PATH is required.");
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? throw new InvalidOperationException("Behavior path has no directory."));
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(value, BehaviorJsonOptions));
     }
 }
 
