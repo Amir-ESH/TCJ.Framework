@@ -7,6 +7,12 @@ on:
         description: Package version to verify; leave empty to use eng/published-release.json
         required: false
         type: string
+  workflow_call:
+    inputs:
+      version:
+        description: Published target version to verify
+        required: true
+        type: string
   schedule:
     - cron: "17 5 * * 1"
 
@@ -14,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: published-package-smoke-${{ github.event.inputs.version || 'latest' }}
+  group: published-package-smoke-${{ inputs.version || 'latest' }}
   cancel-in-progress: true
 
 env:
@@ -45,7 +51,7 @@ jobs:
         id: package-version
         shell: bash
         env:
-          REQUESTED_VERSION: ${{ github.event.inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
 
@@ -106,6 +112,9 @@ jobs:
       - name: Validate compatibility configuration
         run: ${{ matrix.python }} eng/verify-consumer-compatibility.py validate-config
 
+      - name: Validate upgrade compatibility configuration
+        run: ${{ matrix.python }} eng/verify-upgrade-compatibility.py validate-config
+
       - name: Resolve published package source commit
         id: source-commit
         shell: bash
@@ -140,11 +149,57 @@ jobs:
           --output artifacts/compatibility/published-report
           --commit-sha "${{ steps.source-commit.outputs.value }}"
 
+      - name: Resolve published upgrade path
+        if: matrix.os == 'ubuntu-latest'
+        id: upgrade-path
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          target="${{ needs.verify-publication.outputs.version }}"
+          echo "baseline=$baseline" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          if [[ "$baseline" == "$target" ]]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Published version equals the baseline metadata; no newer upgrade target is available."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run selected published-package upgrade scenarios
+        if: matrix.os == 'ubuntu-latest' && steps.upgrade-path.outputs.run == 'true'
+        run: >
+          python3 upgrade-tests/scripts/run-upgrade-tests.py
+          --baseline-version "${{ steps.upgrade-path.outputs.baseline }}"
+          --target-version "${{ steps.upgrade-path.outputs.target }}"
+          --target-source-mode published
+          --output artifacts/upgrade-compatibility
+          --scenario CoreConsumer
+          --scenario AspNetCoreConsumer
+          --scenario FullStackConsumer
+          --commit-sha "${{ steps.source-commit.outputs.value }}"
+
+      - name: Verify selected published-package upgrade scenarios
+        if: matrix.os == 'ubuntu-latest' && steps.upgrade-path.outputs.run == 'true'
+        run: >
+          python3 eng/verify-upgrade-compatibility.py verify-published
+          --baseline-version "${{ steps.upgrade-path.outputs.baseline }}"
+          --target-version "${{ steps.upgrade-path.outputs.target }}"
+          --results artifacts/upgrade-compatibility/results
+          --output artifacts/upgrade-compatibility/report
+
       - name: Publish compatibility summary
         if: always()
         run: |
           if [[ -f artifacts/compatibility/published-report/COMPATIBILITY_SUMMARY.md ]]; then
             cat artifacts/compatibility/published-report/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Publish upgrade compatibility summary
+        if: always() && matrix.os == 'ubuntu-latest'
+        run: |
+          if [[ -f artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload published-package consumer reports
@@ -155,5 +210,7 @@ jobs:
           path: |
             artifacts/compatibility/results/**
             artifacts/compatibility/published-report/**
+            artifacts/upgrade-compatibility/results/**
+            artifacts/upgrade-compatibility/report/**
           if-no-files-found: warn
           retention-days: 7

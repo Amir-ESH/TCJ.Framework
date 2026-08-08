@@ -89,6 +89,9 @@ jobs:
       - name: Validate package consumer compatibility configuration
         run: python3 eng/verify-consumer-compatibility.py validate-config
 
+      - name: Validate package upgrade compatibility configuration
+        run: python3 eng/verify-upgrade-compatibility.py validate-config
+
       - name: Validate release tag
         id: release-version
         shell: bash
@@ -399,6 +402,58 @@ jobs:
             cat artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Prepare exact tagged-package upgrade feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/upgrade-compatibility
+          mkdir -p artifacts/upgrade-compatibility/target/packages
+          cp artifacts/packages/* artifacts/upgrade-compatibility/target/packages/
+          for package in artifacts/upgrade-compatibility/target/packages/*; do
+            source="artifacts/packages/$(basename "$package")"
+            cmp --silent "$source" "$package" || { echo "Upgrade feed package differs from promoted tagged package: $package" >&2; exit 1; }
+          done
+
+      - name: Run exact tagged-package upgrade compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          python3 upgrade-tests/scripts/run-upgrade-tests.py \
+            --baseline-version "$baseline" \
+            --target-version "${{ steps.release-version.outputs.value }}" \
+            --target-packages artifacts/upgrade-compatibility/target/packages \
+            --output artifacts/upgrade-compatibility \
+            --commit-sha "$GITHUB_SHA"
+
+      - name: Verify exact tagged-package upgrade compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          python3 eng/verify-upgrade-compatibility.py verify \
+            --baseline-version "$baseline" \
+            --target-version "${{ steps.release-version.outputs.value }}" \
+            --target-packages artifacts/upgrade-compatibility/target/packages \
+            --results artifacts/upgrade-compatibility/results \
+            --output artifacts/upgrade-compatibility/report
+
+      - name: Publish exact tagged-package upgrade summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Preserve upgrade summary with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cp artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
+          cp artifacts/upgrade-compatibility/report/upgrade-compatibility-summary.json artifacts/release/upgrade-compatibility-summary.json
+
       - name: Preserve compatibility summary with release metadata
         shell: bash
         run: |
@@ -469,6 +524,8 @@ jobs:
             artifacts/release/TCJ.Framework.Documentation.*.zip
             artifacts/release/COMPATIBILITY_SUMMARY.md
             artifacts/release/compatibility-summary.json
+            artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
+            artifacts/release/upgrade-compatibility-summary.json
 
       - name: Upload release package consumer compatibility reports
         if: always()
@@ -478,6 +535,17 @@ jobs:
           path: |
             artifacts/compatibility/results/**
             artifacts/compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload release package upgrade compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-upgrade-compatibility-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/upgrade-compatibility/results/**
+            artifacts/upgrade-compatibility/report/**
           if-no-files-found: warn
           retention-days: 30
 
@@ -499,6 +567,8 @@ jobs:
             artifacts/release/TCJ.Framework.Documentation.*.zip
             artifacts/release/COMPATIBILITY_SUMMARY.md
             artifacts/release/compatibility-summary.json
+            artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
+            artifacts/release/upgrade-compatibility-summary.json
           if-no-files-found: error
           retention-days: 30
 
@@ -661,6 +731,8 @@ jobs:
             artifacts/release/TCJ.Framework.Documentation.*.zip
             artifacts/release/COMPATIBILITY_SUMMARY.md
             artifacts/release/compatibility-summary.json
+            artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
+            artifacts/release/upgrade-compatibility-summary.json
           )
           release_args=(
             "$GITHUB_REF_NAME"
@@ -691,3 +763,11 @@ jobs:
           else
             gh release create "${release_args[@]}"
           fi
+
+  post-publication-validation:
+    name: Revalidate published package upgrade
+    needs: [build-and-pack, publish]
+    uses: ./.github/workflows/published-package-smoke.yml
+    with:
+      version: ${{ needs.build-and-pack.outputs.version }}
+    secrets: inherit

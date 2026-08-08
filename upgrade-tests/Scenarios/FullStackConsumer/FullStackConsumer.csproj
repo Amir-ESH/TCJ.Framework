@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TCJ.Core" Version="$(TCJUpgradeVersion)" />
+    <PackageReference Include="TCJ.DependencyInjection" Version="$(TCJUpgradeVersion)" />
+    <PackageReference Include="TCJ.EntityFrameworkCore" Version="$(TCJUpgradeVersion)" />
+    <PackageReference Include="TCJ.EntityFrameworkCore.SqlServer" Version="$(TCJUpgradeVersion)" />
+    <PackageReference Include="TCJ.AspNetCore" Version="$(TCJUpgradeVersion)" />
+  </ItemGroup>
+</Project>

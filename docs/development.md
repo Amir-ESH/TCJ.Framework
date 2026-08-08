@@ -249,3 +249,7 @@ python3 eng/verify-consumer-compatibility.py validate-config
 ```
 
 After packing a candidate into `artifacts/compatibility/packages`, run the clean-room consumers with `compatibility/scripts/run-compatibility.py` and then `eng/verify-consumer-compatibility.py verify`. The runner isolates `NUGET_PACKAGES`, the HTTP cache, `DOTNET_CLI_HOME`, and consumer `bin`/`obj`; it verifies the exact TCJ version and actual NuGet source recorded in `.nupkg.metadata`, treats restore/build warnings as failures, and executes the HTTP/EF/SQL Server smoke paths. GitHub Actions repeats the full matrix on Linux, Windows, and macOS. See [Package consumer compatibility](package-consumer-compatibility.md) for commands and support rules.
+
+## Package upgrade compatibility
+
+Before changing package-facing behavior, validate the upgrade policy with `python3 eng/verify-upgrade-compatibility.py validate-config`. The full `upgrade-tests/` suite restores the published baseline from NuGet.org, restores the target from locally packed candidate packages, builds and runs the same source, compares dependency graphs and normalized behavior, and verifies explicit migration guidance. See [package upgrade testing](package-upgrade-testing.md).

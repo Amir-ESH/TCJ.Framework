@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "scenario": "EntityFrameworkCore.SqlServerConsumer",
+  "checks": {
+    "providerConfigured": true,
+    "readContextResolved": true,
+    "writeContextResolved": true,
+    "dataSourceConfigured": true,
+    "databaseConfigured": true,
+    "commandTimeoutConfigured": true
+  }
+}

@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Scenarios/">
+    <Project Path="Scenarios/CoreConsumer/CoreConsumer.csproj" />
+    <Project Path="Scenarios/DependencyInjectionConsumer/DependencyInjectionConsumer.csproj" />
+    <Project Path="Scenarios/EntityFrameworkCoreConsumer/EntityFrameworkCoreConsumer.csproj" />
+    <Project Path="Scenarios/EntityFrameworkCore.SqlServerConsumer/EntityFrameworkCore.SqlServerConsumer.csproj" />
+    <Project Path="Scenarios/AspNetCoreConsumer/AspNetCoreConsumer.csproj" />
+    <Project Path="Scenarios/FullStackConsumer/FullStackConsumer.csproj" />
+  </Folder>
+</Solution>

@@ -93,6 +93,10 @@ Pull requests targeting `develop` or `main` must pass the `Build, test and pack`
 
 Packaging, dependency, target-framework, or public setup changes must keep the clean-room consumers green. Consumer projects under `compatibility/Consumers/` may use NuGet `PackageReference` items only; references into `src/` are prohibited. Run `python3 eng/verify-consumer-compatibility.py validate-config` locally, then use the package-only runner described in [Package consumer compatibility](docs/package-consumer-compatibility.md). The dedicated workflow must pass on Linux, Windows, and macOS before compatibility support is claimed or compatibility policy is weakened.
 
+## Package upgrade compatibility
+
+Changes that affect package APIs, dependencies, configuration, runtime wiring, or migration guidance must keep the `upgrade-tests/` clean-room scenarios valid. The published baseline comes from `eng/published-release.json`, the target comes from `eng/release-manifest.json`, and direct upgrades must not edit scenario source. Intentional breaking changes require an approved entry in `eng/breaking-changes.json`, a matching migration-guide section, and an explicit migration patch when consumer source must change. Run `python3 eng/verify-upgrade-compatibility.py validate-config` before opening the pull request.
+
 ## Pull requests
 
 Target regular changes to `develop`. Release pull requests flow from `develop` to `main`.

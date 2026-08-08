@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "scenario": "DependencyInjectionConsumer",
+  "checks": {
+    "transientDistinct": true,
+    "scopedStable": true,
+    "scopeIsolated": true,
+    "singletonStable": true,
+    "selfRegistered": true,
+    "guidGeneratorResolved": true
+  }
+}

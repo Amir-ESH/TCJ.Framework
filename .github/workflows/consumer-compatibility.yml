@@ -16,6 +16,9 @@ on:
       - "NuGet.Config"
       - "global.json"
       - "compatibility/**"
+      - "upgrade-tests/**"
+      - "eng/upgrade-compatibility-policy.json"
+      - "eng/breaking-changes.json"
       - ".github/workflows/consumer-compatibility.yml"
 
   pull_request:
@@ -33,6 +36,9 @@ on:
       - "NuGet.Config"
       - "global.json"
       - "compatibility/**"
+      - "upgrade-tests/**"
+      - "eng/upgrade-compatibility-policy.json"
+      - "eng/breaking-changes.json"
       - ".github/workflows/consumer-compatibility.yml"
 
   workflow_dispatch:

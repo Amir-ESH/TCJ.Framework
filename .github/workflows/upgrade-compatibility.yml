@@ -1,0 +1,188 @@
+name: Package upgrade compatibility
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/**"
+      - "eng/Packaging.props"
+      - "eng/PackageValidation.props"
+      - "eng/published-release.json"
+      - "eng/release-manifest.json"
+      - "eng/upgrade-compatibility-policy.json"
+      - "eng/breaking-changes.json"
+      - "eng/verify-upgrade-compatibility.py"
+      - "eng/tests/test_run_upgrade_tests.py"
+      - "eng/tests/test_verify_upgrade_compatibility.py"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "NuGet.Config"
+      - "global.json"
+      - "upgrade-tests/**"
+      - "docs/migrations/**"
+      - ".github/workflows/upgrade-compatibility.yml"
+      - ".github/workflows/release-preflight.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/published-package-smoke.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/**"
+      - "eng/Packaging.props"
+      - "eng/PackageValidation.props"
+      - "eng/published-release.json"
+      - "eng/release-manifest.json"
+      - "eng/upgrade-compatibility-policy.json"
+      - "eng/breaking-changes.json"
+      - "eng/verify-upgrade-compatibility.py"
+      - "eng/tests/test_run_upgrade_tests.py"
+      - "eng/tests/test_verify_upgrade_compatibility.py"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "NuGet.Config"
+      - "global.json"
+      - "upgrade-tests/**"
+      - "docs/migrations/**"
+      - ".github/workflows/upgrade-compatibility.yml"
+      - ".github/workflows/release-preflight.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/published-package-smoke.yml"
+  workflow_dispatch:
+  workflow_call:
+  schedule:
+    - cron: "37 5 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upgrade-compatibility-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  upgrade-consumers:
+    name: Upgrade consumers
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display runtime information
+        run: |
+          dotnet --info
+          python3 -c "import platform; print(platform.platform()); print(platform.machine())"
+
+      - name: Validate automation scripts
+        run: |
+          python3 -m compileall -q eng upgrade-tests/scripts
+          python3 -m unittest discover --start-directory eng/tests --pattern "test_*upgrade*.py"
+
+      - name: Validate upgrade compatibility configuration
+        run: python3 eng/verify-upgrade-compatibility.py validate-config
+
+      - name: Read baseline and target versions
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          target="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          echo "baseline=$baseline" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "Upgrade path: $baseline -> $target"
+
+      - name: Restore and audit repository dependencies
+        run: dotnet restore TCJ.slnx --force-evaluate
+
+      - name: Build production projects
+        shell: bash
+        run: |
+          set -euo pipefail
+          for project in \
+            src/TCJ.Core/TCJ.Core.csproj \
+            src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj \
+            src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
+            src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
+            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj; do
+            dotnet build "$project" --configuration Release --no-restore \
+              -p:Version="${{ steps.versions.outputs.target }}" \
+              -p:RepositoryCommit="$GITHUB_SHA"
+          done
+
+      - name: Pack target TCJ packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/upgrade-compatibility
+          packages="$GITHUB_WORKSPACE/artifacts/upgrade-compatibility/target/packages"
+          mkdir -p "$packages"
+          for project in \
+            src/TCJ.Core/TCJ.Core.csproj \
+            src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj \
+            src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
+            src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
+            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj; do
+            dotnet pack "$project" --configuration Release --no-build --no-restore \
+              -p:PackageOutputPath="$packages" \
+              -p:Version="${{ steps.versions.outputs.target }}" \
+              -p:RepositoryCommit="$GITHUB_SHA"
+          done
+
+      - name: Verify target package set
+        shell: bash
+        run: |
+          set -euo pipefail
+          for id in TCJ.Core TCJ.DependencyInjection TCJ.EntityFrameworkCore TCJ.EntityFrameworkCore.SqlServer TCJ.AspNetCore; do
+            test -f "artifacts/upgrade-compatibility/target/packages/$id.${{ steps.versions.outputs.target }}.nupkg" || { echo "Missing target package: $id" >&2; exit 1; }
+          done
+
+      - name: Run baseline-to-target upgrade scenarios
+        run: >
+          python3 upgrade-tests/scripts/run-upgrade-tests.py
+          --baseline-version "${{ steps.versions.outputs.baseline }}"
+          --target-version "${{ steps.versions.outputs.target }}"
+          --target-packages artifacts/upgrade-compatibility/target/packages
+          --output artifacts/upgrade-compatibility
+          --commit-sha "${{ github.sha }}"
+
+      - name: Verify upgrade compatibility results
+        run: >
+          python3 eng/verify-upgrade-compatibility.py verify
+          --baseline-version "${{ steps.versions.outputs.baseline }}"
+          --target-version "${{ steps.versions.outputs.target }}"
+          --target-packages artifacts/upgrade-compatibility/target/packages
+          --results artifacts/upgrade-compatibility/results
+          --output artifacts/upgrade-compatibility/report
+
+      - name: Publish upgrade compatibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload upgrade logs, dependency diffs, behavior diffs, and migration results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: package-upgrade-compatibility-${{ github.run_id }}
+          path: |
+            artifacts/upgrade-compatibility/results/**
+            artifacts/upgrade-compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 14
