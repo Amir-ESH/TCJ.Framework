@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "verify-sqlserver-integration.py"
@@ -79,6 +80,70 @@ class SqlServerIntegrationVerifierTests(unittest.TestCase):
 
             self.assertEqual(1, len(leaks))
             self.assertIn("generated SQL Server password pattern", leaks[0])
+
+    def test_migration_metadata_accepts_shared_model_builder(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            migration_root = root / "Migrations"
+            migration_root.mkdir()
+            files = {
+                "InitialSqlServerIntegrationMigration.cs": "migrationBuilder.CreateTable();",
+                "InitialSqlServerIntegrationMigration.Designer.cs": (
+                    '[Migration("202608080001_InitialSqlServerIntegration")]\n'
+                    "protected override void BuildTargetModel(ModelBuilder modelBuilder) => "
+                    "SqlServerIntegrationMigrationModel.Build(modelBuilder);"
+                ),
+                "SqlServerIntegrationMigrationModel.cs": (
+                    "internal static void Build(ModelBuilder modelBuilder) => "
+                    "SqlServerTestDbContextModelBuilder.Build(modelBuilder);"
+                ),
+                "SqlServerTestDbContextModelSnapshot.cs": (
+                    "internal sealed class Snapshot : ModelSnapshot { "
+                    "protected override void BuildModel(ModelBuilder modelBuilder) => "
+                    "SqlServerIntegrationMigrationModel.Build(modelBuilder); }"
+                ),
+            }
+            for name, content in files.items():
+                (migration_root / name).write_text(content, encoding="utf-8")
+            migration_test = root / "RegistrationAndMigrationIntegrationTests.cs"
+            migration_test.write_text("context.Database.HasPendingModelChanges();", encoding="utf-8")
+
+            with (
+                mock.patch.object(MODULE, "EXPECTED_MIGRATION_ROOT", migration_root),
+                mock.patch.object(MODULE, "EXPECTED_MIGRATION_TEST", migration_test),
+            ):
+                MODULE.validate_migration_artifacts()
+
+    def test_migration_metadata_rejects_missing_shared_runtime_model_builder(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            migration_root = root / "Migrations"
+            migration_root.mkdir()
+            files = {
+                "InitialSqlServerIntegrationMigration.cs": "migrationBuilder.CreateTable();",
+                "InitialSqlServerIntegrationMigration.Designer.cs": (
+                    '[Migration("202608080001_InitialSqlServerIntegration")]\n'
+                    "protected override void BuildTargetModel(ModelBuilder modelBuilder) => "
+                    "SqlServerIntegrationMigrationModel.Build(modelBuilder);"
+                ),
+                "SqlServerIntegrationMigrationModel.cs": "internal static void Build(ModelBuilder modelBuilder) { }",
+                "SqlServerTestDbContextModelSnapshot.cs": (
+                    "internal sealed class Snapshot : ModelSnapshot { "
+                    "protected override void BuildModel(ModelBuilder modelBuilder) => "
+                    "SqlServerIntegrationMigrationModel.Build(modelBuilder); }"
+                ),
+            }
+            for name, content in files.items():
+                (migration_root / name).write_text(content, encoding="utf-8")
+            migration_test = root / "RegistrationAndMigrationIntegrationTests.cs"
+            migration_test.write_text("context.Database.HasPendingModelChanges();", encoding="utf-8")
+
+            with (
+                mock.patch.object(MODULE, "EXPECTED_MIGRATION_ROOT", migration_root),
+                mock.patch.object(MODULE, "EXPECTED_MIGRATION_TEST", migration_test),
+                self.assertRaisesRegex(MODULE.SqlServerIntegrationError, "SqlServerTestDbContextModelBuilder"),
+            ):
+                MODULE.validate_migration_artifacts()
 
     def test_sanitize_generated_file_redacts_before_artifact_upload(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

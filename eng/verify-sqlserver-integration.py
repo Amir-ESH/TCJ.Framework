@@ -219,7 +219,8 @@ def validate_migration_artifacts() -> None:
         '[Migration("202608080001_InitialSqlServerIntegration")]',
         "ModelSnapshot",
         "BuildTargetModel",
-        'HasAnnotation("ProductVersion", "10.0.10")',
+        "SqlServerIntegrationMigrationModel.Build(modelBuilder)",
+        "SqlServerTestDbContextModelBuilder.Build(modelBuilder)",
     ):
         if marker not in migration_text:
             fail(f"SQL Server test migration metadata is missing required marker: {marker}")

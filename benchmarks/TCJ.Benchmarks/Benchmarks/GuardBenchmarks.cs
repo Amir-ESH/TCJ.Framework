@@ -7,16 +7,38 @@ namespace TCJ.Benchmarks.Benchmarks;
 [BenchmarkCategory("TCJ.Core", "Guards")]
 public class GuardBenchmarks
 {
-    private const string Value = "benchmark-value";
+    private const int OperationsPerInvoke = 64;
+    private string _value = string.Empty;
 
-    [Benchmark(Baseline = true)]
-    public string BclNotNullOrWhiteSpace()
+    [GlobalSetup]
+    public void Setup()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(Value);
-        return Value;
+        // Keep the benchmark input runtime-provided so the JIT cannot fold the
+        // successful guard path down to an effectively empty constant expression.
+        _value = $"benchmark-{Environment.ProcessId}-value";
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true, OperationsPerInvoke = OperationsPerInvoke)]
+    public string BclNotNullOrWhiteSpace()
+    {
+        string value = _value;
+        for (int index = 0; index < OperationsPerInvoke; index++)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        }
+
+        return value;
+    }
+
+    [Benchmark(OperationsPerInvoke = OperationsPerInvoke)]
     public string TcjNotNullOrWhiteSpace()
-        => Value.NotNullOrWhiteSpace();
+    {
+        string value = _value;
+        for (int index = 0; index < OperationsPerInvoke; index++)
+        {
+            value.NotNullOrWhiteSpace();
+        }
+
+        return value;
+    }
 }
