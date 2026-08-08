@@ -1,13 +1,12 @@
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.EntityFrameworkCore;
 using TCJ.AspNetCore.Extensions;
 using TCJ.Core.Identifiers;
 using TCJ.Core.Security;
 using TCJ.DependencyInjection.Extensions;
-using TCJ.EntityFrameworkCore.Abstractions;
 using TCJ.EntityFrameworkCore.SqlServer.Extensions;
 using TCJ.EntityFrameworkCore.UnitOfWork;
+using TcjCompatibility.FullStackConsumer;
 
 const string connectionString = "Server=127.0.0.1,1433;Database=TcjFullStackCompatibility;Integrated Security=True;Encrypt=False;TrustServerCertificate=True";
 
@@ -47,7 +46,3 @@ if (!response.IsSuccessStatusCode ||
 await app.StopAsync();
 Console.WriteLine("TCJ full-stack consumer passed");
 
-public sealed class FullStackDbContext(DbContextOptions<FullStackDbContext> options)
-    : DbContext(options), IReadDbContext, IWriteDbContext
-{
-}

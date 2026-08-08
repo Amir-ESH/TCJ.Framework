@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TCJ.DependencyInjection.Extensions;
@@ -29,9 +30,17 @@ public static class Program
         using IServiceScope scope = provider.CreateScope();
 
         SqlServerConsumerDbContext dbContext = scope.ServiceProvider.GetRequiredService<SqlServerConsumerDbContext>();
-        if (!string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.SqlServer", StringComparison.Ordinal) ||
-            dbContext.Database.GetConnectionString() != ConnectionString ||
-            scope.ServiceProvider.GetRequiredService<IUnitOfWork>() is null)
+        DbConnection connection = dbContext.Database.GetDbConnection();
+        IReadDbContext readDbContext = scope.ServiceProvider.GetRequiredService<IReadDbContext>();
+        IWriteDbContext writeDbContext = scope.ServiceProvider.GetRequiredService<IWriteDbContext>();
+        _ = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        if (!dbContext.Database.IsSqlServer() ||
+            !ReferenceEquals(dbContext, readDbContext) ||
+            !ReferenceEquals(dbContext, writeDbContext) ||
+            !string.Equals(connection.DataSource, "127.0.0.1,1433", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(connection.Database, "TcjCompatibility", StringComparison.Ordinal) ||
+            dbContext.Database.GetCommandTimeout() != 5)
         {
             throw new InvalidOperationException("SQL Server package registration is invalid.");
         }

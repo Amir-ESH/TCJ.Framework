@@ -21,8 +21,7 @@ if ("consumer".EnsureEndsWith('!') != "consumer!" || !DayOfWeek.Saturday.IsWeeke
     throw new InvalidOperationException("Extension behavior is invalid.");
 }
 
-IGuidGenerator guidGenerator = new GuidGenerator(TimeProvider.System);
-Guid guid = guidGenerator.CreateVersion7();
+Guid guid = ((IGuidGenerator)new GuidGenerator(TimeProvider.System)).CreateVersion7();
 if (guid == Guid.Empty || TimeProvider.System.GetUtcNow() == default)
 {
     throw new InvalidOperationException("Time/GUID abstractions are invalid.");

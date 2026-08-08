@@ -86,7 +86,7 @@ public sealed class ConsumerProduct : FullAuditedEntity<Guid>
 
 public sealed class AlphaProductsSpecification : Specification<ConsumerProduct>
 {
-    public AlphaProductsSpecification() : base(product => product.Name.StartsWith("A"))
+    public AlphaProductsSpecification() : base(product => product.Name.StartsWith('A'))
     {
         ApplyOrderBy(product => product.Name);
     }
