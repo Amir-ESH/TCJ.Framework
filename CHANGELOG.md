@@ -6,6 +6,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+- Moved source-controlled release notes to `docs/release-notes/` so standard Git staging cannot lose them to the Visual Studio `Releases/` ignore rule.
+- Updated documentation validation and repository links to use the non-ignored release-note path.
 - Fixed DocFX site builds by keeping versioned release notes tracked and replacing repository-external relative Markdown links with stable GitHub source links.
 - Strengthened documentation validation so local conceptual links cannot escape the DocFX `docs/` content root and are checked during `validate-config`.
 - Fixed DocFX metadata generation for EF Core save interceptors by replacing inherited external XML comments that produced unresolved `DbContext.SaveChanges` cref values.

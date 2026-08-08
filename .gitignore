@@ -259,10 +259,8 @@ PublishScripts/
 !docs/packages/
 !docs/packages/**
 
-# Keep versioned documentation release notes. The generic Visual Studio
-# Releases/ build-output rule above would otherwise ignore docs/releases/*.md.
-!docs/releases/
-!docs/releases/**
+# Versioned documentation release notes live under docs/release-notes/ so they do not
+# collide with the generic Visual Studio Releases/ build-output rule above.
 
 # except build/, which is used as an MSBuild target.
 !**/[Pp]ackages/build/

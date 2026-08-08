@@ -20,7 +20,7 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 14. [Mutation testing quality gate](mutation-testing.md)
 15. [Performance benchmarking and regression gate](performance-benchmarks.md)
 16. [Architecture tests and module dependency rules](architecture-tests.md)
-17. [First preview release notes](releases/0.1.0-preview.1.md)
+17. [First preview release notes](release-notes/0.1.0-preview.1.md)
 
 ## Package reference
 

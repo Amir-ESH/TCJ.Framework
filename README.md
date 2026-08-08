@@ -149,7 +149,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Restore 
 - [Development workflow](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/development.md)
 - [Versioning and releases](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/versioning.md)
 - [Release automation](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/releasing.md)
-- [First preview release notes](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/releases/0.1.0-preview.1.md)
+- [First preview release notes](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/release-notes/0.1.0-preview.1.md)
 - [Release checklist](https://github.com/Amir-ESH/TCJ.Framework/blob/main/RELEASE_CHECKLIST.md)
 - [Published-package validation](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/published-package-validation.md)
 - [Public API compatibility](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/api-compatibility.md)

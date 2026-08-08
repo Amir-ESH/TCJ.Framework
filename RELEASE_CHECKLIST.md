@@ -27,7 +27,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Set manifest `status` to `ready`.
 - [ ] Set manifest `releaseDate` to `YYYY-MM-DD`.
 - [ ] Move `[Unreleased]` entries into a dated version section in `CHANGELOG.md`.
-- [ ] Add `docs/releases/<version>.md`.
+- [ ] Add `docs/release-notes/<version>.md`.
 
 ## Repository and GitHub
 

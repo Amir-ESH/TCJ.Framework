@@ -254,7 +254,7 @@ def validate_git_tracking(policy: dict) -> None:
     }
     required_sources.update(ROOT / page for page in policy["packagePages"].values())
     required_sources.update(ROOT / item["path"] for item in policy["selectedExamples"])
-    releases_dir = ROOT / "docs" / "releases"
+    releases_dir = ROOT / "docs" / "release-notes"
     if releases_dir.is_dir():
         required_sources.update(releases_dir.glob("*.md"))
 
