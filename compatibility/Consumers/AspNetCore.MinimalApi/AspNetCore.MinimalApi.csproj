@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TCJ.Core" Version="$(TCJCompatibilityVersion)" />
+    <PackageReference Include="TCJ.DependencyInjection" Version="$(TCJCompatibilityVersion)" />
+    <PackageReference Include="TCJ.AspNetCore" Version="$(TCJCompatibilityVersion)" />
+  </ItemGroup>
+</Project>

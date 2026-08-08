@@ -83,6 +83,21 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Run **Published package smoke tests** for the new public version.
 - [ ] Verify Source Link from at least one package in a consumer debugger.
 
+## Package consumer compatibility
+
+- [ ] `python3 eng/verify-consumer-compatibility.py validate-config` passes.
+- [ ] No compatibility consumer contains a `ProjectReference` or a path into `src/`.
+- [ ] `Package consumer compatibility / Test consumers (ubuntu-latest)` is green for the exact release source.
+- [ ] `Package consumer compatibility / Test consumers (windows-latest)` is green for the exact release source.
+- [ ] `Package consumer compatibility / Test consumers (macos-latest)` is green for the exact release source.
+- [ ] Cross-platform compatibility verification is green and the required architecture/TFM policy is unchanged or explicitly reviewed.
+- [ ] Release preflight runs the exact promoted candidate package bytes through all six consumers.
+- [ ] Review `COMPATIBILITY_SUMMARY.md`, restore/build/runtime logs, resolved versions, and source identity.
+- [ ] All five `.nupkg` and `.snupkg` files pass XML documentation, portable PDB, repository metadata, and Source Link validation.
+- [ ] The tagged release repeats the exact-package consumer check before NuGet publication and retains compatibility reports with release metadata.
+- [ ] After publication, Core, ASP.NET Core, and full-stack consumers restore the released version from NuGet.org.
+- [ ] No generated `artifacts/compatibility/` or compatibility `bin`/`obj` output is committed.
+
 ## API documentation
 
 - [ ] `dotnet tool restore` restores the pinned DocFX version.

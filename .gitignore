@@ -483,3 +483,17 @@ artifacts/sqlserver-integration/
 TestResults/AspNetCoreIntegration/
 artifacts/aspnetcore-integration/
 artifacts/aspnetcore-integration-cross-platform/
+
+# Package consumer compatibility
+artifacts/compatibility/
+compatibility/**/bin/
+compatibility/**/obj/
+!eng/compatibility-policy.json
+!eng/verify-consumer-compatibility.py
+!compatibility/NuGet.Config
+!compatibility/NuGet.Published.Config
+!compatibility/**/*.csproj
+!compatibility/**/*.slnx
+!compatibility/**/*.cs
+!compatibility/**/*.py
+!compatibility/**/*.props

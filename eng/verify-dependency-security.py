@@ -157,8 +157,9 @@ def verify_workflows() -> None:
         ROOT / ".github" / "workflows" / "published-package-smoke.yml",
         (
             "python3 eng/verify-dependency-security.py",
-            "TCJ.PublishedPackages.SmokeTest.csproj",
-            "dotnet restore",
+            "compatibility/scripts/run-compatibility.py",
+            "eng/verify-consumer-compatibility.py verify-published",
+            "--source-mode published",
         ),
     )
 

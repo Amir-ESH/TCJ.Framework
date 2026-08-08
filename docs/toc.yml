@@ -33,6 +33,8 @@
   href: architecture.md
 - name: ASP.NET Core Integration Testing
   href: aspnetcore-integration-testing.md
+- name: Package Consumer Compatibility
+  href: package-consumer-compatibility.md
 - name: Security
   href: security.md
 - name: Release Process

@@ -91,6 +91,9 @@ jobs:
       - name: Validate ASP.NET Core integration configuration
         run: python3 eng/verify-aspnetcore-integration.py validate-config
 
+      - name: Validate package consumer compatibility configuration
+        run: python3 eng/verify-consumer-compatibility.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 

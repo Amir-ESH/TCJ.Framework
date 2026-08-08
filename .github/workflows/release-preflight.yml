@@ -34,8 +34,14 @@ jobs:
     name: ASP.NET Core integration gate
     uses: ./.github/workflows/aspnetcore-integration.yml
 
+  consumer-compatibility:
+    name: Package consumer compatibility gate
+    uses: ./.github/workflows/consumer-compatibility.yml
+    with:
+      version_source: release-manifest
+
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -87,6 +93,9 @@ jobs:
 
       - name: Validate documentation policy
         run: python3 eng/verify-documentation.py validate-config
+
+      - name: Validate package consumer compatibility configuration
+        run: python3 eng/verify-consumer-compatibility.py validate-config
 
       - name: Check NuGet package IDs
         run: >
@@ -333,6 +342,49 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Prepare exact release-candidate compatibility feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/compatibility
+          mkdir -p artifacts/compatibility/packages
+          cp artifacts/packages/* artifacts/compatibility/packages/
+          for package in artifacts/compatibility/packages/*; do
+            source="artifacts/packages/$(basename "$package")"
+            cmp --silent "$source" "$package" || { echo "Compatibility feed package differs from promoted release candidate: $package" >&2; exit 1; }
+          done
+
+      - name: Run exact release-candidate consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.release-version.outputs.value }}"
+          python3 compatibility/scripts/run-compatibility.py \
+            --version "$version" \
+            --platform ubuntu-latest \
+            --configuration Release \
+            --source-mode local \
+            --packages artifacts/compatibility/packages \
+            --results artifacts/compatibility/results
+
+      - name: Verify exact release-candidate package compatibility
+        run: >
+          python3 eng/verify-consumer-compatibility.py verify
+          --version "${{ steps.release-version.outputs.value }}"
+          --packages artifacts/compatibility/packages
+          --results artifacts/compatibility/results
+          --output artifacts/compatibility/report
+          --platform ubuntu-latest
+          --commit-sha "${{ github.sha }}"
+
+      - name: Publish exact release-candidate compatibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Generate release SBOM
         shell: bash
         run: |
@@ -403,6 +455,17 @@ jobs:
             --sbom "artifacts/sbom/TCJ.Framework.$version.cdx.json" \
             --checksums artifacts/release/SHA256SUMS
 
+      - name: Upload preflight package consumer compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-consumer-compatibility-${{ github.run_id }}
+          path: |
+            artifacts/compatibility/results/**
+            artifacts/compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Upload preflight SBOM reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -449,6 +512,8 @@ jobs:
             artifacts/sbom/sbom-summary.json
             artifacts/release/RELEASE_NOTES.md
             artifacts/release/SHA256SUMS
+            artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md
+            artifacts/compatibility/report/compatibility-summary.json
             eng/release-manifest.json
           if-no-files-found: error
           retention-days: 30

@@ -26,8 +26,14 @@ jobs:
     name: ASP.NET Core integration gate
     uses: ./.github/workflows/aspnetcore-integration.yml
 
+  consumer-compatibility:
+    name: Package consumer compatibility gate
+    uses: ./.github/workflows/consumer-compatibility.yml
+    with:
+      version_source: release-manifest
+
   build-and-pack:
-    needs: [sqlserver-integration, aspnetcore-integration]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -79,6 +85,9 @@ jobs:
 
       - name: Validate documentation policy
         run: python3 eng/verify-documentation.py validate-config
+
+      - name: Validate package consumer compatibility configuration
+        run: python3 eng/verify-consumer-compatibility.py validate-config
 
       - name: Validate release tag
         id: release-version
@@ -348,6 +357,56 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Prepare exact tagged-package compatibility feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/compatibility
+          mkdir -p artifacts/compatibility/packages
+          cp artifacts/packages/* artifacts/compatibility/packages/
+          for package in artifacts/compatibility/packages/*; do
+            source="artifacts/packages/$(basename "$package")"
+            cmp --silent "$source" "$package" || { echo "Compatibility feed package differs from promoted tagged package: $package" >&2; exit 1; }
+          done
+
+      - name: Run exact tagged-package consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 compatibility/scripts/run-compatibility.py \
+            --version "${{ steps.release-version.outputs.value }}" \
+            --platform ubuntu-latest \
+            --configuration Release \
+            --source-mode local \
+            --packages artifacts/compatibility/packages \
+            --results artifacts/compatibility/results
+
+      - name: Verify exact tagged-package compatibility
+        run: >
+          python3 eng/verify-consumer-compatibility.py verify
+          --version "${{ steps.release-version.outputs.value }}"
+          --packages artifacts/compatibility/packages
+          --results artifacts/compatibility/results
+          --output artifacts/compatibility/report
+          --platform ubuntu-latest
+          --commit-sha "${{ github.sha }}"
+
+      - name: Publish exact tagged-package compatibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Preserve compatibility summary with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cp artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md artifacts/release/COMPATIBILITY_SUMMARY.md
+          cp artifacts/compatibility/report/compatibility-summary.json artifacts/release/compatibility-summary.json
+
       - name: Generate release SBOM
         run: >
           python3 eng/generate-sbom.py
@@ -408,6 +467,19 @@ jobs:
             artifacts/sbom/*.cdx.json
             artifacts/release/SHA256SUMS
             artifacts/release/TCJ.Framework.Documentation.*.zip
+            artifacts/release/COMPATIBILITY_SUMMARY.md
+            artifacts/release/compatibility-summary.json
+
+      - name: Upload release package consumer compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-consumer-compatibility-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/compatibility/results/**
+            artifacts/compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Upload release packages
         uses: actions/upload-artifact@v7
@@ -425,6 +497,8 @@ jobs:
             artifacts/release/RELEASE_NOTES.md
             artifacts/release/SHA256SUMS
             artifacts/release/TCJ.Framework.Documentation.*.zip
+            artifacts/release/COMPATIBILITY_SUMMARY.md
+            artifacts/release/compatibility-summary.json
           if-no-files-found: error
           retention-days: 30
 
@@ -585,6 +659,8 @@ jobs:
             artifacts/sbom/*.cdx.json
             artifacts/release/SHA256SUMS
             artifacts/release/TCJ.Framework.Documentation.*.zip
+            artifacts/release/COMPATIBILITY_SUMMARY.md
+            artifacts/release/compatibility-summary.json
           )
           release_args=(
             "$GITHUB_REF_NAME"
