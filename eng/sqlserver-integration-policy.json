@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "testProject": "tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj",
+  "containerImage": "mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04",
+  "minimumTestCount": 24,
+  "startupTimeoutSeconds": 120,
+  "commandTimeoutSeconds": 30,
+  "collectContainerLogsOnFailure": true,
+  "requirePinnedImage": true,
+  "requireDockerHealthCheck": true,
+  "allowExternalDatabase": false,
+  "databaseIsolation": "database-per-test",
+  "requiredCategories": [
+    "Integration",
+    "SqlServer",
+    "Database",
+    "Transaction",
+    "Migration"
+  ]
+}

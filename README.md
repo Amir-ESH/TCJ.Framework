@@ -47,6 +47,7 @@ python3 eng/verify-documentation.py verify \
 
 - .NET SDK `10.0.100` or a compatible SDK selected by [`global.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/main/global.json)
 - SQL Server only when using `TCJ.EntityFrameworkCore.SqlServer` or running the sample application
+- Docker with Linux-container support when running the real SQL Server integration suite
 
 ## Install the preview packages
 
@@ -69,7 +70,7 @@ git clone https://github.com/Amir-ESH/TCJ.Framework.git
 cd TCJ.Framework
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer"
 ```
 
 Run the Product API sample:
@@ -79,6 +80,8 @@ dotnet run --project samples/TCJ.Empty/TCJ.Empty.csproj
 ```
 
 The default Development connection string uses SQL Server LocalDB on Windows. See the [sample README](https://github.com/Amir-ESH/TCJ.Framework/blob/main/samples/TCJ.Empty/README.md) for configuration details.
+
+Provider-specific integration tests start a disposable pinned SQL Server container and require Docker; they do not use LocalDB or permanent database secrets. See [SQL Server integration testing](docs/sqlserver-integration-testing.md) for local commands, isolation, diagnostics, and CI behavior.
 
 ## Minimal application setup
 
@@ -135,6 +138,7 @@ python3 eng/verify-performance-results.py validate-config
 python3 eng/verify-architecture-policy.py validate-config
 python3 eng/verify-sbom.py validate-config
 python3 eng/verify-reproducible-build.py validate-config
+python3 eng/verify-sqlserver-integration.py validate-config
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 

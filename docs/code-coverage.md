@@ -32,6 +32,7 @@ Run the same collection locally:
 ```bash
 dotnet test TCJ.slnx \
   -c Release \
+  --filter "Category!=SqlServer" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
@@ -71,3 +72,5 @@ CI appends the Markdown summary to the GitHub Actions run summary and uploads th
 ## Review expectations
 
 New behavior and bug fixes should add focused assertions in the nearest package-specific test project. Do not add meaningless execution-only tests solely to increase a percentage. Exclusions must be narrow, technically justified, and reviewed alongside the affected production code.
+
+The SQL Server integration project is intentionally excluded from the general coverage-report count in `eng/coverage-policy.json`. Its tests require Docker and run in the dedicated SQL Server integration workflow, while the normal coverage gate continues to measure the six non-container test projects. This exclusion prevents the coverage job from starting the same database suite a second time and does not exclude any production TCJ package from coverage measurement.

@@ -5,6 +5,7 @@
 - Git
 - .NET SDK selected by `global.json`
 - SQL Server LocalDB or another SQL Server instance for the sample
+- Docker with Linux-container support for the SQL Server integration suite
 
 ## Restore, build, and test
 
@@ -12,7 +13,7 @@
 python3 eng/verify-dependency-security.py
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer"
 ```
 
 Run coverage:
@@ -21,6 +22,7 @@ Run coverage:
 dotnet test TCJ.slnx \
   -c Release \
   --no-build \
+  --filter "Category!=SqlServer" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
@@ -36,6 +38,7 @@ python3 eng/verify-performance-results.py validate-config
 python3 eng/verify-architecture-policy.py validate-config
 python3 eng/verify-reproducible-build.py validate-config
 python3 eng/verify-sbom.py validate-config
+python3 eng/verify-sqlserver-integration.py validate-config
 ```
 
 A pending baseline is allowed during configuration validation. Run Stryker first, generate a candidate, review both HTML reports, and accept the candidate before normal mutation verification can pass.
@@ -61,6 +64,25 @@ Packages are written to `artifacts/packages`. The Pack target also runs SDK pack
 Release publication is isolated in `.github/workflows/release.yml` and is triggered only by `v*` tags. See [Release automation](releasing.md).
 
 Dependabot checks NuGet and GitHub Actions dependencies weekly and targets update pull requests to `develop`.
+
+
+## SQL Server integration tests
+
+The dedicated `TCJ.EntityFrameworkCore.SqlServer.IntegrationTests` project starts a pinned disposable SQL Server container, creates a database per test, applies test migrations, and writes sanitized diagnostics. Run it separately from the normal solution test command:
+
+```bash
+python3 eng/verify-sqlserver-integration.py validate-config
+dotnet test tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj \
+  -c Release \
+  --filter "Category=SqlServer" \
+  --logger "trx;LogFileName=sqlserver-integration.trx" \
+  --results-directory TestResults/SqlServerIntegration
+python3 eng/verify-sqlserver-integration.py verify \
+  --results TestResults/SqlServerIntegration \
+  --output artifacts/sqlserver-integration
+```
+
+See [SQL Server integration testing](sqlserver-integration-testing.md) for prerequisites, image policy, credentials, isolation, migrations, diagnostics, and release enforcement.
 
 ## Branch model
 

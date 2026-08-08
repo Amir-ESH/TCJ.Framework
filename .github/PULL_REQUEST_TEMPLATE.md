@@ -19,7 +19,7 @@ Describe the problem and the approach taken.
 - [ ] Dependency security policy passes and no package source was added without review
 - [ ] `dotnet restore TCJ.slnx --force-evaluate` reports no blocking advisory
 - [ ] `dotnet build TCJ.slnx -c Release`
-- [ ] `dotnet test TCJ.slnx -c Release`
+- [ ] `dotnet test TCJ.slnx -c Release --filter "Category!=SqlServer"`
 - [ ] Code coverage quality gate passes; new behavior has focused tests
 - [ ] Mutation testing ran when applicable; the recorded baseline is valid and relevant survived mutants were reviewed
 - [ ] Performance benchmarks pass for performance-sensitive changes
@@ -62,6 +62,15 @@ Describe the problem and the approach taken.
 - [ ] Generated documentation output is not committed
 - [ ] Documentation updated where required
 - [ ] No secrets or generated artifacts included
+- [ ] SQL Server integration tests pass
+- [ ] The SQL Server container image remains pinned
+- [ ] No permanent database secret is required
+- [ ] Test databases are isolated
+- [ ] Migrations apply successfully
+- [ ] Transaction behavior is verified
+- [ ] Container logs are sanitized
+- [ ] Generated SQL Server integration output is not committed
+- [ ] Production changes discovered by integration tests are explained
 
 ## Related issue
 

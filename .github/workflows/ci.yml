@@ -85,6 +85,9 @@ jobs:
       - name: Validate documentation policy
         run: python3 eng/verify-documentation.py validate-config
 
+      - name: Validate SQL Server integration configuration
+        run: python3 eng/verify-sqlserver-integration.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -135,6 +138,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
+          --filter "Category!=SqlServer"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=test-results.trx"

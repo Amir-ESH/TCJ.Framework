@@ -17,6 +17,7 @@
     <Project Path="tests/TCJ.AspNetCore.Tests/TCJ.AspNetCore.Tests.csproj" />
     <Project Path="tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj" />
     <Project Path="tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj" />
+    <Project Path="tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj" />
     <Project Path="tests/TCJ.EntityFrameworkCore.SqlServer.Tests/TCJ.EntityFrameworkCore.SqlServer.Tests.csproj" />
     <Project Path="tests/TCJ.EntityFrameworkCore.Tests/TCJ.EntityFrameworkCore.Tests.csproj" />
   </Folder>
