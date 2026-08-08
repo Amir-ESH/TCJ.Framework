@@ -51,7 +51,7 @@ env:
   CI: true
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
-  TCJ_ASPNETCORE_RESULTS_DIR: TestResults/AspNetCoreIntegration
+  TCJ_ASPNETCORE_RESULTS_DIR: ${{ github.workspace }}/TestResults/AspNetCoreIntegration
 
 concurrency:
   group: aspnetcore-integration-${{ github.event.pull_request.number || github.ref || github.run_id }}

@@ -1,14 +1,17 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TCJ.AspNetCore.Diagnostics;
 using TCJ.AspNetCore.Extensions;
 using TCJ.AspNetCore.Options;
+using TCJ.AspNetCore.Security;
 using TCJ.AspNetCore.IntegrationTests.TestHost;
 using TCJ.Core.Results;
 using TCJ.Core.Security;
@@ -25,7 +28,8 @@ public sealed class TcjWebApplicationFactory : IAsyncLifetime
     private readonly Action<TcjAspNetCoreOptions>? _configureTcj;
     private WebApplication? _application;
 
-    public TcjWebApplicationFactory() : this(environmentName: Environments.Production)
+    public TcjWebApplicationFactory()
+        : this(Environments.Production)
     {
     }
 
@@ -139,7 +143,7 @@ public sealed class TcjWebApplicationFactory : IAsyncLifetime
         app.UseRouting();
         app.UseAuthentication();
         app.UseAuthorization();
-        app.Use(async (context, next) =>
+        app.Use(async (HttpContext context, RequestDelegate next) =>
         {
             Diagnostics.RecordEndpoint(context.GetEndpoint()?.DisplayName);
             await next(context).ConfigureAwait(false);
@@ -155,20 +159,20 @@ public sealed class TcjWebApplicationFactory : IAsyncLifetime
         app.MapGet("/health", () => HttpResults.Ok(new { status = "ok" })).WithDisplayName("Health");
 
         app.MapGet("/current-user", (ICurrentUserProvider currentUser, HttpContext context) =>
-                                        HttpResults.Ok(new
-                                        {
-                                            userId = currentUser.UserId,
-                                            authenticated = context.User.Identity?.IsAuthenticated == true,
-                                        })).WithDisplayName("CurrentUser");
+            HttpResults.Ok(new
+            {
+                userId = currentUser.UserId,
+                authenticated = context.User.Identity?.IsAuthenticated == true,
+            })).WithDisplayName("CurrentUser");
 
         app.MapGet("/current-user/claims", (HttpContext context) =>
-                                               HttpResults.Ok(new
-                                               {
-                                                   claims = context.User.Claims.Select(claim => new { claim.Type, claim.Value }).ToArray(),
-                                                   roles = context.User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role)
-                                                                  .Select(claim => claim.Value)
-                                                                  .ToArray(),
-                                               })).WithDisplayName("CurrentUserClaims");
+            HttpResults.Ok(new
+            {
+                claims = context.User.Claims.Select(claim => new { claim.Type, claim.Value }).ToArray(),
+                roles = context.User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role)
+                                    .Select(claim => claim.Value)
+                                    .ToArray(),
+            })).WithDisplayName("CurrentUserClaims");
 
         app.MapGet("/services/framework", (IServiceProvider requestServices) =>
         {
@@ -204,7 +208,7 @@ public sealed class TcjWebApplicationFactory : IAsyncLifetime
            .WithDisplayName("SingletonService");
 
         app.MapGet("/services/disposed/{id:guid}", (Guid id, ScopedDisposalTracker tracker) =>
-                                                       HttpResults.Ok(new { disposed = tracker.WasDisposed(id) })).WithDisplayName("ScopedDisposal");
+            HttpResults.Ok(new { disposed = tracker.WasDisposed(id) })).WithDisplayName("ScopedDisposal");
 
         app.MapGet("/errors/validation", () =>
             Result.Failure([CommonErrors.ValidationForField("Name", "Name is required.")]).ToHttpResult())
