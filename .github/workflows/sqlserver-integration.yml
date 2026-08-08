@@ -7,6 +7,13 @@ on:
       - develop
     paths:
       - "src/TCJ.Core/**"
+      - "compatibility/Consumers/EntityFrameworkCore.Console/**"
+      - "compatibility/Consumers/EntityFrameworkCore.SqlServer.Console/**"
+      - "compatibility/Consumers/FullStack.MinimalApi/**"
+      - "compatibility/Directory.Build.props"
+      - "compatibility/Directory.Packages.props"
+      - "compatibility/NuGet.Config"
+      - "compatibility/NuGet.Published.Config"
       - "src/TCJ.DependencyInjection/**"
       - "src/TCJ.EntityFrameworkCore/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
@@ -25,6 +32,13 @@ on:
       - develop
     paths:
       - "src/TCJ.Core/**"
+      - "compatibility/Consumers/EntityFrameworkCore.Console/**"
+      - "compatibility/Consumers/EntityFrameworkCore.SqlServer.Console/**"
+      - "compatibility/Consumers/FullStack.MinimalApi/**"
+      - "compatibility/Directory.Build.props"
+      - "compatibility/Directory.Packages.props"
+      - "compatibility/NuGet.Config"
+      - "compatibility/NuGet.Published.Config"
       - "src/TCJ.DependencyInjection/**"
       - "src/TCJ.EntityFrameworkCore/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"

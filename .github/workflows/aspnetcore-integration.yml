@@ -7,6 +7,12 @@ on:
       - develop
     paths:
       - "src/TCJ.Core/**"
+      - "compatibility/Consumers/AspNetCore.MinimalApi/**"
+      - "compatibility/Consumers/FullStack.MinimalApi/**"
+      - "compatibility/Directory.Build.props"
+      - "compatibility/Directory.Packages.props"
+      - "compatibility/NuGet.Config"
+      - "compatibility/NuGet.Published.Config"
       - "src/TCJ.DependencyInjection/**"
       - "src/TCJ.AspNetCore/**"
       - "tests/TCJ.AspNetCore.IntegrationTests/**"
@@ -23,6 +29,12 @@ on:
       - develop
     paths:
       - "src/TCJ.Core/**"
+      - "compatibility/Consumers/AspNetCore.MinimalApi/**"
+      - "compatibility/Consumers/FullStack.MinimalApi/**"
+      - "compatibility/Directory.Build.props"
+      - "compatibility/Directory.Packages.props"
+      - "compatibility/NuGet.Config"
+      - "compatibility/NuGet.Published.Config"
       - "src/TCJ.DependencyInjection/**"
       - "src/TCJ.AspNetCore/**"
       - "tests/TCJ.AspNetCore.IntegrationTests/**"
