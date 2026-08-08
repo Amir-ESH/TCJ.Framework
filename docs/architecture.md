@@ -72,7 +72,7 @@ Repository restore is restricted to the configured NuGet.org source and audits d
 
 ## Executable architecture policy
 
-The approved package graph, namespace roots, forbidden infrastructure prefixes, and public option allowlist are versioned in [`eng/architecture-policy.json`](../eng/architecture-policy.json). The `TCJ.Architecture.Tests` project checks both production project references and compiled assembly metadata, detects cycles, validates namespace ownership, and rejects infrastructure leakage through public APIs.
+The approved package graph, namespace roots, forbidden infrastructure prefixes, and public option allowlist are versioned in [`eng/architecture-policy.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/architecture-policy.json). The `TCJ.Architecture.Tests` project checks both production project references and compiled assembly metadata, detects cycles, validates namespace ownership, and rejects infrastructure leakage through public APIs.
 
 Run the policy validator and focused test category with:
 

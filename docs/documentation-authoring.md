@@ -56,6 +56,8 @@ Document important nullability semantics: whether null means “not found”, �
 
 Use `<see cref="TypeName"/>` for inline references and `<seealso cref="TypeName"/>` for related APIs. Prefer compiler-resolved `cref` expressions instead of plain text. An unresolved reference is emitted with a `!:` prefix in the XML file and is blocking.
 
+For Markdown links in conceptual documentation, keep relative file links inside the `docs/` content root. Files that live elsewhere in the repository—such as policies, workflows, samples, or release checklists—must use an absolute GitHub source URL. DocFX validates local file links against the configured content set, so a repository-relative path that escapes `docs/` is not a valid site link.
+
 ## Examples
 
 Important consumer examples are listed explicitly in `eng/documentation-policy.json`. A compiled example uses this fence:

@@ -6,6 +6,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+- Fixed DocFX site builds by keeping versioned release notes tracked and replacing repository-external relative Markdown links with stable GitHub source links.
+- Strengthened documentation validation so local conceptual links cannot escape the DocFX `docs/` content root and are checked during `validate-config`.
 - Fixed DocFX metadata generation for EF Core save interceptors by replacing inherited external XML comments that produced unresolved `DbContext.SaveChanges` cref values.
 - Refined mutation-test scope detection so repository-tool changes trigger Stryker only when the pinned `dotnet-stryker` definition actually changes.
 

@@ -117,6 +117,17 @@ class DocumentationVerifierTests(unittest.TestCase):
                 with self.assertRaisesRegex(MODULE.DocumentationError, "Broken internal documentation links"):
                     MODULE.verify_markdown_links(self.policy(), output)
 
+    def test_link_outside_docfx_conceptual_root_is_blocking(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            docs = root / "docs"
+            docs.mkdir()
+            (root / "README.md").write_text("# Repository\n", encoding="utf-8")
+            (docs / "index.md").write_text("[repository](../README.md)\n", encoding="utf-8")
+            with mock.patch.object(MODULE, "ROOT", root):
+                with self.assertRaisesRegex(MODULE.DocumentationError, "Broken internal documentation links"):
+                    MODULE.verify_markdown_links(self.policy())
+
     def test_stale_baseline_entry_is_blocking(self):
         with tempfile.TemporaryDirectory() as directory:
             baseline_path = Path(directory) / "documentation-baseline.json"

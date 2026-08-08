@@ -4,7 +4,7 @@ TCJ Framework collects cross-platform coverage for every production package duri
 
 ## Policy
 
-The repository policy lives in [`eng/coverage-policy.json`](../eng/coverage-policy.json):
+The repository policy lives in [`eng/coverage-policy.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/coverage-policy.json):
 
 ```json
 {

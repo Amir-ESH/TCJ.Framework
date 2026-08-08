@@ -158,7 +158,7 @@ Download and review the `release-candidate-*` artifact before tagging. The first
 
 ## Publish the first preview
 
-Complete [`RELEASE_CHECKLIST.md`](../RELEASE_CHECKLIST.md), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.
+Complete [`RELEASE_CHECKLIST.md`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/RELEASE_CHECKLIST.md), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.
 
 Create the annotated tag:
 

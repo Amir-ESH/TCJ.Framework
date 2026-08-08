@@ -254,6 +254,9 @@ def validate_git_tracking(policy: dict) -> None:
     }
     required_sources.update(ROOT / page for page in policy["packagePages"].values())
     required_sources.update(ROOT / item["path"] for item in policy["selectedExamples"])
+    releases_dir = ROOT / "docs" / "releases"
+    if releases_dir.is_dir():
+        required_sources.update(releases_dir.glob("*.md"))
 
     for path in sorted(required_sources):
         if not path.is_file():
@@ -803,9 +806,10 @@ def verify_xml_docs(policy: dict, build_root: Path | None) -> tuple[int, list[st
     return len(seen_ids), unresolved
 
 
-def verify_markdown_links(policy: dict, output: Path) -> list[dict]:
+def verify_markdown_links(policy: dict, output: Path | None = None) -> list[dict]:
     broken: list[dict] = []
     docs_root = ROOT / "docs"
+    docs_root_resolved = docs_root.resolve()
     for path in sorted(docs_root.rglob("*.md")):
         text = path.read_text(encoding="utf-8")
         for match in LINK_RE.finditer(text):
@@ -817,16 +821,21 @@ def verify_markdown_links(policy: dict, output: Path) -> list[dict]:
                 continue
             resolved = (path.parent / target).resolve()
             try:
-                resolved.relative_to(ROOT.resolve())
+                resolved.relative_to(docs_root_resolved)
             except ValueError:
-                broken.append({"source": path.relative_to(ROOT).as_posix(), "target": raw, "reason": "outside repository"})
+                broken.append({
+                    "source": path.relative_to(ROOT).as_posix(),
+                    "target": raw,
+                    "reason": "outside DocFX conceptual content root",
+                })
                 continue
             if not resolved.exists():
                 # DocFX translates .html links from source .md files.
                 md_candidate = resolved.with_suffix(".md") if resolved.suffix == ".html" else None
                 if not (md_candidate and md_candidate.exists()):
                     broken.append({"source": path.relative_to(ROOT).as_posix(), "target": raw, "reason": "missing target"})
-    (output / "broken-links.json").write_text(json.dumps(broken, indent=2) + "\n", encoding="utf-8")
+    if output is not None:
+        (output / "broken-links.json").write_text(json.dumps(broken, indent=2) + "\n", encoding="utf-8")
     if broken and policy["failOnBrokenInternalLinks"]:
         formatted = ", ".join(f"{item['source']} -> {item['target']}" for item in broken[:20])
         fail(f"Broken internal documentation links: {formatted}")
@@ -965,6 +974,7 @@ def command_validate_config(_: argparse.Namespace) -> int:
     validate_git_tracking(policy)
     validate_workflow_integration()
     validate_examples(policy)
+    verify_markdown_links(policy)
     items = parse_csharp_apis(policy)
     if not items:
         fail("No public production APIs were discovered.")

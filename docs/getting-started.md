@@ -176,7 +176,7 @@ dotnet build TCJ.slnx -c Release --no-restore
 dotnet test TCJ.slnx -c Release --no-build
 ```
 
-Continue with the [package reference](README.md#package-reference) and the [Product API sample](../samples/TCJ.Empty/README.md).
+Continue with the [package reference](README.md#package-reference) and the [Product API sample](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/samples/TCJ.Empty/README.md).
 
 ## Package and API reference
 

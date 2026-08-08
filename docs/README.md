@@ -6,7 +6,7 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 
 1. [Getting started](getting-started.md)
 2. [Architecture and package boundaries](architecture.md)
-3. [Product API sample](../samples/TCJ.Empty/README.md)
+3. [Product API sample](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/samples/TCJ.Empty/README.md)
 4. [Development workflow](development.md)
 5. [Versioning and releases](versioning.md)
 6. [Release automation](releasing.md)
