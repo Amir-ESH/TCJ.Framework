@@ -13,7 +13,10 @@ public class StringExtensionBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        _value = "api/products/";
+        // Benchmark the branch that actually has work to do. The previous
+        // already-suffixed input was so cheap that BenchmarkDotNet could not
+        // distinguish it from invocation overhead on hosted CI runners.
+        _value = $"api/products/{Environment.ProcessId}";
         _suffix = '/';
     }
 
