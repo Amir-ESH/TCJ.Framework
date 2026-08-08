@@ -19,6 +19,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Any compatibility suppression is minimal, reviewed, and described in the changelog.
 - [ ] The published-package smoke workflow is green for the previous release.
 - [ ] SQL Server integration policy validation is green and the container image remains pinned.
+- [ ] ASP.NET Core integration policy validation is green; Production/Development, current-user isolation, and sanitized diagnostics requirements remain enforced.
 
 ## Prepare release metadata
 
@@ -40,6 +41,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] The `Mutation testing / Run mutation tests` check is required for `develop` and `main`, with no administrator bypass.
 - [ ] The latest `Reproducible builds / Compare package builds` run is green for the exact release source and SDK.
 - [ ] `SQL Server integration / Run database tests` is green for the exact release source.
+- [ ] `ASP.NET Core integration / Test on Linux`, `Test on Windows`, and cross-platform verification are green for the exact release source.
 
 ## Release candidate
 
@@ -51,6 +53,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Review the latest performance summary plus JSON, Markdown, CSV, and log artifacts.
 - [ ] Review the architecture-test summary and confirm no policy weakening was introduced.
 - [ ] Review `SQLSERVER_INTEGRATION_SUMMARY.md`, TRX results, and sanitized SQL Server diagnostics; migrations and transaction scenarios are green.
+- [ ] Review `ASPNETCORE_INTEGRATION_SUMMARY.md`, both platform TRX files, and sanitized host/HTTP diagnostics; Production safety and current-user/request-scope isolation are green.
 - [ ] Review `REPRODUCIBILITY_SUMMARY.md`, both five-package build sets, and any focused difference reports.
 - [ ] Confirm assemblies, portable PDBs, Source Link metadata, XML documentation, NuSpec metadata, and extracted package contents match.
 - [ ] Confirm any raw archive-only warning is explained by an approved container normalization.

@@ -161,6 +161,11 @@ Download and review the `release-candidate-*` artifact before tagging. The first
 
 Release preflight and the tagged release both call `.github/workflows/sqlserver-integration.yml` for the same source commit before package publication can continue. The reusable workflow starts the pinned disposable SQL Server image, migrates isolated databases, runs the `Category=SqlServer` suite, verifies the minimum test count and sanitized diagnostics, and uploads the result artifacts. A failure blocks release readiness or publication. See [SQL Server integration testing](sqlserver-integration-testing.md).
 
+
+### ASP.NET Core integration gate
+
+Release preflight and the tagged release both call `.github/workflows/aspnetcore-integration.yml` for the exact release source. The reusable workflow runs the in-memory `Category=AspNetCore` suite on Linux and Windows, verifies Production-safe error responses, Development diagnostics, current-user/request-scope isolation, cancellation, sanitized host diagnostics, and the configured minimum test count, then requires a successful cross-platform aggregate before packaging or publication can continue. See [ASP.NET Core end-to-end integration testing](aspnetcore-integration-testing.md).
+
 ## Publish the first preview
 
 Complete [`RELEASE_CHECKLIST.md`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/RELEASE_CHECKLIST.md), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.

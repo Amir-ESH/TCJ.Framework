@@ -30,8 +30,12 @@ jobs:
     name: SQL Server integration gate
     uses: ./.github/workflows/sqlserver-integration.yml
 
+  aspnetcore-integration:
+    name: ASP.NET Core integration gate
+    uses: ./.github/workflows/aspnetcore-integration.yml
+
   preflight:
-    needs: sqlserver-integration
+    needs: [sqlserver-integration, aspnetcore-integration]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -172,7 +176,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
-          --filter "Category!=SqlServer"
+          --filter "Category!=SqlServer&Category!=AspNetCore"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=preflight-test-results.trx"

@@ -23,6 +23,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Cross-platform ASP.NET Core end-to-end integration coverage using an in-memory TestServer, deterministic authentication, request-scope/current-user isolation, Problem Details and exception behavior, cancellation, sanitized diagnostics, policy verification, and release gating.
 - Real SQL Server integration coverage through Testcontainers, including isolated migrated databases, repository/transaction/auditing/storage/concurrency scenarios, sanitized diagnostics, and policy verification.
 - Dedicated SQL Server integration CI plus release-preflight and tagged-release enforcement for relevant database changes.
 - Automated DocFX API reference generation and a policy-backed documentation quality gate for all five public packages, including measured coverage, explicit baseline debt, validated examples, link checks, and CI/release artifacts.

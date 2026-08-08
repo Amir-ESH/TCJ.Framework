@@ -13,7 +13,7 @@
 python3 eng/verify-dependency-security.py
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer"
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore"
 ```
 
 Run coverage:
@@ -22,7 +22,7 @@ Run coverage:
 dotnet test TCJ.slnx \
   -c Release \
   --no-build \
-  --filter "Category!=SqlServer" \
+  --filter "Category!=SqlServer&Category!=AspNetCore" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
@@ -222,3 +222,20 @@ python3 eng/verify-documentation.py verify \
 ```
 
 The verifier writes coverage, baseline, missing-documentation, broken-link, snippet, and generated-page results under `artifacts/documentation/`. See [Documentation authoring](documentation-authoring.md) before changing XML comments, package pages, selected examples, or the baseline.
+
+## ASP.NET Core end-to-end integration
+
+The normal coverage run excludes `Category=AspNetCore`; use the dedicated in-memory HTTP suite when changing ASP.NET Core registration, middleware, current-user behavior, or Result-to-HTTP mapping:
+
+```bash
+python3 eng/verify-aspnetcore-integration.py validate-config
+dotnet test tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj \
+  -c Release --filter "Category=AspNetCore" \
+  --logger "trx;LogFileName=aspnetcore-integration.trx" \
+  --results-directory TestResults/AspNetCoreIntegration
+python3 eng/verify-aspnetcore-integration.py verify \
+  --results TestResults/AspNetCoreIntegration \
+  --output artifacts/aspnetcore-integration
+```
+
+The CI gate executes the suite on Linux and Windows. Test authentication and endpoints remain in the test project, and generated diagnostics are sanitized before artifact upload. See [ASP.NET Core end-to-end integration testing](aspnetcore-integration-testing.md).

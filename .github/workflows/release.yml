@@ -22,8 +22,12 @@ jobs:
     name: SQL Server integration gate
     uses: ./.github/workflows/sqlserver-integration.yml
 
+  aspnetcore-integration:
+    name: ASP.NET Core integration gate
+    uses: ./.github/workflows/aspnetcore-integration.yml
+
   build-and-pack:
-    needs: sqlserver-integration
+    needs: [sqlserver-integration, aspnetcore-integration]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -186,7 +190,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
-          --filter "Category!=SqlServer"
+          --filter "Category!=SqlServer&Category!=AspNetCore"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=release-test-results.trx"

@@ -16,7 +16,7 @@ The repository policy lives in [`eng/coverage-policy.json`](https://github.com/A
 
 These deliberately conservative initial minimums protect the preview codebase from losing broad test execution while the suite grows. Raise them only after the current default branch is measured and the higher value is demonstrated to pass consistently. Lowering either threshold requires an explicit explanation in the pull request.
 
-The expected package list must remain identical to `eng/release-manifest.json`. The expected report count must remain identical to the number of test projects included in `TCJ.slnx`.
+The expected package list must remain identical to `eng/release-manifest.json`. The expected report count must remain identical to the number of non-excluded test projects included in `TCJ.slnx`; dedicated SQL Server and ASP.NET Core integration projects are validated by their own gates and are listed in `excludedTestProjects`.
 
 ## Collection
 
@@ -32,7 +32,7 @@ Run the same collection locally:
 ```bash
 dotnet test TCJ.slnx \
   -c Release \
-  --filter "Category!=SqlServer" \
+  --filter "Category!=SqlServer&Category!=AspNetCore" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults

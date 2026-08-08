@@ -19,7 +19,7 @@ Describe the problem and the approach taken.
 - [ ] Dependency security policy passes and no package source was added without review
 - [ ] `dotnet restore TCJ.slnx --force-evaluate` reports no blocking advisory
 - [ ] `dotnet build TCJ.slnx -c Release`
-- [ ] `dotnet test TCJ.slnx -c Release --filter "Category!=SqlServer"`
+- [ ] `dotnet test TCJ.slnx -c Release --filter "Category!=SqlServer&Category!=AspNetCore"`
 - [ ] Code coverage quality gate passes; new behavior has focused tests
 - [ ] Mutation testing ran when applicable; the recorded baseline is valid and relevant survived mutants were reviewed
 - [ ] Performance benchmarks pass for performance-sensitive changes
@@ -71,6 +71,17 @@ Describe the problem and the approach taken.
 - [ ] Container logs are sanitized
 - [ ] Generated SQL Server integration output is not committed
 - [ ] Production changes discovered by integration tests are explained
+
+- [ ] ASP.NET Core integration tests pass
+- [ ] Application startup succeeds
+- [ ] Exception mapping is verified
+- [ ] Production responses hide sensitive details
+- [ ] Current-user behavior is verified
+- [ ] Request-scope isolation is verified
+- [ ] Linux and Windows ASP.NET Core integration results are green
+- [ ] Test authentication remains test-only
+- [ ] ASP.NET Core diagnostics are sanitized
+- [ ] Generated ASP.NET Core integration output is not committed
 
 ## Related issue
 
