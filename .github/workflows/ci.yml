@@ -88,6 +88,9 @@ jobs:
       - name: Validate SQL Server integration configuration
         run: python3 eng/verify-sqlserver-integration.py validate-config
 
+      - name: Validate ASP.NET Core integration configuration
+        run: python3 eng/verify-aspnetcore-integration.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -138,7 +141,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
-          --filter "Category!=SqlServer"
+          --filter "Category!=SqlServer&Category!=AspNetCore"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=test-results.trx"

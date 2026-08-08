@@ -480,3 +480,6 @@ docfx/api/*.yml
 # SQL Server integration test output
 TestResults/SqlServerIntegration/
 artifacts/sqlserver-integration/
+TestResults/AspNetCoreIntegration/
+artifacts/aspnetcore-integration/
+artifacts/aspnetcore-integration-cross-platform/

@@ -185,7 +185,7 @@ def validate_config(policy: CoveragePolicy) -> None:
     required_fragments = (
         'python3 eng/verify-coverage.py validate-config',
         '--collect:"XPlat Code Coverage"',
-        '--filter "Category!=SqlServer"',
+        '--filter "Category!=SqlServer&Category!=AspNetCore"',
         '--settings tests/coverlet.runsettings',
         'python3 eng/verify-coverage.py verify',
         'artifacts/coverage/COVERAGE_SUMMARY.md',

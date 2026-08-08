@@ -9,6 +9,7 @@ TCJ.EntityFrameworkCore.Tests
 TCJ.EntityFrameworkCore.SqlServer.Tests
 TCJ.EntityFrameworkCore.SqlServer.IntegrationTests
 TCJ.AspNetCore.Tests
+TCJ.AspNetCore.IntegrationTests
 TCJ.Architecture.Tests
 ```
 
@@ -17,7 +18,7 @@ The suite uses xUnit v3, Microsoft.NET.Test.Sdk, the Visual Studio runner adapte
 Run all tests:
 
 ```bash
-dotnet test TCJ.slnx -c Release --filter "Category!=SqlServer"
+dotnet test TCJ.slnx -c Release --filter "Category!=SqlServer&Category!=AspNetCore"
 ```
 
 Run coverage:
@@ -25,7 +26,7 @@ Run coverage:
 ```bash
 dotnet test TCJ.slnx \
   -c Release \
-  --filter "Category!=SqlServer" \
+  --filter "Category!=SqlServer&Category!=AspNetCore" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
@@ -71,3 +72,21 @@ python3 eng/verify-sqlserver-integration.py verify \
 ```
 
 See [`docs/sqlserver-integration-testing.md`](../docs/sqlserver-integration-testing.md) for the full lifecycle and diagnostics policy.
+
+## ASP.NET Core end-to-end integration tests
+
+`TCJ.AspNetCore.IntegrationTests` starts a real in-memory ASP.NET Core application through TestServer. It validates startup, public TCJ registration, middleware, deterministic authentication, current-user isolation, DI lifetimes, exception mapping, Problem Details, cancellation, and sanitized diagnostics. No deployed server or external network service is required.
+
+```bash
+python3 eng/verify-aspnetcore-integration.py validate-config
+dotnet test tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj \
+  -c Release \
+  --filter "Category=AspNetCore" \
+  --logger "trx;LogFileName=aspnetcore-integration.trx" \
+  --results-directory TestResults/AspNetCoreIntegration
+python3 eng/verify-aspnetcore-integration.py verify \
+  --results TestResults/AspNetCoreIntegration \
+  --output artifacts/aspnetcore-integration
+```
+
+The dedicated GitHub Actions workflow runs the same suite on Linux and Windows and aggregates both results. See [`docs/aspnetcore-integration-testing.md`](../docs/aspnetcore-integration-testing.md).

@@ -48,6 +48,7 @@ python3 eng/verify-documentation.py verify \
 - .NET SDK `10.0.100` or a compatible SDK selected by [`global.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/main/global.json)
 - SQL Server only when using `TCJ.EntityFrameworkCore.SqlServer` or running the sample application
 - Docker with Linux-container support when running the real SQL Server integration suite
+- No external web server is required for the ASP.NET Core end-to-end integration suite; it uses an in-memory TestServer on Linux and Windows
 
 ## Install the preview packages
 
@@ -70,7 +71,7 @@ git clone https://github.com/Amir-ESH/TCJ.Framework.git
 cd TCJ.Framework
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer"
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore"
 ```
 
 Run the Product API sample:
@@ -82,6 +83,8 @@ dotnet run --project samples/TCJ.Empty/TCJ.Empty.csproj
 The default Development connection string uses SQL Server LocalDB on Windows. See the [sample README](https://github.com/Amir-ESH/TCJ.Framework/blob/main/samples/TCJ.Empty/README.md) for configuration details.
 
 Provider-specific integration tests start a disposable pinned SQL Server container and require Docker; they do not use LocalDB or permanent database secrets. See [SQL Server integration testing](docs/sqlserver-integration-testing.md) for local commands, isolation, diagnostics, and CI behavior.
+
+ASP.NET Core end-to-end tests run a real in-memory application through TestServer, deterministic test authentication, request scopes, exception handling, Problem Details, and cancellation on Linux and Windows. See [ASP.NET Core integration testing](docs/aspnetcore-integration-testing.md).
 
 ## Minimal application setup
 
@@ -129,6 +132,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
 dotnet test TCJ.slnx -c Release --no-build \
+  --filter "Category!=SqlServer&Category!=AspNetCore" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
@@ -139,6 +143,7 @@ python3 eng/verify-architecture-policy.py validate-config
 python3 eng/verify-sbom.py validate-config
 python3 eng/verify-reproducible-build.py validate-config
 python3 eng/verify-sqlserver-integration.py validate-config
+python3 eng/verify-aspnetcore-integration.py validate-config
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
@@ -165,6 +170,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Restore 
 - [Mutation testing quality gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/mutation-testing.md)
 - [Performance benchmarking and regression gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/performance-benchmarks.md)
 - [Architecture tests and module dependency rules](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/architecture-tests.md)
+- [ASP.NET Core end-to-end integration testing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/aspnetcore-integration-testing.md)
 - [Contributing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md)
 - [Security policy](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SECURITY.md)
 - [Support](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SUPPORT.md)
