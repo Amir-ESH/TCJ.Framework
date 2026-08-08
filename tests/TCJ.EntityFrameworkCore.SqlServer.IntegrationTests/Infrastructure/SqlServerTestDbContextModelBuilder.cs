@@ -52,6 +52,7 @@ internal static class SqlServerTestDbContextModelBuilder
             entity.ToTable("IntegrationParents");
             entity.HasKey(value => value.Id);
             entity.Property(value => value.Id)
+                  .ValueGeneratedOnAdd()
                   .UseIdentityColumn()
                   .HasColumnType("int");
             entity.Property(value => value.Name)
@@ -65,6 +66,7 @@ internal static class SqlServerTestDbContextModelBuilder
             entity.ToTable("IntegrationChildren");
             entity.HasKey(value => value.Id);
             entity.Property(value => value.Id)
+                  .ValueGeneratedOnAdd()
                   .UseIdentityColumn()
                   .HasColumnType("int");
             entity.Property(value => value.Name)
@@ -72,9 +74,11 @@ internal static class SqlServerTestDbContextModelBuilder
                   .HasMaxLength(80)
                   .IsRequired();
             entity.Property(value => value.ParentId).HasColumnType("int");
+            entity.HasIndex(value => value.ParentId);
             entity.HasOne(value => value.Parent)
                   .WithMany(value => value.Children)
                   .HasForeignKey(value => value.ParentId)
+                  .IsRequired()
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
