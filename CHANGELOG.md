@@ -23,6 +23,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Deterministic property-based testing and bounded fuzzing for foundational Core and dependency-registration APIs, including custom generators, shrinking/replay, reviewed seed corpora, failure minimization, policy verification, dedicated/scheduled automation, and release-blocking quality gates.
 - Automated package upgrade compatibility from the published baseline to the release candidate, including six clean-room scenarios, source-tree stability, dependency/behavior diffs, persisted-data validation, migration guidance, release gates, and post-publication revalidation.
 - Clean-room NuGet package consumer compatibility across Linux, Windows, and macOS, with six package-only applications, isolated restore/source verification, package/symbol/Source Link validation, release gates, and published-package consumer reuse.
 - Cross-platform ASP.NET Core end-to-end integration coverage using an in-memory TestServer, deterministic authentication, request-scope/current-user isolation, Problem Details and exception behavior, cancellation, sanitized diagnostics, policy verification, and release gating.

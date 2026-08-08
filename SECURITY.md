@@ -50,3 +50,7 @@ Official GitHub release assets include a CycloneDX JSON software bill of materia
 ## Reproducible release packages
 
 Release preflight and tagged publication build all five primary packages and all five symbol packages twice in isolated output/intermediate directories. The verifier compares assemblies, portable PDBs, embedded Source Link metadata, XML documentation, source files, NuSpec/repository metadata, and all extracted package contents. Unexplained semantic differences block release publication. Raw ZIP differences are warnings only when extracted contents match and the difference is limited to the documented NuGet container metadata rules. The official workflow promotes one verified build before generating the SBOM, checksums, attestations, and release artifacts. See [`docs/reproducible-builds.md`](docs/reproducible-builds.md).
+
+## Fuzzing artifacts
+
+Fuzz inputs are untrusted data. The fuzz workflow does not execute corpus files as scripts, bounds input and artifact sizes, avoids shell interpolation of corpus bytes, rejects path traversal and configured secret markers, uses short artifact retention, and does not automatically commit generated crash corpora. Report a security-sensitive fuzz finding privately under the normal vulnerability-reporting process before publishing the reproducer.

@@ -111,6 +111,20 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Release-preflight upgrade reports are archived.
 - [ ] Post-publication Core, ASP.NET Core, and FullStack upgrades pass with the target restored from NuGet.org.
 
+## Property and fuzz testing
+
+- [ ] `python3 eng/verify-fuzzing.py validate-config` passes.
+- [ ] `Property and fuzz testing / Run property tests` is green with all required categories and at least 100 generated cases per property.
+- [ ] `Property and fuzz testing / Run short fuzz targets` is green for all five required targets.
+- [ ] Review deterministic seeds, shrinking/replay output, `PROPERTY_TEST_SUMMARY.md`, and the property TRX artifact.
+- [ ] Review `FUZZ_SUMMARY.md`; crashes, hangs, unexpected exceptions, invariant violations, unresolved failures, input-size violations, and timeout violations are zero.
+- [ ] Any confirmed finding has a minimized reproducer, linked issue/PR, and conventional regression test.
+- [ ] Seed corpora remain small, reviewed, tracked, and free of sensitive values.
+- [ ] Generated fuzz corpus, failures, minimized outputs, `bin`, `obj`, and `artifacts/fuzzing/` are not committed.
+- [ ] The latest weekly long fuzz campaign is reviewed for the release source lineage.
+- [ ] Release preflight archives property/fuzz reports and blocks on unresolved findings.
+- [ ] The exact tagged source reruns the property suite and all required fuzz targets before NuGet publication.
+
 ## API documentation
 
 - [ ] `dotnet tool restore` restores the pinned DocFX version.

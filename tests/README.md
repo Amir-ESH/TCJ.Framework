@@ -90,3 +90,7 @@ python3 eng/verify-aspnetcore-integration.py verify \
 ```
 
 The dedicated GitHub Actions workflow runs the same suite on Linux and Windows and aggregates both results. See [`docs/aspnetcore-integration-testing.md`](../docs/aspnetcore-integration-testing.md).
+
+## Property-based testing
+
+`TCJ.PropertyTests` is the deterministic FsCheck suite for foundational `TCJ.Core` and `TCJ.DependencyInjection` invariants. It is intentionally separate from example-based unit tests, runs at least 100 generated cases per property, pins replay seeds, and uses custom boundary-heavy generators with shrinking. See `docs/property-and-fuzz-testing.md` for local commands and replay guidance.
