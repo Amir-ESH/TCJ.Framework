@@ -158,7 +158,7 @@ Download and review the `release-candidate-*` artifact before tagging. The first
 
 ## Publish the first preview
 
-Complete [`RELEASE_CHECKLIST.md`](../RELEASE_CHECKLIST.md), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.
+Complete [`RELEASE_CHECKLIST.md`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/RELEASE_CHECKLIST.md), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.
 
 Create the annotated tag:
 
@@ -229,3 +229,9 @@ SBOM generation, inspection, checksum, and provenance commands are documented in
 
 
 Reproducibility commands, isolation rules, approved container normalization, and report interpretation are documented in [Reproducible NuGet package builds](reproducible-builds.md).
+
+## Release documentation artifacts
+
+Release preflight builds DocFX metadata and the complete site from the release-candidate commit, runs the documentation quality gate, and uploads the site, reports, and a versioned ZIP. The tag workflow repeats the process from the exact tagged commit before NuGet publication, attests the documentation archive, and attaches it to the GitHub Release.
+
+Confirm that the documentation summary reports all five packages, the configured coverage threshold, zero unresolved references, zero broken links, successful required snippets, and generated API pages. Documentation created from another commit must not be substituted for the tagged artifact.

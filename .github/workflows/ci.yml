@@ -29,7 +29,7 @@ jobs:
   build-test-pack:
     name: Build, test and pack
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
 
     steps:
       - name: Checkout repository
@@ -39,6 +39,9 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
+
+      - name: Restore repository tools
+        run: dotnet tool restore
 
       - name: Display .NET information
         run: dotnet --info
@@ -79,6 +82,9 @@ jobs:
       - name: Validate reproducibility policy
         run: python3 eng/verify-reproducible-build.py validate-config
 
+      - name: Validate documentation policy
+        run: python3 eng/verify-documentation.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -87,6 +93,42 @@ jobs:
           dotnet build TCJ.slnx
           --configuration Release
           --no-restore
+
+      - name: Generate DocFX API metadata
+        run: >
+          dotnet docfx metadata docfx/docfx.json
+          --noRestore
+          --warningsAsErrors
+          --property "RepositoryCommit=${{ github.sha }}"
+
+      - name: Build documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          dotnet docfx build docfx/docfx.json \
+            --warningsAsErrors \
+            --metadata "sourceCommit=${{ github.sha }}" \
+            --metadata "releaseTag=ci-${{ github.sha }}" \
+            --metadata "documentationBuildDate=$build_date"
+
+      - name: Verify documentation quality gate
+        run: >
+          python3 eng/verify-documentation.py verify
+          --configuration Release
+          --build-root src
+          --api-root artifacts/documentation/api
+          --output artifacts/documentation
+          --commit-sha "${{ github.sha }}"
+          --release-tag "ci-${{ github.sha }}"
+
+      - name: Publish documentation summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/documentation/DOCUMENTATION_SUMMARY.md ]]; then
+            cat artifacts/documentation/DOCUMENTATION_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Run tests
         run: >
@@ -210,6 +252,21 @@ jobs:
             artifacts/sbom/*.cdx.json
             artifacts/sbom/SBOM_SUMMARY.md
             artifacts/sbom/sbom-summary.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload documentation artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: documentation-ci-${{ github.run_id }}
+          path: |
+            artifacts/documentation/site/**
+            artifacts/documentation/api/**
+            artifacts/documentation/DOCUMENTATION_SUMMARY.md
+            artifacts/documentation/documentation-summary.json
+            artifacts/documentation/missing-documentation.json
+            artifacts/documentation/broken-links.json
           if-no-files-found: warn
           retention-days: 7
 

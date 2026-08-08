@@ -1,0 +1,191 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/**"
+      - "docs/**"
+      - "docfx/**"
+      - "eng/documentation-*.json"
+      - "eng/verify-documentation.py"
+      - ".config/dotnet-tools.json"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "global.json"
+      - ".github/workflows/documentation.yml"
+
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/**"
+      - "docs/**"
+      - "docfx/**"
+      - "eng/documentation-*.json"
+      - "eng/verify-documentation.py"
+      - "eng/tests/test_verify_documentation.py"
+      - ".config/dotnet-tools.json"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "global.json"
+      - ".github/workflows/documentation.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  build-documentation:
+    name: Build and validate documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display .NET information
+        run: dotnet --info
+
+      - name: Restore repository tools
+        run: dotnet tool restore
+
+      - name: Validate automation scripts
+        run: |
+          python3 -m py_compile eng/*.py
+          python3 -m unittest discover \
+            --start-directory eng/tests \
+            --pattern "test_*.py"
+
+      - name: Validate documentation policy
+        run: python3 eng/verify-documentation.py validate-config
+
+      - name: Read package version
+        id: package-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import xml.etree.ElementTree as ET; print(ET.parse("eng/Packaging.props").getroot().findtext("./PropertyGroup/Version").strip())')"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore and audit dependencies
+        run: dotnet restore TCJ.slnx --force-evaluate
+
+      - name: Build production projects with XML documentation
+        run: >
+          dotnet build TCJ.slnx
+          --configuration Release
+          --no-restore
+          -p:Version="${{ steps.package-version.outputs.value }}"
+          -p:RepositoryCommit="${{ github.sha }}"
+
+      - name: Generate DocFX API metadata
+        run: >
+          dotnet docfx metadata docfx/docfx.json
+          --noRestore
+          --warningsAsErrors
+          --property "Version=${{ steps.package-version.outputs.value }};RepositoryCommit=${{ github.sha }}"
+
+      - name: Build documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          dotnet docfx build docfx/docfx.json \
+            --warningsAsErrors \
+            --metadata "packageVersion=${{ steps.package-version.outputs.value }}" \
+            --metadata "sourceCommit=${{ github.sha }}" \
+            --metadata "releaseTag=${{ github.ref_name }}" \
+            --metadata "documentationBuildDate=$build_date"
+
+      - name: Verify API documentation, links, and examples
+        run: >
+          python3 eng/verify-documentation.py verify
+          --configuration Release
+          --build-root src
+          --api-root artifacts/documentation/api
+          --output artifacts/documentation
+          --version "${{ steps.package-version.outputs.value }}"
+          --commit-sha "${{ github.sha }}"
+          --release-tag "${{ github.ref_name }}"
+
+      - name: Archive Pages-ready documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd artifacts/documentation
+          zip -qr "TCJ.Framework.Documentation.${{ steps.package-version.outputs.value }}.zip" site
+
+      - name: Configure GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_DOCUMENTATION_PAGES == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_DOCUMENTATION_PAGES == 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: artifacts/documentation/site
+
+      - name: Publish documentation summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/documentation/DOCUMENTATION_SUMMARY.md ]]; then
+            cat artifacts/documentation/DOCUMENTATION_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload generated documentation site and reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: documentation-${{ github.run_id }}
+          path: |
+            artifacts/documentation/site/**
+            artifacts/documentation/api/**
+            artifacts/documentation/DOCUMENTATION_SUMMARY.md
+            artifacts/documentation/documentation-summary.json
+            artifacts/documentation/missing-documentation.json
+            artifacts/documentation/broken-links.json
+            artifacts/documentation/snippets/build.log
+            artifacts/documentation/TCJ.Framework.Documentation.*.zip
+          if-no-files-found: warn
+          retention-days: 14
+
+  deploy-pages:
+    name: Deploy trusted main documentation
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_DOCUMENTATION_PAGES == 'true'
+    needs: build-documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy documentation to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

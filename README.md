@@ -24,6 +24,25 @@ TCJ Framework is a modular foundation for building .NET 10 applications with exp
 | `TCJ.EntityFrameworkCore.SqlServer` | SQL Server registration options and rowversion conventions. |
 | `TCJ.AspNetCore` | Current-user resolution, Result-to-HTTP mapping, Problem Details, and centralized exception handling. |
 
+## API reference and documentation quality
+
+The repository builds a DocFX site from the five production projects and the conceptual documentation under [`docs/`](docs/README.md). The documentation gate measures public API coverage, rejects new undocumented APIs, validates XML references and internal links, and compiles selected consumer examples.
+
+Start with the [documentation home](docs/index.md), browse the [package landing pages](docs/packages/index.md), or read the [documentation authoring guide](docs/documentation-authoring.md).
+
+Local validation:
+
+```bash
+dotnet tool restore
+dotnet build TCJ.slnx --configuration Release
+dotnet docfx metadata docfx/docfx.json --warningsAsErrors
+dotnet docfx build docfx/docfx.json --warningsAsErrors
+python3 eng/verify-documentation.py verify \
+  --configuration Release \
+  --build-root src \
+  --api-root artifacts/documentation/api
+```
+
 ## Requirements
 
 - .NET SDK `10.0.100` or a compatible SDK selected by [`global.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/main/global.json)
@@ -130,7 +149,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Restore 
 - [Development workflow](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/development.md)
 - [Versioning and releases](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/versioning.md)
 - [Release automation](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/releasing.md)
-- [First preview release notes](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/releases/0.1.0-preview.1.md)
+- [First preview release notes](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/release-notes/0.1.0-preview.1.md)
 - [Release checklist](https://github.com/Amir-ESH/TCJ.Framework/blob/main/RELEASE_CHECKLIST.md)
 - [Published-package validation](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/published-package-validation.md)
 - [Public API compatibility](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/api-compatibility.md)

@@ -4,13 +4,13 @@ TCJ Framework validates dependency security at restore time and reviews dependen
 
 ## Repository NuGet policy
 
-[`NuGet.Config`](../NuGet.Config) clears inherited package and audit sources, enables only the NuGet.org V3 feed, and maps every package ID to that source. This prevents machine-level NuGet configuration from silently introducing an additional restore source.
+[`NuGet.Config`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/NuGet.Config) clears inherited package and audit sources, enables only the NuGet.org V3 feed, and maps every package ID to that source. This prevents machine-level NuGet configuration from silently introducing an additional restore source.
 
 The published-package smoke project also uses this repository configuration. It must not define its own `RestoreSources` property.
 
 ## NuGet Audit policy
 
-[`eng/DependencySecurity.props`](../eng/DependencySecurity.props) is imported by [`Directory.Build.props`](../Directory.Build.props), so it applies to source projects, tests, samples, and the published-package consumer.
+[`eng/DependencySecurity.props`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/DependencySecurity.props) is imported by [`Directory.Build.props`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/Directory.Build.props), so it applies to source projects, tests, samples, and the published-package consumer.
 
 The policy is:
 
@@ -26,7 +26,7 @@ Low-severity advisories are outside the blocking threshold. They may still be ev
 
 ## Pull-request dependency review
 
-[`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml) runs for pull requests targeting `develop` or `main`. It uses GitHub Dependency Review to reject newly introduced runtime or development dependencies with moderate-or-higher known vulnerabilities.
+[`.github/workflows/dependency-review.yml`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/.github/workflows/dependency-review.yml) runs for pull requests targeting `develop` or `main`. It uses GitHub Dependency Review to reject newly introduced runtime or development dependencies with moderate-or-higher known vulnerabilities.
 
 This check complements NuGet Audit:
 
@@ -35,7 +35,7 @@ This check complements NuGet Audit:
 
 ## Scheduled audit
 
-[`.github/workflows/dependency-audit.yml`](../.github/workflows/dependency-audit.yml) runs every Monday and can also be started manually. A schedule is necessary because a new advisory can be published even when the repository has not changed.
+[`.github/workflows/dependency-audit.yml`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/.github/workflows/dependency-audit.yml) runs every Monday and can also be started manually. A schedule is necessary because a new advisory can be published even when the repository has not changed.
 
 The workflow audits:
 

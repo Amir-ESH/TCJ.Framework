@@ -96,7 +96,7 @@ It supports:
 - weekly scheduled execution;
 - manual execution with `verify` or `capture-baseline` mode.
 
-The workflow does not use a top-level pull-request path filter. It always creates the stable check, then performs an internal scope check. Unrelated changes finish successfully as `not-applicable`, so a required check cannot remain permanently pending.
+The workflow does not use a top-level pull-request path filter. It always creates the stable check, then performs an internal scope check. Unrelated changes finish successfully as `not-applicable`, so a required check cannot remain permanently pending. The scope detector treats `.config/dotnet-tools.json` as mutation-relevant only when the pinned `dotnet-stryker` definition changes; adding or updating unrelated repository tools such as DocFX does not start an expensive Stryker run. Changes to the scope detector itself are covered by the repository Python test suite, while controlled production, test, Stryker, policy, or baseline changes still require the full mutation run.
 
 ## First baseline bootstrap
 

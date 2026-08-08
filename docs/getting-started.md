@@ -176,4 +176,8 @@ dotnet build TCJ.slnx -c Release --no-restore
 dotnet test TCJ.slnx -c Release --no-build
 ```
 
-Continue with the [package reference](README.md#package-reference) and the [Product API sample](../samples/TCJ.Empty/README.md).
+Continue with the [package reference](README.md#package-reference) and the [Product API sample](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/samples/TCJ.Empty/README.md).
+
+## Package and API reference
+
+Use the [package landing pages](packages/index.md) to choose modules and locate their main entry points. The [API reference](api/index.md) is generated from the exact production projects and XML documentation comments. Consumer examples that are part of the quality gate are collected in [Validated consumer examples](examples.md).

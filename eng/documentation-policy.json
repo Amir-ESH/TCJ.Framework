@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "docfxVersion": "2.78.5",
+  "requiredPackages": [
+    "TCJ.Core",
+    "TCJ.DependencyInjection",
+    "TCJ.EntityFrameworkCore",
+    "TCJ.EntityFrameworkCore.SqlServer",
+    "TCJ.AspNetCore"
+  ],
+  "projects": {
+    "TCJ.Core": "src/TCJ.Core/TCJ.Core.csproj",
+    "TCJ.DependencyInjection": "src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj",
+    "TCJ.EntityFrameworkCore": "src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
+    "TCJ.EntityFrameworkCore.SqlServer": "src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
+    "TCJ.AspNetCore": "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj"
+  },
+  "packagePages": {
+    "TCJ.Core": "docs/packages/tcj-core.md",
+    "TCJ.DependencyInjection": "docs/packages/tcj-dependencyinjection.md",
+    "TCJ.EntityFrameworkCore": "docs/packages/tcj-entityframeworkcore.md",
+    "TCJ.EntityFrameworkCore.SqlServer": "docs/packages/tcj-entityframeworkcore-sqlserver.md",
+    "TCJ.AspNetCore": "docs/packages/tcj-aspnetcore.md"
+  },
+  "minimumPublicApiDocumentationPercent": 57.17,
+  "requireTypeSummaries": true,
+  "requireMemberSummaries": true,
+  "requireParameterDocumentation": true,
+  "requireReturnDocumentation": true,
+  "requireExceptionDocumentation": false,
+  "requireExampleForSelectedApis": true,
+  "failOnBrokenInternalLinks": true,
+  "failOnUnresolvedCrefs": true,
+  "failOnMalformedXmlDocumentation": true,
+  "baselineMaximumEntries": 606,
+  "baselineTargetMilestone": "0.1.0-rc.1",
+  "selectedExamples": [
+    {
+      "id": "result-usage",
+      "area": "Result usage",
+      "path": "docs/examples.md"
+    },
+    {
+      "id": "dependency-registration",
+      "area": "Dependency registration",
+      "path": "docs/examples.md"
+    },
+    {
+      "id": "repository-unit-of-work",
+      "area": "Repository and Unit of Work",
+      "path": "docs/examples.md"
+    },
+    {
+      "id": "specification-usage",
+      "area": "Specification usage",
+      "path": "docs/examples.md"
+    },
+    {
+      "id": "efcore-registration",
+      "area": "Entity Framework Core registration",
+      "path": "docs/examples.md"
+    },
+    {
+      "id": "sqlserver-registration",
+      "area": "SQL Server registration",
+      "path": "docs/examples.md"
+    },
+    {
+      "id": "aspnetcore-registration",
+      "area": "ASP.NET Core registration and exception handling",
+      "path": "docs/examples.md"
+    },
+    {
+      "id": "domain-event-dispatch",
+      "area": "Domain-event dispatching",
+      "path": "docs/examples.md"
+    }
+  ],
+  "baselineRecordedDate": "2026-08-06",
+  "measuredPublicApiCount": 453,
+  "measuredFullyDocumentedApiCount": 259
+}

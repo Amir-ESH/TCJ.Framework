@@ -253,6 +253,15 @@ PublishScripts/
 *.snupkg
 # The packages folder can be ignored because of Package Restore
 **/[Pp]ackages/*
+
+# Keep source-controlled documentation package landing pages. The generic
+# NuGet packages rule above would otherwise ignore docs/packages/*.md.
+!docs/packages/
+!docs/packages/**
+
+# Versioned documentation release notes live under docs/release-notes/ so they do not
+# collide with the generic Visual Studio Releases/ build-output rule above.
+
 # except build/, which is used as an MSBuild target.
 !**/[Pp]ackages/build/
 # Uncomment if necessary however generally it will be regenerated when needed
@@ -458,3 +467,12 @@ FodyWeavers.xsd
 # Python tooling caches
 __pycache__/
 *.py[cod]
+
+# Generated API reference documentation
+artifacts/documentation/
+_site/
+docfx/api/*.yml
+!docfx/docfx.json
+!eng/documentation-policy.json
+!eng/documentation-baseline.json
+!eng/verify-documentation.py

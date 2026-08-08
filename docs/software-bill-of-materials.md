@@ -40,7 +40,7 @@ Multi-targeted NuGet packages may declare different version ranges for the same 
 
 ## Policy
 
-[`eng/sbom-policy.json`](../eng/sbom-policy.json) defines:
+[`eng/sbom-policy.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/sbom-policy.json) defines:
 
 - the required CycloneDX format and specification version;
 - the exact five release package IDs;

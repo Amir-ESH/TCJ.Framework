@@ -83,15 +83,10 @@ jobs:
             base="$(git rev-parse "$HEAD_SHA^")"
           fi
 
-          git diff --name-only "$base" "$HEAD_SHA" | tee changed-files.txt
-
-          if grep -Eq '^(\.config/dotnet-tools\.json|\.github/workflows/mutation-testing\.yml|eng/(mutation-(policy|baseline)\.json|run-mutation-testing\.py|verify-mutation-results\.py|tests/test_(run_mutation_testing|verify_mutation_results)\.py)|stryker-config\.json|tests/TestProject\.props|src/TCJ\.(Core|DependencyInjection)/|tests/TCJ\.(Core|DependencyInjection)\.Tests/)' changed-files.txt; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "Relevant production, test, or mutation-infrastructure changes were detected."
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "No mutation-relevant changes were detected."
-          fi
+          python3 eng/detect-mutation-scope.py \
+            --base "$base" \
+            --head "$HEAD_SHA" \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Setup .NET SDK
         if: ${{ steps.scope.outputs.run == 'true' }}

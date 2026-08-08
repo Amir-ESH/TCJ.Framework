@@ -6,6 +6,15 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+- Moved source-controlled release notes to `docs/release-notes/` so standard Git staging cannot lose them to the Visual Studio `Releases/` ignore rule.
+- Updated documentation validation and repository links to use the non-ignored release-note path.
+- Fixed DocFX site builds by keeping versioned release notes tracked and replacing repository-external relative Markdown links with stable GitHub source links.
+- Strengthened documentation validation so local conceptual links cannot escape the DocFX `docs/` content root and are checked during `validate-config`.
+- Fixed DocFX metadata generation for EF Core save interceptors by replacing inherited external XML comments that produced unresolved `DbContext.SaveChanges` cref values.
+- Refined mutation-test scope detection so repository-tool changes trigger Stryker only when the pinned `dotnet-stryker` definition actually changes.
+
+- Fixed Git ignore rules so documentation package landing pages remain tracked and documentation validation verifies their Git status.
+
 - Fixed reproducibility verification to support valid modern `.snupkg` files that contain portable PDBs and Source Link metadata without physical `src/**/*.cs` entries; optional source entries remain fully compared when present.
 - Canonicalized isolated reproducibility build roots so generated source paths no longer change portable PDBs or deterministic assemblies.
 - Fixed reproducibility verification for NuGet core-properties parts that legitimately omit the optional `dcterms:created` value or register `.psmdcp` through a `[Content_Types].xml` default declaration.
@@ -14,6 +23,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Automated DocFX API reference generation and a policy-backed documentation quality gate for all five public packages, including measured coverage, explicit baseline debt, validated examples, link checks, and CI/release artifacts.
 - Reproducible NuGet package verification for all five primary and symbol packages using two isolated builds, semantic content comparison, focused difference reports, and a dedicated scheduled/manual/pull-request workflow.
 - Release-preflight and tagged-release enforcement that promotes only a verified package set before SBOM generation, checksums, attestations, and publication.
 - CycloneDX JSON SBOM generation and strict verification for all five release packages, restored direct/transitive NuGet dependencies, licenses, hashes, repository metadata, and source provenance.

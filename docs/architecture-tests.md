@@ -2,7 +2,7 @@
 
 TCJ Framework publishes five packages with intentionally one-way dependencies. Compiler checks prove that code builds; architecture tests prove that it still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
 
-The executable policy is stored in [`eng/architecture-policy.json`](../eng/architecture-policy.json). The test implementation lives in [`tests/TCJ.Architecture.Tests`](../tests/TCJ.Architecture.Tests/).
+The executable policy is stored in [`eng/architecture-policy.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/architecture-policy.json). The test implementation lives in [`tests/TCJ.Architecture.Tests`](https://github.com/Amir-ESH/TCJ.Framework/tree/develop/tests/TCJ.Architecture.Tests).
 
 ## Package responsibilities
 
