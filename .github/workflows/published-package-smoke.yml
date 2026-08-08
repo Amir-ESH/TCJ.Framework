@@ -21,6 +21,10 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   verify-publication:
     name: Verify NuGet publication
@@ -69,50 +73,87 @@ jobs:
           retention-days: 7
 
   consume-packages:
-    name: Consume packages (${{ matrix.os }})
+    name: Consume compatibility packages (${{ matrix.os }})
     needs: verify-publication
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
+        include:
+          - os: ubuntu-latest
+            python: python3
+            slug: linux
+          - os: windows-latest
+            python: python
+            slug: windows
+          - os: macos-latest
+            python: python3
+            slug: macos
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
-      - name: Clear NuGet caches
-        run: dotnet nuget locals all --clear
+      - name: Validate compatibility configuration
+        run: ${{ matrix.python }} eng/verify-consumer-compatibility.py validate-config
 
-      - name: Restore published packages
-        run: >
-          dotnet restore
-          smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
-          --no-cache
-          --force
-          -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
+      - name: Resolve published package source commit
+        id: source-commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v${{ needs.verify-publication.outputs.version }}"
+          commit="$(git rev-list -n 1 "$tag")"
+          [[ -n "$commit" ]] || { echo "Unable to resolve source commit for $tag." >&2; exit 1; }
+          echo "value=$commit" >> "$GITHUB_OUTPUT"
 
-      - name: Build consumer
+      - name: Clear published-consumer restore state
+        run: rm -rf artifacts/compatibility/nuget artifacts/compatibility/results artifacts/compatibility/published-report compatibility/Consumers/*/bin compatibility/Consumers/*/obj
+
+      - name: Restore, build, and run selected published-package consumers
         run: >
-          dotnet build
-          smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
+          ${{ matrix.python }} compatibility/scripts/run-compatibility.py
+          --version "${{ needs.verify-publication.outputs.version }}"
+          --platform "${{ matrix.os }}"
           --configuration Release
-          --no-restore
-          -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
+          --source-mode published
+          --results artifacts/compatibility/results
+          --consumer Core.Console
+          --consumer AspNetCore.MinimalApi
+          --consumer FullStack.MinimalApi
 
-      - name: Run consumer
+      - name: Verify published-package consumer results
         run: >
-          dotnet run
-          --project smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
-          --configuration Release
-          --no-build
-          -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
+          ${{ matrix.python }} eng/verify-consumer-compatibility.py verify-published
+          --version "${{ needs.verify-publication.outputs.version }}"
+          --platform "${{ matrix.os }}"
+          --results artifacts/compatibility/results
+          --output artifacts/compatibility/published-report
+          --commit-sha "${{ steps.source-commit.outputs.value }}"
+
+      - name: Publish compatibility summary
+        if: always()
+        run: |
+          if [[ -f artifacts/compatibility/published-report/COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/compatibility/published-report/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload published-package consumer reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: published-consumer-compatibility-${{ matrix.slug }}-${{ needs.verify-publication.outputs.version }}-${{ github.run_id }}
+          path: |
+            artifacts/compatibility/results/**
+            artifacts/compatibility/published-report/**
+          if-no-files-found: warn
+          retention-days: 7

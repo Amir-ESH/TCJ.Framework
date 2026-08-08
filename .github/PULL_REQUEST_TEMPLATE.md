@@ -83,6 +83,18 @@ Describe the problem and the approach taken.
 - [ ] ASP.NET Core diagnostics are sanitized
 - [ ] Generated ASP.NET Core integration output is not committed
 
+- [ ] All package consumers restore from the expected package source
+- [ ] No compatibility consumer uses repository project references
+- [ ] Resolved TCJ package versions match the candidate version
+- [ ] TCJ package source identity is verified
+- [ ] Linux, Windows, and macOS package consumers pass
+- [ ] The full five-package consumer combination passes
+- [ ] No package downgrade or dependency-conflict warning occurs
+- [ ] Source and symbol package compatibility validation passes
+- [ ] XML documentation, portable PDB, and Source Link validation passes
+- [ ] Generated package-consumer compatibility output is not committed
+- [ ] Compatibility-policy changes are explicit and justified
+
 ## Related issue
 
 Refs #

@@ -1,0 +1,251 @@
+name: Package consumer compatibility
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/**"
+      - "eng/Packaging.props"
+      - "eng/PackageValidation.props"
+      - "eng/compatibility-policy.json"
+      - "eng/verify-consumer-compatibility.py"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "NuGet.Config"
+      - "global.json"
+      - "compatibility/**"
+      - ".github/workflows/consumer-compatibility.yml"
+
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/**"
+      - "eng/Packaging.props"
+      - "eng/PackageValidation.props"
+      - "eng/compatibility-policy.json"
+      - "eng/verify-consumer-compatibility.py"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "NuGet.Config"
+      - "global.json"
+      - "compatibility/**"
+      - ".github/workflows/consumer-compatibility.yml"
+
+  workflow_dispatch:
+
+  workflow_call:
+    inputs:
+      version_source:
+        description: Source used to resolve the compatibility package version
+        required: false
+        type: string
+        default: packaging-props
+
+  schedule:
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+concurrency:
+  group: consumer-compatibility-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  compatibility:
+    name: Test consumers (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            slug: linux
+            python: python3
+          - os: windows-latest
+            slug: windows
+            python: python
+          - os: macos-latest
+            slug: macos
+            python: python3
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display runtime and operating-system information
+        run: |
+          dotnet --info
+          ${{ matrix.python }} -c "import platform; print(platform.platform()); print(platform.machine())"
+
+      - name: Validate automation scripts
+        run: |
+          ${{ matrix.python }} -m compileall -q eng compatibility/scripts
+          ${{ matrix.python }} -m unittest discover --start-directory eng/tests --pattern "test_*consumer_compatibility.py"
+
+      - name: Validate compatibility policy
+        run: ${{ matrix.python }} eng/verify-consumer-compatibility.py validate-config
+
+      - name: Resolve compatibility package version
+        id: package-version
+        env:
+          VERSION_SOURCE: ${{ inputs.version_source || 'packaging-props' }}
+        run: |
+          set -euo pipefail
+          if [[ "$VERSION_SOURCE" == "release-manifest" ]]; then
+            version="$(${{ matrix.python }} -c 'import json; print(json.load(open("eng/release-manifest.json", encoding="utf-8"))["version"])')"
+          else
+            version="$(${{ matrix.python }} -c 'import xml.etree.ElementTree as ET; value=ET.parse("eng/Packaging.props").getroot().findtext("./PropertyGroup/Version"); print(value.strip() if value else "")')"
+          fi
+          [[ -n "$version" ]] || { echo "Unable to resolve compatibility package version." >&2; exit 1; }
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore and audit repository dependencies
+        run: dotnet restore TCJ.slnx --force-evaluate
+
+      - name: Build production projects
+        run: |
+          set -euo pipefail
+          for project in \
+            src/TCJ.Core/TCJ.Core.csproj \
+            src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj \
+            src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
+            src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
+            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj; do
+            dotnet build "$project" \
+              --configuration Release \
+              --no-restore \
+              -p:Version="${{ steps.package-version.outputs.value }}" \
+              -p:RepositoryCommit="${{ github.sha }}"
+          done
+
+      - name: Pack all TCJ packages
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/compatibility/packages
+          mkdir -p artifacts/compatibility/packages
+          package_output="$(pwd)/artifacts/compatibility/packages"
+          for project in \
+            src/TCJ.Core/TCJ.Core.csproj \
+            src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj \
+            src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
+            src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
+            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj; do
+            dotnet pack "$project" \
+              --configuration Release \
+              --no-build \
+              --no-restore \
+              -p:PackageOutputPath="$package_output" \
+              -p:Version="${{ steps.package-version.outputs.value }}" \
+              -p:RepositoryCommit="${{ github.sha }}"
+          done
+
+      - name: Clear compatibility restore state
+        run: rm -rf artifacts/compatibility/nuget artifacts/compatibility/results artifacts/compatibility/report compatibility/Consumers/*/bin compatibility/Consumers/*/obj
+
+      - name: Restore, build, and run clean consumers
+        run: >
+          ${{ matrix.python }} compatibility/scripts/run-compatibility.py
+          --version "${{ steps.package-version.outputs.value }}"
+          --platform "${{ matrix.os }}"
+          --configuration Release
+          --source-mode local
+          --packages artifacts/compatibility/packages
+          --results artifacts/compatibility/results
+
+      - name: Verify package set, sources, versions, source packages, and symbol packages
+        run: >
+          ${{ matrix.python }} eng/verify-consumer-compatibility.py verify
+          --version "${{ steps.package-version.outputs.value }}"
+          --packages artifacts/compatibility/packages
+          --results artifacts/compatibility/results
+          --output artifacts/compatibility/report
+          --platform "${{ matrix.os }}"
+          --commit-sha "${{ github.sha }}"
+
+      - name: Publish compatibility summary
+        if: always()
+        run: ${{ matrix.python }} -c "from pathlib import Path; import os; p=Path('artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md'); open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf-8').write(p.read_text(encoding='utf-8') if p.exists() else '# Package consumer compatibility\n\nSummary unavailable.\n')"
+
+      - name: Upload restore, build, runtime, and package reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: consumer-compatibility-${{ matrix.slug }}-${{ github.run_id }}
+          path: |
+            artifacts/compatibility/results/**
+            artifacts/compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  cross-platform:
+    name: Verify Linux, Windows, and macOS results
+    needs: compatibility
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve compatibility package version
+        id: package-version
+        env:
+          VERSION_SOURCE: ${{ inputs.version_source || 'packaging-props' }}
+        run: |
+          set -euo pipefail
+          if [[ "$VERSION_SOURCE" == "release-manifest" ]]; then
+            version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json", encoding="utf-8"))["version"])')"
+          else
+            version="$(python3 -c 'import xml.etree.ElementTree as ET; value=ET.parse("eng/Packaging.props").getroot().findtext("./PropertyGroup/Version"); print(value.strip() if value else "")')"
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Download platform results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: consumer-compatibility-*-${{ github.run_id }}
+          path: artifacts/compatibility/platform-results
+
+      - name: Verify cross-platform result set
+        run: >
+          python3 eng/verify-consumer-compatibility.py verify-platforms
+          --version "${{ steps.package-version.outputs.value }}"
+          --results artifacts/compatibility/platform-results
+          --output artifacts/compatibility/cross-platform
+          --commit-sha "${{ github.sha }}"
+
+      - name: Publish cross-platform summary
+        run: cat artifacts/compatibility/cross-platform/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload cross-platform report
+        uses: actions/upload-artifact@v7
+        with:
+          name: consumer-compatibility-cross-platform-${{ github.run_id }}
+          path: artifacts/compatibility/cross-platform/**
+          if-no-files-found: error
+          retention-days: 14

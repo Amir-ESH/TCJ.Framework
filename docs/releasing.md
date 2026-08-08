@@ -166,6 +166,10 @@ Release preflight and the tagged release both call `.github/workflows/sqlserver-
 
 Release preflight and the tagged release both call `.github/workflows/aspnetcore-integration.yml` for the exact release source. The reusable workflow runs the in-memory `Category=AspNetCore` suite on Linux and Windows, verifies Production-safe error responses, Development diagnostics, current-user/request-scope isolation, cancellation, sanitized host diagnostics, and the configured minimum test count, then requires a successful cross-platform aggregate before packaging or publication can continue. See [ASP.NET Core end-to-end integration testing](aspnetcore-integration-testing.md).
 
+### Package consumer compatibility gate
+
+Release preflight and the tagged release both depend on `.github/workflows/consumer-compatibility.yml`. That reusable gate packs the release-manifest version and requires all six package-only consumers to restore, build, and run on Linux, Windows, and macOS with exact version/source verification. After reproducible Build A is promoted, the release job additionally copies those exact verified package bytes into the local compatibility feed and runs all six consumers again on Ubuntu before SBOM/checksum/publication stages can continue. Primary and symbol package metadata, XML documentation, portable PDBs, and Source Link are validated against the release commit, and compatibility summaries are retained with release artifacts. See [Package consumer compatibility](package-consumer-compatibility.md).
+
 ## Publish the first preview
 
 Complete [`RELEASE_CHECKLIST.md`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/RELEASE_CHECKLIST.md), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.
@@ -224,7 +228,7 @@ If any package was published, increment the version, update `eng/Packaging.props
 5. add the first new entries under `[Unreleased]`;
 6. run the **Published package smoke tests** workflow for the released version.
 
-The smoke workflow verifies NuGet registration metadata, public listing state, downloaded package contents, dependency restore, application build, and runtime registration on Linux and Windows.
+The smoke workflow verifies NuGet registration metadata, public listing state, and downloaded package contents, then reuses the maintained Core, ASP.NET Core, and full-stack compatibility consumers against NuGet.org on Linux, Windows, and macOS. The package source, exact released version, application build, HTTP startup, EF/SQL Server registration, and runtime execution must all pass.
 
 Verify the GitHub release checksum manifest, inspect the CycloneDX SBOM, and verify at least one package attestation plus the SBOM attestation after publication. The exact commands and the distinction between GitHub release assets and NuGet.org repository-signed packages are documented in [Release integrity and build provenance](release-integrity.md).
 

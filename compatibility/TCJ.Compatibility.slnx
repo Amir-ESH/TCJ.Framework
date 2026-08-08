@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Consumers/">
+    <Project Path="Consumers/Core.Console/Core.Console.csproj" />
+    <Project Path="Consumers/DependencyInjection.Console/DependencyInjection.Console.csproj" />
+    <Project Path="Consumers/EntityFrameworkCore.Console/EntityFrameworkCore.Console.csproj" />
+    <Project Path="Consumers/EntityFrameworkCore.SqlServer.Console/EntityFrameworkCore.SqlServer.Console.csproj" />
+    <Project Path="Consumers/AspNetCore.MinimalApi/AspNetCore.MinimalApi.csproj" />
+    <Project Path="Consumers/FullStack.MinimalApi/FullStack.MinimalApi.csproj" />
+  </Folder>
+</Solution>

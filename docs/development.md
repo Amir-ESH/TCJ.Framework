@@ -239,3 +239,13 @@ python3 eng/verify-aspnetcore-integration.py verify \
 ```
 
 The CI gate executes the suite on Linux and Windows. Test authentication and endpoints remain in the test project, and generated diagnostics are sanitized before artifact upload. See [ASP.NET Core end-to-end integration testing](aspnetcore-integration-testing.md).
+
+## Package consumer compatibility
+
+Package changes must also work as external NuGet dependencies, not only as project references inside `TCJ.slnx`. Validate the tracked matrix first:
+
+```bash
+python3 eng/verify-consumer-compatibility.py validate-config
+```
+
+After packing a candidate into `artifacts/compatibility/packages`, run the clean-room consumers with `compatibility/scripts/run-compatibility.py` and then `eng/verify-consumer-compatibility.py verify`. The runner isolates `NUGET_PACKAGES`, the HTTP cache, `DOTNET_CLI_HOME`, and consumer `bin`/`obj`; it verifies the exact TCJ version and actual NuGet source recorded in `.nupkg.metadata`, treats restore/build warnings as failures, and executes the HTTP/EF/SQL Server smoke paths. GitHub Actions repeats the full matrix on Linux, Windows, and macOS. See [Package consumer compatibility](package-consumer-compatibility.md) for commands and support rules.

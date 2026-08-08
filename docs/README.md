@@ -22,7 +22,8 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 16. [Architecture tests and module dependency rules](architecture-tests.md)
 17. [SQL Server integration testing](sqlserver-integration-testing.md)
 18. [ASP.NET Core end-to-end integration testing](aspnetcore-integration-testing.md)
-19. [First preview release notes](release-notes/0.1.0-preview.1.md)
+19. [Package consumer compatibility](package-consumer-compatibility.md)
+20. [First preview release notes](release-notes/0.1.0-preview.1.md)
 
 ## Package reference
 

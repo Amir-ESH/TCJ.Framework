@@ -4,6 +4,7 @@
 > **Current development version:** `0.1.0-preview.2`
 
 [![CI](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/ci.yml)
+[![Package consumer compatibility](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/consumer-compatibility.yml/badge.svg?branch=develop)](https://github.com/Amir-ESH/TCJ.Framework/actions/workflows/consumer-compatibility.yml)
 
 TCJ Framework is a modular foundation for building .NET 10 applications with explicit boundaries between domain primitives, dependency injection, persistence, SQL Server, and ASP.NET Core integration.
 
@@ -85,6 +86,8 @@ The default Development connection string uses SQL Server LocalDB on Windows. Se
 Provider-specific integration tests start a disposable pinned SQL Server container and require Docker; they do not use LocalDB or permanent database secrets. See [SQL Server integration testing](docs/sqlserver-integration-testing.md) for local commands, isolation, diagnostics, and CI behavior.
 
 ASP.NET Core end-to-end tests run a real in-memory application through TestServer, deterministic test authentication, request scopes, exception handling, Problem Details, and cancellation on Linux and Windows. See [ASP.NET Core integration testing](docs/aspnetcore-integration-testing.md).
+
+Package-consumer compatibility is also tested from outside the production solution. Six clean applications restore only TCJ NuGet packages, verify the exact package version and source, build and run on Linux/Windows/macOS, exercise ASP.NET Core and EF Core wiring, and validate `.nupkg`, `.snupkg`, portable PDB, XML documentation, and Source Link metadata. See [Package consumer compatibility](docs/package-consumer-compatibility.md).
 
 ## Minimal application setup
 
@@ -171,6 +174,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Restore 
 - [Performance benchmarking and regression gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/performance-benchmarks.md)
 - [Architecture tests and module dependency rules](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/architecture-tests.md)
 - [ASP.NET Core end-to-end integration testing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/aspnetcore-integration-testing.md)
+- [Package consumer compatibility](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/package-consumer-compatibility.md)
 - [Contributing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/CONTRIBUTING.md)
 - [Security policy](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SECURITY.md)
 - [Support](https://github.com/Amir-ESH/TCJ.Framework/blob/main/SUPPORT.md)
