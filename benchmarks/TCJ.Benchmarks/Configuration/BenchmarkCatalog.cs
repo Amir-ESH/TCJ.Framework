@@ -86,7 +86,7 @@ internal static class BenchmarkCatalog
         string type,
         string method,
         bool baseline = false)
-        => new(type, method, ["TCJ.Core", "TCJ.DependencyInjection", "Observability"], comparisonGroup: null, baseline);
+        => new(type, method, ["TCJ.Core", "TCJ.DependencyInjection", "Observability"], null, baseline);
 
     private sealed record BenchmarkDefinition(
         string Type,

@@ -251,7 +251,7 @@ public class EfReadRepository<TEntity, TKey> : IReadRepository<TEntity, TKey>
         }
     }
 
-    private Task<IReadOnlyList<TEntity>> ObserveListAsync(
+    private async Task<IReadOnlyList<TEntity>> ObserveListAsync(
         Func<Task<List<TEntity>>> operation,
         string operationName,
         CancellationToken cancellationToken)
@@ -264,8 +264,8 @@ public class EfReadRepository<TEntity, TKey> : IReadRepository<TEntity, TKey>
         {
             Task<List<TEntity>> task = operation();
             return telemetry.IsActive
-                ? ObserveListWithTelemetryAsync(task, telemetry, cancellationToken)
-                : task;
+                ? await ObserveListWithTelemetryAsync(task, telemetry, cancellationToken).ConfigureAwait(false)
+                : await task.ConfigureAwait(false);
         }
         catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
         {
