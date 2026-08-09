@@ -34,7 +34,12 @@ internal static class BenchmarkCatalog
         DependencyInjection("DependencyRegistrationBenchmarks", "RegisterTransientDependency", "DependencyRegistrationLifetime", baseline: true),
         DependencyInjection("DependencyRegistrationBenchmarks", "RegisterScopedDependency", "DependencyRegistrationLifetime"),
         DependencyInjection("DependencyRegistrationBenchmarks", "RegisterSingletonDependency", "DependencyRegistrationLifetime"),
-        DependencyInjection("DependencyRegistrationBenchmarks", "RepeatedRegistrationWithDuplicateProtection")
+        DependencyInjection("DependencyRegistrationBenchmarks", "RepeatedRegistrationWithDuplicateProtection"),
+
+        Observability("ObservabilityBenchmarks", "TelemetryDisabled", baseline: true),
+        Observability("ObservabilityBenchmarks", "TracingListenerEnabled"),
+        Observability("ObservabilityBenchmarks", "MetricsListenerEnabled"),
+        Observability("ObservabilityBenchmarks", "TracingAndMetricsEnabled")
     ];
 
     internal static void WriteManifest()
@@ -76,6 +81,12 @@ internal static class BenchmarkCatalog
         string? comparisonGroup = null,
         bool baseline = false)
         => new(type, method, ["TCJ.DependencyInjection"], comparisonGroup, baseline);
+
+    private static BenchmarkDefinition Observability(
+        string type,
+        string method,
+        bool baseline = false)
+        => new(type, method, ["TCJ.Core", "TCJ.DependencyInjection", "Observability"], comparisonGroup: null, baseline);
 
     private sealed record BenchmarkDefinition(
         string Type,

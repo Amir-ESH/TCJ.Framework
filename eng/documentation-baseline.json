@@ -4260,7 +4260,7 @@
     },
     {
       "package": "TCJ.EntityFrameworkCore",
-      "documentationId": "M:TCJ.EntityFrameworkCore.Repositories.EfReadRepository.#ctor(IReadDbContext)@src/TCJ.EntityFrameworkCore/Repositories/EfReadRepository.cs:173",
+      "documentationId": "M:TCJ.EntityFrameworkCore.Repositories.EfReadRepository.#ctor(IReadDbContext)@src/TCJ.EntityFrameworkCore/Repositories/EfReadRepository.cs:349",
       "memberKind": "Constructor",
       "missingElement": "param:db",
       "reason": "Existing public API predating the documentation quality gate",
@@ -4314,7 +4314,7 @@
     },
     {
       "package": "TCJ.EntityFrameworkCore",
-      "documentationId": "M:TCJ.EntityFrameworkCore.Repositories.EfSoftDeleteRepository.#ctor(IWriteDbContext)@src/TCJ.EntityFrameworkCore/Repositories/EfSoftDeleteRepository.cs:115",
+      "documentationId": "M:TCJ.EntityFrameworkCore.Repositories.EfSoftDeleteRepository.#ctor(IWriteDbContext)@src/TCJ.EntityFrameworkCore/Repositories/EfSoftDeleteRepository.cs:160",
       "memberKind": "Constructor",
       "missingElement": "param:db",
       "reason": "Existing public API predating the documentation quality gate",
@@ -4332,7 +4332,7 @@
     },
     {
       "package": "TCJ.EntityFrameworkCore",
-      "documentationId": "M:TCJ.EntityFrameworkCore.Repositories.EfWriteRepository.#ctor(IWriteDbContext)@src/TCJ.EntityFrameworkCore/Repositories/EfWriteRepository.cs:123",
+      "documentationId": "M:TCJ.EntityFrameworkCore.Repositories.EfWriteRepository.#ctor(IWriteDbContext)@src/TCJ.EntityFrameworkCore/Repositories/EfWriteRepository.cs:212",
       "memberKind": "Constructor",
       "missingElement": "param:db",
       "reason": "Existing public API predating the documentation quality gate",

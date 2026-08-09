@@ -99,3 +99,7 @@ The dedicated GitHub Actions workflow runs the same suite on Linux and Windows a
 ## Concurrency stress tests
 
 `TCJ.Concurrency.Tests` owns deterministic concurrency contracts. Run the bounded core suite with `dotnet test tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj -c Release --filter "Category=Concurrency&Category!=AspNetCore&Category!=SqlServer"`. Replay an exact failure with `python3 tests/TCJ.Concurrency.Tests/scripts/replay-stress.py --scenario <name> --seed <seed>`. SQL Server scenarios use the pinned Testcontainers image and must not be used to imply that a shared `DbContext` or Unit of Work is thread-safe.
+
+## Observability tests
+
+`TCJ.Observability.Tests` uses in-memory `ActivityListener` and `MeterListener` instances; it requires no collector or network exporter. The suite covers stable source/meter identity and versions, no-listener behavior, parent-child propagation, success/failure/cancellation, domain-event and repository/Unit of Work instrumentation, ASP.NET Core exception handling, metric names/units/dimensions, and synthetic sensitive-data markers. Run the verifier afterward to generate `artifacts/observability/`.

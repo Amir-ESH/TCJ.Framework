@@ -257,3 +257,7 @@ Before changing package-facing behavior, validate the upgrade policy with `pytho
 ## Property and fuzz quality gates
 
 Run `python3 eng/verify-fuzzing.py validate-config` when changing Core, dependency registration, property generators, fuzz targets, corpus files, or fuzz policy. Property tests are deterministic and run in normal CI. The dedicated fuzz workflow runs bounded PR campaigns and longer weekly campaigns. See [Property and fuzz testing](property-and-fuzz-testing.md) for replay, corpus, minimization, and local target commands.
+
+## Observability validation
+
+Telemetry changes must keep `eng/observability-policy.json` and `eng/observability-contract.json` aligned with implementation and tests. Run `python3 eng/verify-observability.py validate-config`, then the `TCJ.Observability.Tests` project and `verify-observability.py verify` command documented in [the observability guide](observability.md). Generated `TestResults/Observability/` and `artifacts/observability/` content is local/CI evidence and must not be committed.

@@ -25,6 +25,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Added backend-neutral tracing and metrics across domain-event dispatch, dependency registration, EF Core repositories and Unit of Work/transactions, SQL Server configuration, and ASP.NET Core exception handling, with stable versioned contracts, sensitive-data-safe defaults, dedicated observability tests/verifier, CI/release enforcement, benchmarks, and OpenTelemetry sample configuration.
+
 - Deterministic property-based testing and bounded fuzzing for foundational Core and dependency-registration APIs, including custom generators, shrinking/replay, reviewed seed corpora, failure minimization, policy verification, dedicated/scheduled automation, and release-blocking quality gates.
 - Automated package upgrade compatibility from the published baseline to the release candidate, including six clean-room scenarios, source-tree stability, dependency/behavior diffs, persisted-data validation, migration guidance, release gates, and post-publication revalidation.
 - Clean-room NuGet package consumer compatibility across Linux, Windows, and macOS, with six package-only applications, isolated restore/source verification, package/symbol/Source Link validation, release gates, and published-package consumer reuse.

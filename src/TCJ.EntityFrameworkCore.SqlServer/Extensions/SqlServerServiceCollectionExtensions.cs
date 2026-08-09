@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using TCJ.Core.Diagnostics;
 using TCJ.EntityFrameworkCore.Abstractions;
 using TCJ.EntityFrameworkCore.Extensions;
+using TCJ.EntityFrameworkCore.SqlServer.Diagnostics;
 using TCJ.EntityFrameworkCore.SqlServer.Options;
 
 namespace TCJ.EntityFrameworkCore.SqlServer.Extensions;
@@ -45,14 +47,25 @@ public static class SqlServerServiceCollectionExtensions
 
         return services.AddTcjEntityFrameworkCore<TDbContext>((serviceProvider, optionsBuilder) =>
         {
-            string connectionString = connectionStringFactory(serviceProvider);
-            ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-
-            optionsBuilder.UseSqlServer(connectionString, sqlServerOptionsBuilder =>
+            using var activity = SqlServerTelemetryDiagnostics.StartConfigureActivity();
+            try
             {
-                tcjSqlServerOptions.Apply(sqlServerOptionsBuilder);
-                configureProvider?.Invoke(sqlServerOptionsBuilder);
-            });
+                string connectionString = connectionStringFactory(serviceProvider);
+                ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+                optionsBuilder.UseSqlServer(connectionString, sqlServerOptionsBuilder =>
+                {
+                    tcjSqlServerOptions.Apply(sqlServerOptionsBuilder);
+                    configureProvider?.Invoke(sqlServerOptionsBuilder);
+                });
+
+                TcjTelemetry.CompleteSuccess(activity);
+            }
+            catch (Exception exception)
+            {
+                TcjTelemetry.CompleteFailure(activity, exception);
+                throw;
+            }
         });
     }
 }

@@ -87,6 +87,8 @@ Provider-specific integration tests start a disposable pinned SQL Server contain
 
 ASP.NET Core end-to-end tests run a real in-memory application through TestServer, deterministic test authentication, request scopes, exception handling, Problem Details, and cancellation on Linux and Windows. See [ASP.NET Core integration testing](docs/aspnetcore-integration-testing.md).
 
+TCJ also exposes backend-neutral `ActivitySource` and `Meter` contracts for domain events, dependency registration, repositories, Unit of Work/transactions, SQL Server setup, and ASP.NET Core exception handling. Production packages do not depend on an exporter. See [Diagnostics and OpenTelemetry observability](docs/observability.md).
+
 Package-consumer compatibility is also tested from outside the production solution. Six clean applications restore only TCJ NuGet packages, verify the exact package version and source, build and run on Linux/Windows/macOS, exercise ASP.NET Core and EF Core wiring, and validate `.nupkg`, `.snupkg`, portable PDB, XML documentation, and Source Link metadata. See [Package consumer compatibility](docs/package-consumer-compatibility.md).
 
 ## Minimal application setup
@@ -147,6 +149,7 @@ python3 eng/verify-sbom.py validate-config
 python3 eng/verify-reproducible-build.py validate-config
 python3 eng/verify-sqlserver-integration.py validate-config
 python3 eng/verify-aspnetcore-integration.py validate-config
+python3 eng/verify-observability.py validate-config
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
@@ -174,6 +177,7 @@ NuGet packages and symbol packages are written to `artifacts/packages`. Restore 
 - [Performance benchmarking and regression gate](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/performance-benchmarks.md)
 - [Architecture tests and module dependency rules](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/architecture-tests.md)
 - [ASP.NET Core end-to-end integration testing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/aspnetcore-integration-testing.md)
+- [Diagnostics and OpenTelemetry observability](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/observability.md)
 - [Package consumer compatibility](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/package-consumer-compatibility.md)
 - [Package upgrade testing](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/package-upgrade-testing.md)
 - [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](https://github.com/Amir-ESH/TCJ.Framework/blob/main/docs/migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)

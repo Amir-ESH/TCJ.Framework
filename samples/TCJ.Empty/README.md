@@ -9,6 +9,7 @@ This sample demonstrates the current TCJ modules together in a small Minimal API
 - Unit of Work
 - auditing and soft deletion
 - deterministic, idempotent data seeding
+- OpenTelemetry tracing and metrics with TCJ ActivitySource/Meter registration
 
 For framework setup and package details, start with the [documentation hub](../../docs/README.md).
 
@@ -57,3 +58,7 @@ Use `TCJ.Empty.http` to exercise create, read, update, soft-delete, and restore 
 ## Retry note
 
 The sample data seeder owns an explicit transaction, so SQL Server retry-on-failure is disabled in `Program.cs` until execution-strategy orchestration is added. This is a sample-specific choice, not a general production recommendation.
+
+## OpenTelemetry
+
+The sample registers TCJ tracing and meters with the OpenTelemetry SDK and configures an OTLP exporter. TCJ itself does not require an exporter or collector. Configure the standard `OTEL_EXPORTER_OTLP_*` environment variables when you want to send telemetry; do not commit exporter credentials or sensitive headers. See [the observability guide](../../docs/observability.md) for the stable source, activity, metric, tag, and cardinality contracts.

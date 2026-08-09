@@ -54,3 +54,7 @@ Release preflight and tagged publication build all five primary packages and all
 ## Fuzzing artifacts
 
 Fuzz inputs are untrusted data. The fuzz workflow does not execute corpus files as scripts, bounds input and artifact sizes, avoids shell interpolation of corpus bytes, rejects path traversal and configured secret markers, uses short artifact retention, and does not automatically commit generated crash corpora. Report a security-sensitive fuzz finding privately under the normal vulnerability-reporting process before publishing the reproducer.
+
+## Telemetry data boundary
+
+TCJ telemetry excludes raw SQL, connection strings, request bodies, entity/user/tenant identifiers, tokens, passwords, and exception messages by default. `RecordExceptionMessages` is an explicit diagnostic opt-in and should be treated as potentially sensitive. CI exercises synthetic marker values and scans observability evidence; production packages do not contain exporter credentials, endpoints, or vendor exporters.

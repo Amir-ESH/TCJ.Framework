@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using TCJ.Core.DomainEvents;
 using TCJ.Core.Identifiers;
+using TCJ.DependencyInjection.Diagnostics;
 using TCJ.DependencyInjection.DomainEvents;
 using TCJ.DependencyInjection.Lifetimes;
 using TCJ.DependencyInjection.Registration;
@@ -79,23 +80,30 @@ public static class ServiceCollectionExtensions
         // mutation of the same collection must follow the same application-level boundary.
         lock (services)
         {
-            if (options.RegisterFrameworkServices)
-            {
-                RegisterFrameworkServices(services);
-            }
+            DependencyInjectionTelemetryDiagnostics.ObserveRegistration(
+                services,
+                () =>
+                {
+                    if (options.RegisterFrameworkServices)
+                    {
+                        RegisterFrameworkServices(services);
+                    }
 
-            var implementationTypes = options.Assemblies
-                .SelectMany(GetPublicConcreteTypes)
-                .Distinct()
-                .OrderBy(type => type.FullName, StringComparer.Ordinal)
-                .ToArray();
+                    Type[] implementationTypes = DependencyInjectionTelemetryDiagnostics.ObserveScan(
+                        options.Assemblies.Count,
+                        () => options.Assemblies
+                            .SelectMany(GetPublicConcreteTypes)
+                            .Distinct()
+                            .OrderBy(type => type.FullName, StringComparer.Ordinal)
+                            .ToArray());
 
-            if (options.RegisterDomainEventHandlers)
-            {
-                RegisterDomainEventHandlers(services, implementationTypes);
-            }
+                    if (options.RegisterDomainEventHandlers)
+                    {
+                        RegisterDomainEventHandlers(services, implementationTypes);
+                    }
 
-            RegisterMarkedDependencies(services, implementationTypes);
+                    RegisterMarkedDependencies(services, implementationTypes);
+                });
         }
 
         return services;

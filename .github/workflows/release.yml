@@ -38,8 +38,14 @@ jobs:
     with:
       mode: release
 
+  performance-benchmarks:
+    name: Performance and observability overhead gate
+    uses: ./.github/workflows/performance-benchmarks.yml
+    with:
+      mode: full
+
   build-and-pack:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -104,6 +110,9 @@ jobs:
       - name: Validate concurrency stress configuration
         run: python3 eng/verify-concurrency.py validate-config
 
+      - name: Validate observability configuration
+        run: python3 eng/verify-observability.py validate-config
+
       - name: Validate release tag
         id: release-version
         shell: bash
@@ -161,6 +170,47 @@ jobs:
           dotnet build TCJ.slnx
           --configuration Release
           --no-restore
+
+      - name: Run observability contract tests
+        run: >
+          dotnet test tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=observability.trx"
+          --results-directory TestResults/Observability
+
+      - name: Verify observability contracts and evidence
+        run: >
+          python3 eng/verify-observability.py verify
+          --results TestResults/Observability
+          --output artifacts/observability
+
+      - name: Publish observability summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/observability/OBSERVABILITY_SUMMARY.md ]]; then
+            cat artifacts/observability/OBSERVABILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload observability evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: observability-${{ github.run_id }}
+          path: |
+            TestResults/Observability/**
+            artifacts/observability/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Preserve observability summary with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cp artifacts/observability/OBSERVABILITY_SUMMARY.md artifacts/release/OBSERVABILITY_SUMMARY.md
+          cp artifacts/observability/observability-summary.json artifacts/release/observability-summary.json
 
       - name: Generate tagged API metadata
         run: >
@@ -620,6 +670,8 @@ jobs:
             artifacts/release/property-test-summary.json
             artifacts/release/FUZZ_SUMMARY.md
             artifacts/release/fuzz-summary.json
+            artifacts/release/OBSERVABILITY_SUMMARY.md
+            artifacts/release/observability-summary.json
 
       - name: Upload release package consumer compatibility reports
         if: always()
@@ -667,6 +719,8 @@ jobs:
             artifacts/release/property-test-summary.json
             artifacts/release/FUZZ_SUMMARY.md
             artifacts/release/fuzz-summary.json
+            artifacts/release/OBSERVABILITY_SUMMARY.md
+            artifacts/release/observability-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
           if-no-files-found: error
           retention-days: 30
@@ -832,6 +886,8 @@ jobs:
             artifacts/release/compatibility-summary.json
             artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
             artifacts/release/upgrade-compatibility-summary.json
+            artifacts/release/OBSERVABILITY_SUMMARY.md
+            artifacts/release/observability-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
           )
           release_args=(

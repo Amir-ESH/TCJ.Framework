@@ -24,8 +24,9 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 18. [ASP.NET Core end-to-end integration testing](aspnetcore-integration-testing.md)
 19. [Package consumer compatibility](package-consumer-compatibility.md)
 20. [Package upgrade testing](package-upgrade-testing.md)
-21. [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
-22. [First preview release notes](release-notes/0.1.0-preview.1.md)
+21. [Diagnostics and OpenTelemetry observability](observability.md)
+22. [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
+23. [First preview release notes](release-notes/0.1.0-preview.1.md)
 
 ## Package reference
 

@@ -103,6 +103,9 @@ jobs:
       - name: Validate concurrency stress configuration
         run: python3 eng/verify-concurrency.py validate-config
 
+      - name: Validate observability configuration
+        run: python3 eng/verify-observability.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -111,6 +114,39 @@ jobs:
           dotnet build TCJ.slnx
           --configuration Release
           --no-restore
+
+      - name: Run observability contract tests
+        run: >
+          dotnet test tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=observability.trx"
+          --results-directory TestResults/Observability
+
+      - name: Verify observability contracts and evidence
+        run: >
+          python3 eng/verify-observability.py verify
+          --results TestResults/Observability
+          --output artifacts/observability
+
+      - name: Publish observability summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/observability/OBSERVABILITY_SUMMARY.md ]]; then
+            cat artifacts/observability/OBSERVABILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload observability evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: observability-${{ github.run_id }}
+          path: |
+            TestResults/Observability/**
+            artifacts/observability/**
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Generate DocFX API metadata
         run: >

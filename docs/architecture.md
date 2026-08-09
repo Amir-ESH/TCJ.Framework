@@ -84,3 +84,7 @@ dotnet test tests/TCJ.Architecture.Tests/TCJ.Architecture.Tests.csproj \
 ```
 
 See [Architecture tests and module dependency rules](architecture-tests.md) for the complete dependency graph and change process.
+
+## Observability boundary
+
+TCJ production modules publish logical framework telemetry through BCL `ActivitySource` and `Meter` primitives only. Exporters, collectors, and vendor SDKs stay at the application edge. Repository and Unit of Work activities complement rather than duplicate EF Core/database command telemetry, and ASP.NET Core exception activities remain children of the ambient request activity. Stable names and bounded tags are tracked in `eng/observability-contract.json`; see [Diagnostics and OpenTelemetry observability](observability.md).

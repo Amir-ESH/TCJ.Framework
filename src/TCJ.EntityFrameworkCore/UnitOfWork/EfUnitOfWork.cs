@@ -1,6 +1,8 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using TCJ.Core.Diagnostics;
 using TCJ.EntityFrameworkCore.Abstractions;
+using TCJ.EntityFrameworkCore.Diagnostics;
 
 namespace TCJ.EntityFrameworkCore.UnitOfWork;
 
@@ -22,20 +24,67 @@ public sealed class EfUnitOfWork : IUnitOfWork
     }
 
     /// <inheritdoc />
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        _db.SaveChangesAsync(cancellationToken);
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        string provider = EntityFrameworkCoreTelemetryDiagnostics.GetProviderName(_db);
+        PersistenceTelemetryState telemetry =
+            EntityFrameworkCoreTelemetryDiagnostics.StartPersistenceOperation(
+                TcjDiagnosticNames.Activities.UnitOfWorkCommit,
+                "commit",
+                provider,
+                PersistenceMetricKind.Commit);
+
+        try
+        {
+            Task<int> operation = _db.SaveChangesAsync(cancellationToken);
+            return telemetry.IsActive
+                ? CompleteSaveChangesAsync(operation, telemetry, cancellationToken)
+                : operation;
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            telemetry.CompleteCanceled(exception);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
+        }
+    }
 
     /// <inheritdoc />
     public async Task<IUnitOfWorkTransaction> BeginTransactionAsync(
         CancellationToken cancellationToken = default)
     {
         EnsureNoActiveTransaction();
+        string provider = EntityFrameworkCoreTelemetryDiagnostics.GetProviderName(_db);
+        PersistenceTelemetryState telemetry =
+            EntityFrameworkCoreTelemetryDiagnostics.StartPersistenceOperation(
+                TcjDiagnosticNames.Activities.TransactionBegin,
+                "transaction_begin",
+                provider,
+                PersistenceMetricKind.None);
 
-        var transaction = await _db.Database
-            .BeginTransactionAsync(cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            var transaction = await _db.Database
+                .BeginTransactionAsync(cancellationToken)
+                .ConfigureAwait(false);
 
-        return new EfUnitOfWorkTransaction(transaction);
+            telemetry.CompleteSuccess(transactionOutcome: TcjDiagnosticNames.Outcomes.Success);
+            return new EfUnitOfWorkTransaction(transaction, provider);
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            telemetry.CompleteCanceled(exception);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
+        }
     }
 
     /// <inheritdoc />
@@ -44,12 +93,56 @@ public sealed class EfUnitOfWork : IUnitOfWork
         CancellationToken cancellationToken = default)
     {
         EnsureNoActiveTransaction();
+        string provider = EntityFrameworkCoreTelemetryDiagnostics.GetProviderName(_db);
+        PersistenceTelemetryState telemetry =
+            EntityFrameworkCoreTelemetryDiagnostics.StartPersistenceOperation(
+                TcjDiagnosticNames.Activities.TransactionBegin,
+                "transaction_begin",
+                provider,
+                PersistenceMetricKind.None);
 
-        var transaction = await _db.Database
-            .BeginTransactionAsync(isolationLevel, cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            var transaction = await _db.Database
+                .BeginTransactionAsync(isolationLevel, cancellationToken)
+                .ConfigureAwait(false);
 
-        return new EfUnitOfWorkTransaction(transaction);
+            telemetry.CompleteSuccess(transactionOutcome: TcjDiagnosticNames.Outcomes.Success);
+            return new EfUnitOfWorkTransaction(transaction, provider);
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            telemetry.CompleteCanceled(exception);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
+        }
+    }
+
+    private static async Task<int> CompleteSaveChangesAsync(
+        Task<int> operation,
+        PersistenceTelemetryState telemetry,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            int affectedRows = await operation.ConfigureAwait(false);
+            telemetry.CompleteSuccess(affectedRows);
+            return affectedRows;
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            telemetry.CompleteCanceled(exception);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
+        }
     }
 
     private void EnsureNoActiveTransaction()
