@@ -4,51 +4,51 @@ using TCJ.DependencyInjection.Lifetimes;
 
 namespace TCJ.Concurrency.Tests.Fixtures;
 
-public interface ITransientProbe : ITransientDependency
+public interface ITransientProbe
 {
     Guid Id { get; }
 }
-public sealed class TransientProbe : ITransientProbe
+public sealed class TransientProbe : ITransientProbe, ITransientDependency
 {
     public Guid Id { get; } = Guid.NewGuid();
 }
 
-public interface IScopedProbe : IScopedDependency
+public interface IScopedProbe
 {
     Guid Id { get; }
 }
-public sealed class ScopedProbe : IScopedProbe
+public sealed class ScopedProbe : IScopedProbe, IScopedDependency
 {
     public Guid Id { get; } = Guid.NewGuid();
 }
 
-public interface ISingletonProbe : ISingletonDependency
+public interface ISingletonProbe
 {
     Guid Id { get; }
 }
-public sealed class SingletonProbe : ISingletonProbe
+public sealed class SingletonProbe : ISingletonProbe, ISingletonDependency
 {
     public Guid Id { get; } = Guid.NewGuid();
 }
 
-public interface IDisposalProbe : IScopedDependency
+public interface IDisposalProbe
 {
     Guid Id { get; }
     bool IsDisposed { get; }
 }
-public sealed class DisposalProbe : IDisposalProbe, IDisposable
+public sealed class DisposalProbe : IDisposalProbe, IScopedDependency, IDisposable
 {
     public Guid Id { get; } = Guid.NewGuid();
     public bool IsDisposed { get; private set; }
     public void Dispose() => IsDisposed = true;
 }
 
-public interface IOperationRecorder : IScopedDependency
+public interface IOperationRecorder
 {
     void Record(string operationId);
     IReadOnlyCollection<string> Records { get; }
 }
-public sealed class OperationRecorder : IOperationRecorder
+public sealed class OperationRecorder : IOperationRecorder, IScopedDependency
 {
     private readonly ConcurrentQueue<string> _records = new();
     public IReadOnlyCollection<string> Records => _records.ToArray();

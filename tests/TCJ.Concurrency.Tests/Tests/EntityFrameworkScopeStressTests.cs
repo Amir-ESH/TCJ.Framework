@@ -15,10 +15,10 @@ namespace TCJ.Concurrency.Tests.Tests;
 public sealed class EntityFrameworkScopeStressTests
 {
     [Fact]
-    public Task IndependentDbContextScopesDoNotShareContext()
+    public async Task IndependentDbContextScopesDoNotShareContext()
     {
         using ServiceProvider provider = BuildProvider(nameof(IndependentDbContextScopesDoNotShareContext));
-        return StressRunner.RunAsync(nameof(IndependentDbContextScopesDoNotShareContext), "core", _ =>
+        await StressRunner.RunAsync(nameof(IndependentDbContextScopesDoNotShareContext), "core", _ =>
         {
             using IServiceScope first = provider.CreateScope();
             using IServiceScope second = provider.CreateScope();
@@ -32,10 +32,10 @@ public sealed class EntityFrameworkScopeStressTests
     }
 
     [Fact]
-    public Task RepositoryResolutionRemainsScopeCorrect()
+    public async Task RepositoryResolutionRemainsScopeCorrect()
     {
         using ServiceProvider provider = BuildProvider(nameof(RepositoryResolutionRemainsScopeCorrect));
-        return StressRunner.RunAsync(nameof(RepositoryResolutionRemainsScopeCorrect), "core", _ =>
+        await StressRunner.RunAsync(nameof(RepositoryResolutionRemainsScopeCorrect), "core", _ =>
         {
             using IServiceScope first = provider.CreateScope();
             using IServiceScope second = provider.CreateScope();
