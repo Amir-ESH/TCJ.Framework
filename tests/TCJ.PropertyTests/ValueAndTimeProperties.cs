@@ -69,7 +69,8 @@ public sealed class ValueAndTimeProperties
     [Trait("Category", "Guid")]
     public bool VersionSevenGuidUsesDeterministicTime(long offsetSeconds)
     {
-        long bounded = offsetSeconds % 86_400;
+        long maxOffsetSeconds = (DateTimeOffset.MaxValue - DateTimeOffset.UnixEpoch).Ticks / TimeSpan.TicksPerSecond;
+        long bounded = Math.Abs(offsetSeconds % (maxOffsetSeconds + 1));
         var provider = new FixedTimeProvider(DateTimeOffset.UnixEpoch.AddSeconds(bounded));
         var generator = new GuidGenerator(provider);
         Guid first = generator.CreateVersion7();

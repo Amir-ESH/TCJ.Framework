@@ -81,6 +81,10 @@ class FuzzingVerifierTests(unittest.TestCase):
     def test_workflow_contract_is_present(self):
         vf.check_workflows()
 
+    def test_fuzz_campaign_serializes_the_verifier_camel_case_contract(self):
+        campaign=(vf.ROOT/'fuzz/TCJ.FuzzTests/FuzzCampaign.cs').read_text(encoding='utf-8')
+        self.assertIn('JsonNamingPolicy.CamelCase',campaign)
+
     def test_policy_requires_deterministic_seed_and_shrinking(self):
         policy=vf.load_json(vf.POLICY_PATH)
         self.assertTrue(policy['requireDeterministicSeed']); self.assertTrue(policy['requireShrinking'])
@@ -106,7 +110,7 @@ class FuzzingVerifierTests(unittest.TestCase):
                 'largestInputBytes':64,'peakWorkingSetBytes':1048576,'minimizedFailures':0,'unresolvedFailures':0,'failureKind':None,'failureHash':None}
         if overrides: result.update(overrides)
         (directory/'result.json').write_text(json.dumps(result))
-        (directory/'runner-result.json').write_text(json.dumps({'target':target,'status':'Pass' if classification=='Pass' else 'Fail','classification':classification,'returnCode':0 if classification=='Pass' else 1}))
+        (directory/'runner-result.json').write_text(json.dumps({'target':target,'status':'Pass' if classification=='Pass' else 'Fail','classification':classification,'returnCode':0 if classification=='Pass' else 1,'wallClockSeconds':duration,'requestedDurationSeconds':duration}))
 
 
     def test_fuzz_scope_selects_only_affected_foundational_targets(self):
@@ -161,6 +165,31 @@ class FuzzingVerifierTests(unittest.TestCase):
             policy=vf.load_json(vf.POLICY_PATH)
             for target in policy['requiredFuzzTargets'][1:]: self._write_fuzz_result(td,target)
             with self.assertRaises(vf.VerificationError): vf.verify_fuzz(Path(td),Path(out),'abc',30)
+
+    def test_verify_fuzz_rejects_pascal_case_campaign_schema(self):
+        with tempfile.TemporaryDirectory() as td, tempfile.TemporaryDirectory() as out:
+            target='StringExtensions'; self._write_fuzz_result(td,target)
+            path=Path(td)/target/'result.json'; data=json.loads(path.read_text())
+            pascal={key[0].upper()+key[1:]:value for key,value in data.items()}
+            path.write_text(json.dumps(pascal))
+            with self.assertRaisesRegex(vf.VerificationError,'missing required field'):
+                vf.verify_fuzz(Path(td),Path(out),'abc',30,[target])
+
+    def test_verify_fuzz_rejects_missing_campaign_metric(self):
+        with tempfile.TemporaryDirectory() as td, tempfile.TemporaryDirectory() as out:
+            target='StringExtensions'; self._write_fuzz_result(td,target)
+            path=Path(td)/target/'result.json'; data=json.loads(path.read_text())
+            data.pop('executions'); path.write_text(json.dumps(data))
+            with self.assertRaisesRegex(vf.VerificationError,'executions'):
+                vf.verify_fuzz(Path(td),Path(out),'abc',30,[target])
+
+    def test_verify_fuzz_rejects_target_identity_mismatch(self):
+        with tempfile.TemporaryDirectory() as td, tempfile.TemporaryDirectory() as out:
+            target='StringExtensions'; self._write_fuzz_result(td,target)
+            path=Path(td)/target/'result.json'; data=json.loads(path.read_text())
+            data['target']='Check'; path.write_text(json.dumps(data))
+            with self.assertRaisesRegex(vf.VerificationError,'target mismatch'):
+                vf.verify_fuzz(Path(td),Path(out),'abc',30,[target])
 
     def test_verify_properties_accepts_sufficient_passes(self):
         with tempfile.TemporaryDirectory() as td, tempfile.TemporaryDirectory() as out:

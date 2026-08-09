@@ -130,6 +130,7 @@ def validate_config(skip_git=False):
     campaign=(fuzz.parent/'FuzzCampaign.cs').read_text(encoding='utf-8')
     require('Task.WhenAny' in campaign and 'maxInputBytes' in campaign and 'maximumProcessMemoryBytes' in campaign,'Per-input timeout, input-size, and memory limits are required.')
     require('minimized' in campaign and 'failures' in campaign,'Failure corpus and minimization support are required.')
+    require('JsonNamingPolicy.CamelCase' in campaign,'Fuzz result JSON must use the verifier camelCase field contract.')
     enum_target=(fuzz.parent/'Targets/EnumerableExtensionsTarget.cs').read_text(encoding='utf-8')
     require(f"MaxElements = {policy['maximumCollectionElements']}" in enum_target,'Fuzz collection limit must match policy.')
     check_workflows(); check_git(policy,skip_git)
@@ -169,22 +170,36 @@ def scan_sensitive(path:Path,markers):
             for marker in markers:
                 if marker.lower() in text: raise VerificationError(f'Sensitive marker found in fuzz artifact: {file}')
 
+FUZZ_RESULT_FIELDS={
+    'target','status','seed','durationSeconds','executions','crashes','hangs','unexpectedExceptions',
+    'invariantViolations','inputSizeViolations','timeoutViolations','largestInputBytes','peakWorkingSetBytes',
+    'minimizedFailures','unresolvedFailures','failureKind','failureHash'
+}
+RUNNER_RESULT_FIELDS={'target','status','classification','returnCode','wallClockSeconds','requestedDurationSeconds'}
+
+def validate_result_contract(data:dict,name:str,required_fields:set[str],kind:str):
+    missing=required_fields-set(data)
+    require(not missing,f'{kind} result for {name} is missing required field(s): {sorted(missing)}')
+    require(data.get('target')==name,f'{kind} result target mismatch for {name}: {data.get("target")}')
+
 def verify_fuzz(results:Path,output:Path,commit_sha:str,minimum_duration:int|None,targets:list[str]|None=None):
     policy=load_json(POLICY_PATH); required=targets or policy['requiredFuzzTargets']; rows=[]
     unknown=set(required)-set(policy['requiredFuzzTargets']); require(not unknown,f'Unknown fuzz targets requested for verification: {sorted(unknown)}')
     for name in required:
         directory=results/name; require(directory.is_dir(),f'Missing fuzz target results: {name}')
         runner=load_external(directory/'runner-result.json')
-        require(runner.get('status')=='Pass',f'Fuzz target process failed: {name} ({runner.get("classification")})')
+        validate_result_contract(runner,name,RUNNER_RESULT_FIELDS,'Fuzz runner')
+        require(runner['status']=='Pass',f'Fuzz target process failed: {name} ({runner["classification"]})')
         data=load_external(directory/'result.json')
-        require(data.get('status')=='Pass',f'Fuzz target failed: {name}: {data.get("failureKind")}')
+        validate_result_contract(data,name,FUZZ_RESULT_FIELDS,'Fuzz campaign')
+        require(data['status']=='Pass',f'Fuzz target failed: {name}: {data["failureKind"]}')
         for key in ['crashes','hangs','unexpectedExceptions','invariantViolations','inputSizeViolations','timeoutViolations','unresolvedFailures']:
-            require(int(data.get(key,0))==0,f'{name} reports {key}={data.get(key)}')
-        require(int(data.get('executions',0))>0,f'{name} did not execute any inputs.')
-        require(int(data.get('largestInputBytes',0))<=int(policy['maximumInputBytes']),f'{name} exceeded the maximum input-size policy.')
-        require(int(data.get('peakWorkingSetBytes',0))<=int(policy['maximumProcessMemoryBytes']),f'{name} exceeded the process-memory policy.')
+            require(int(data[key])==0,f'{name} reports {key}={data[key]}')
+        require(int(data['executions'])>0,f'{name} did not execute any inputs.')
+        require(int(data['largestInputBytes'])<=int(policy['maximumInputBytes']),f'{name} exceeded the maximum input-size policy.')
+        require(int(data['peakWorkingSetBytes'])<=int(policy['maximumProcessMemoryBytes']),f'{name} exceeded the process-memory policy.')
         if minimum_duration is not None:
-            require(float(data.get('durationSeconds',0))>=max(0,minimum_duration-1),f'{name} did not run for the required duration.')
+            require(float(data['durationSeconds'])>=max(0,minimum_duration-1),f'{name} did not run for the required duration.')
         rows.append(data)
     scan_sensitive(results,policy['sensitiveMarkers'])
     output.mkdir(parents=True,exist_ok=True)

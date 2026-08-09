@@ -14,7 +14,7 @@ internal sealed class FuzzCampaign(
     int perInputTimeoutMilliseconds,
     long maximumProcessMemoryBytes)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     public async Task<int> RunAsync()
     {
