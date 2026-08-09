@@ -132,3 +132,7 @@ python3 eng/verify-documentation.py verify \
 ```
 
 See [`docs/documentation-authoring.md`](docs/documentation-authoring.md) for XML IDs, `cref`, examples, local preview, baseline maintenance, and versioned site metadata.
+
+## Property and fuzz findings
+
+Changes to foundational Core or dependency-registration behavior should preserve the property and fuzz gates. Reproduce a property failure from its FsCheck seed or a fuzz failure from its minimized corpus input. Every confirmed finding requires a conventional regression test before the failure corpus is considered resolved. Do not disable a flaky property, lower fuzz limits, remove a required target, or swallow broad exception classes to make a gate pass.

@@ -97,6 +97,9 @@ jobs:
       - name: Validate package upgrade compatibility configuration
         run: python3 eng/verify-upgrade-compatibility.py validate-config
 
+      - name: Validate property and fuzz testing configuration
+        run: python3 eng/verify-fuzzing.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -141,6 +144,54 @@ jobs:
           if [[ -f artifacts/documentation/DOCUMENTATION_SUMMARY.md ]]; then
             cat artifacts/documentation/DOCUMENTATION_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Run property tests
+        id: property-tests
+        continue-on-error: true
+        run: >
+          dotnet test tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj
+          --configuration Release
+          --no-build
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
+          --logger "trx;LogFileName=property-tests.trx"
+          --results-directory TestResults/PropertyTests
+
+      - name: Verify property testing quality gate
+        id: verify-properties
+        if: always()
+        continue-on-error: true
+        run: >
+          python3 eng/verify-fuzzing.py verify-properties
+          --results TestResults/PropertyTests
+          --output artifacts/fuzzing/property-report
+          --commit-sha "${{ github.sha }}"
+
+      - name: Publish property testing summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md ]]; then
+            cat artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload property testing results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: property-tests-${{ github.run_id }}
+          path: |
+            TestResults/PropertyTests/**
+            artifacts/fuzzing/property-report/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce property testing result
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.property-tests.outcome }}" = "success"
+          test "${{ steps.verify-properties.outcome }}" = "success"
 
       - name: Run tests
         run: >

@@ -190,3 +190,7 @@ Contributions are welcome through focused issues and pull requests. Read [`CONTR
 ## License
 
 TCJ Framework is licensed under the [MIT License](https://github.com/Amir-ESH/TCJ.Framework/blob/main/LICENSE.txt).
+
+## Property-based and fuzz testing
+
+Foundational `TCJ.Core` and `TCJ.DependencyInjection` behavior is protected by deterministic FsCheck properties and five bounded fuzz targets. Pull requests get reproducible generated-input coverage and short fuzz campaigns; scheduled and release workflows run longer or release-blocking validation. See [Property and fuzz testing](docs/property-and-fuzz-testing.md).

@@ -106,6 +106,15 @@ Describe the problem and the approach taken.
 - [ ] Generated package-upgrade compatibility output is not committed
 - [ ] Upgrade-compatibility policy changes are explicit and justified
 
+- [ ] Property tests pass with required categories, iterations, deterministic seeds, and shrinking
+- [ ] Fuzz targets complete without crashes, hangs, unexpected exceptions, or invariant violations
+- [ ] Failure seeds and minimized inputs are reproducible
+- [ ] Confirmed property or fuzz findings have conventional regression tests
+- [ ] Fuzz input-size, per-input timeout, total-duration, and collection limits remain enforced
+- [ ] Seed corpora are bounded, reviewed, and contain no sensitive values
+- [ ] Generated fuzz artifacts and crash corpora are not committed
+- [ ] Fuzzing-policy changes are explicit and justified
+
 ## Related issue
 
 Refs #

@@ -92,6 +92,9 @@ jobs:
       - name: Validate package upgrade compatibility configuration
         run: python3 eng/verify-upgrade-compatibility.py validate-config
 
+      - name: Validate property and fuzz testing configuration
+        run: python3 eng/verify-fuzzing.py validate-config
+
       - name: Validate release tag
         id: release-version
         shell: bash
@@ -230,6 +233,68 @@ jobs:
           if [[ -f artifacts/coverage/COVERAGE_SUMMARY.md ]]; then
             cat artifacts/coverage/COVERAGE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Run tagged property tests
+        run: >
+          dotnet test tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj
+          --configuration Release
+          --no-build
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
+          --logger "trx;LogFileName=release-property-tests.trx"
+          --results-directory TestResults/PropertyTests
+
+      - name: Verify tagged property tests
+        run: >
+          python3 eng/verify-fuzzing.py verify-properties
+          --results TestResults/PropertyTests
+          --output artifacts/fuzzing/property-report
+          --commit-sha "${{ github.sha }}"
+
+      - name: Run exact tagged-source fuzz targets
+        run: >
+          python3 fuzz/scripts/run-fuzz.py
+          --duration 30
+          --output artifacts/fuzzing/fuzz-results
+          --seed 39039
+
+      - name: Verify exact tagged-source fuzz targets
+        run: >
+          python3 eng/verify-fuzzing.py verify-fuzz
+          --results artifacts/fuzzing/fuzz-results
+          --output artifacts/fuzzing/fuzz-report
+          --commit-sha "${{ github.sha }}"
+          --minimum-duration-seconds 30
+
+      - name: Publish property and fuzz summaries
+        if: always()
+        shell: bash
+        run: |
+          test ! -f artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md || cat artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          test ! -f artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md || cat artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve property and fuzz summaries with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cp artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md artifacts/release/PROPERTY_TEST_SUMMARY.md
+          cp artifacts/fuzzing/property-report/property-test-summary.json artifacts/release/property-test-summary.json
+          cp artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md artifacts/release/FUZZ_SUMMARY.md
+          cp artifacts/fuzzing/fuzz-report/fuzz-summary.json artifacts/release/fuzz-summary.json
+
+      - name: Upload tagged property and fuzz reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-property-fuzz-${{ steps.release-version.outputs.value }}
+          path: |
+            TestResults/PropertyTests/**
+            artifacts/fuzzing/property-report/**
+            artifacts/fuzzing/fuzz-results/**
+            artifacts/fuzzing/fuzz-report/**
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Clean previous reproducibility outputs
         run: rm -rf artifacts/reproducibility artifacts/packages
@@ -526,6 +591,10 @@ jobs:
             artifacts/release/compatibility-summary.json
             artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
             artifacts/release/upgrade-compatibility-summary.json
+            artifacts/release/PROPERTY_TEST_SUMMARY.md
+            artifacts/release/property-test-summary.json
+            artifacts/release/FUZZ_SUMMARY.md
+            artifacts/release/fuzz-summary.json
 
       - name: Upload release package consumer compatibility reports
         if: always()
@@ -569,6 +638,10 @@ jobs:
             artifacts/release/compatibility-summary.json
             artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
             artifacts/release/upgrade-compatibility-summary.json
+            artifacts/release/PROPERTY_TEST_SUMMARY.md
+            artifacts/release/property-test-summary.json
+            artifacts/release/FUZZ_SUMMARY.md
+            artifacts/release/fuzz-summary.json
           if-no-files-found: error
           retention-days: 30
 

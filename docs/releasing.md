@@ -253,3 +253,7 @@ Confirm that the documentation summary reports all five packages, the configured
 ## Upgrade compatibility gate
 
 Release preflight and the official tag workflow run all six upgrade scenarios from the version in `eng/published-release.json` to the version in `eng/release-manifest.json` using the exact promoted candidate packages. Undocumented behavior changes, dependency downgrades, source-tree changes, or incomplete guided migrations block release. After NuGet publication, the published-package workflow reruns Core, ASP.NET Core, and FullStack upgrade paths with the target restored from NuGet.org. See [package upgrade testing](package-upgrade-testing.md) and the [current migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md).
+
+## Property and fuzz release gate
+
+Release preflight and the official tag workflow rerun all required property tests and fuzz targets against the exact release source. Any unresolved property failure, crash, hang, unexpected exception, invariant violation, or resource-limit violation blocks publication. Review `PROPERTY_TEST_SUMMARY.md`, `FUZZ_SUMMARY.md`, and any minimized failure corpus before approving a release.

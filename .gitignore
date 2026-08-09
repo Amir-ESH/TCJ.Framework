@@ -504,3 +504,10 @@ compatibility/**/obj/
 !compatibility/**/*.cs
 !compatibility/**/*.py
 !compatibility/**/*.props
+
+# Property-based testing and fuzzing generated output
+artifacts/fuzzing/
+fuzz/**/bin/
+fuzz/**/obj/
+fuzz/generated-corpus/
+TestResults/PropertyTests/

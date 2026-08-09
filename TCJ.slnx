@@ -2,6 +2,9 @@
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/TCJ.Benchmarks/TCJ.Benchmarks.csproj" />
   </Folder>
+  <Folder Name="/fuzz/">
+    <Project Path="fuzz/TCJ.FuzzTests/TCJ.FuzzTests.csproj" />
+  </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/TCJ.Empty/TCJ.Empty.csproj" />
   </Folder>
@@ -21,5 +24,6 @@
     <Project Path="tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj" />
     <Project Path="tests/TCJ.EntityFrameworkCore.SqlServer.Tests/TCJ.EntityFrameworkCore.SqlServer.Tests.csproj" />
     <Project Path="tests/TCJ.EntityFrameworkCore.Tests/TCJ.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj" />
   </Folder>
 </Solution>

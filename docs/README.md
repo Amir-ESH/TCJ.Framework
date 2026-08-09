@@ -60,3 +60,5 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 - [Documentation authoring and baseline maintenance](documentation-authoring.md)
 
 The generated `artifacts/documentation/api/` and `artifacts/documentation/site/` directories are workflow outputs and must not be committed.
+
+- [Property and fuzz testing](property-and-fuzz-testing.md) explains deterministic FsCheck properties, shrinking/replay, fuzz target corpora, resource limits, failure minimization, and release gating.

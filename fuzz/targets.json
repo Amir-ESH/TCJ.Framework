@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "targets": [
+    { "name": "StringExtensions", "corpus": "fuzz/corpus/strings" },
+    { "name": "Check", "corpus": "fuzz/corpus/guards" },
+    { "name": "EnumerableExtensions", "corpus": "fuzz/corpus/collections" },
+    { "name": "DependencyScanning", "corpus": "fuzz/corpus/dependency-types" },
+    { "name": "ResultComposition", "corpus": "fuzz/corpus/results" }
+  ]
+}

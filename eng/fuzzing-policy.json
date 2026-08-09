@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "propertyTestProject": "tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj",
+  "fuzzProject": "fuzz/TCJ.FuzzTests/TCJ.FuzzTests.csproj",
+  "targetCatalog": "fuzz/targets.json",
+  "minimumPropertyCount": 36,
+  "minimumIterationsPerProperty": 100,
+  "requiredPropertyCategories": [
+    "Result",
+    "String",
+    "Comparable",
+    "Enumerable",
+    "Collection",
+    "DateTime",
+    "Decimal",
+    "Guid",
+    "Guard",
+    "DependencyInjection"
+  ],
+  "requiredFuzzTargets": [
+    "StringExtensions",
+    "Check",
+    "EnumerableExtensions",
+    "DependencyScanning",
+    "ResultComposition"
+  ],
+  "pullRequestFuzzSecondsPerTarget": 30,
+  "scheduledFuzzMinutesPerTarget": 10,
+  "releaseFuzzSecondsPerTarget": 30,
+  "maximumInputBytes": 1048576,
+  "maximumCorpusEntryBytes": 65536,
+  "maximumSingleExecutionMilliseconds": 1000,
+  "maximumCollectionElements": 4096,
+  "requireDeterministicSeed": true,
+  "requireShrinking": true,
+  "requireFailureCorpusUpload": true,
+  "requireRegressionTestForConfirmedFailure": true,
+  "sensitiveMarkers": [
+    "BEGIN PRIVATE KEY",
+    "github_pat_",
+    "ghp_",
+    "AKIA"
+  ],
+  "maximumProcessMemoryBytes": 536870912
+}

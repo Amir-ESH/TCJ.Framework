@@ -253,3 +253,7 @@ After packing a candidate into `artifacts/compatibility/packages`, run the clean
 ## Package upgrade compatibility
 
 Before changing package-facing behavior, validate the upgrade policy with `python3 eng/verify-upgrade-compatibility.py validate-config`. The full `upgrade-tests/` suite restores the published baseline from NuGet.org, restores the target from locally packed candidate packages, builds and runs the same source, compares dependency graphs and normalized behavior, and verifies explicit migration guidance. See [package upgrade testing](package-upgrade-testing.md).
+
+## Property and fuzz quality gates
+
+Run `python3 eng/verify-fuzzing.py validate-config` when changing Core, dependency registration, property generators, fuzz targets, corpus files, or fuzz policy. Property tests are deterministic and run in normal CI. The dedicated fuzz workflow runs bounded PR campaigns and longer weekly campaigns. See [Property and fuzz testing](property-and-fuzz-testing.md) for replay, corpus, minimization, and local target commands.
