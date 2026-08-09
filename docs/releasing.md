@@ -262,3 +262,7 @@ Release preflight and the official tag workflow rerun all required property test
 ## Concurrency stress release gate
 
 Release preflight and official tagged releases execute the reusable `Concurrency stress` workflow against the exact release source. Core, ASP.NET Core request-isolation, and SQL Server transaction scenarios must all pass with deterministic seeds and without unresolved failure traces. A deadlock, hang, timeout, duplicate/missing operation, scope/identity leak, or transaction interference blocks release readiness and NuGet publication. The tag workflow downloads commit-matched concurrency artifacts and retains the summaries/traces in `TCJ.Framework.Concurrency.Evidence.<version>.zip` with release metadata.
+
+## Observability release gate
+
+Release preflight and the official tag workflow validate the committed observability policy, execute `TCJ.Observability.Tests`, verify source/meter version metadata, scan generated telemetry evidence for the synthetic sensitive-data markers, publish `OBSERVABILITY_SUMMARY.md`, and block the release when the telemetry contract drifts. Exporter packages remain sample/application dependencies rather than production TCJ dependencies.

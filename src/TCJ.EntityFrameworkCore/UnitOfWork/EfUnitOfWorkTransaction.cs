@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore.Storage;
+using TCJ.Core.Diagnostics;
+using TCJ.EntityFrameworkCore.Diagnostics;
 
 namespace TCJ.EntityFrameworkCore.UnitOfWork;
 
@@ -10,14 +12,17 @@ internal sealed class EfUnitOfWorkTransaction : IUnitOfWorkTransaction
 {
     private readonly IDbContextTransaction _transaction;
     private readonly Guid _transactionId;
+    private readonly string _provider;
     private TransactionState _state = TransactionState.Active;
 
-    public EfUnitOfWorkTransaction(IDbContextTransaction transaction)
+    public EfUnitOfWorkTransaction(IDbContextTransaction transaction, string provider)
     {
         ArgumentNullException.ThrowIfNull(transaction);
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
 
         _transaction = transaction;
         _transactionId = transaction.TransactionId;
+        _provider = provider;
     }
 
     /// <inheritdoc />
@@ -27,24 +32,58 @@ internal sealed class EfUnitOfWorkTransaction : IUnitOfWorkTransaction
     public async Task CommitAsync(CancellationToken cancellationToken = default)
     {
         EnsureActive();
+        PersistenceTelemetryState telemetry =
+            EntityFrameworkCoreTelemetryDiagnostics.StartPersistenceOperation(
+                TcjDiagnosticNames.Activities.TransactionCommit,
+                "transaction_commit",
+                _provider,
+                PersistenceMetricKind.None);
 
-        await _transaction
-            .CommitAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        _state = TransactionState.Committed;
+        try
+        {
+            await _transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            _state = TransactionState.Committed;
+            telemetry.CompleteSuccess(transactionOutcome: TcjDiagnosticNames.Outcomes.Success);
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            telemetry.CompleteCanceled(exception);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
         EnsureActive();
+        PersistenceTelemetryState telemetry =
+            EntityFrameworkCoreTelemetryDiagnostics.StartPersistenceOperation(
+                TcjDiagnosticNames.Activities.TransactionRollback,
+                "transaction_rollback",
+                _provider,
+                PersistenceMetricKind.Rollback);
 
-        await _transaction
-            .RollbackAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        _state = TransactionState.RolledBack;
+        try
+        {
+            await _transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            _state = TransactionState.RolledBack;
+            telemetry.CompleteSuccess(transactionOutcome: TcjDiagnosticNames.Outcomes.Success);
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            telemetry.CompleteCanceled(exception);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
+        }
     }
 
     /// <inheritdoc />

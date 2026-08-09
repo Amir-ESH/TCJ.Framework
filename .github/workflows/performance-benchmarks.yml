@@ -1,6 +1,14 @@
 name: Performance benchmarks
 
 on:
+  workflow_call:
+    inputs:
+      mode:
+        description: Benchmark execution mode
+        required: false
+        type: string
+        default: full
+
   workflow_dispatch:
     inputs:
       mode:
@@ -23,6 +31,11 @@ on:
       - "benchmarks/**"
       - "src/TCJ.Core/**"
       - "src/TCJ.DependencyInjection/**"
+      - "src/TCJ.EntityFrameworkCore/**"
+      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "src/TCJ.AspNetCore/**"
+      - "eng/observability-policy.json"
+      - "eng/observability-contract.json"
       - "eng/performance-policy.json"
       - "eng/verify-performance-results.py"
       - "eng/tests/test_verify_performance_results.py"
@@ -38,6 +51,11 @@ on:
       - "benchmarks/**"
       - "src/TCJ.Core/**"
       - "src/TCJ.DependencyInjection/**"
+      - "src/TCJ.EntityFrameworkCore/**"
+      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "src/TCJ.AspNetCore/**"
+      - "eng/observability-policy.json"
+      - "eng/observability-contract.json"
       - "eng/performance-policy.json"
       - "eng/verify-performance-results.py"
       - "eng/tests/test_verify_performance_results.py"
@@ -55,7 +73,7 @@ concurrency:
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
-  TCJ_BENCHMARK_MODE: ${{ github.event_name == 'pull_request' && 'short' || github.event.inputs.mode || 'full' }}
+  TCJ_BENCHMARK_MODE: ${{ github.event_name == 'pull_request' && 'short' || inputs.mode || 'full' }}
 
 jobs:
   performance-benchmarks:

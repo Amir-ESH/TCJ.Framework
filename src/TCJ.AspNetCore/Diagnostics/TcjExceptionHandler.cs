@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TCJ.AspNetCore.Options;
+using TCJ.Core.Diagnostics;
 using HttpResults = Microsoft.AspNetCore.Http.Results;
 
 namespace TCJ.AspNetCore.Diagnostics;
@@ -25,36 +26,64 @@ public sealed class TcjExceptionHandler(ILogger<TcjExceptionHandler> logger, IOp
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(exception);
 
+        AspNetCoreTelemetryState telemetry = AspNetCoreTelemetryDiagnostics.StartExceptionHandling();
+
         if (exception is OperationCanceledException
             && httpContext.RequestAborted.IsCancellationRequested)
         {
+            telemetry.CompleteCanceled(exception);
             return true;
         }
 
-        _logger.LogError(exception, 
-                         "Unhandled exception while processing {Method} {Path}. Trace identifier: {TraceIdentifier}", 
-                         httpContext.Request.Method, 
-                         httpContext.Request.Path, 
-                         httpContext.TraceIdentifier);
-
-        var problemDetails = new ProblemDetails
+        try
         {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = _options.UnexpectedErrorTitle,
-            Detail = _options.IncludeExceptionDetails 
-                         ? exception.Message 
-                         : _options.UnexpectedErrorDetail,
-            Instance = httpContext.Request.Path,
-            Extensions =
+            // Do not include the exception object, message, request path, query string,
+            // headers, or body in the default framework log. Consumers can attach richer
+            // diagnostics explicitly at their application boundary when appropriate.
+            _logger.LogError(
+                "Unhandled exception of type {ExceptionType} while processing {Method}. Trace identifier: {TraceIdentifier}",
+                TcjTelemetry.NormalizeTypeName(exception.GetType()),
+                httpContext.Request.Method,
+                httpContext.TraceIdentifier);
+
+            var problemDetails = new ProblemDetails
             {
-                ["code"] = UnexpectedErrorCode,
-                ["traceId"] = httpContext.TraceIdentifier
-            }
-        };
+                Status = StatusCodes.Status500InternalServerError,
+                Title = _options.UnexpectedErrorTitle,
+                Detail = _options.IncludeExceptionDetails
+                    ? exception.Message
+                    : _options.UnexpectedErrorDetail,
+                Instance = httpContext.Request.Path,
+                Extensions =
+                {
+                    ["code"] = UnexpectedErrorCode,
+                    ["traceId"] = httpContext.TraceIdentifier
+                }
+            };
 
-        await HttpResults.Problem(problemDetails)
-                         .ExecuteAsync(httpContext);
+            await HttpResults.Problem(problemDetails)
+                .ExecuteAsync(httpContext);
 
-        return true;
+            telemetry.CompleteFailure(
+                exception,
+                StatusCodes.Status500InternalServerError,
+                "unknown");
+
+            return true;
+        }
+        catch (OperationCanceledException canceledException)
+            when (cancellationToken.IsCancellationRequested || httpContext.RequestAborted.IsCancellationRequested)
+        {
+            telemetry.CompleteCanceled(canceledException);
+            throw;
+        }
+        catch (Exception handlerException)
+        {
+            telemetry.CompleteFailure(
+                handlerException,
+                StatusCodes.Status500InternalServerError,
+                "handler_failure");
+            throw;
+        }
     }
 }

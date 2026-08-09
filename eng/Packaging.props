@@ -28,6 +28,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AssemblyMetadata Include="PackageVersion" Value="$(Version)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None
       Include="$(MSBuildThisFileDirectory)..\README.md"
       Pack="true"

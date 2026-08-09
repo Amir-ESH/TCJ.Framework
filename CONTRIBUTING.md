@@ -141,3 +141,7 @@ Changes to foundational Core or dependency-registration behavior should preserve
 ## Concurrency stress findings
 
 Concurrency failures are first-class quality-gate failures. Reproduce the recorded scenario and seed before changing timeouts or worker counts. Do not add retries that turn a failed run into success, do not weaken a documented concurrency boundary, and do not make `DbContext` or Unit of Work appear thread-safe. Confirmed race, leakage, duplicate/missing operation, deadlock, timeout, or transaction-interference findings require an ordinary regression test where practical. Failure traces must stay sanitized and generated `TestResults/Concurrency/` and `artifacts/concurrency/` content must not be committed.
+
+## Observability changes
+
+Treat activity names, metric names/types/units, and commonly consumed tags as compatibility contracts. Telemetry changes must update `eng/observability-contract.json`, focused observability tests, documentation, and release notes when applicable. Do not add exporter/vendor dependencies to production packages, unbounded dimensions, raw SQL, connection strings, entity/user identifiers, or exception messages by default.

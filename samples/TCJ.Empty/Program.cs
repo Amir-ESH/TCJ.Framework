@@ -1,3 +1,7 @@
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using TCJ.Core.Diagnostics;
 using TCJ.AspNetCore.Extensions;
 using TCJ.DependencyInjection.Extensions;
 using TCJ.Empty.Data;
@@ -13,11 +17,40 @@ string connectionString = builder.Configuration.GetConnectionString(name: "Defau
 builder.Services.AddOpenApi();
 builder.Services.AddTcjDependencyInjection(typeof(Program).Assembly);
 builder.Services.AddTcjAspNetCore();
+builder.Services.AddTcjTelemetry();
+
+builder.Services
+    .AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService("TCJ.Empty")
+        .AddAttributes(
+            [new KeyValuePair<string, object>(
+                TcjDiagnosticNames.Tags.FrameworkVersion,
+                TcjTelemetry.FrameworkVersion)]))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddEntityFrameworkCoreInstrumentation()
+        .AddSource(
+            TcjDiagnosticNames.Sources.Core,
+            TcjDiagnosticNames.Sources.DependencyInjection,
+            TcjDiagnosticNames.Sources.EntityFrameworkCore,
+            TcjDiagnosticNames.Sources.EntityFrameworkCoreSqlServer,
+            TcjDiagnosticNames.Sources.AspNetCore)
+        .AddOtlpExporter())
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddMeter(
+            TcjDiagnosticNames.Sources.Core,
+            TcjDiagnosticNames.Sources.DependencyInjection,
+            TcjDiagnosticNames.Sources.EntityFrameworkCore,
+            TcjDiagnosticNames.Sources.EntityFrameworkCoreSqlServer,
+            TcjDiagnosticNames.Sources.AspNetCore)
+        .AddOtlpExporter());
 
 builder.Services.AddTcjSqlServer<AppDbContext>(connectionString, configureTcjSqlServer: options =>
                                                {
                                                    // The sample data seeder owns an explicit transaction. Retry is disabled in
-                                                   // // this local sample until transaction execution-strategy orchestration is added.
+                                                   // this local sample until transaction execution-strategy orchestration is added.
                                                    options.EnableRetryOnFailure = false;
                                                    options.CommandTimeout = 30;
                                                });

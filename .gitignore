@@ -517,3 +517,14 @@ TestResults/Concurrency/
 artifacts/concurrency/
 tests/TCJ.Concurrency.Tests/bin/
 tests/TCJ.Concurrency.Tests/obj/
+
+# Observability test and verifier output
+TestResults/Observability/
+artifacts/observability/
+tests/TCJ.Observability.Tests/bin/
+tests/TCJ.Observability.Tests/obj/
+!eng/observability-policy.json
+!eng/observability-contract.json
+!eng/verify-observability.py
+!tests/TCJ.Observability.Tests/**/*.cs
+!tests/TCJ.Observability.Tests/**/*.csproj

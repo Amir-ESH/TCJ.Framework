@@ -150,3 +150,13 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] `DbContext` and Unit of Work remain documented as single-operation/not-concurrently-safe boundaries.
 - [ ] Release metadata contains `TCJ.Framework.Concurrency.Evidence.<version>.zip`.
 - [ ] Generated concurrency output is not committed.
+
+## Observability
+
+- [ ] `python3 eng/verify-observability.py validate-config` passes.
+- [ ] `TCJ.Observability.Tests` passes and `verify-observability.py verify` reports PASS.
+- [ ] ActivitySource/Meter versions match the release package version.
+- [ ] Sensitive marker scan passes and generated observability artifacts contain no secrets.
+- [ ] Telemetry contract changes are intentional, documented, and included in release notes.
+- [ ] The observability overhead benchmark is present in the performance evidence.
+- [ ] No exporter or vendor telemetry dependency entered a production TCJ package.

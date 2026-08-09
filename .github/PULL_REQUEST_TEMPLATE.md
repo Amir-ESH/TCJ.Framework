@@ -126,6 +126,20 @@ Describe the problem and the approach taken.
 - [ ] Generated concurrency traces are not committed
 - [ ] Concurrency-policy changes are explicit and justified
 
+## Observability
+
+- [ ] ActivitySource names remain stable
+- [ ] Meter names remain stable
+- [ ] Activity and metric contract changes are intentional and documented
+- [ ] No sensitive telemetry tags are emitted
+- [ ] Metric dimensions remain bounded
+- [ ] Trace parenting and standard Activity propagation are correct
+- [ ] Telemetry-disabled behavior is verified
+- [ ] Telemetry-disabled overhead is measured
+- [ ] Exporters remain optional and consumer-controlled
+- [ ] Observability tests pass
+- [ ] Generated telemetry artifacts are not committed
+
 ## Related issue
 
 Refs #

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using TCJ.Core.Diagnostics;
 using TCJ.Core.DomainEvents;
 
 namespace TCJ.DependencyInjection.DomainEvents;
@@ -17,11 +19,17 @@ internal interface IDomainEventHandlerInvoker
 /// dependency-registration order.
 /// </summary>
 /// <typeparam name="TEvent">The concrete domain-event type.</typeparam>
-internal sealed class DomainEventHandlerInvoker<TEvent>(
-    IEnumerable<IDomainEventHandler<TEvent>> handlers)
-    : IDomainEventHandlerInvoker
+internal sealed class DomainEventHandlerInvoker<TEvent> : IDomainEventHandlerInvoker
     where TEvent : IDomainEvent
 {
+    private readonly IEnumerable<IDomainEventHandler<TEvent>> _handlers;
+
+    public DomainEventHandlerInvoker(IEnumerable<IDomainEventHandler<TEvent>> handlers)
+    {
+        ArgumentNullException.ThrowIfNull(handlers);
+        _handlers = handlers;
+    }
+
     public async Task InvokeAsync(
         IDomainEvent domainEvent,
         CancellationToken cancellationToken)
@@ -36,13 +44,159 @@ internal sealed class DomainEventHandlerInvoker<TEvent>(
                 nameof(domainEvent));
         }
 
-        foreach (var handler in handlers)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
+        Activity? activity = TcjTelemetry.StartActivity(
+            CoreTelemetryDiagnostics.ActivitySource,
+            TcjDiagnosticNames.Activities.DomainEventDispatch,
+            TcjDiagnosticNames.Sources.Core,
+            CoreTelemetryDiagnostics.PackageVersion,
+            "dispatch");
 
-            await handler
-                .HandleAsync(typedEvent, cancellationToken)
-                .ConfigureAwait(false);
+        if (activity is not null)
+        {
+            activity.SetTag(
+                TcjDiagnosticNames.Tags.DomainEventType,
+                TcjTelemetry.NormalizeTypeName(typeof(TEvent)));
+
+            if (_handlers.TryGetNonEnumeratedCount(out int handlerCount))
+            {
+                activity.SetTag(TcjDiagnosticNames.Tags.HandlerCount, handlerCount);
+            }
+        }
+
+        bool measureDuration = TcjTelemetry.MetricsEnabled &&
+            CoreTelemetryDiagnostics.DomainEventDispatchDuration.Enabled;
+        long startedAt = measureDuration ? Stopwatch.GetTimestamp() : 0;
+        string outcome = TcjDiagnosticNames.Outcomes.Success;
+
+        try
+        {
+            foreach (IDomainEventHandler<TEvent> handler in _handlers)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await InvokeHandlerAsync(handler, typedEvent, cancellationToken).ConfigureAwait(false);
+            }
+
+            TcjTelemetry.CompleteSuccess(activity);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            outcome = TcjDiagnosticNames.Outcomes.Canceled;
+            TcjTelemetry.CompleteCanceled(activity);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            outcome = TcjDiagnosticNames.Outcomes.Failure;
+            TcjTelemetry.CompleteFailure(activity, exception);
+            throw;
+        }
+        finally
+        {
+            RecordDispatchMetrics(outcome, startedAt, measureDuration);
+            activity?.Dispose();
         }
     }
+
+    private static async Task InvokeHandlerAsync(
+        IDomainEventHandler<TEvent> handler,
+        TEvent domainEvent,
+        CancellationToken cancellationToken)
+    {
+        Activity? activity = TcjTelemetry.StartActivity(
+            CoreTelemetryDiagnostics.ActivitySource,
+            TcjDiagnosticNames.Activities.DomainEventHandle,
+            TcjDiagnosticNames.Sources.Core,
+            CoreTelemetryDiagnostics.PackageVersion,
+            "handle");
+
+        if (activity is not null)
+        {
+            activity.SetTag(
+                TcjDiagnosticNames.Tags.DomainEventType,
+                TcjTelemetry.NormalizeTypeName(typeof(TEvent)));
+
+            if (TcjTelemetry.RecordHandlerTypeNames)
+            {
+                activity.SetTag(
+                    TcjDiagnosticNames.Tags.HandlerType,
+                    TcjTelemetry.NormalizeTypeName(handler.GetType()));
+            }
+        }
+
+        bool measureDuration = TcjTelemetry.MetricsEnabled &&
+            CoreTelemetryDiagnostics.DomainEventHandlerDuration.Enabled;
+        long startedAt = measureDuration ? Stopwatch.GetTimestamp() : 0;
+        string outcome = TcjDiagnosticNames.Outcomes.Success;
+
+        try
+        {
+            await handler.HandleAsync(domainEvent, cancellationToken).ConfigureAwait(false);
+            TcjTelemetry.CompleteSuccess(activity);
+
+            if (TcjTelemetry.MetricsEnabled && CoreTelemetryDiagnostics.DomainEventHandlersCompleted.Enabled)
+            {
+                TagList tags = CreateOutcomeTags(TcjDiagnosticNames.Outcomes.Success);
+                CoreTelemetryDiagnostics.DomainEventHandlersCompleted.Add(1, tags);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            outcome = TcjDiagnosticNames.Outcomes.Canceled;
+            TcjTelemetry.CompleteCanceled(activity);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            outcome = TcjDiagnosticNames.Outcomes.Failure;
+            TcjTelemetry.CompleteFailure(activity, exception);
+
+            if (TcjTelemetry.MetricsEnabled && CoreTelemetryDiagnostics.DomainEventHandlersFailed.Enabled)
+            {
+                TagList tags = CreateOutcomeTags(TcjDiagnosticNames.Outcomes.Failure);
+                CoreTelemetryDiagnostics.DomainEventHandlersFailed.Add(1, tags);
+            }
+
+            throw;
+        }
+        finally
+        {
+            if (measureDuration)
+            {
+                TagList tags = CreateOutcomeTags(outcome);
+                CoreTelemetryDiagnostics.DomainEventHandlerDuration.Record(
+                    Stopwatch.GetElapsedTime(startedAt).TotalSeconds,
+                    tags);
+            }
+
+            activity?.Dispose();
+        }
+    }
+
+    private static void RecordDispatchMetrics(string outcome, long startedAt, bool measureDuration)
+    {
+        if (!TcjTelemetry.MetricsEnabled)
+        {
+            return;
+        }
+
+        TagList tags = CreateOutcomeTags(outcome);
+
+        if (CoreTelemetryDiagnostics.DomainEventsDispatched.Enabled)
+        {
+            CoreTelemetryDiagnostics.DomainEventsDispatched.Add(1, tags);
+        }
+
+        if (measureDuration)
+        {
+            CoreTelemetryDiagnostics.DomainEventDispatchDuration.Record(
+                Stopwatch.GetElapsedTime(startedAt).TotalSeconds,
+                tags);
+        }
+    }
+
+    private static TagList CreateOutcomeTags(string outcome) =>
+        new()
+        {
+            { TcjDiagnosticNames.Tags.OperationOutcome, outcome }
+        };
 }

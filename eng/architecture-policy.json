@@ -95,6 +95,7 @@
   ],
   "approvedPublicOptionTypes": [
     "TCJ.AspNetCore.Options.TcjAspNetCoreOptions",
+    "TCJ.Core.Diagnostics.TcjTelemetryOptions",
     "TCJ.DependencyInjection.Registration.TcjDependencyInjectionOptions",
     "TCJ.EntityFrameworkCore.SqlServer.Options.TcjSqlServerOptions"
   ]

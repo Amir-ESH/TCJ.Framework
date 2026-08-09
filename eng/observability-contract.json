@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "versionMetadataKey": "PackageVersion",
+  "activitySources": [
+    {
+      "name": "TCJ.Core",
+      "package": "TCJ.Core"
+    },
+    {
+      "name": "TCJ.DependencyInjection",
+      "package": "TCJ.DependencyInjection"
+    },
+    {
+      "name": "TCJ.EntityFrameworkCore",
+      "package": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "TCJ.EntityFrameworkCore.SqlServer",
+      "package": "TCJ.EntityFrameworkCore.SqlServer"
+    },
+    {
+      "name": "TCJ.AspNetCore",
+      "package": "TCJ.AspNetCore"
+    }
+  ],
+  "meters": [
+    {
+      "name": "TCJ.Core",
+      "package": "TCJ.Core"
+    },
+    {
+      "name": "TCJ.DependencyInjection",
+      "package": "TCJ.DependencyInjection"
+    },
+    {
+      "name": "TCJ.EntityFrameworkCore",
+      "package": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "TCJ.EntityFrameworkCore.SqlServer",
+      "package": "TCJ.EntityFrameworkCore.SqlServer"
+    },
+    {
+      "name": "TCJ.AspNetCore",
+      "package": "TCJ.AspNetCore"
+    }
+  ],
+  "activities": [
+    {
+      "name": "tcj.domain_event.dispatch",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.domain_event.handle",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.di.scan",
+      "source": "TCJ.DependencyInjection"
+    },
+    {
+      "name": "tcj.di.register",
+      "source": "TCJ.DependencyInjection"
+    },
+    {
+      "name": "tcj.repository.query",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.repository.get",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.repository.add",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.repository.update",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.repository.delete",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.unit_of_work.commit",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.db.transaction.begin",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.db.transaction.commit",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.db.transaction.rollback",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.db.sqlserver.configure",
+      "source": "TCJ.EntityFrameworkCore.SqlServer"
+    },
+    {
+      "name": "tcj.aspnetcore.exception.handle",
+      "source": "TCJ.AspNetCore"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "tcj.domain_events.dispatched",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{event}"
+    },
+    {
+      "name": "tcj.domain_event_handlers.completed",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{event}"
+    },
+    {
+      "name": "tcj.domain_event_handlers.failed",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{event}"
+    },
+    {
+      "name": "tcj.domain_event.dispatch.duration",
+      "meter": "TCJ.Core",
+      "type": "histogram",
+      "unit": "s"
+    },
+    {
+      "name": "tcj.domain_event.handler.duration",
+      "meter": "TCJ.Core",
+      "type": "histogram",
+      "unit": "s"
+    },
+    {
+      "name": "tcj.repository.operations",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{operation}"
+    },
+    {
+      "name": "tcj.repository.operation.duration",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "s"
+    },
+    {
+      "name": "tcj.unit_of_work.commits",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{operation}"
+    },
+    {
+      "name": "tcj.unit_of_work.rollbacks",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{operation}"
+    },
+    {
+      "name": "tcj.unit_of_work.commit.duration",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "s"
+    },
+    {
+      "name": "tcj.aspnetcore.exceptions.handled",
+      "meter": "TCJ.AspNetCore",
+      "type": "counter",
+      "unit": "{exception}"
+    },
+    {
+      "name": "tcj.aspnetcore.exception_handler.duration",
+      "meter": "TCJ.AspNetCore",
+      "type": "histogram",
+      "unit": "s"
+    }
+  ],
+  "tags": [
+    "tcj.package.name",
+    "tcj.package.version",
+    "tcj.framework.version",
+    "tcj.operation.name",
+    "tcj.operation.outcome",
+    "tcj.domain_event.type",
+    "tcj.handler.type",
+    "tcj.handler.count",
+    "tcj.repository.type",
+    "tcj.entity.type",
+    "tcj.db.provider",
+    "tcj.transaction.outcome",
+    "tcj.exception.type",
+    "tcj.exception.category",
+    "tcj.http.status_code",
+    "tcj.canceled",
+    "tcj.affected_rows",
+    "tcj.di.assembly_count",
+    "tcj.di.discovered_type_count",
+    "tcj.di.registered_service_count"
+  ],
+  "optInSensitiveTags": [
+    "tcj.exception.message"
+  ]
+}
