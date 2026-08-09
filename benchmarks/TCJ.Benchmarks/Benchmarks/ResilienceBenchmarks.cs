@@ -77,16 +77,15 @@ public class ResilienceBenchmarks
     }
 
     [Benchmark]
-    public async Task<int> RetryExhaustion()
+    public async Task RetryExhaustion()
     {
         try
         {
-            return await _retryPolicy.ExecuteAsync<int>(_ => throw new BenchmarkTransientException())
+            await _retryPolicy.ExecuteAsync<int>(_ => throw new BenchmarkTransientException())
                 .ConfigureAwait(false);
         }
         catch (BenchmarkTransientException)
         {
-            return -1;
         }
     }
 
@@ -98,16 +97,15 @@ public class ResilienceBenchmarks
     public Task<int> CircuitBreakerClosed() =>
         _closedCircuit.ExecuteAsync(_ => Task.FromResult(42));
 
-    [Benchmark]
-    public async Task<int> CircuitBreakerOpenFastFail()
+    [Benchmark(OperationsPerInvoke = 1)]
+    public async Task CircuitBreakerOpenFastFail()
     {
         try
         {
-            return await _openCircuit.ExecuteAsync(_ => Task.FromResult(42)).ConfigureAwait(false);
+            await _openCircuit.ExecuteAsync(_ => Task.FromResult(42)).ConfigureAwait(false);
         }
         catch (TcjCircuitOpenException)
         {
-            return -1;
         }
     }
 
