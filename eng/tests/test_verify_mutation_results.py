@@ -288,6 +288,19 @@ jobs:
         )
         self.assertAlmostEqual(60.0, result.totals.score)
 
+    def test_recorded_baseline_uses_persisted_score_precision(self) -> None:
+        self.write_baseline(recorded=True, score=72.73)
+        self.write_report("TCJ.Core", ["Killed"] * 4 + ["Survived"] * 2)
+        self.write_report("TCJ.DependencyInjection", ["Killed"] * 4 + ["Survived"])
+        policy, baseline = self.load()
+
+        result = MODULE.execute_gate(
+            self.root, policy, baseline, "verify", self.summary_path, self.json_path, self.candidate_path
+        )
+
+        self.assertAlmostEqual(72.72727272727273, result.totals.score)
+        self.assertTrue(result.baseline_score_passed)
+
     def test_all_survived_result_is_rejected_and_no_candidate_is_created(self) -> None:
         for name in self.PROJECTS:
             self.write_report(name, ["Survived"] * 5)
