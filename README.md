@@ -72,7 +72,7 @@ git clone https://github.com/Amir-ESH/TCJ.Framework.git
 cd TCJ.Framework
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore"
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
 ```
 
 Run the Product API sample:
@@ -135,7 +135,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
 dotnet test TCJ.slnx -c Release --no-build \
-  --filter "Category!=SqlServer&Category!=AspNetCore" \
+  --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
@@ -194,3 +194,8 @@ TCJ Framework is licensed under the [MIT License](https://github.com/Amir-ESH/TC
 ## Property-based and fuzz testing
 
 Foundational `TCJ.Core` and `TCJ.DependencyInjection` behavior is protected by deterministic FsCheck properties and five bounded fuzz targets. Pull requests get reproducible generated-input coverage and short fuzz campaigns; scheduled and release workflows run longer or release-blocking validation. See [Property and fuzz testing](docs/property-and-fuzz-testing.md).
+
+
+## Concurrency stress testing
+
+TCJ documents and continuously verifies concurrency boundaries rather than assuming every abstraction is thread-safe. A deterministic stress suite exercises dependency registration, service lifetimes, domain-event dispatch, ASP.NET Core request/current-user isolation, independent EF Core scopes, cancellation/disposal races, and real SQL Server transactions. Pull requests run bounded workloads, while scheduled and release workflows run stronger replayable campaigns. See [Concurrency stress testing](docs/concurrency-stress-testing.md).

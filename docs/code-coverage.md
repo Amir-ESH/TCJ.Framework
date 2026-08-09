@@ -32,7 +32,7 @@ Run the same collection locally:
 ```bash
 dotnet test TCJ.slnx \
   -c Release \
-  --filter "Category!=SqlServer&Category!=AspNetCore" \
+  --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults

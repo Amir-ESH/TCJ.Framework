@@ -236,6 +236,15 @@ public sealed class ResultBehaviorTests
         Assert.False(left != right);
         Assert.Equal(left.GetHashCode(), right.GetHashCode());
         Assert.NotEqual(left, different);
+        Assert.False(left == different);
+        Assert.True(left != different);
+        Assert.True(different != left);
+
+        ResultError? missing = null;
+        Assert.False(left == missing);
+        Assert.True(left != missing);
+        Assert.False(missing != null);
+        Assert.True(missing == null);
         Assert.False(left.Equals((object?)null));
     }
 

@@ -629,7 +629,10 @@ def collect(root: Path, policy: Policy, baseline: Baseline) -> Result:
         totals=totals,
         health_failures=tuple(failures),
         policy_score_passed=totals.score + 1e-9 >= policy.minimum_score,
-        baseline_score_passed=totals.score + 1e-9 >= effective,
+        # Baseline candidates persist mutationScore rounded to two decimals. Compare
+        # the current score at the same precision so an unchanged mutant outcome
+        # cannot fail merely because its exact fraction rounds up in the baseline.
+        baseline_score_passed=round(totals.score, 2) + 1e-9 >= effective,
         tested_passed=totals.tested >= policy.minimum_tested,
         killed_passed=totals.killed >= policy.minimum_killed,
         effective_minimum_score=effective,

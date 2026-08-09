@@ -257,3 +257,8 @@ Release preflight and the official tag workflow run all six upgrade scenarios fr
 ## Property and fuzz release gate
 
 Release preflight and the official tag workflow rerun all required property tests and fuzz targets against the exact release source. Any unresolved property failure, crash, hang, unexpected exception, invariant violation, or resource-limit violation blocks publication. Review `PROPERTY_TEST_SUMMARY.md`, `FUZZ_SUMMARY.md`, and any minimized failure corpus before approving a release.
+
+
+## Concurrency stress release gate
+
+Release preflight and official tagged releases execute the reusable `Concurrency stress` workflow against the exact release source. Core, ASP.NET Core request-isolation, and SQL Server transaction scenarios must all pass with deterministic seeds and without unresolved failure traces. A deadlock, hang, timeout, duplicate/missing operation, scope/identity leak, or transaction interference blocks release readiness and NuGet publication. The tag workflow downloads commit-matched concurrency artifacts and retains the summaries/traces in `TCJ.Framework.Concurrency.Evidence.<version>.zip` with release metadata.

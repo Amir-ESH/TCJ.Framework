@@ -39,6 +39,8 @@
   href: package-upgrade-testing.md
 - name: Property and Fuzz Testing
   href: property-and-fuzz-testing.md
+- name: Concurrency Stress Testing
+  href: concurrency-stress-testing.md
 - name: Migration 0.1.0-preview.1 to 0.1.0-preview.2
   href: migrations/0.1.0-preview.1-to-0.1.0-preview.2.md
 - name: Security

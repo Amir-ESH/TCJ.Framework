@@ -52,7 +52,7 @@ Do not disable `EnablePackageValidation` in CI or Release workflows. A local eme
 ```bash
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore"
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 

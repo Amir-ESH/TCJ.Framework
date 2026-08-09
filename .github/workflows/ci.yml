@@ -100,6 +100,9 @@ jobs:
       - name: Validate property and fuzz testing configuration
         run: python3 eng/verify-fuzzing.py validate-config
 
+      - name: Validate concurrency stress configuration
+        run: python3 eng/verify-concurrency.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -198,7 +201,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
-          --filter "Category!=SqlServer&Category!=AspNetCore"
+          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=test-results.trx"

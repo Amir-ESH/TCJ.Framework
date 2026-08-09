@@ -1,0 +1,392 @@
+name: Concurrency stress
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "src/TCJ.EntityFrameworkCore/**"
+      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "src/TCJ.AspNetCore/**"
+      - "tests/TCJ.Concurrency.Tests/**"
+      - "eng/concurrency-policy.json"
+      - "eng/verify-concurrency.py"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "global.json"
+      - ".github/workflows/concurrency-stress.yml"
+
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "src/TCJ.EntityFrameworkCore/**"
+      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "src/TCJ.AspNetCore/**"
+      - "tests/TCJ.Concurrency.Tests/**"
+      - "eng/concurrency-policy.json"
+      - "eng/verify-concurrency.py"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "global.json"
+      - ".github/workflows/concurrency-stress.yml"
+
+  workflow_dispatch:
+
+  workflow_call:
+    inputs:
+      mode:
+        description: Stress workload mode for release callers.
+        required: false
+        type: string
+        default: release
+
+  schedule:
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: concurrency-stress-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+  TCJ_CONCURRENCY_TRACE_DIR: ${{ github.workspace }}/artifacts/concurrency/traces
+  TCJ_CONCURRENCY_FAILURE_DIR: ${{ github.workspace }}/artifacts/concurrency/failures
+
+jobs:
+  scope:
+    name: Determine stress scope
+    runs-on: ubuntu-latest
+    outputs:
+      sqlserver: ${{ steps.scope.outputs.sqlserver }}
+      mode: ${{ steps.scope.outputs.mode }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine workload and SQL Server scope
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CALL_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          mode="pull-request"
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            mode="scheduled"
+          elif [[ "$EVENT_NAME" == "workflow_call" && "$CALL_MODE" == "scheduled" ]]; then
+            mode="scheduled"
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+          sqlserver=true
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            sqlserver=false
+            changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+            if grep -Eq '^(src/TCJ.EntityFrameworkCore/|src/TCJ.EntityFrameworkCore.SqlServer/|tests/TCJ.Concurrency.Tests/|eng/concurrency-policy.json|eng/verify-concurrency.py|Directory.Build.props|Directory.Packages.props|global.json|\.github/workflows/concurrency-stress.yml)' <<< "$changed"; then
+              sqlserver=true
+            fi
+          fi
+          echo "sqlserver=$sqlserver" >> "$GITHUB_OUTPUT"
+
+  core:
+    name: Run core stress tests
+    needs: scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TCJ_STRESS_MODE: ${{ needs.scope.outputs.mode }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display runtime and system information
+        run: |
+          dotnet --info
+          uname -a
+
+      - name: Validate automation scripts
+        run: |
+          python3 -m compileall -q eng tests/TCJ.Concurrency.Tests/scripts
+          python3 -m unittest eng.tests.test_verify_concurrency
+
+      - name: Validate concurrency policy
+        run: python3 eng/verify-concurrency.py validate-config
+
+      - name: Restore and audit dependencies
+        run: dotnet restore tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj --force-evaluate
+
+      - name: Build concurrency tests
+        run: dotnet build tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj -c Release --no-restore
+
+      - name: Run bounded core stress scenarios
+        id: stress-tests
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          seeds="$(python3 -c 'import json; p=json.load(open("eng/concurrency-policy.json")); print(" ".join(map(str,p["scheduledSeeds"] if "${{ needs.scope.outputs.mode }}" == "scheduled" else p["pullRequestSeeds"])))')"
+          mkdir -p TestResults/Concurrency/core
+          for seed in $seeds; do
+            TCJ_STRESS_SEED="$seed" dotnet test tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj \
+              -c Release --no-build \
+              --filter "Category=Concurrency&Category!=AspNetCore&Category!=SqlServer" \
+              --logger "trx;LogFileName=core-$seed.trx" \
+              --results-directory TestResults/Concurrency/core
+          done
+
+      - name: Verify core stress results and invariants
+        id: verify-results
+        if: always()
+        continue-on-error: true
+        run: |
+          minimum=1
+          [[ "${{ needs.scope.outputs.mode }}" == "scheduled" ]] && minimum=3
+          python3 eng/verify-concurrency.py verify \
+            --results TestResults/Concurrency/core \
+            --traces artifacts/concurrency/traces \
+            --failures artifacts/concurrency/failures \
+            --output artifacts/concurrency/report/core \
+            --group core \
+            --minimum-seeds "$minimum"
+
+      - name: Publish core concurrency summary
+        if: always()
+        run: test ! -f artifacts/concurrency/report/core/CONCURRENCY_SUMMARY.md || cat artifacts/concurrency/report/core/CONCURRENCY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload core stress results and failure traces
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: concurrency-core-${{ github.run_id }}
+          path: |
+            TestResults/Concurrency/core/**
+            artifacts/concurrency/traces/**
+            artifacts/concurrency/failures/**
+            artifacts/concurrency/report/core/**
+          if-no-files-found: warn
+          retention-days: 21
+
+      - name: Enforce core stress result
+        if: always()
+        run: |
+          test "${{ steps.stress-tests.outcome }}" = "success"
+          test "${{ steps.verify-results.outcome }}" = "success"
+
+  aspnetcore:
+    name: Run ASP.NET Core stress tests
+    needs: scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TCJ_STRESS_MODE: ${{ needs.scope.outputs.mode }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display runtime and system information
+        run: |
+          dotnet --info
+          uname -a
+
+      - name: Validate automation scripts
+        run: python3 -m compileall -q eng tests/TCJ.Concurrency.Tests/scripts
+
+      - name: Validate concurrency policy
+        run: python3 eng/verify-concurrency.py validate-config
+
+      - name: Restore and audit dependencies
+        run: dotnet restore tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj --force-evaluate
+
+      - name: Build concurrency tests
+        run: dotnet build tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj -c Release --no-restore
+
+      - name: Run bounded ASP.NET Core request-isolation stress scenarios
+        id: stress-tests
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          seeds="$(python3 -c 'import json; p=json.load(open("eng/concurrency-policy.json")); print(" ".join(map(str,p["scheduledSeeds"] if "${{ needs.scope.outputs.mode }}" == "scheduled" else p["pullRequestSeeds"])))')"
+          mkdir -p TestResults/Concurrency/aspnetcore
+          for seed in $seeds; do
+            TCJ_STRESS_SEED="$seed" dotnet test tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj \
+              -c Release --no-build \
+              --filter "Category=Concurrency&Category=AspNetCore" \
+              --logger "trx;LogFileName=aspnetcore-$seed.trx" \
+              --results-directory TestResults/Concurrency/aspnetcore
+          done
+
+      - name: Verify ASP.NET Core stress results and invariants
+        id: verify-results
+        if: always()
+        continue-on-error: true
+        run: |
+          minimum=1
+          [[ "${{ needs.scope.outputs.mode }}" == "scheduled" ]] && minimum=3
+          python3 eng/verify-concurrency.py verify \
+            --results TestResults/Concurrency/aspnetcore \
+            --traces artifacts/concurrency/traces \
+            --failures artifacts/concurrency/failures \
+            --output artifacts/concurrency/report/aspnetcore \
+            --group aspnetcore \
+            --minimum-seeds "$minimum"
+
+      - name: Publish ASP.NET Core concurrency summary
+        if: always()
+        run: test ! -f artifacts/concurrency/report/aspnetcore/CONCURRENCY_SUMMARY.md || cat artifacts/concurrency/report/aspnetcore/CONCURRENCY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload ASP.NET Core stress results and failure traces
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: concurrency-aspnetcore-${{ github.run_id }}
+          path: |
+            TestResults/Concurrency/aspnetcore/**
+            artifacts/concurrency/traces/**
+            artifacts/concurrency/failures/**
+            artifacts/concurrency/report/aspnetcore/**
+          if-no-files-found: warn
+          retention-days: 21
+
+      - name: Enforce ASP.NET Core stress result
+        if: always()
+        run: |
+          test "${{ steps.stress-tests.outcome }}" = "success"
+          test "${{ steps.verify-results.outcome }}" = "success"
+
+  sqlserver:
+    name: Run SQL Server stress tests
+    needs: scope
+    if: needs.scope.outputs.sqlserver == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      TCJ_STRESS_MODE: ${{ needs.scope.outputs.mode }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display runtime and system information
+        run: |
+          dotnet --info
+          uname -a
+          docker version
+
+      - name: Validate automation scripts
+        run: python3 -m compileall -q eng tests/TCJ.Concurrency.Tests/scripts
+
+      - name: Validate concurrency policy
+        run: python3 eng/verify-concurrency.py validate-config
+
+      - name: Restore and audit dependencies
+        run: dotnet restore tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj --force-evaluate
+
+      - name: Build concurrency tests
+        run: dotnet build tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj -c Release --no-restore
+
+      - name: Run SQL Server transaction stress scenarios with Testcontainers.MsSql
+        id: stress-tests
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          seeds="$(python3 -c 'import json; p=json.load(open("eng/concurrency-policy.json")); print(" ".join(map(str,p["scheduledSeeds"] if "${{ needs.scope.outputs.mode }}" == "scheduled" else p["pullRequestSeeds"])))')"
+          mkdir -p TestResults/Concurrency/sqlserver
+          for seed in $seeds; do
+            TCJ_STRESS_SEED="$seed" dotnet test tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj \
+              -c Release --no-build \
+              --filter "Category=Concurrency&Category=SqlServer" \
+              --logger "trx;LogFileName=sqlserver-$seed.trx" \
+              --results-directory TestResults/Concurrency/sqlserver
+          done
+
+      - name: Capture sanitized SQL Server logs on failure
+        if: failure() || steps.stress-tests.outcome != 'success'
+        run: |
+          set +e
+          mkdir -p artifacts/concurrency/logs
+          : > artifacts/concurrency/logs/sanitized-sqlserver.log
+          for id in $(docker ps -aq --filter "label=tcj.concurrency.stress=true"); do
+            docker logs "$id" 2>&1 | sed -E 's/((Password|Pwd)=)[^; ]+/\1***/Ig' >> artifacts/concurrency/logs/sanitized-sqlserver.log
+          done
+
+      - name: Verify SQL Server stress results and invariants
+        id: verify-results
+        if: always()
+        continue-on-error: true
+        run: |
+          minimum=1
+          [[ "${{ needs.scope.outputs.mode }}" == "scheduled" ]] && minimum=3
+          python3 eng/verify-concurrency.py verify \
+            --results TestResults/Concurrency/sqlserver \
+            --traces artifacts/concurrency/traces \
+            --failures artifacts/concurrency/failures \
+            --output artifacts/concurrency/report/sqlserver \
+            --group sqlserver \
+            --minimum-seeds "$minimum"
+
+      - name: Publish SQL Server concurrency summary
+        if: always()
+        run: test ! -f artifacts/concurrency/report/sqlserver/CONCURRENCY_SUMMARY.md || cat artifacts/concurrency/report/sqlserver/CONCURRENCY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload SQL Server test results, failure traces, and sanitized logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: concurrency-sqlserver-${{ github.run_id }}
+          path: |
+            TestResults/Concurrency/sqlserver/**
+            artifacts/concurrency/traces/**
+            artifacts/concurrency/failures/**
+            artifacts/concurrency/report/sqlserver/**
+            artifacts/concurrency/logs/**
+          if-no-files-found: warn
+          retention-days: 21
+
+      - name: Clean up SQL Server stress containers
+        if: always()
+        run: docker ps -aq --filter "label=tcj.concurrency.stress=true" | xargs -r docker rm -f
+
+      - name: Enforce SQL Server stress result
+        if: always()
+        run: |
+          test "${{ steps.stress-tests.outcome }}" = "success"
+          test "${{ steps.verify-results.outcome }}" = "success"

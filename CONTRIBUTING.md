@@ -28,7 +28,7 @@ python3 eng/verify-consumer-compatibility.py validate-config
 python3 eng/verify-reproducible-build.py validate-config
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore" \
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
@@ -136,3 +136,8 @@ See [`docs/documentation-authoring.md`](docs/documentation-authoring.md) for XML
 ## Property and fuzz findings
 
 Changes to foundational Core or dependency-registration behavior should preserve the property and fuzz gates. Reproduce a property failure from its FsCheck seed or a fuzz failure from its minimized corpus input. Every confirmed finding requires a conventional regression test before the failure corpus is considered resolved. Do not disable a flaky property, lower fuzz limits, remove a required target, or swallow broad exception classes to make a gate pass.
+
+
+## Concurrency stress findings
+
+Concurrency failures are first-class quality-gate failures. Reproduce the recorded scenario and seed before changing timeouts or worker counts. Do not add retries that turn a failed run into success, do not weaken a documented concurrency boundary, and do not make `DbContext` or Unit of Work appear thread-safe. Confirmed race, leakage, duplicate/missing operation, deadlock, timeout, or transaction-interference findings require an ordinary regression test where practical. Failure traces must stay sanitized and generated `TestResults/Concurrency/` and `artifacts/concurrency/` content must not be committed.

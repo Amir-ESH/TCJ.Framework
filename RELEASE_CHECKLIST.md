@@ -137,3 +137,16 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Required C# examples compile against the release-candidate source.
 - [ ] `DOCUMENTATION_SUMMARY.md` and the Pages-ready site archive are present in workflow artifacts.
 - [ ] The tagged release attaches the documentation ZIP generated from the same commit.
+
+
+## Concurrency stress testing
+
+- [ ] `python3 eng/verify-concurrency.py validate-config` passes.
+- [ ] `Concurrency stress / Run core stress tests` is green for the release source.
+- [ ] `Concurrency stress / Run ASP.NET Core stress tests` is green and request/current-user isolation is preserved.
+- [ ] `Concurrency stress / Run SQL Server stress tests` is green with rollback, unique-constraint, optimistic-concurrency, and independent-transaction coverage.
+- [ ] Review deterministic seeds, scenario/operation timeouts, replay metadata, and any failure traces.
+- [ ] No failed stress test was converted to success by retry.
+- [ ] `DbContext` and Unit of Work remain documented as single-operation/not-concurrently-safe boundaries.
+- [ ] Release metadata contains `TCJ.Framework.Concurrency.Evidence.<version>.zip`.
+- [ ] Generated concurrency output is not committed.
