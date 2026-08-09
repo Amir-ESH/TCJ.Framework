@@ -19,7 +19,7 @@ Describe the problem and the approach taken.
 - [ ] Dependency security policy passes and no package source was added without review
 - [ ] `dotnet restore TCJ.slnx --force-evaluate` reports no blocking advisory
 - [ ] `dotnet build TCJ.slnx -c Release`
-- [ ] `dotnet test TCJ.slnx -c Release --filter "Category!=SqlServer&Category!=AspNetCore"`
+- [ ] `dotnet test TCJ.slnx -c Release --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"`
 - [ ] Code coverage quality gate passes; new behavior has focused tests
 - [ ] Mutation testing ran when applicable; the recorded baseline is valid and relevant survived mutants were reviewed
 - [ ] Performance benchmarks pass for performance-sensitive changes
@@ -114,6 +114,17 @@ Describe the problem and the approach taken.
 - [ ] Seed corpora are bounded, reviewed, and contain no sensitive values
 - [ ] Generated fuzz artifacts and crash corpora are not committed
 - [ ] Fuzzing-policy changes are explicit and justified
+
+- [ ] Concurrency stress tests pass
+- [ ] Deterministic stress seeds are replayable
+- [ ] Dependency registration remains deterministic under parallel calls
+- [ ] Request scopes and current-user identities remain isolated
+- [ ] Domain events are neither duplicated nor lost
+- [ ] EF Core and SQL Server concurrency boundaries are respected
+- [ ] Deadlocks, hangs, timeouts, and invariant failures produce actionable traces
+- [ ] Thread-safety contracts are documented
+- [ ] Generated concurrency traces are not committed
+- [ ] Concurrency-policy changes are explicit and justified
 
 ## Related issue
 

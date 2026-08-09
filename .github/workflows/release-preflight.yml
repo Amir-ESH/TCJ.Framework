@@ -40,8 +40,14 @@ jobs:
     with:
       version_source: release-manifest
 
+  concurrency-stress:
+    name: Concurrency stress gate
+    uses: ./.github/workflows/concurrency-stress.yml
+    with:
+      mode: release
+
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -102,6 +108,9 @@ jobs:
 
       - name: Validate property and fuzz testing configuration
         run: python3 eng/verify-fuzzing.py validate-config
+
+      - name: Validate concurrency stress configuration
+        run: python3 eng/verify-concurrency.py validate-config
 
       - name: Check NuGet package IDs
         run: >
@@ -191,7 +200,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
-          --filter "Category!=SqlServer&Category!=AspNetCore"
+          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=preflight-test-results.trx"

@@ -85,7 +85,7 @@ The normal solution test/coverage command intentionally excludes both dedicated 
 
 ```bash
 dotnet test TCJ.slnx -c Release --no-build \
-  --filter "Category!=SqlServer&Category!=AspNetCore"
+  --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
 ```
 
 ## Filtering categories

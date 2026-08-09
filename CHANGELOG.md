@@ -6,6 +6,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+- Deterministic concurrency and thread-safety stress testing with replayable seeds, deadlock/timeout diagnostics, request/DI/domain-event/EF/SQL Server scenarios, policy verification, scheduled automation, and release-blocking gates.
+
 - Moved source-controlled release notes to `docs/release-notes/` so standard Git staging cannot lose them to the Visual Studio `Releases/` ignore rule.
 - Updated documentation validation and repository links to use the non-ignored release-note path.
 - Fixed DocFX site builds by keeping versioned release notes tracked and replacing repository-external relative Markdown links with stable GitHub source links.

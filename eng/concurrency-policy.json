@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "testProject": "tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj",
+  "minimumScenarioCount": 20,
+  "pullRequestWorkers": 8,
+  "pullRequestIterations": 100,
+  "scheduledWorkers": 32,
+  "scheduledIterations": 1000,
+  "sqlServerPullRequestWorkers": 8,
+  "sqlServerPullRequestIterations": 20,
+  "sqlServerScheduledWorkers": 16,
+  "sqlServerScheduledIterations": 100,
+  "operationTimeoutMilliseconds": 5000,
+  "maximumScenarioSeconds": 60,
+  "maximumScheduledScenarioSeconds": 300,
+  "requireDeterministicSeed": true,
+  "requireDeadlockDetection": true,
+  "requireFailureTrace": true,
+  "pullRequestSeeds": [
+    4001
+  ],
+  "scheduledSeeds": [
+    4001,
+    4003,
+    4005
+  ],
+  "sqlServerContainerImage": "mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04",
+  "requiredCategories": [
+    "Concurrency",
+    "Stress",
+    "DependencyInjection",
+    "DomainEvents",
+    "RequestScope",
+    "CurrentUser",
+    "Cancellation",
+    "Transactions",
+    "SqlServer",
+    "ScheduledStress"
+  ],
+  "scenarios": [
+    {
+      "name": "RegistrationProducesCanonicalDescriptorsUnderParallelCalls",
+      "group": "core",
+      "categories": [
+        "DependencyInjection"
+      ]
+    },
+    {
+      "name": "AssemblyScanningOrderRemainsDeterministic",
+      "group": "core",
+      "categories": [
+        "DependencyInjection"
+      ]
+    },
+    {
+      "name": "DuplicateRegistrationProtectionRemainsDeterministic",
+      "group": "core",
+      "categories": [
+        "DependencyInjection"
+      ]
+    },
+    {
+      "name": "TransientServicesAreDistinctUnderConcurrentResolution",
+      "group": "core",
+      "categories": [
+        "DependencyInjection"
+      ]
+    },
+    {
+      "name": "ScopedServicesStayWithinOwningScope",
+      "group": "core",
+      "categories": [
+        "DependencyInjection",
+        "RequestScope"
+      ]
+    },
+    {
+      "name": "SingletonServicesRemainStableAcrossConcurrentScopes",
+      "group": "core",
+      "categories": [
+        "DependencyInjection"
+      ]
+    },
+    {
+      "name": "DisposingIndependentScopesDoesNotLeakState",
+      "group": "core",
+      "categories": [
+        "DependencyInjection",
+        "Cancellation"
+      ]
+    },
+    {
+      "name": "DomainEventsDispatchExactlyOncePerOperation",
+      "group": "core",
+      "categories": [
+        "DomainEvents"
+      ]
+    },
+    {
+      "name": "DomainEventsFromIndependentScopesDoNotMix",
+      "group": "core",
+      "categories": [
+        "DomainEvents",
+        "RequestScope"
+      ]
+    },
+    {
+      "name": "CancellationStopsOnlyTargetDomainEventOperation",
+      "group": "core",
+      "categories": [
+        "DomainEvents",
+        "Cancellation"
+      ]
+    },
+    {
+      "name": "ConcurrentResultReadsRemainStable",
+      "group": "core",
+      "categories": [
+        "Concurrency"
+      ]
+    },
+    {
+      "name": "ConcurrentGuidGenerationProducesUniqueVersionSevenValues",
+      "group": "core",
+      "categories": [
+        "Concurrency"
+      ]
+    },
+    {
+      "name": "IndependentDbContextScopesDoNotShareContext",
+      "group": "core",
+      "categories": [
+        "Transactions",
+        "RequestScope"
+      ]
+    },
+    {
+      "name": "RepositoryResolutionRemainsScopeCorrect",
+      "group": "core",
+      "categories": [
+        "Transactions",
+        "RequestScope"
+      ]
+    },
+    {
+      "name": "ConcurrentRequestsKeepCurrentUsersIsolated",
+      "group": "aspnetcore",
+      "categories": [
+        "CurrentUser",
+        "RequestScope"
+      ]
+    },
+    {
+      "name": "ConcurrentRequestsKeepRolesAndScopedServicesIsolated",
+      "group": "aspnetcore",
+      "categories": [
+        "CurrentUser",
+        "RequestScope"
+      ]
+    },
+    {
+      "name": "CanceledRequestDoesNotCancelOtherRequests",
+      "group": "aspnetcore",
+      "categories": [
+        "Cancellation",
+        "RequestScope"
+      ]
+    },
+    {
+      "name": "FailedRequestDoesNotLeakExceptionState",
+      "group": "aspnetcore",
+      "categories": [
+        "RequestScope"
+      ]
+    },
+    {
+      "name": "IndependentSqlServerTransactionsCommitWithoutInterference",
+      "group": "sqlserver",
+      "categories": [
+        "Transactions",
+        "SqlServer",
+        "ScheduledStress"
+      ]
+    },
+    {
+      "name": "RollbackDoesNotRemoveAnotherTransactionCommit",
+      "group": "sqlserver",
+      "categories": [
+        "Transactions",
+        "SqlServer",
+        "ScheduledStress"
+      ]
+    },
+    {
+      "name": "ConcurrentUniqueConstraintAllowsSingleWinner",
+      "group": "sqlserver",
+      "categories": [
+        "Transactions",
+        "SqlServer",
+        "ScheduledStress"
+      ]
+    },
+    {
+      "name": "SameDbContextConcurrentOperationsFailPredictably",
+      "group": "sqlserver",
+      "categories": [
+        "Transactions",
+        "SqlServer",
+        "ScheduledStress"
+      ]
+    },
+    {
+      "name": "OptimisticConcurrencyConflictsAreDetected",
+      "group": "sqlserver",
+      "categories": [
+        "Transactions",
+        "SqlServer",
+        "ScheduledStress"
+      ]
+    }
+  ]
+}

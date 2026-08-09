@@ -511,3 +511,9 @@ fuzz/**/bin/
 fuzz/**/obj/
 fuzz/generated-corpus/
 TestResults/PropertyTests/
+
+# Concurrency stress generated output
+TestResults/Concurrency/
+artifacts/concurrency/
+tests/TCJ.Concurrency.Tests/bin/
+tests/TCJ.Concurrency.Tests/obj/

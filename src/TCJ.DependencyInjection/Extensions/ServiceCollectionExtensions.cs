@@ -73,23 +73,30 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
 
-        if (options.RegisterFrameworkServices)
+        // IServiceCollection is mutable and does not provide a concurrent-write contract.
+        // Serialize TCJ-owned registration mutations so concurrent calls to this extension
+        // cannot corrupt the collection or bypass TryAdd duplicate protection. External
+        // mutation of the same collection must follow the same application-level boundary.
+        lock (services)
         {
-            RegisterFrameworkServices(services);
+            if (options.RegisterFrameworkServices)
+            {
+                RegisterFrameworkServices(services);
+            }
+
+            var implementationTypes = options.Assemblies
+                .SelectMany(GetPublicConcreteTypes)
+                .Distinct()
+                .OrderBy(type => type.FullName, StringComparer.Ordinal)
+                .ToArray();
+
+            if (options.RegisterDomainEventHandlers)
+            {
+                RegisterDomainEventHandlers(services, implementationTypes);
+            }
+
+            RegisterMarkedDependencies(services, implementationTypes);
         }
-
-        var implementationTypes = options.Assemblies
-            .SelectMany(GetPublicConcreteTypes)
-            .Distinct()
-            .OrderBy(type => type.FullName, StringComparer.Ordinal)
-            .ToArray();
-
-        if (options.RegisterDomainEventHandlers)
-        {
-            RegisterDomainEventHandlers(services, implementationTypes);
-        }
-
-        RegisterMarkedDependencies(services, implementationTypes);
 
         return services;
     }

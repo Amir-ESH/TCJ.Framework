@@ -32,8 +32,14 @@ jobs:
     with:
       version_source: release-manifest
 
+  concurrency-stress:
+    name: Concurrency stress gate
+    uses: ./.github/workflows/concurrency-stress.yml
+    with:
+      mode: release
+
   build-and-pack:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -95,6 +101,9 @@ jobs:
       - name: Validate property and fuzz testing configuration
         run: python3 eng/verify-fuzzing.py validate-config
 
+      - name: Validate concurrency stress configuration
+        run: python3 eng/verify-concurrency.py validate-config
+
       - name: Validate release tag
         id: release-version
         shell: bash
@@ -128,6 +137,21 @@ jobs:
 
           echo "value=$version" >> "$GITHUB_OUTPUT"
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+      - name: Download exact tagged-source concurrency evidence
+        uses: actions/download-artifact@v8
+        with:
+          pattern: concurrency-*-${{ github.run_id }}
+          path: artifacts/concurrency-release
+
+      - name: Preserve concurrency stress evidence with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          test -d artifacts/concurrency-release
+          find artifacts/concurrency-release -type f -name 'CONCURRENCY_SUMMARY.md' -print -quit | grep -q .
+          zip -qr "artifacts/release/TCJ.Framework.Concurrency.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/concurrency-release
 
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
@@ -205,7 +229,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
-          --filter "Category!=SqlServer&Category!=AspNetCore"
+          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=release-test-results.trx"
@@ -591,6 +615,7 @@ jobs:
             artifacts/release/compatibility-summary.json
             artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
             artifacts/release/upgrade-compatibility-summary.json
+            artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/PROPERTY_TEST_SUMMARY.md
             artifacts/release/property-test-summary.json
             artifacts/release/FUZZ_SUMMARY.md
@@ -642,6 +667,7 @@ jobs:
             artifacts/release/property-test-summary.json
             artifacts/release/FUZZ_SUMMARY.md
             artifacts/release/fuzz-summary.json
+            artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -806,6 +832,7 @@ jobs:
             artifacts/release/compatibility-summary.json
             artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
             artifacts/release/upgrade-compatibility-summary.json
+            artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
           )
           release_args=(
             "$GITHUB_REF_NAME"

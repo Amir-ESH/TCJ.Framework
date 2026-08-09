@@ -13,7 +13,7 @@
 python3 eng/verify-dependency-security.py
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore"
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
 ```
 
 Run coverage:
@@ -22,7 +22,7 @@ Run coverage:
 dotnet test TCJ.slnx \
   -c Release \
   --no-build \
-  --filter "Category!=SqlServer&Category!=AspNetCore" \
+  --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency" \
   --collect:"XPlat Code Coverage" \
   --settings tests/coverlet.runsettings \
   --results-directory TestResults
