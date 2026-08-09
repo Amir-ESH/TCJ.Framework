@@ -15,19 +15,19 @@ public sealed class StringProperties
         return once.NormalizeLineEndings() == once;
     }
 
-    [Property(MaxTest = 100, Replay = "1102,2102", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1102,2103", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "String")]
     public bool EnsureStartsWithAlwaysEstablishesPrefix(UnicodeText text, char prefix)
         => text.Value.EnsureStartsWith(prefix).StartsWith(prefix);
 
-    [Property(MaxTest = 100, Replay = "1103,2103", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1103,2105", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "String")]
     public bool EnsureEndsWithAlwaysEstablishesSuffix(UnicodeText text, char suffix)
         => text.Value.EnsureEndsWith(suffix).EndsWith(suffix);
 
-    [Property(MaxTest = 100, Replay = "1104,2104", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1104,2107", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "String")]
     public bool TruncateNeverExceedsRequestedLength(LongText text, byte rawLength)
@@ -37,13 +37,13 @@ public sealed class StringProperties
         return truncated is not null && truncated.Length <= maxLength;
     }
 
-    [Property(MaxTest = 100, Replay = "1105,2105", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1105,2109", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "String")]
     public bool NullIfWhitespaceRecognizesWhitespace(WhitespaceText text)
         => text.Value.NullIfWhiteSpace() is null;
 
-    [Property(MaxTest = 100, Replay = "1106,2106", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1106,2111", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "String")]
     public bool RemoveKnownPrefixRemovesExactlyOnePrefix(AsciiText text, char prefix)

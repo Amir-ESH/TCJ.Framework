@@ -15,7 +15,7 @@ public sealed class ResultProperties
         return result.IsSuccess && !result.IsFailure && result.Value == value && result.Errors.Count == 0;
     }
 
-    [Property(MaxTest = 100, Replay = "1002,2002", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1002,2003", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "Result")]
     public bool FailurePreservesError(int value)
@@ -25,7 +25,7 @@ public sealed class ResultProperties
         return result.IsFailure && result.FirstError == error && result.Errors.SequenceEqual([error]);
     }
 
-    [Property(MaxTest = 100, Replay = "1003,2003", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1003,2005", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "Result")]
     public bool SuccessfulMapRunsExactlyOnce(int value)
@@ -35,7 +35,7 @@ public sealed class ResultProperties
         return calls == 1 && mapped.IsSuccess && mapped.Value == value + 1;
     }
 
-    [Property(MaxTest = 100, Replay = "1004,2004", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1004,2007", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "Result")]
     public bool FailedMapDoesNotInvokeMapper(int value)
@@ -46,7 +46,7 @@ public sealed class ResultProperties
         return calls == 0 && mapped.IsFailure;
     }
 
-    [Property(MaxTest = 100, Replay = "1005,2005", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1005,2009", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "Result")]
     public bool FailedValueAccessUsesDocumentedException(int value)
@@ -57,7 +57,7 @@ public sealed class ResultProperties
         catch (InvalidOperationException) { return true; }
     }
 
-    [Property(MaxTest = 100, Replay = "1006,2006", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1006,2011", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "Result")]
     public bool CombineDoesNotMutateInputs(bool firstFails, bool secondFails)

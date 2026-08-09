@@ -14,7 +14,9 @@ internal static class FuzzTargetCatalog
             ["ResultComposition"] = static () => new ResultCompositionTarget()
         };
 
-    public static IReadOnlyCollection<string> Names => Factories.Keys;
+    private static readonly IReadOnlyCollection<string> TargetNames = Factories.Keys.ToArray();
+
+    public static IReadOnlyCollection<string> Names => TargetNames;
 
     public static IFuzzTarget Create(string name) =>
         Factories.TryGetValue(name, out Func<IFuzzTarget>? factory)

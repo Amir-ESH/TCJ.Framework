@@ -22,7 +22,7 @@ public sealed class DependencyInjectionProperties
         return services.Count(d => d.ServiceType == typeof(IPropertyTransient)) == 1;
     }
 
-    [Property(MaxTest = 100, Replay = "1502,2502", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1502,2503", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "DependencyInjection")]
     public bool MarkerLifetimesRemainStable(bool registerFrameworkServices)
@@ -37,7 +37,7 @@ public sealed class DependencyInjectionProperties
             && FindLifetime<IPropertySingleton>(services) == ServiceLifetime.Singleton;
     }
 
-    [Property(MaxTest = 100, Replay = "1503,2503", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1503,2505", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "DependencyInjection")]
     public bool SelfRegistrationRemainsSelfScoped(bool value)
@@ -50,7 +50,7 @@ public sealed class DependencyInjectionProperties
             && descriptor.ImplementationType == typeof(PropertySelfScoped);
     }
 
-    [Property(MaxTest = 100, Replay = "1504,2504", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1504,2507", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "DependencyInjection")]
     public bool AbstractMarkedTypesAreNotRegistered(bool reverse)
@@ -63,7 +63,7 @@ public sealed class DependencyInjectionProperties
         return services.All(d => d.ImplementationType != typeof(AbstractPropertyTransient));
     }
 
-    [Property(MaxTest = 100, Replay = "1505,2505", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1505,2509", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "DependencyInjection")]
     public bool OpenGenericRegistrationPreservesGenericContract(bool value)

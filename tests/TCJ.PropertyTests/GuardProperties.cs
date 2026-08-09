@@ -15,7 +15,7 @@ public sealed class GuardProperties
         return ReferenceEquals(value, value.NotNull("value"));
     }
 
-    [Property(MaxTest = 100, Replay = "1402,2402", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1402,2403", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "Guard")]
     public bool NotNullOrWhitespaceRejectsGeneratedWhitespace(WhitespaceText text)
@@ -24,7 +24,7 @@ public sealed class GuardProperties
         catch (ArgumentException ex) { return ex.ParamName == "candidate"; }
     }
 
-    [Property(MaxTest = 100, Replay = "1403,2403", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1403,2405", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "Guard")]
     public bool PositiveAcceptsExactlyPositiveValues(int value)
@@ -33,7 +33,7 @@ public sealed class GuardProperties
         catch (ArgumentOutOfRangeException ex) { return value <= 0 && ex.ParamName == "value"; }
     }
 
-    [Property(MaxTest = 100, Replay = "1404,2404", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1404,2407", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "Guard")]
     public bool InRangeMatchesInclusiveComparison(int value, short a, short b)
@@ -44,7 +44,7 @@ public sealed class GuardProperties
         catch (ArgumentOutOfRangeException ex) { return (value < min || value > max) && ex.ParamName == "value"; }
     }
 
-    [Property(MaxTest = 100, Replay = "1405,2405", Arbitrary = new[] { typeof(PropertyArbitraries) })]
+    [Property(MaxTest = 100, Replay = "1405,2409", Arbitrary = new[] { typeof(PropertyArbitraries) })]
     [Trait("Category", "Property")]
     [Trait("Category", "Guard")]
     public bool LengthBetweenUsesInclusiveBounds(AsciiText text, byte lower, byte width)

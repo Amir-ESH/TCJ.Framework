@@ -43,6 +43,18 @@ def inspect_properties(policy):
                             'iterations':int(max_test.group('count')) if max_test else 0})
     return entries,categories
 
+def validate_replay_seeds(entries):
+    seen=set()
+    for entry in entries:
+        replay=entry['replay']
+        require(replay,f"Property {entry['name']} is missing deterministic Replay seed.")
+        parts=[int(part) for part in replay.split(',')]
+        require(len(parts)>=2,f"Property {entry['name']} has an invalid Replay seed: {replay}.")
+        require(parts[1] % 2 == 1,
+                f"Property {entry['name']} has invalid FsCheck Replay gamma {parts[1]}; gamma must be odd.")
+        require(replay not in seen,f"Duplicate property Replay seed: {replay}.")
+        seen.add(replay)
+
 def check_central_versions():
     root=ET.parse(ROOT/'Directory.Packages.props').getroot()
     versions={e.attrib.get('Include'):e.attrib.get('Version') for e in root.findall('.//PackageVersion')}
@@ -98,7 +110,7 @@ def validate_config(skip_git=False):
     require(not missing,f'Missing required property categories: {sorted(missing)}')
     for entry in entries:
         require(entry['iterations']>=int(policy['minimumIterationsPerProperty']),f"Property {entry['name']} has insufficient iterations.")
-        require(entry['replay'],f"Property {entry['name']} is missing deterministic Replay seed.")
+    validate_replay_seeds(entries)
     generators=(prop.parent/'Infrastructure/PropertyArbitraries.cs').read_text(encoding='utf-8')
     require('Arb.From' in generators and 'Shrink' in generators,'Custom generators with shrinking are required.')
     catalog=load_json(ROOT/policy['targetCatalog']); names={item['name'] for item in catalog.get('targets',[])}

@@ -17,6 +17,25 @@ class FuzzingVerifierTests(unittest.TestCase):
         self.assertTrue(all(e['replay'] for e in entries))
         self.assertTrue(set(policy['requiredPropertyCategories']).issubset(categories))
 
+    def test_property_replay_gamma_is_odd_and_seeds_are_unique(self):
+        policy=vf.load_json(vf.POLICY_PATH); entries,_=vf.inspect_properties(policy)
+        vf.validate_replay_seeds(entries)
+        self.assertTrue(all(int(entry['replay'].split(',')[1]) % 2 == 1 for entry in entries))
+        self.assertEqual(len(entries),len({entry['replay'] for entry in entries}))
+
+    def test_even_fscheck_replay_gamma_is_rejected(self):
+        entries=[{'name':'InvalidReplayProperty','replay':'1001,2002'}]
+        with self.assertRaisesRegex(vf.VerificationError,'gamma must be odd'):
+            vf.validate_replay_seeds(entries)
+
+    def test_duplicate_property_replay_seed_is_rejected(self):
+        entries=[
+            {'name':'FirstProperty','replay':'1001,2001'},
+            {'name':'SecondProperty','replay':'1001,2001'},
+        ]
+        with self.assertRaisesRegex(vf.VerificationError,'Duplicate property Replay seed'):
+            vf.validate_replay_seeds(entries)
+
     def test_required_fuzz_targets_have_corpora(self):
         policy=vf.load_json(vf.POLICY_PATH); catalog=vf.load_json(vf.ROOT/policy['targetCatalog'])
         by_name={t['name']:t for t in catalog['targets']}
