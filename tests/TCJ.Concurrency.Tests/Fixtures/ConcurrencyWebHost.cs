@@ -60,7 +60,7 @@ internal sealed class ConcurrencyWebHost : IAsyncDisposable
             return Results.Ok();
         });
 
-        app.MapGet("/fail", () => throw new InvalidOperationException("stress-endpoint-failure"));
+        app.MapGet("/fail", (HttpContext _) => throw new InvalidOperationException("stress-endpoint-failure"));
 
         await app.StartAsync().ConfigureAwait(false);
         _application = app;

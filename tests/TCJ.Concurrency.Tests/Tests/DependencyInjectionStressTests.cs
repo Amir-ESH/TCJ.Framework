@@ -45,7 +45,7 @@ public sealed class DependencyInjectionStressTests
     public Task AssemblyScanningOrderRemainsDeterministic()
     {
         var expectedServices = new ServiceCollection();
-        expectedServices.AddTcjDependencyInjection(options => options.AddAssemblies(TestAssembly, typeof(IGuidGenerator).Assembly));
+        expectedServices.AddTcjDependencyInjection(options => options.AddAssemblies(new[] { TestAssembly, typeof(IGuidGenerator).Assembly }));
         string expected = Canonicalize(expectedServices);
 
         return StressRunner.RunAsync(nameof(AssemblyScanningOrderRemainsDeterministic), "core", context =>
