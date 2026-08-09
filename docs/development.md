@@ -261,3 +261,7 @@ Run `python3 eng/verify-fuzzing.py validate-config` when changing Core, dependen
 ## Observability validation
 
 Telemetry changes must keep `eng/observability-policy.json` and `eng/observability-contract.json` aligned with implementation and tests. Run `python3 eng/verify-observability.py validate-config`, then the `TCJ.Observability.Tests` project and `verify-observability.py verify` command documented in [the observability guide](observability.md). Generated `TestResults/Observability/` and `artifacts/observability/` content is local/CI evidence and must not be committed.
+
+## Resilience validation
+
+Resilience changes must keep `eng/resilience-policy.json` and `eng/resilience-contract.json` aligned with production defaults, deterministic tests, telemetry, benchmarks, and automation. Run `python3 eng/verify-resilience.py validate-config`, then `TCJ.Resilience.Tests` with the fast non-SQL filter locally; the dedicated workflow runs provider-specific SQL Server scenarios and verifies generated TRX/trace evidence. Do not commit `TestResults/Resilience/` or `artifacts/resilience/`. See [the resilience guide](resilience.md) before changing retry or transaction boundaries.

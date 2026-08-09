@@ -27,6 +27,36 @@ public sealed class SqlServerIntegrationTests
     }
 
     [Fact]
+    public void Provider_registration_rejects_retry_count_above_resilience_bound()
+    {
+        var services = new ServiceCollection();
+        services.AddTcjSqlServer<SqlServerTestDbContext>(ConnectionString,
+            configureTcjSqlServer: options => options.MaxRetryCount = 11);
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        using IServiceScope scope = provider.CreateScope();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            scope.ServiceProvider.GetRequiredService<SqlServerTestDbContext>());
+        Assert.Contains("between 1 and 10", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Provider_registration_rejects_retry_delay_above_resilience_bound()
+    {
+        var services = new ServiceCollection();
+        services.AddTcjSqlServer<SqlServerTestDbContext>(ConnectionString,
+            configureTcjSqlServer: options => options.MaxRetryDelay = TimeSpan.FromSeconds(31));
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        using IServiceScope scope = provider.CreateScope();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            scope.ServiceProvider.GetRequiredService<SqlServerTestDbContext>());
+        Assert.Contains("no more than 30 seconds", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Provider_registration_exposes_context_abstractions_and_unit_of_work()
     {
         var services = new ServiceCollection();

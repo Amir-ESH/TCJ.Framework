@@ -39,7 +39,15 @@ internal static class BenchmarkCatalog
         Observability("ObservabilityBenchmarks", "TelemetryDisabled", baseline: true),
         Observability("ObservabilityBenchmarks", "TracingListenerEnabled"),
         Observability("ObservabilityBenchmarks", "MetricsListenerEnabled"),
-        Observability("ObservabilityBenchmarks", "TracingAndMetricsEnabled")
+        Observability("ObservabilityBenchmarks", "TracingAndMetricsEnabled"),
+
+        Resilience("ResilienceBenchmarks", "NoPolicy", baseline: true),
+        Resilience("ResilienceBenchmarks", "PolicyConfiguredNoFailure"),
+        Resilience("ResilienceBenchmarks", "OneRetry"),
+        Resilience("ResilienceBenchmarks", "RetryExhaustion"),
+        Resilience("ResilienceBenchmarks", "TimeoutSetup"),
+        Resilience("ResilienceBenchmarks", "CircuitBreakerClosed"),
+        Resilience("ResilienceBenchmarks", "CircuitBreakerOpenFastFail")
     ];
 
     internal static void WriteManifest()
@@ -87,6 +95,12 @@ internal static class BenchmarkCatalog
         string method,
         bool baseline = false)
         => new(type, method, ["TCJ.Core", "TCJ.DependencyInjection", "Observability"], null, baseline);
+
+    private static BenchmarkDefinition Resilience(
+        string type,
+        string method,
+        bool baseline = false)
+        => new(type, method, ["TCJ.Core", "Resilience"], null, baseline);
 
     private sealed record BenchmarkDefinition(
         string Type,

@@ -52,8 +52,14 @@ jobs:
     with:
       mode: full
 
+  resilience:
+    name: Resilience fault-injection gate
+    uses: ./.github/workflows/resilience.yml
+    with:
+      mode: full
+
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -120,6 +126,9 @@ jobs:
 
       - name: Validate observability configuration
         run: python3 eng/verify-observability.py validate-config
+
+      - name: Validate resilience configuration
+        run: python3 eng/verify-resilience.py validate-config
 
       - name: Check NuGet package IDs
         run: >

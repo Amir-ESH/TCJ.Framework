@@ -79,6 +79,12 @@ nunit-*.xml
 [Rr]eleasePS/
 dlldata.c
 
+# Resilience fault-injection evidence
+artifacts/resilience/
+!eng/resilience-policy.json
+!eng/resilience-contract.json
+!eng/verify-resilience.py
+
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
 artifacts/performance/

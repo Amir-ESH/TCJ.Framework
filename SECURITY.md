@@ -58,3 +58,7 @@ Fuzz inputs are untrusted data. The fuzz workflow does not execute corpus files 
 ## Telemetry data boundary
 
 TCJ telemetry excludes raw SQL, connection strings, request bodies, entity/user/tenant identifiers, tokens, passwords, and exception messages by default. `RecordExceptionMessages` is an explicit diagnostic opt-in and should be treated as potentially sensitive. CI exercises synthetic marker values and scans observability evidence; production packages do not contain exporter credentials, endpoints, or vendor exporters.
+
+## Resilience and sensitive data
+
+Resilience telemetry uses bounded failure categories and circuit states rather than raw exception messages, SQL, connection strings, credentials, user/tenant identifiers, or endpoint keys. Fault-injection traces are generated test evidence and are scanned by the resilience verifier before upload.

@@ -262,3 +262,24 @@ Treat telemetry names and units as consumer-facing contracts:
 - telemetry-contract changes must be called out in release notes.
 
 Update `eng/observability-contract.json`, tests, documentation, and the changelog together when an intentional contract change is required.
+
+## Resilience instrumentation
+
+Step 42 extends the existing `TCJ.Core` source and meter; it does not add a second telemetry backend or exporter dependency.
+
+Activities:
+
+- `tcj.resilience.execute`
+- `tcj.resilience.retry`
+- `tcj.resilience.timeout`
+- `tcj.resilience.circuit_breaker`
+
+Metrics:
+
+- `tcj.resilience.attempts`
+- `tcj.resilience.retries`
+- `tcj.resilience.timeouts`
+- `tcj.resilience.circuit_open`
+- `tcj.resilience.failures`
+
+Resilience dimensions are bounded strategy, outcome, attempt number, failure category, and circuit state values. Unknown consumer strategy labels collapse to `custom`; raw exception messages, SQL, connection strings, endpoint identifiers, user identifiers, and tenant identifiers are not resilience metric dimensions. See [Resilience policies and fault injection](resilience.md) for policy boundaries and idempotency requirements.

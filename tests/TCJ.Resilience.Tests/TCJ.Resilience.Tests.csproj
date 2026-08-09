@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\TestProject.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>TCJ.Resilience.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Testcontainers.MsSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TCJ.Core\TCJ.Core.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.DependencyInjection\TCJ.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.EntityFrameworkCore\TCJ.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.EntityFrameworkCore.SqlServer\TCJ.EntityFrameworkCore.SqlServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\eng\resilience-policy.json"
+          Link="resilience-policy.json"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\eng\resilience-contract.json"
+          Link="resilience-contract.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

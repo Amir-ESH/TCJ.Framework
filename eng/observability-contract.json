@@ -105,6 +105,22 @@
     {
       "name": "tcj.aspnetcore.exception.handle",
       "source": "TCJ.AspNetCore"
+    },
+    {
+      "name": "tcj.resilience.execute",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.resilience.retry",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.resilience.timeout",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.resilience.circuit_breaker",
+      "source": "TCJ.Core"
     }
   ],
   "metrics": [
@@ -179,6 +195,36 @@
       "meter": "TCJ.AspNetCore",
       "type": "histogram",
       "unit": "s"
+    },
+    {
+      "name": "tcj.resilience.attempts",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{attempt}"
+    },
+    {
+      "name": "tcj.resilience.retries",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{retry}"
+    },
+    {
+      "name": "tcj.resilience.timeouts",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{timeout}"
+    },
+    {
+      "name": "tcj.resilience.circuit_open",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{transition}"
+    },
+    {
+      "name": "tcj.resilience.failures",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{failure}"
     }
   ],
   "tags": [
@@ -201,7 +247,12 @@
     "tcj.affected_rows",
     "tcj.di.assembly_count",
     "tcj.di.discovered_type_count",
-    "tcj.di.registered_service_count"
+    "tcj.di.registered_service_count",
+    "tcj.resilience.strategy",
+    "tcj.resilience.outcome",
+    "tcj.resilience.attempt",
+    "tcj.resilience.failure_type",
+    "tcj.resilience.circuit_state"
   ],
   "optInSensitiveTags": [
     "tcj.exception.message"

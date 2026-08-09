@@ -59,6 +59,14 @@ public static class TcjDiagnosticNames
         public const string SqlServerConfigure = "tcj.db.sqlserver.configure";
         /// <summary>ASP.NET Core exception handling operation.</summary>
         public const string AspNetCoreExceptionHandle = "tcj.aspnetcore.exception.handle";
+        /// <summary>Explicit resilience policy execution.</summary>
+        public const string ResilienceExecute = "tcj.resilience.execute";
+        /// <summary>Retry attempt scheduled by an explicit resilience policy.</summary>
+        public const string ResilienceRetry = "tcj.resilience.retry";
+        /// <summary>Operation timeout produced by an explicit resilience policy.</summary>
+        public const string ResilienceTimeout = "tcj.resilience.timeout";
+        /// <summary>Circuit-breaker state transition or rejection.</summary>
+        public const string ResilienceCircuitBreaker = "tcj.resilience.circuit_breaker";
     }
 
     /// <summary>Stable metric instrument names.</summary>
@@ -88,6 +96,16 @@ public static class TcjDiagnosticNames
         public const string AspNetCoreExceptionsHandled = "tcj.aspnetcore.exceptions.handled";
         /// <summary>TCJ ASP.NET Core exception-handler duration.</summary>
         public const string AspNetCoreExceptionHandlerDuration = "tcj.aspnetcore.exception_handler.duration";
+        /// <summary>Attempts executed by explicit resilience policies.</summary>
+        public const string ResilienceAttempts = "tcj.resilience.attempts";
+        /// <summary>Retries scheduled by explicit resilience policies.</summary>
+        public const string ResilienceRetries = "tcj.resilience.retries";
+        /// <summary>Operations canceled by explicit timeout policies.</summary>
+        public const string ResilienceTimeouts = "tcj.resilience.timeouts";
+        /// <summary>Circuit-open transitions recorded by circuit breakers.</summary>
+        public const string ResilienceCircuitOpen = "tcj.resilience.circuit_open";
+        /// <summary>Terminal failures observed by explicit resilience policies.</summary>
+        public const string ResilienceFailures = "tcj.resilience.failures";
     }
 
     /// <summary>Stable activity-tag and metric-dimension names.</summary>
@@ -135,6 +153,16 @@ public static class TcjDiagnosticNames
         public const string DiscoveredTypeCount = "tcj.di.discovered_type_count";
         /// <summary>Stable telemetry tag for RegisteredServiceCount.</summary>
         public const string RegisteredServiceCount = "tcj.di.registered_service_count";
+        /// <summary>Stable bounded resilience strategy name.</summary>
+        public const string ResilienceStrategy = "tcj.resilience.strategy";
+        /// <summary>Stable resilience operation outcome.</summary>
+        public const string ResilienceOutcome = "tcj.resilience.outcome";
+        /// <summary>Bounded retry-attempt number.</summary>
+        public const string ResilienceAttempt = "tcj.resilience.attempt";
+        /// <summary>Bounded resilience failure category.</summary>
+        public const string ResilienceFailureType = "tcj.resilience.failure_type";
+        /// <summary>Bounded circuit-breaker state.</summary>
+        public const string ResilienceCircuitState = "tcj.resilience.circuit_state";
     }
 
     /// <summary>Bounded operation outcome values.</summary>

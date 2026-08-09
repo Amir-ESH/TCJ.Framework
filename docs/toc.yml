@@ -41,6 +41,8 @@
   href: property-and-fuzz-testing.md
 - name: Concurrency Stress Testing
   href: concurrency-stress-testing.md
+- name: Resilience Policies and Fault Injection
+  href: resilience.md
 - name: Migration 0.1.0-preview.1 to 0.1.0-preview.2
   href: migrations/0.1.0-preview.1-to-0.1.0-preview.2.md
 - name: Security

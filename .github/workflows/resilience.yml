@@ -1,0 +1,155 @@
+name: Resilience fault injection
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: Resilience execution mode
+        required: false
+        type: string
+        default: full
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Resilience execution mode
+        required: true
+        type: choice
+        default: full
+        options: [fast, full]
+  schedule:
+    - cron: "43 4 * * 2"
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "tests/TCJ.Resilience.Tests/**"
+      - "eng/resilience-policy.json"
+      - "eng/resilience-contract.json"
+      - "eng/verify-resilience.py"
+      - "eng/observability-*.json"
+      - "benchmarks/TCJ.Benchmarks/**"
+      - "docs/resilience.md"
+      - ".github/workflows/resilience.yml"
+      - ".github/workflows/release-preflight.yml"
+      - ".github/workflows/release.yml"
+      - "Directory.Packages.props"
+      - "TCJ.slnx"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "tests/TCJ.Resilience.Tests/**"
+      - "eng/resilience-policy.json"
+      - "eng/resilience-contract.json"
+      - "eng/verify-resilience.py"
+      - "eng/observability-*.json"
+      - "benchmarks/TCJ.Benchmarks/**"
+      - "docs/resilience.md"
+      - ".github/workflows/resilience.yml"
+      - ".github/workflows/release-preflight.yml"
+      - ".github/workflows/release.yml"
+      - "Directory.Packages.props"
+      - "TCJ.slnx"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: resilience-${{ github.ref }}-${{ inputs.mode || 'full' }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+  TCJ_RESILIENCE_TRACE_DIR: artifacts/resilience/traces
+
+jobs:
+  fault-injection:
+    name: Run deterministic resilience scenarios
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Validate automation scripts
+        run: |
+          python3 -m py_compile eng/*.py
+          python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
+
+      - name: Validate resilience configuration
+        run: python3 eng/verify-resilience.py validate-config
+
+      - name: Restore and audit dependencies
+        run: dotnet restore TCJ.slnx --force-evaluate
+
+      - name: Build resilience tests
+        run: >
+          dotnet build tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Prepare deterministic evidence directories
+        run: |
+          rm -rf TestResults/Resilience artifacts/resilience
+          mkdir -p TestResults/Resilience artifacts/resilience/traces
+
+      - name: Run fast resilience scenarios
+        run: >
+          dotnet test tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj
+          --configuration Release
+          --no-build
+          --filter "Category!=SqlServer"
+          --logger "trx;LogFileName=resilience-core.trx"
+          --results-directory TestResults/Resilience
+
+      - name: Run SQL Server resilience scenarios
+        if: inputs.mode != 'fast' || github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'schedule'
+        run: >
+          dotnet test tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj
+          --configuration Release
+          --no-build
+          --filter "Category=SqlServer"
+          --logger "trx;LogFileName=resilience-sqlserver.trx"
+          --results-directory TestResults/Resilience
+
+      - name: Verify resilience evidence
+        if: always()
+        run: >
+          python3 eng/verify-resilience.py verify
+          --results TestResults/Resilience
+          --traces artifacts/resilience/traces
+          --output artifacts/resilience/report
+
+      - name: Publish resilience summary
+        if: always()
+        run: |
+          if [[ -f artifacts/resilience/report/RESILIENCE_SUMMARY.md ]]; then
+            cat artifacts/resilience/report/RESILIENCE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "# Resilience fault injection" >> "$GITHUB_STEP_SUMMARY"
+            echo "No passing resilience summary was generated; inspect test and verifier logs." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload attempt histories and traces
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: resilience-${{ github.run_id }}-${{ inputs.mode || 'full' }}
+          path: |
+            TestResults/Resilience/**
+            artifacts/resilience/traces/**
+            artifacts/resilience/report/**
+          if-no-files-found: warn
+          retention-days: 30
