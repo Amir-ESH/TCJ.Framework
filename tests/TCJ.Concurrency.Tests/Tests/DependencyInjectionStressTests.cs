@@ -45,7 +45,7 @@ public sealed class DependencyInjectionStressTests
     public Task AssemblyScanningOrderRemainsDeterministic()
     {
         var expectedServices = new ServiceCollection();
-        expectedServices.AddTcjDependencyInjection(options => options.AddAssemblies(new[] { TestAssembly, typeof(IGuidGenerator).Assembly }));
+        expectedServices.AddTcjDependencyInjection(options => options.AddAssemblies(TestAssembly, typeof(IGuidGenerator).Assembly));
         string expected = Canonicalize(expectedServices);
 
         return StressRunner.RunAsync(nameof(AssemblyScanningOrderRemainsDeterministic), "core", context =>
@@ -74,10 +74,10 @@ public sealed class DependencyInjectionStressTests
         });
 
     [Fact]
-    public async Task TransientServicesAreDistinctUnderConcurrentResolution()
+    public Task TransientServicesAreDistinctUnderConcurrentResolution()
     {
         using ServiceProvider provider = BuildProvider();
-        await StressRunner.RunAsync(nameof(TransientServicesAreDistinctUnderConcurrentResolution), "core", _ =>
+        return StressRunner.RunAsync(nameof(TransientServicesAreDistinctUnderConcurrentResolution), "core", _ =>
         {
             ITransientProbe first = provider.GetRequiredService<ITransientProbe>();
             ITransientProbe second = provider.GetRequiredService<ITransientProbe>();
@@ -89,10 +89,10 @@ public sealed class DependencyInjectionStressTests
 
     [Fact]
     [Trait("Category", "RequestScope")]
-    public async Task ScopedServicesStayWithinOwningScope()
+    public Task ScopedServicesStayWithinOwningScope()
     {
         using ServiceProvider provider = BuildProvider();
-        await StressRunner.RunAsync(nameof(ScopedServicesStayWithinOwningScope), "core", _ =>
+        return StressRunner.RunAsync(nameof(ScopedServicesStayWithinOwningScope), "core", _ =>
         {
             using IServiceScope scope = provider.CreateScope();
             IScopedProbe first = scope.ServiceProvider.GetRequiredService<IScopedProbe>();
@@ -103,11 +103,11 @@ public sealed class DependencyInjectionStressTests
     }
 
     [Fact]
-    public async Task SingletonServicesRemainStableAcrossConcurrentScopes()
+    public Task SingletonServicesRemainStableAcrossConcurrentScopes()
     {
         using ServiceProvider provider = BuildProvider();
         Guid expected = provider.GetRequiredService<ISingletonProbe>().Id;
-        await StressRunner.RunAsync(nameof(SingletonServicesRemainStableAcrossConcurrentScopes), "core", _ =>
+        return StressRunner.RunAsync(nameof(SingletonServicesRemainStableAcrossConcurrentScopes), "core", _ =>
         {
             using IServiceScope scope = provider.CreateScope();
             Assert.Equal(expected, scope.ServiceProvider.GetRequiredService<ISingletonProbe>().Id);
@@ -117,10 +117,10 @@ public sealed class DependencyInjectionStressTests
 
     [Fact]
     [Trait("Category", "Cancellation")]
-    public async Task DisposingIndependentScopesDoesNotLeakState()
+    public Task DisposingIndependentScopesDoesNotLeakState()
     {
         using ServiceProvider provider = BuildProvider();
-        await StressRunner.RunAsync(nameof(DisposingIndependentScopesDoesNotLeakState), "core", _ =>
+        return StressRunner.RunAsync(nameof(DisposingIndependentScopesDoesNotLeakState), "core", _ =>
         {
             IServiceScope firstScope = provider.CreateScope();
             using IServiceScope secondScope = provider.CreateScope();

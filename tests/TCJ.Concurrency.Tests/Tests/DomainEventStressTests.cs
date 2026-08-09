@@ -13,10 +13,10 @@ namespace TCJ.Concurrency.Tests.Tests;
 public sealed class DomainEventStressTests
 {
     [Fact]
-    public async Task DomainEventsDispatchExactlyOncePerOperation()
+    public Task DomainEventsDispatchExactlyOncePerOperation()
     {
         using ServiceProvider provider = BuildProvider();
-        await StressRunner.RunAsync(nameof(DomainEventsDispatchExactlyOncePerOperation), "core", async context =>
+        return StressRunner.RunAsync(nameof(DomainEventsDispatchExactlyOncePerOperation), "core", async context =>
         {
             using IServiceScope scope = provider.CreateScope();
             IDomainEventDispatcher dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
@@ -28,10 +28,10 @@ public sealed class DomainEventStressTests
 
     [Fact]
     [Trait("Category", "RequestScope")]
-    public async Task DomainEventsFromIndependentScopesDoNotMix()
+    public Task DomainEventsFromIndependentScopesDoNotMix()
     {
         using ServiceProvider provider = BuildProvider();
-        await StressRunner.RunAsync(nameof(DomainEventsFromIndependentScopesDoNotMix), "core", async context =>
+        return StressRunner.RunAsync(nameof(DomainEventsFromIndependentScopesDoNotMix), "core", async context =>
         {
             using IServiceScope scope = provider.CreateScope();
             IDomainEventDispatcher dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
@@ -45,11 +45,11 @@ public sealed class DomainEventStressTests
 
     [Fact]
     [Trait("Category", "Cancellation")]
-    public async Task CancellationStopsOnlyTargetDomainEventOperation()
+    public Task CancellationStopsOnlyTargetDomainEventOperation()
     {
         using ServiceProvider provider = BuildProvider();
         var successful = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
-        await StressRunner.RunAsync(nameof(CancellationStopsOnlyTargetDomainEventOperation), "core", async context =>
+        return StressRunner.RunAsync(nameof(CancellationStopsOnlyTargetDomainEventOperation), "core", async context =>
         {
             using IServiceScope scope = provider.CreateScope();
             IDomainEventDispatcher dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
