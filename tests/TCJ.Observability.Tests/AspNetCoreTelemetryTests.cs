@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -20,7 +21,11 @@ public sealed class AspNetCoreTelemetryTests : IDisposable
     {
         using var collector = new ActivityCollector(TcjDiagnosticNames.Sources.AspNetCore);
         using var request = new Activity("Microsoft.AspNetCore.Hosting.HttpRequestIn").Start();
-        var context = new DefaultHttpContext();
+        using ServiceProvider requestServices = CreateRequestServices();
+        var context = new DefaultHttpContext
+        {
+            RequestServices = requestServices
+        };
         context.Response.Body = new MemoryStream();
         context.Request.Method = HttpMethods.Get;
         context.Request.Path = "/api/orders/42";
@@ -50,7 +55,11 @@ public sealed class AspNetCoreTelemetryTests : IDisposable
     public async Task Default_exception_log_does_not_include_sensitive_exception_message()
     {
         var logger = new CaptureLogger<TcjExceptionHandler>();
-        var context = new DefaultHttpContext();
+        using ServiceProvider requestServices = CreateRequestServices();
+        var context = new DefaultHttpContext
+        {
+            RequestServices = requestServices
+        };
         context.Response.Body = new MemoryStream();
         context.Request.Method = HttpMethods.Post;
         context.Request.Path = "/orders/TCJ_TEST_TOKEN_MARKER";
@@ -94,6 +103,14 @@ public sealed class AspNetCoreTelemetryTests : IDisposable
             item => item.OperationName == TcjDiagnosticNames.Activities.AspNetCoreExceptionHandle);
         Assert.Equal(true, activity.TagObjects.First(tag => tag.Key == TcjDiagnosticNames.Tags.Canceled).Value);
         Assert.NotEqual(ActivityStatusCode.Error, activity.Status);
+    }
+
+    private static ServiceProvider CreateRequestServices()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddProblemDetails();
+        return services.BuildServiceProvider();
     }
 
     private sealed class CaptureLogger<T> : ILogger<T>
