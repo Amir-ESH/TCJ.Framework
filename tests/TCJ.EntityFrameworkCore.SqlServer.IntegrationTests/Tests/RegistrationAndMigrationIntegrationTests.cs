@@ -71,15 +71,10 @@ public sealed class RegistrationAndMigrationIntegrationTests(SqlServerContainerF
     public void Invalid_sql_server_options_fail_with_a_useful_error()
     {
         var services = new ServiceCollection();
-        services.AddTcjSqlServer<SqlServerTestDbContext>(
-            Database.ConnectionString,
-            options => options.CommandTimeout = 0);
-
-        using ServiceProvider provider = services.BuildServiceProvider();
-        using IServiceScope scope = provider.CreateScope();
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => scope.ServiceProvider.GetRequiredService<SqlServerTestDbContext>());
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            services.AddTcjSqlServer<SqlServerTestDbContext>(
+                Database.ConnectionString,
+                options => options.CommandTimeout = 0));
 
         Assert.Contains("CommandTimeout must be greater than zero", exception.Message, StringComparison.Ordinal);
     }
