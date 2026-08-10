@@ -44,7 +44,6 @@ public static class SqlServerServiceCollectionExtensions
 
         var tcjSqlServerOptions = new TcjSqlServerOptions();
         configureTcjSqlServer?.Invoke(tcjSqlServerOptions);
-        tcjSqlServerOptions.Validate();
 
         return services.AddTcjEntityFrameworkCore<TDbContext>((serviceProvider, optionsBuilder) =>
         {
