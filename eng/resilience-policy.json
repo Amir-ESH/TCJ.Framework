@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "testProject": "tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj",
+  "minimumScenarioCount": 18,
+  "maximumRetryAttempts": 5,
+  "maximumRetryDelaySeconds": 30,
+  "maximumOperationTimeoutSeconds": 120,
+  "maximumCircuitBreakSeconds": 300,
+  "sqlServerProviderMaximumRetryCount": 10,
+  "requireJitter": true,
+  "requireCancellationPropagation": true,
+  "requireCircuitBreakerTests": true,
+  "requireSqlServerTests": true,
+  "requireDomainEventTests": true,
+  "requireDuplicateSideEffectTests": true,
+  "requireConcurrencyTests": true,
+  "requireTelemetryAssertions": true,
+  "requireSuccessPathBenchmark": true,
+  "requiredCategories": [
+    "Retry",
+    "Timeout",
+    "CircuitBreaker",
+    "Cancellation",
+    "SqlServer",
+    "DomainEvents",
+    "Idempotency",
+    "Concurrency"
+  ],
+  "allowedTelemetryDimensions": [
+    "tcj.resilience.strategy",
+    "tcj.resilience.outcome",
+    "tcj.resilience.attempt",
+    "tcj.resilience.failure_type",
+    "tcj.resilience.circuit_state"
+  ],
+  "forbiddenSensitivePatterns": [
+    "password",
+    "connection_string",
+    "raw_sql",
+    "user.id",
+    "tenant.id",
+    "exception.message"
+  ]
+}

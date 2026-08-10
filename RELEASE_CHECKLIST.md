@@ -160,3 +160,12 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Telemetry contract changes are intentional, documented, and included in release notes.
 - [ ] The observability overhead benchmark is present in the performance evidence.
 - [ ] No exporter or vendor telemetry dependency entered a production TCJ package.
+
+## Resilience
+
+- [ ] `python3 eng/verify-resilience.py validate-config` passes.
+- [ ] Fast and SQL Server `TCJ.Resilience.Tests` scenarios pass.
+- [ ] `verify-resilience.py verify` reports PASS with deterministic attempt traces.
+- [ ] Retry/timeout/circuit defaults and telemetry contracts match `eng/resilience-contract.json`.
+- [ ] Performance evidence includes the resilience success path and failure-path benchmarks.
+- [ ] Generated `TestResults/Resilience/` and `artifacts/resilience/` output is not committed.

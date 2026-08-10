@@ -64,11 +64,11 @@ public sealed class DomainEventDispatcher : IDomainEventDispatcher
 
                 return ActivatorUtilities.CreateFactory(
                     invokerType,
-                    Type.EmptyTypes);
+                    new[] { typeof(IServiceProvider) });
             });
 
         return (IDomainEventHandlerInvoker)factory(
             _serviceProvider,
-            []);
+            new object[] { _serviceProvider });
     }
 }

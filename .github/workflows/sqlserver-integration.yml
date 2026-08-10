@@ -27,6 +27,10 @@ on:
       - "src/TCJ.EntityFrameworkCore/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/**"
+      - "tests/TCJ.Resilience.Tests/**"
+      - "eng/resilience-policy.json"
+      - "eng/resilience-contract.json"
+      - "eng/verify-resilience.py"
       - "eng/sqlserver-integration-policy.json"
       - "eng/verify-sqlserver-integration.py"
       - "Directory.Build.props"
@@ -61,6 +65,10 @@ on:
       - "src/TCJ.EntityFrameworkCore/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/**"
+      - "tests/TCJ.Resilience.Tests/**"
+      - "eng/resilience-policy.json"
+      - "eng/resilience-contract.json"
+      - "eng/verify-resilience.py"
       - "eng/sqlserver-integration-policy.json"
       - "eng/verify-sqlserver-integration.py"
       - "Directory.Build.props"
@@ -137,6 +145,9 @@ jobs:
       - name: Validate SQL Server integration policy
         run: python3 eng/verify-sqlserver-integration.py validate-config
 
+      - name: Validate resilience policy
+        run: python3 eng/verify-resilience.py validate-config
+
       - name: Restore and audit dependencies
         run: >
           dotnet restore
@@ -149,6 +160,11 @@ jobs:
           tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj
           --configuration Release
           --no-restore
+
+      - name: Restore and build SQL Server resilience tests
+        run: |
+          dotnet restore tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj --force-evaluate
+          dotnet build tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj --configuration Release --no-restore
 
       - name: Run SQL Server integration tests
         id: integration-tests
@@ -165,6 +181,17 @@ jobs:
             --results-directory TestResults/SqlServerIntegration \
             2>&1 | sed -E 's/(Password|Pwd)[[:space:]]*=[^;[:space:]]+/\1=<redacted>/Ig; s/Tcj!aA1_[A-F0-9]{20,}/<redacted>/g' \
             | tee TestResults/SqlServerIntegration/diagnostics/test-host.log
+
+      - name: Run SQL Server resilience fault-injection scenarios
+        env:
+          TCJ_RESILIENCE_TRACE_DIR: artifacts/resilience/sqlserver-traces
+        run: >
+          dotnet test tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj
+          --configuration Release
+          --no-build
+          --filter "Category=SqlServer"
+          --logger "trx;LogFileName=resilience-sqlserver.trx"
+          --results-directory TestResults/ResilienceSqlServer
 
       - name: Verify test results and minimum test count
         id: verify-results
@@ -197,6 +224,8 @@ jobs:
             artifacts/sqlserver-integration/SQLSERVER_INTEGRATION_SUMMARY.md
             artifacts/sqlserver-integration/sqlserver-integration-summary.json
             artifacts/sqlserver-integration/logs/**
+            TestResults/ResilienceSqlServer/**
+            artifacts/resilience/sqlserver-traces/**
           if-no-files-found: warn
           retention-days: 14
 

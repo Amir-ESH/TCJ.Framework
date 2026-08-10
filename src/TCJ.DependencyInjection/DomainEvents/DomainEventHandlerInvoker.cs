@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using TCJ.Core.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using TCJ.Core.DomainEvents;
+using TCJ.Core.Resilience;
 
 namespace TCJ.DependencyInjection.DomainEvents;
 
@@ -23,11 +25,29 @@ internal sealed class DomainEventHandlerInvoker<TEvent> : IDomainEventHandlerInv
     where TEvent : IDomainEvent
 {
     private readonly IEnumerable<IDomainEventHandler<TEvent>> _handlers;
+    private readonly TcjRetryPolicy? _handlerRetryPolicy;
+    private readonly TcjDomainEventResilienceOptions? _resilienceOptions;
 
     public DomainEventHandlerInvoker(IEnumerable<IDomainEventHandler<TEvent>> handlers)
     {
         ArgumentNullException.ThrowIfNull(handlers);
         _handlers = handlers;
+    }
+
+    public DomainEventHandlerInvoker(
+        IEnumerable<IDomainEventHandler<TEvent>> handlers,
+        IServiceProvider serviceProvider)
+        : this(handlers)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+        _resilienceOptions = serviceProvider.GetService<TcjDomainEventResilienceOptions>();
+
+        if (_resilienceOptions?.RetryTransientHandlerFailures == true)
+        {
+            ITransientFailureDetector detector = serviceProvider.GetRequiredService<ITransientFailureDetector>();
+            TimeProvider timeProvider = serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System;
+            _handlerRetryPolicy = new TcjRetryPolicy(detector, _resilienceOptions.Retry, timeProvider);
+        }
     }
 
     public async Task InvokeAsync(
@@ -97,7 +117,7 @@ internal sealed class DomainEventHandlerInvoker<TEvent> : IDomainEventHandlerInv
         }
     }
 
-    private static async Task InvokeHandlerAsync(
+    private async Task InvokeHandlerAsync(
         IDomainEventHandler<TEvent> handler,
         TEvent domainEvent,
         CancellationToken cancellationToken)
@@ -130,7 +150,18 @@ internal sealed class DomainEventHandlerInvoker<TEvent> : IDomainEventHandlerInv
 
         try
         {
-            await handler.HandleAsync(domainEvent, cancellationToken).ConfigureAwait(false);
+            if (_handlerRetryPolicy is not null && _resilienceOptions?.RetryTransientHandlerFailures == true)
+            {
+                await _handlerRetryPolicy.ExecuteAsync(
+                    token => handler.HandleAsync(domainEvent, token),
+                    strategy: "domain_event_handler",
+                    cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await handler.HandleAsync(domainEvent, cancellationToken).ConfigureAwait(false);
+            }
+
             TcjTelemetry.CompleteSuccess(activity);
 
             if (TcjTelemetry.MetricsEnabled && CoreTelemetryDiagnostics.DomainEventHandlersCompleted.Enabled)

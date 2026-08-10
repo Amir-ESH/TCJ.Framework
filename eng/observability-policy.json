@@ -30,7 +30,11 @@
     "tcj.db.transaction.commit",
     "tcj.db.transaction.rollback",
     "tcj.db.sqlserver.configure",
-    "tcj.aspnetcore.exception.handle"
+    "tcj.aspnetcore.exception.handle",
+    "tcj.resilience.execute",
+    "tcj.resilience.retry",
+    "tcj.resilience.timeout",
+    "tcj.resilience.circuit_breaker"
   ],
   "requiredMetrics": [
     "tcj.domain_events.dispatched",
@@ -44,14 +48,24 @@
     "tcj.unit_of_work.rollbacks",
     "tcj.unit_of_work.commit.duration",
     "tcj.aspnetcore.exceptions.handled",
-    "tcj.aspnetcore.exception_handler.duration"
+    "tcj.aspnetcore.exception_handler.duration",
+    "tcj.resilience.attempts",
+    "tcj.resilience.retries",
+    "tcj.resilience.timeouts",
+    "tcj.resilience.circuit_open",
+    "tcj.resilience.failures"
   ],
   "allowedMetricDimensions": [
     "tcj.operation.name",
     "tcj.operation.outcome",
     "tcj.db.provider",
     "tcj.exception.category",
-    "tcj.http.status_code"
+    "tcj.http.status_code",
+    "tcj.resilience.strategy",
+    "tcj.resilience.outcome",
+    "tcj.resilience.attempt",
+    "tcj.resilience.failure_type",
+    "tcj.resilience.circuit_state"
   ],
   "forbiddenTagPatterns": [
     "password",

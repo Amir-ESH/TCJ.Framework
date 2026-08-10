@@ -88,3 +88,7 @@ See [Architecture tests and module dependency rules](architecture-tests.md) for 
 ## Observability boundary
 
 TCJ production modules publish logical framework telemetry through BCL `ActivitySource` and `Meter` primitives only. Exporters, collectors, and vendor SDKs stay at the application edge. Repository and Unit of Work activities complement rather than duplicate EF Core/database command telemetry, and ASP.NET Core exception activities remain children of the ambient request activity. Stable names and bounded tags are tracked in `eng/observability-contract.json`; see [Diagnostics and OpenTelemetry observability](observability.md).
+
+### Resilience boundaries
+
+Resilience primitives live in existing packages rather than a vendor-specific resilience package. `TCJ.Core` owns provider-neutral retry/timeout/circuit contracts, `TCJ.DependencyInjection` owns explicit domain-event handler retry registration, and `TCJ.EntityFrameworkCore.SqlServer` owns the transaction-level bridge to EF Core execution strategies. Operation, handler, transaction, command-timeout, request-timeout, and circuit boundaries are deliberately separate; see [Resilience policies and fault injection](resilience.md).

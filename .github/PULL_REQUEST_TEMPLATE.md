@@ -140,6 +140,17 @@ Describe the problem and the approach taken.
 - [ ] Observability tests pass
 - [ ] Generated telemetry artifacts are not committed
 
+## Resilience
+
+- [ ] Resilience boundaries and retry safety are documented
+- [ ] Permanent failures and caller cancellation are not retried
+- [ ] Retry, timeout, and circuit-breaker limits remain bounded
+- [ ] SQL Server transaction retries recreate context and transaction state
+- [ ] Domain-event retries do not duplicate successful handlers or undocumented side effects
+- [ ] Resilience telemetry dimensions remain bounded and sensitive-safe
+- [ ] Resilience tests pass, including applicable fault-injection and concurrency scenarios
+- [ ] Generated resilience traces and reports are not committed
+
 ## Related issue
 
 Refs #

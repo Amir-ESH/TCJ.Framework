@@ -106,6 +106,9 @@ jobs:
       - name: Validate observability configuration
         run: python3 eng/verify-observability.py validate-config
 
+      - name: Validate resilience configuration
+        run: python3 eng/verify-resilience.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -114,6 +117,47 @@ jobs:
           dotnet build TCJ.slnx
           --configuration Release
           --no-restore
+
+      - name: Run fast resilience tests
+        env:
+          TCJ_RESILIENCE_TRACE_DIR: ${{ github.workspace }}/artifacts/resilience/traces
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf TestResults/Resilience artifacts/resilience
+          mkdir -p TestResults/Resilience artifacts/resilience/traces
+          dotnet test tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --filter "Category!=SqlServer" \
+            --logger "trx;LogFileName=resilience-core.trx" \
+            --results-directory TestResults/Resilience
+
+      - name: Verify fast resilience evidence
+        run: >
+          python3 eng/verify-resilience.py verify
+          --results TestResults/Resilience
+          --traces artifacts/resilience/traces
+          --output artifacts/resilience/report
+
+      - name: Publish resilience summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/resilience/report/RESILIENCE_SUMMARY.md ]]; then
+            cat artifacts/resilience/report/RESILIENCE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload resilience evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: resilience-fast-${{ github.run_id }}
+          path: |
+            TestResults/Resilience/**
+            artifacts/resilience/**
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Run observability contract tests
         run: >

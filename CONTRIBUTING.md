@@ -145,3 +145,7 @@ Concurrency failures are first-class quality-gate failures. Reproduce the record
 ## Observability changes
 
 Treat activity names, metric names/types/units, and commonly consumed tags as compatibility contracts. Telemetry changes must update `eng/observability-contract.json`, focused observability tests, documentation, and release notes when applicable. Do not add exporter/vendor dependencies to production packages, unbounded dimensions, raw SQL, connection strings, entity/user identifiers, or exception messages by default.
+
+### Resilience changes
+
+Do not add broad retry loops to make transient tests pass. Any resilience change must identify its operation/transaction/handler/timeout/circuit boundary, preserve cancellation, prove permanent failures are not retried, and add deterministic fault-injection coverage. Side-effect retries require documented idempotency. Keep `eng/resilience-policy.json`, `eng/resilience-contract.json`, telemetry contracts, benchmarks, and release notes synchronized.

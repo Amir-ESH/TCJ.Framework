@@ -4,6 +4,9 @@ using TCJ.AspNetCore.Options;
 using TCJ.Core.Entities;
 using TCJ.Core.Identifiers;
 using TCJ.Core.Results;
+#if TCJ_RESILIENCE_SMOKE
+using TCJ.Core.Resilience;
+#endif
 using TCJ.DependencyInjection.Extensions;
 using TCJ.DependencyInjection.Registration;
 using TCJ.EntityFrameworkCore.Abstractions;
@@ -88,9 +91,52 @@ internal static class Program
             Console.WriteLine($"Loaded {assemblyName}");
         }
 
+
+#if TCJ_RESILIENCE_SMOKE
+        await VerifyPublishedResilienceAsync();
+#endif
+
         Console.WriteLine(
             $"Published package smoke test succeeded. Generated UUID: {id}");
     }
+
+#if TCJ_RESILIENCE_SMOKE
+    private static async Task VerifyPublishedResilienceAsync()
+    {
+        var detector = new TransientFailureDetector([new PublishedSmokeTransientClassifier()]);
+        var policy = new TcjRetryPolicy(detector, new TcjRetryOptions
+        {
+            MaxRetryAttempts = 1,
+            BaseDelay = TimeSpan.Zero,
+            MaxDelay = TimeSpan.Zero,
+            UseJitter = false
+        });
+        int attempts = 0;
+        int result = await policy.ExecuteAsync(_ =>
+        {
+            if (Interlocked.Increment(ref attempts) == 1)
+            {
+                throw new PublishedSmokeTransientException();
+            }
+
+            return Task.FromResult(42);
+        }, "operation");
+
+        if (result != 42 || attempts != 2 || detector.IsTransient(new ArgumentException("permanent")))
+        {
+            throw new InvalidOperationException("Published resilience retry/classification smoke check failed.");
+        }
+
+        Console.WriteLine("TCJ_RESILIENCE_SMOKE succeeded.");
+    }
+
+    private sealed class PublishedSmokeTransientException : Exception { }
+
+    private sealed class PublishedSmokeTransientClassifier : ITransientFailureClassifier
+    {
+        public bool IsTransient(Exception exception) => exception is PublishedSmokeTransientException;
+    }
+#endif
 }
 
 public sealed class SmokeDbContext(

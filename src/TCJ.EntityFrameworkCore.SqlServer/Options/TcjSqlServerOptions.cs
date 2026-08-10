@@ -15,13 +15,13 @@ public sealed class TcjSqlServerOptions
 
     /// <summary>
     /// Gets or sets the maximum number of retry attempts when connection resiliency is enabled.
-    /// The default value is 6.
+    /// The default value is 6; enabled retry configuration is bounded to the range 1 through 10.
     /// </summary>
     public int MaxRetryCount { get; set; } = 6;
 
     /// <summary>
     /// Gets or sets the maximum delay between retry attempts.
-    /// The default value is 30 seconds.
+    /// The default and maximum value is 30 seconds when retry-on-failure is enabled.
     /// </summary>
     public TimeSpan MaxRetryDelay { get; set; } = TimeSpan.FromSeconds(30);
 
@@ -69,16 +69,16 @@ public sealed class TcjSqlServerOptions
 
     private void Validate()
     {
-        if (EnableRetryOnFailure && MaxRetryCount <= 0)
+        if (EnableRetryOnFailure && MaxRetryCount is < 1 or > 10)
         {
             throw new InvalidOperationException(
-                $"{nameof(MaxRetryCount)} must be greater than zero when retry-on-failure is enabled.");
+                $"{nameof(MaxRetryCount)} must be between 1 and 10 when retry-on-failure is enabled.");
         }
 
-        if (EnableRetryOnFailure && MaxRetryDelay <= TimeSpan.Zero)
+        if (EnableRetryOnFailure && (MaxRetryDelay <= TimeSpan.Zero || MaxRetryDelay > TimeSpan.FromSeconds(30)))
         {
             throw new InvalidOperationException(
-                $"{nameof(MaxRetryDelay)} must be greater than zero when retry-on-failure is enabled.");
+                $"{nameof(MaxRetryDelay)} must be greater than zero and no more than 30 seconds when retry-on-failure is enabled.");
         }
 
         if (CommandTimeout is <= 0)

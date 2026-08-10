@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
   "minimumBenchmarkCount": 8,
-  "maximumRelativeMeanRatio": 1.20,
+  "maximumRelativeMeanRatio": 1.2,
   "maximumRelativeAllocationRatio": 1.15,
   "maximumUnexplainedAllocatedBytes": 1024,
   "requiredBenchmarkCategories": [
     "TCJ.Core",
-    "TCJ.DependencyInjection"
+    "TCJ.DependencyInjection",
+    "Resilience"
   ]
 }

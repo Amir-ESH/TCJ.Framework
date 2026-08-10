@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "packageStrategy": "built-in-primitives",
+  "defaults": {
+    "maxRetryAttempts": 3,
+    "retryBaseDelayMilliseconds": 200,
+    "retryMaxDelaySeconds": 5,
+    "useJitter": true,
+    "operationTimeoutSeconds": 30,
+    "circuitFailureThreshold": 5,
+    "circuitBreakSeconds": 30,
+    "domainEventHandlerRetryEnabled": false,
+    "domainEventHandlerMaxRetryAttemptsWhenEnabled": 2,
+    "sqlServerProviderRetryEnabled": true,
+    "sqlServerProviderMaxRetryCount": 6,
+    "sqlServerProviderMaxRetryDelaySeconds": 30
+  },
+  "failureClassification": {
+    "transient": [
+      "TimeoutException",
+      "DbException.IsTransient",
+      "consumer ITransientFailureClassifier"
+    ],
+    "nonTransientByDefault": [
+      "OperationCanceledException",
+      "argument and validation failures",
+      "authorization and authentication failures",
+      "configuration failures",
+      "deterministic programming failures"
+    ]
+  },
+  "boundaries": [
+    "operation_retry",
+    "transaction_retry",
+    "handler_retry",
+    "operation_timeout",
+    "database_command_timeout",
+    "circuit_breaker"
+  ],
+  "activities": [
+    "tcj.resilience.execute",
+    "tcj.resilience.retry",
+    "tcj.resilience.timeout",
+    "tcj.resilience.circuit_breaker"
+  ],
+  "metrics": [
+    { "name": "tcj.resilience.attempts", "type": "counter", "unit": "{attempt}" },
+    { "name": "tcj.resilience.retries", "type": "counter", "unit": "{retry}" },
+    { "name": "tcj.resilience.timeouts", "type": "counter", "unit": "{timeout}" },
+    { "name": "tcj.resilience.circuit_open", "type": "counter", "unit": "{transition}" },
+    { "name": "tcj.resilience.failures", "type": "counter", "unit": "{failure}" }
+  ],
+  "telemetryDimensions": [
+    "tcj.resilience.strategy",
+    "tcj.resilience.outcome",
+    "tcj.resilience.attempt",
+    "tcj.resilience.failure_type",
+    "tcj.resilience.circuit_state"
+  ],
+  "circuitStates": ["Closed", "Open", "HalfOpen"]
+}

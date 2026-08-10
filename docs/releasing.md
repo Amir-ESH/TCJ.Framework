@@ -266,3 +266,7 @@ Release preflight and official tagged releases execute the reusable `Concurrency
 ## Observability release gate
 
 Release preflight and the official tag workflow validate the committed observability policy, execute `TCJ.Observability.Tests`, verify source/meter version metadata, scan generated telemetry evidence for the synthetic sensitive-data markers, publish `OBSERVABILITY_SUMMARY.md`, and block the release when the telemetry contract drifts. Exporter packages remain sample/application dependencies rather than production TCJ dependencies.
+
+### Resilience release gate
+
+Release preflight and official tag publication call the reusable resilience workflow for the exact source commit. It validates the committed policy/contract, executes deterministic core and SQL Server fault-injection scenarios, verifies attempt traces, and publishes `RESILIENCE_SUMMARY.md`. Unresolved retry, timeout, circuit, transaction, duplicate-side-effect, telemetry, or trace failures block publication. The post-publication smoke workflow detects packages exposing Step 42 and runs a selected retry/classification scenario against the NuGet package set.

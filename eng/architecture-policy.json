@@ -96,6 +96,11 @@
   "approvedPublicOptionTypes": [
     "TCJ.AspNetCore.Options.TcjAspNetCoreOptions",
     "TCJ.Core.Diagnostics.TcjTelemetryOptions",
+    "TCJ.Core.Resilience.TcjCircuitBreakerOptions",
+    "TCJ.Core.Resilience.TcjResilienceOptions",
+    "TCJ.Core.Resilience.TcjRetryOptions",
+    "TCJ.Core.Resilience.TcjTimeoutOptions",
+    "TCJ.DependencyInjection.DomainEvents.TcjDomainEventResilienceOptions",
     "TCJ.DependencyInjection.Registration.TcjDependencyInjectionOptions",
     "TCJ.EntityFrameworkCore.SqlServer.Options.TcjSqlServerOptions"
   ]
