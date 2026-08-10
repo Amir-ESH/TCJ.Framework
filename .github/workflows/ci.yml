@@ -120,7 +120,7 @@ jobs:
 
       - name: Run fast resilience tests
         env:
-          TCJ_RESILIENCE_TRACE_DIR: artifacts/resilience/traces
+          TCJ_RESILIENCE_TRACE_DIR: ${{ github.workspace }}/artifacts/resilience/traces
         shell: bash
         run: |
           set -euo pipefail
