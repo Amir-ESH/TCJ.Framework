@@ -151,6 +151,20 @@ Describe the problem and the approach taken.
 - [ ] Resilience tests pass, including applicable fault-injection and concurrency scenarios
 - [ ] Generated resilience traces and reports are not committed
 
+## Health checks
+
+- [ ] Liveness remains dependency-independent
+- [ ] Readiness reflects required dependencies
+- [ ] SQL Server connectivity is tested
+- [ ] Migration-state behavior is tested
+- [ ] Health-check timeouts are bounded
+- [ ] Health-check cancellation is propagated
+- [ ] Health responses contain no secrets
+- [ ] Detailed diagnostics are protected
+- [ ] Concurrent health requests are safe
+- [ ] Health-check contracts are updated intentionally
+- [ ] Generated health-check artifacts are not committed
+
 ## Related issue
 
 Refs #

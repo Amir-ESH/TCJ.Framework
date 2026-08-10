@@ -58,8 +58,12 @@ jobs:
     with:
       mode: full
 
+  health-checks:
+    name: Health-check contract gate
+    uses: ./.github/workflows/health-checks.yml
+
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -129,6 +133,9 @@ jobs:
 
       - name: Validate resilience configuration
         run: python3 eng/verify-resilience.py validate-config
+
+      - name: Validate health-check configuration
+        run: python3 eng/verify-health-checks.py validate-config
 
       - name: Check NuGet package IDs
         run: >

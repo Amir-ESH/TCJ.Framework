@@ -121,6 +121,10 @@
     {
       "name": "tcj.resilience.circuit_breaker",
       "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.health_check.execute",
+      "source": "TCJ.Core"
     }
   ],
   "metrics": [
@@ -225,6 +229,30 @@
       "meter": "TCJ.Core",
       "type": "counter",
       "unit": "{failure}"
+    },
+    {
+      "name": "tcj.health_checks.executed",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{check}"
+    },
+    {
+      "name": "tcj.health_checks.duration",
+      "meter": "TCJ.Core",
+      "type": "histogram",
+      "unit": "ms"
+    },
+    {
+      "name": "tcj.health_checks.failures",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{failure}"
+    },
+    {
+      "name": "tcj.health_checks.status",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{check}"
     }
   ],
   "tags": [
@@ -252,7 +280,10 @@
     "tcj.resilience.outcome",
     "tcj.resilience.attempt",
     "tcj.resilience.failure_type",
-    "tcj.resilience.circuit_state"
+    "tcj.resilience.circuit_state",
+    "tcj.health_check.name",
+    "tcj.health_check.category",
+    "tcj.health_check.status"
   ],
   "optInSensitiveTags": [
     "tcj.exception.message"

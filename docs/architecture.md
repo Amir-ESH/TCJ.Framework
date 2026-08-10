@@ -92,3 +92,7 @@ TCJ production modules publish logical framework telemetry through BCL `Activity
 ### Resilience boundaries
 
 Resilience primitives live in existing packages rather than a vendor-specific resilience package. `TCJ.Core` owns provider-neutral retry/timeout/circuit contracts, `TCJ.DependencyInjection` owns explicit domain-event handler retry registration, and `TCJ.EntityFrameworkCore.SqlServer` owns the transaction-level bridge to EF Core execution strategies. Operation, handler, transaction, command-timeout, request-timeout, and circuit boundaries are deliberately separate; see [Resilience policies and fault injection](resilience.md).
+
+## Health-check boundaries
+
+Step 43 keeps health support inside existing packages: contract/options/startup diagnostics live in `TCJ.Core`; standard health registrations live alongside dependency injection and EF integrations; SQL Server connectivity/migration checks remain provider-specific; ASP.NET Core owns endpoint mapping and JSON formatting. `TCJ.Core` does not acquire an ASP.NET Core dependency and no circular package edge is introduced.

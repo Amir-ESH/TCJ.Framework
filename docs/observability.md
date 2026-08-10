@@ -283,3 +283,7 @@ Metrics:
 - `tcj.resilience.failures`
 
 Resilience dimensions are bounded strategy, outcome, attempt number, failure category, and circuit state values. Unknown consumer strategy labels collapse to `custom`; raw exception messages, SQL, connection strings, endpoint identifiers, user identifiers, and tenant identifiers are not resilience metric dimensions. See [Resilience policies and fault injection](resilience.md) for policy boundaries and idempotency requirements.
+
+## Health-check telemetry
+
+Health probes emit `tcj.health_check.execute` plus `tcj.health_checks.executed`, `tcj.health_checks.duration`, `tcj.health_checks.failures`, and `tcj.health_checks.status`. Dimensions are bounded to stable health-check name/category/status and operation outcome values; provider errors and secrets are not tags. See [health checks](health-checks.md).

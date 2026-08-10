@@ -270,3 +270,7 @@ Release preflight and the official tag workflow validate the committed observabi
 ### Resilience release gate
 
 Release preflight and official tag publication call the reusable resilience workflow for the exact source commit. It validates the committed policy/contract, executes deterministic core and SQL Server fault-injection scenarios, verifies attempt traces, and publishes `RESILIENCE_SUMMARY.md`. Unresolved retry, timeout, circuit, transaction, duplicate-side-effect, telemetry, or trace failures block publication. The post-publication smoke workflow detects packages exposing Step 42 and runs a selected retry/classification scenario against the NuGet package set.
+
+## Health-check release gate
+
+Release preflight and official tag publication depend on the commit-matched `Health checks` reusable workflow. The release preserves the generated `HEALTH_CHECK_SUMMARY.md` evidence, and published-package validation maps and executes the released liveness/readiness endpoint APIs.

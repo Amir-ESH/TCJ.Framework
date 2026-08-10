@@ -25,6 +25,7 @@
     <Project Path="tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj" />
     <Project Path="tests/TCJ.EntityFrameworkCore.SqlServer.Tests/TCJ.EntityFrameworkCore.SqlServer.Tests.csproj" />
     <Project Path="tests/TCJ.EntityFrameworkCore.Tests/TCJ.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj" />
     <Project Path="tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj" />
     <Project Path="tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj" />
     <Project Path="tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj" />

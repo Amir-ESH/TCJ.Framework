@@ -149,3 +149,7 @@ Treat activity names, metric names/types/units, and commonly consumed tags as co
 ### Resilience changes
 
 Do not add broad retry loops to make transient tests pass. Any resilience change must identify its operation/transaction/handler/timeout/circuit boundary, preserve cancellation, prove permanent failures are not retried, and add deterministic fault-injection coverage. Side-effect retries require documented idempotency. Keep `eng/resilience-policy.json`, `eng/resilience-contract.json`, telemetry contracts, benchmarks, and release notes synchronized.
+
+## Health-check changes
+
+Changes to public health-check names, tags, endpoint defaults, response fields, timeout/cache bounds, or telemetry require an intentional update to `eng/health-check-contract.json` and `eng/health-check-policy.json`. Run `python3 eng/verify-health-checks.py validate-config` and the health-check test project before opening a PR.

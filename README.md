@@ -207,3 +207,7 @@ Foundational `TCJ.Core` and `TCJ.DependencyInjection` behavior is protected by d
 ## Concurrency stress testing
 
 TCJ documents and continuously verifies concurrency boundaries rather than assuming every abstraction is thread-safe. A deterministic stress suite exercises dependency registration, service lifetimes, domain-event dispatch, ASP.NET Core request/current-user isolation, independent EF Core scopes, cancellation/disposal races, and real SQL Server transactions. Pull requests run bounded workloads, while scheduled and release workflows run stronger replayable campaigns. See [Concurrency stress testing](docs/concurrency-stress-testing.md).
+
+## Health checks
+
+TCJ provides composable liveness, readiness, startup-diagnostic, EF Core, and SQL Server health checks plus ASP.NET Core endpoint mapping. See [`docs/health-checks.md`](docs/health-checks.md) for safe defaults, Kubernetes guidance, timeout/caching rules, and migration behavior.

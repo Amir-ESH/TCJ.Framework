@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "testProject": "tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj",
-  "minimumScenarioCount": 20,
+  "minimumScenarioCount": 25,
   "pullRequestWorkers": 8,
   "pullRequestIterations": 100,
   "scheduledWorkers": 32,
@@ -35,7 +35,8 @@
     "Cancellation",
     "Transactions",
     "SqlServer",
-    "ScheduledStress"
+    "ScheduledStress",
+    "HealthChecks"
   ],
   "scenarios": [
     {
@@ -216,6 +217,22 @@
         "Transactions",
         "SqlServer",
         "ScheduledStress"
+      ]
+    },
+    {
+      "name": "ConcurrentReadinessRequestsUseSingleFlightCache",
+      "group": "aspnetcore",
+      "categories": [
+        "HealthChecks",
+        "Concurrency"
+      ]
+    },
+    {
+      "name": "CanceledReadinessRequestDoesNotCorruptSharedCache",
+      "group": "aspnetcore",
+      "categories": [
+        "HealthChecks",
+        "Cancellation"
       ]
     }
   ]

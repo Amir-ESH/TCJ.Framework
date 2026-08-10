@@ -50,8 +50,12 @@ jobs:
     with:
       mode: full
 
+  health-checks:
+    name: Health-check contract gate
+    uses: ./.github/workflows/health-checks.yml
+
   build-and-pack:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -122,6 +126,9 @@ jobs:
       - name: Validate resilience configuration
         run: python3 eng/verify-resilience.py validate-config
 
+      - name: Validate health-check configuration
+        run: python3 eng/verify-health-checks.py validate-config
+
       - name: Validate release tag
         id: release-version
         shell: bash
@@ -170,6 +177,21 @@ jobs:
           test -d artifacts/concurrency-release
           find artifacts/concurrency-release -type f -name 'CONCURRENCY_SUMMARY.md' -print -quit | grep -q .
           zip -qr "artifacts/release/TCJ.Framework.Concurrency.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/concurrency-release
+
+      - name: Download exact tagged-source health-check evidence
+        uses: actions/download-artifact@v8
+        with:
+          pattern: health-checks-*-${{ github.run_id }}
+          path: artifacts/health-check-release
+
+      - name: Preserve health-check evidence with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          test -d artifacts/health-check-release
+          find artifacts/health-check-release -type f -name 'HEALTH_CHECK_SUMMARY.md' -print -quit | grep -q .
+          zip -qr "artifacts/release/TCJ.Framework.HealthChecks.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/health-check-release
 
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
@@ -675,6 +697,7 @@ jobs:
             artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
             artifacts/release/upgrade-compatibility-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
+            artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
             artifacts/release/PROPERTY_TEST_SUMMARY.md
             artifacts/release/property-test-summary.json
             artifacts/release/FUZZ_SUMMARY.md
@@ -731,6 +754,7 @@ jobs:
             artifacts/release/OBSERVABILITY_SUMMARY.md
             artifacts/release/observability-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
+            artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -898,6 +922,7 @@ jobs:
             artifacts/release/OBSERVABILITY_SUMMARY.md
             artifacts/release/observability-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
+            artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
           )
           release_args=(
             "$GITHUB_REF_NAME"

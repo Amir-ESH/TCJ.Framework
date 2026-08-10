@@ -34,7 +34,8 @@
     "tcj.resilience.execute",
     "tcj.resilience.retry",
     "tcj.resilience.timeout",
-    "tcj.resilience.circuit_breaker"
+    "tcj.resilience.circuit_breaker",
+    "tcj.health_check.execute"
   ],
   "requiredMetrics": [
     "tcj.domain_events.dispatched",
@@ -53,7 +54,11 @@
     "tcj.resilience.retries",
     "tcj.resilience.timeouts",
     "tcj.resilience.circuit_open",
-    "tcj.resilience.failures"
+    "tcj.resilience.failures",
+    "tcj.health_checks.executed",
+    "tcj.health_checks.duration",
+    "tcj.health_checks.failures",
+    "tcj.health_checks.status"
   ],
   "allowedMetricDimensions": [
     "tcj.operation.name",
@@ -65,7 +70,10 @@
     "tcj.resilience.outcome",
     "tcj.resilience.attempt",
     "tcj.resilience.failure_type",
-    "tcj.resilience.circuit_state"
+    "tcj.resilience.circuit_state",
+    "tcj.health_check.name",
+    "tcj.health_check.category",
+    "tcj.health_check.status"
   ],
   "forbiddenTagPatterns": [
     "password",

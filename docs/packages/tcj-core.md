@@ -19,3 +19,7 @@ Result<int> result = int.TryParse(input, out int value)
 ```
 
 Related guides: [Result and HTTP](../guides/results-and-http.md), [Domain events](../guides/domain-events.md), and the [generated API reference](../api/index.md).
+
+## Health integration
+
+See [Health checks and startup diagnostics](../health-checks.md) for the Step 43 APIs and operational contracts supported by this package.

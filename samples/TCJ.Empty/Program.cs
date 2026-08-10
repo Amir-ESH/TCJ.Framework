@@ -4,10 +4,13 @@ using OpenTelemetry.Trace;
 using TCJ.Core.Diagnostics;
 using TCJ.AspNetCore.Extensions;
 using TCJ.DependencyInjection.Extensions;
+using TCJ.DependencyInjection.HealthChecks;
 using TCJ.Empty.Data;
 using TCJ.Empty.Products;
 using TCJ.EntityFrameworkCore.Seeding;
+using TCJ.EntityFrameworkCore.HealthChecks;
 using TCJ.EntityFrameworkCore.SqlServer.Extensions;
+using TCJ.EntityFrameworkCore.SqlServer.HealthChecks;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +21,12 @@ builder.Services.AddOpenApi();
 builder.Services.AddTcjDependencyInjection(typeof(Program).Assembly);
 builder.Services.AddTcjAspNetCore();
 builder.Services.AddTcjTelemetry();
+builder.Services
+    .AddTcjHealthChecks()
+    .AddTcjDependencyInjection()
+    .AddTcjDomainEvents()
+    .AddTcjEntityFrameworkCore<AppDbContext>()
+    .AddTcjSqlServer<AppDbContext>();
 
 builder.Services
     .AddOpenTelemetry()
@@ -70,6 +79,8 @@ if (app.Environment.IsDevelopment())
     await app.Services.SeedTcjDataAsync();
 }
 
+app.MapTcjLivenessChecks();
+app.MapTcjReadinessChecks();
 app.MapProductEndpoints();
 
 app.Run();

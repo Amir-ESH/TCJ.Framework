@@ -67,7 +67,7 @@ public sealed class TcjSqlServerOptions
         }
     }
 
-    private void Validate()
+    internal void Validate()
     {
         if (EnableRetryOnFailure && MaxRetryCount is < 1 or > 10)
         {

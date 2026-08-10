@@ -118,5 +118,54 @@ public sealed class AspNetCoreStressTests
         });
     }
 
+
+    [Fact]
+    [Trait("Category", "HealthChecks")]
+    public async Task ConcurrentReadinessRequestsUseSingleFlightCache()
+    {
+        await using var host = new ConcurrencyWebHost();
+        await host.StartAsync();
+        using HttpClient client = host.CreateClient();
+        await StressRunner.RunAsync(nameof(ConcurrentReadinessRequestsUseSingleFlightCache), "aspnetcore", async context =>
+        {
+            using HttpResponseMessage response = await client.GetAsync("/health/ready", context.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        });
+        Assert.Equal(1, host.ReadinessProbe.MaxConcurrentExecutions);
+        Assert.True(host.ReadinessProbe.ExecutionCount > 0);
+    }
+
+    [Fact]
+    [Trait("Category", "HealthChecks")]
+    [Trait("Category", "Cancellation")]
+    public async Task CanceledReadinessRequestDoesNotCorruptSharedCache()
+    {
+        await using var host = new ConcurrencyWebHost();
+        await host.StartAsync();
+        using HttpClient client = host.CreateClient();
+        await StressRunner.RunAsync(nameof(CanceledReadinessRequestDoesNotCorruptSharedCache), "aspnetcore", async context =>
+        {
+            if ((context.Worker + context.Iteration) % 7 == 0)
+            {
+                using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
+                cancellation.CancelAfter(TimeSpan.FromMilliseconds(1));
+                try
+                {
+                    using HttpResponseMessage _ = await client.GetAsync("/health/ready", cancellation.Token);
+                }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+                {
+                }
+                return;
+            }
+
+            using HttpResponseMessage response = await client.GetAsync("/health/ready", context.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        });
+        using HttpResponseMessage final = await client.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.OK, final.StatusCode);
+        Assert.Equal(1, host.ReadinessProbe.MaxConcurrentExecutions);
+    }
+
     private sealed record IdentityResponse(long? UserId, string[] Roles, Guid FirstScope, Guid SecondScope, string Correlation);
 }

@@ -109,3 +109,8 @@ artifacts/concurrency/logs/
 ## CI and release behavior
 
 The dedicated **Concurrency stress** workflow runs core, ASP.NET Core, and relevant SQL Server groups, publishes Markdown summaries, and uploads TRX/traces/logs. Pull-request work is bounded; the weekly run uses multiple deterministic seeds. Release preflight invokes the same reusable workflow against the release candidate. Official tag publication depends on successful concurrency jobs from the exact tagged commit and preserves commit-matched summaries/traces as release evidence. Any unresolved race, deadlock, hang, timeout, leakage, duplicate/missing operation or transaction-interference finding blocks the gate.
+
+
+## Concurrent health readiness
+
+Step 43 adds deterministic ASP.NET Core stress scenarios for readiness probes. Expensive checks use a per-check single-flight cache: concurrent requests may wait for the same bounded execution, cancellation must not corrupt later probes, and independent named checks never share cached state. The stress suite asserts that the underlying readiness execution never runs concurrently with itself and that a canceled request does not make later readiness requests fail or deadlock.

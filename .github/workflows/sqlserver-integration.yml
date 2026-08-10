@@ -145,6 +145,9 @@ jobs:
       - name: Validate SQL Server integration policy
         run: python3 eng/verify-sqlserver-integration.py validate-config
 
+      - name: Validate health-check configuration
+        run: python3 eng/verify-health-checks.py validate-config
+
       - name: Validate resilience policy
         run: python3 eng/verify-resilience.py validate-config
 
