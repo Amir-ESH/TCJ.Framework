@@ -17,3 +17,7 @@ services.AddTcjSqlServer<AppDbContext>(connectionString);
 ```
 
 Related packages: [TCJ.EntityFrameworkCore](tcj-entityframeworkcore.md) and [TCJ.DependencyInjection](tcj-dependencyinjection.md). See the [generated API reference](../api/index.md).
+
+## Health integration
+
+See [Health checks and startup diagnostics](../health-checks.md) for the Step 43 APIs and operational contracts supported by this package.

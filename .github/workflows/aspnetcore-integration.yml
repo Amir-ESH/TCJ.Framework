@@ -127,6 +127,9 @@ jobs:
       - name: Validate ASP.NET Core integration policy
         run: ${{ matrix.python }} eng/verify-aspnetcore-integration.py validate-config
 
+      - name: Validate health-check configuration
+        run: python3 eng/verify-health-checks.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj --force-evaluate
 

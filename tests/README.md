@@ -103,3 +103,7 @@ The dedicated GitHub Actions workflow runs the same suite on Linux and Windows a
 ## Observability tests
 
 `TCJ.Observability.Tests` uses in-memory `ActivityListener` and `MeterListener` instances; it requires no collector or network exporter. The suite covers stable source/meter identity and versions, no-listener behavior, parent-child propagation, success/failure/cancellation, domain-event and repository/Unit of Work instrumentation, ASP.NET Core exception handling, metric names/units/dimensions, and synthetic sensitive-data markers. Run the verifier afterward to generate `artifacts/observability/`.
+
+## Health-check integration tests
+
+`TCJ.HealthChecks.Tests` validates liveness/readiness HTTP endpoints, startup diagnostics, duplicate registration, safe JSON, bounded cache/single-flight concurrency, cancellation, telemetry, and SQL Server connectivity/migration state through the pinned Testcontainers image. Run `python3 eng/verify-health-checks.py validate-config` before the suite and `verify` against `TestResults/HealthChecks/` afterward.

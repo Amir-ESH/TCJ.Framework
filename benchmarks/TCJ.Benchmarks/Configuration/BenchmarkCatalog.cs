@@ -47,7 +47,14 @@ internal static class BenchmarkCatalog
         Resilience("ResilienceBenchmarks", "RetryExhaustion"),
         Resilience("ResilienceBenchmarks", "TimeoutSetup"),
         Resilience("ResilienceBenchmarks", "CircuitBreakerClosed"),
-        Resilience("ResilienceBenchmarks", "CircuitBreakerOpenFastFail")
+        Resilience("ResilienceBenchmarks", "CircuitBreakerOpenFastFail"),
+
+        HealthChecks("HealthCheckBenchmarks", "LivenessEndpointCorePath", baseline: true),
+        HealthChecks("HealthCheckBenchmarks", "CachedReadinessPath"),
+        HealthChecks("HealthCheckBenchmarks", "UncachedReadinessPath"),
+        HealthChecks("HealthCheckBenchmarks", "PublicResponseSerialization"),
+        HealthChecks("HealthCheckBenchmarks", "TelemetryDisabled"),
+        HealthChecks("HealthCheckBenchmarks", "TelemetryEnabled")
     ];
 
     internal static void WriteManifest()
@@ -101,6 +108,12 @@ internal static class BenchmarkCatalog
         string method,
         bool baseline = false)
         => new(type, method, ["TCJ.Core", "Resilience"], null, baseline);
+
+    private static BenchmarkDefinition HealthChecks(
+        string type,
+        string method,
+        bool baseline = false)
+        => new(type, method, ["TCJ.Core", "HealthChecks"], null, baseline);
 
     private sealed record BenchmarkDefinition(
         string Type,

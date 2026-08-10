@@ -86,3 +86,5 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 [Unreleased]: https://github.com/Amir-ESH/TCJ.Framework/compare/v0.1.0-preview.1...develop
 [0.1.0-preview.1]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.1
+
+- Added first-class TCJ liveness/readiness health checks, startup diagnostics, bounded SQL Server connectivity and migration readiness, safe ASP.NET Core health endpoints, telemetry, CI/release enforcement, and published-package smoke coverage.

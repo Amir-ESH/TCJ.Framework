@@ -137,15 +137,29 @@ jobs:
           fi
           echo "required=$required" >> "$GITHUB_OUTPUT"
 
-      - name: Run selected published-package resilience scenario
+      - name: Determine whether Step 43 published health-check smoke is required
+        id: health-smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          required=false
+          if [[ "${{ needs.verify-publication.outputs.version }}" == "$current" ]]; then
+            required=true
+          fi
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+
+      - name: Run selected published-package resilience and health-check scenarios
         env:
           TCJ_RESILIENCE_SMOKE: ${{ steps.resilience-smoke.outputs.required }}
+          TCJ_HEALTH_CHECK_SMOKE: ${{ steps.health-smoke.outputs.required }}
         run: >
           dotnet run
           --project smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
           --configuration Release
           -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
           -p:EnableResilienceSmoke=${{ steps.resilience-smoke.outputs.required }}
+          -p:EnableHealthCheckSmoke=${{ steps.health-smoke.outputs.required }}
 
       - name: Clear published-consumer restore state
         run: rm -rf artifacts/compatibility/nuget artifacts/compatibility/results artifacts/compatibility/published-report compatibility/Consumers/*/bin compatibility/Consumers/*/obj

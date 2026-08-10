@@ -8,6 +8,11 @@ using TCJ.Core.Results;
 using TCJ.Core.Resilience;
 #endif
 using TCJ.DependencyInjection.Extensions;
+#if TCJ_HEALTH_CHECK_SMOKE
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using TCJ.DependencyInjection.HealthChecks;
+#endif
 using TCJ.DependencyInjection.Registration;
 using TCJ.EntityFrameworkCore.Abstractions;
 using TCJ.EntityFrameworkCore.Extensions;
@@ -31,6 +36,11 @@ internal static class Program
 
         builder.Services.AddTcjDependencyInjection(typeof(Program).Assembly);
         builder.Services.AddTcjAspNetCore();
+#if TCJ_HEALTH_CHECK_SMOKE
+        builder.Services.AddTcjHealthChecks()
+            .AddTcjDependencyInjection()
+            .AddTcjDomainEvents();
+#endif
 
         builder.Services.AddTcjSqlServer<SmokeDbContext>(
             "Server=localhost;Database=TCJ_PublishedPackageSmoke;User Id=sa;Password=NotUsed_123!;TrustServerCertificate=True",
@@ -40,6 +50,10 @@ internal static class Program
         await using WebApplication app = builder.Build();
 
         app.UseTcjAspNetCore();
+#if TCJ_HEALTH_CHECK_SMOKE
+        app.MapTcjLivenessChecks();
+        app.MapTcjReadinessChecks();
+#endif
 
         await using AsyncServiceScope scope =
             app.Services.CreateAsyncScope();
@@ -96,9 +110,43 @@ internal static class Program
         await VerifyPublishedResilienceAsync();
 #endif
 
+#if TCJ_HEALTH_CHECK_SMOKE
+        await VerifyPublishedHealthChecksAsync(app);
+#endif
+
         Console.WriteLine(
             $"Published package smoke test succeeded. Generated UUID: {id}");
     }
+
+#if TCJ_HEALTH_CHECK_SMOKE
+    private static async Task VerifyPublishedHealthChecksAsync(WebApplication app)
+    {
+        app.Urls.Add("http://127.0.0.1:0");
+        await app.StartAsync().ConfigureAwait(false);
+        try
+        {
+            IServer server = app.Services.GetRequiredService<IServer>();
+            string address = server.Features.Get<IServerAddressesFeature>()?.Addresses.Single()
+                ?? throw new InvalidOperationException("Published health-check smoke could not resolve its listening address.");
+            using var client = new HttpClient { BaseAddress = new Uri(address) };
+            foreach (string path in new[] { "/health/live", "/health/ready" })
+            {
+                using HttpResponseMessage response = await client.GetAsync(path).ConfigureAwait(false);
+                string body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode || !body.Contains("Healthy", StringComparison.Ordinal)
+                    || body.Contains("Password=", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Published health-check endpoint smoke failed for {path}.");
+                }
+            }
+            Console.WriteLine("TCJ_HEALTH_CHECK_SMOKE succeeded.");
+        }
+        finally
+        {
+            await app.StopAsync().ConfigureAwait(false);
+        }
+    }
+#endif
 
 #if TCJ_RESILIENCE_SMOKE
     private static async Task VerifyPublishedResilienceAsync()

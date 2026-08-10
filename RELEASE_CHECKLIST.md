@@ -169,3 +169,9 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Retry/timeout/circuit defaults and telemetry contracts match `eng/resilience-contract.json`.
 - [ ] Performance evidence includes the resilience success path and failure-path benchmarks.
 - [ ] Generated `TestResults/Resilience/` and `artifacts/resilience/` output is not committed.
+
+## Health-check contract
+
+- [ ] `python3 eng/verify-health-checks.py validate-config` passes.
+- [ ] Commit-matched liveness, readiness, SQL Server, migration, cancellation, timeout, cache, concurrency, sensitive-data, and telemetry health gates pass.
+- [ ] Published-package health endpoint smoke validation is enabled for the release version.

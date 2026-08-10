@@ -265,3 +265,7 @@ Telemetry changes must keep `eng/observability-policy.json` and `eng/observabili
 ## Resilience validation
 
 Resilience changes must keep `eng/resilience-policy.json` and `eng/resilience-contract.json` aligned with production defaults, deterministic tests, telemetry, benchmarks, and automation. Run `python3 eng/verify-resilience.py validate-config`, then `TCJ.Resilience.Tests` with the fast non-SQL filter locally; the dedicated workflow runs provider-specific SQL Server scenarios and verifies generated TRX/trace evidence. Do not commit `TestResults/Resilience/` or `artifacts/resilience/`. See [the resilience guide](resilience.md) before changing retry or transaction boundaries.
+
+## Health-check validation
+
+Run `python3 eng/verify-health-checks.py validate-config` for static policy validation. Runtime evidence comes from `tests/TCJ.HealthChecks.Tests`; SQL Server cases require Docker/Testcontainers. Generated evidence is written under `TestResults/HealthChecks/` and `artifacts/health-checks/`.

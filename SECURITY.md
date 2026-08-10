@@ -62,3 +62,7 @@ TCJ telemetry excludes raw SQL, connection strings, request bodies, entity/user/
 ## Resilience and sensitive data
 
 Resilience telemetry uses bounded failure categories and circuit states rather than raw exception messages, SQL, connection strings, credentials, user/tenant identifiers, or endpoint keys. Fault-injection traces are generated test evidence and are scanned by the resilience verifier before upload.
+
+## Health endpoint exposure
+
+Public TCJ health responses intentionally omit exception messages, stack traces, connection strings, server/database names, SQL, credentials, environment variables, and file-system paths. Detailed health diagnostics require authorization by default; applications should keep them disabled or protected on public networks.

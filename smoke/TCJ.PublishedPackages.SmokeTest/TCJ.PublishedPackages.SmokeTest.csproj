@@ -8,7 +8,9 @@
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <TCJPackageVersion Condition="'$(TCJPackageVersion)' == ''">0.1.0-preview.1</TCJPackageVersion>
     <EnableResilienceSmoke Condition="'$(EnableResilienceSmoke)' == ''">false</EnableResilienceSmoke>
+    <EnableHealthCheckSmoke Condition="'$(EnableHealthCheckSmoke)' == ''">false</EnableHealthCheckSmoke>
     <DefineConstants Condition="'$(EnableResilienceSmoke)' == 'true'">$(DefineConstants);TCJ_RESILIENCE_SMOKE</DefineConstants>
+    <DefineConstants Condition="'$(EnableHealthCheckSmoke)' == 'true'">$(DefineConstants);TCJ_HEALTH_CHECK_SMOKE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

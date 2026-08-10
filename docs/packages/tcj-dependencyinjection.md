@@ -17,3 +17,7 @@ services.AddTcjDependencyInjection(typeof(Program).Assembly);
 ```
 
 Related packages: [TCJ.Core](tcj-core.md). See [validated examples](../examples.md) and the [generated API reference](../api/index.md).
+
+## Health integration
+
+See [Health checks and startup diagnostics](../health-checks.md) for the Step 43 APIs and operational contracts supported by this package.

@@ -534,3 +534,14 @@ tests/TCJ.Observability.Tests/obj/
 !eng/verify-observability.py
 !tests/TCJ.Observability.Tests/**/*.cs
 !tests/TCJ.Observability.Tests/**/*.csproj
+
+# Health-check validation output
+TestResults/HealthChecks/
+artifacts/health-checks/
+tests/TCJ.HealthChecks.Tests/bin/
+tests/TCJ.HealthChecks.Tests/obj/
+!eng/health-check-policy.json
+!eng/health-check-contract.json
+!eng/verify-health-checks.py
+!tests/TCJ.HealthChecks.Tests/**/*.cs
+!tests/TCJ.HealthChecks.Tests/**/*.csproj

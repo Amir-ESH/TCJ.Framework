@@ -168,3 +168,8 @@ Do not increase a global threshold to hide one noisy or incorrectly designed ben
 ## Accepting a regression
 
 A regression may be accepted when it buys a reviewed correctness, security, compatibility, or maintainability improvement and the cost is understood. The pull request must describe the tradeoff and include benchmark artifacts. If policy must change, keep the change explicit and justified; never silently remove the method, baseline, category, memory diagnostics, or report exporter.
+
+
+## Health-check benchmarks
+
+`HealthCheckBenchmarks` measures the lightweight core liveness path, cached readiness, uncached readiness with a fast in-process dependency, sanitized public-response serialization, and health telemetry disabled/enabled. The `HealthChecks` category is required by `eng/performance-policy.json`. Database network latency is intentionally excluded from the shared regression ratio; SQL Server behavior is validated by integration tests while the benchmarks catch framework overhead, allocation, and cache regressions.

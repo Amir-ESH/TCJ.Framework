@@ -181,3 +181,21 @@ public static class EventDispatchExample
         dispatcher.DispatchAsync([domainEvent], cancellationToken);
 }
 ```
+
+
+<a id="health-check-registration"></a>
+## Health-check registration
+
+```csharp
+builder.Services
+    .AddTcjHealthChecks()
+    .AddTcjDependencyInjection()
+    .AddTcjDomainEvents()
+    .AddTcjEntityFrameworkCore<AppDbContext>()
+    .AddTcjSqlServer<AppDbContext>(checkPendingMigrations: true);
+
+app.MapTcjLivenessChecks("/health/live");
+app.MapTcjReadinessChecks("/health/ready");
+```
+
+Liveness remains in-process only; SQL Server and migration checks participate in readiness. See [health checks and startup diagnostics](health-checks.md).

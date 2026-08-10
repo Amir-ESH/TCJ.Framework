@@ -9,3 +9,7 @@ Documentation builds record the package version, source commit, release tag, and
 ## Versioned build metadata
 
 Every generated site records the package version, source commit, release tag, and UTC documentation build date. Pull-request sites remain downloadable workflow artifacts. Trusted `main` or tag workflows can later publish the same Pages-ready site without exposing pull-request content or repository secrets.
+
+## Operational health
+
+Use [health checks and startup diagnostics](health-checks.md) for stable liveness/readiness endpoints, bounded SQL Server readiness, safe response formatting, and Kubernetes probe guidance.

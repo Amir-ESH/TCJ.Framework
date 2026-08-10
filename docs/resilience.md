@@ -215,3 +215,7 @@ Avoid these patterns:
 - sharing one circuit across unrelated dependencies;
 - using user IDs, URLs, tenant IDs, SQL, or exception messages as resilience telemetry dimensions;
 - increasing retry count or timeout simply to make a failing fault-injection test pass.
+
+## Health-check interaction
+
+Health checks keep their own total timeout bounded and do not add broad retries. SQL connectivity can observe provider-level resilience only within the health deadline; invalid configuration is never retried and circuit-breaker state must not hide dependency recovery. See [health checks](health-checks.md).

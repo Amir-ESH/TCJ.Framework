@@ -8,10 +8,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TCJ.AspNetCore.Extensions;
 using TCJ.Core.Security;
+using TCJ.Core.HealthChecks;
+using TCJ.DependencyInjection.HealthChecks;
 
 namespace TCJ.Concurrency.Tests.Fixtures;
 
@@ -19,6 +22,7 @@ internal sealed class ConcurrencyWebHost : IAsyncDisposable
 {
     private WebApplication? _application;
     public CancellationProbe CancellationProbe { get; } = new();
+    public StressReadinessHealthCheck ReadinessProbe => _application?.Services.GetRequiredService<StressReadinessHealthCheck>() ?? throw new InvalidOperationException("The concurrency test host is not started.");
 
     public async Task StartAsync()
     {
@@ -32,6 +36,9 @@ internal sealed class ConcurrencyWebHost : IAsyncDisposable
         builder.Services.AddAuthorization();
         builder.Services.AddScoped<RequestMarker>();
         builder.Services.AddSingleton(CancellationProbe);
+        builder.Services.AddSingleton<StressReadinessHealthCheck>();
+        builder.Services.AddTcjHealthChecks();
+        builder.Services.AddHealthChecks().AddCheck<StressReadinessHealthCheck>("stress.readiness", tags: ["ready"]);
         builder.Services.AddTcjAspNetCore();
 
         WebApplication app = builder.Build();
@@ -59,6 +66,8 @@ internal sealed class ConcurrencyWebHost : IAsyncDisposable
             await Task.Delay(Timeout.InfiniteTimeSpan, context.RequestAborted).ConfigureAwait(false);
             return Results.Ok();
         });
+
+        app.MapTcjReadinessChecks();
 
         app.MapGet("/fail", (HttpContext _) => throw new InvalidOperationException("stress-endpoint-failure"));
 
@@ -95,6 +104,41 @@ internal sealed class CancellationProbe
 
     private TaskCompletionSource<bool> Get(string id) =>
         _started.GetOrAdd(id, static _ => new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously));
+}
+
+internal sealed class StressReadinessHealthCheck : IHealthCheck
+{
+    private readonly AsyncHealthCheckCache<HealthCheckResult> _cache = new(TimeProvider.System, TimeSpan.FromMilliseconds(250));
+    private int _executions;
+    private int _current;
+    private int _maxConcurrent;
+
+    internal int ExecutionCount => Volatile.Read(ref _executions);
+    internal int MaxConcurrentExecutions => Volatile.Read(ref _maxConcurrent);
+
+    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+        => _cache.GetOrCreateAsync(ExecuteAsync, cancellationToken);
+
+    private async Task<HealthCheckResult> ExecuteAsync(CancellationToken cancellationToken)
+    {
+        Interlocked.Increment(ref _executions);
+        int current = Interlocked.Increment(ref _current);
+        int observed;
+        do
+        {
+            observed = Volatile.Read(ref _maxConcurrent);
+            if (current <= observed) break;
+        } while (Interlocked.CompareExchange(ref _maxConcurrent, current, observed) != observed);
+        try
+        {
+            await Task.Delay(20, cancellationToken).ConfigureAwait(false);
+            return HealthCheckResult.Healthy();
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _current);
+        }
+    }
 }
 
 internal sealed class StressAuthenticationHandler(

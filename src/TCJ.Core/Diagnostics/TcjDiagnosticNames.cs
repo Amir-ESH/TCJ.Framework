@@ -67,6 +67,8 @@ public static class TcjDiagnosticNames
         public const string ResilienceTimeout = "tcj.resilience.timeout";
         /// <summary>Circuit-breaker state transition or rejection.</summary>
         public const string ResilienceCircuitBreaker = "tcj.resilience.circuit_breaker";
+        /// <summary>TCJ health-check execution.</summary>
+        public const string HealthCheckExecute = "tcj.health_check.execute";
     }
 
     /// <summary>Stable metric instrument names.</summary>
@@ -106,6 +108,14 @@ public static class TcjDiagnosticNames
         public const string ResilienceCircuitOpen = "tcj.resilience.circuit_open";
         /// <summary>Terminal failures observed by explicit resilience policies.</summary>
         public const string ResilienceFailures = "tcj.resilience.failures";
+        /// <summary>Completed health-check executions.</summary>
+        public const string HealthChecksExecuted = "tcj.health_checks.executed";
+        /// <summary>Health-check execution duration.</summary>
+        public const string HealthCheckDuration = "tcj.health_checks.duration";
+        /// <summary>Unhealthy health-check executions.</summary>
+        public const string HealthCheckFailures = "tcj.health_checks.failures";
+        /// <summary>Health-check result counts by bounded status.</summary>
+        public const string HealthCheckStatus = "tcj.health_checks.status";
     }
 
     /// <summary>Stable activity-tag and metric-dimension names.</summary>
@@ -163,6 +173,12 @@ public static class TcjDiagnosticNames
         public const string ResilienceFailureType = "tcj.resilience.failure_type";
         /// <summary>Bounded circuit-breaker state.</summary>
         public const string ResilienceCircuitState = "tcj.resilience.circuit_state";
+        /// <summary>Stable bounded health-check name.</summary>
+        public const string HealthCheckName = "tcj.health_check.name";
+        /// <summary>Stable bounded health-check category.</summary>
+        public const string HealthCheckCategory = "tcj.health_check.category";
+        /// <summary>Stable bounded health-check status.</summary>
+        public const string HealthCheckStatus = "tcj.health_check.status";
     }
 
     /// <summary>Bounded operation outcome values.</summary>

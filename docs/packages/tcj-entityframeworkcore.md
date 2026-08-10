@@ -18,3 +18,7 @@ services.AddTcjEntityFrameworkCore<AppDbContext>(options =>
 ```
 
 Related guides: [Specifications and repositories](../guides/specifications-and-repositories.md), [auditing and soft delete](../guides/auditing-soft-delete-rowversion.md), and the [generated API reference](../api/index.md).
+
+## Health integration
+
+See [Health checks and startup diagnostics](../health-checks.md) for the Step 43 APIs and operational contracts supported by this package.
