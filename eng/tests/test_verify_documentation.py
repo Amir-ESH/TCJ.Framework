@@ -273,6 +273,45 @@ class DocumentationVerifierTests(unittest.TestCase):
                 (root / name).write_text("items: []\n", encoding="utf-8")
             self.assertEqual(2, MODULE.count_api_pages(root))
 
+    def test_pages_security_boundary_rejects_privilege_in_reusable_validation_workflow(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workflows = root / ".github" / "workflows"
+            workflows.mkdir(parents=True)
+            (workflows / "documentation.yml").write_text("permissions:\n  pages: write\n", encoding="utf-8")
+            (workflows / "documentation-pages.yml").write_text(
+                "uses: ./.github/workflows/documentation.yml\n"
+                "upload_pages_artifact:\nENABLE_DOCUMENTATION_PAGES\npages: write\nid-token: write\n"
+                "actions/configure-pages@v5\nactions/deploy-pages@v4\nname: github-pages\n",
+                encoding="utf-8",
+            )
+            (workflows / "required-pr-gate.yml").write_text("contents: read\n", encoding="utf-8")
+            with mock.patch.object(MODULE, "ROOT", root):
+                with self.assertRaisesRegex(MODULE.DocumentationError, "must remain PR-safe"):
+                    MODULE.validate_pages_security_boundaries()
+
+    def test_pages_security_boundary_accepts_privilege_only_in_trusted_pages_workflow(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workflows = root / ".github" / "workflows"
+            workflows.mkdir(parents=True)
+            (workflows / "documentation.yml").write_text(
+                "workflow_call:\nupload_pages_artifact:\nactions/upload-pages-artifact@v4\n",
+                encoding="utf-8",
+            )
+            (workflows / "documentation-pages.yml").write_text(
+                "uses: ./.github/workflows/documentation.yml\n"
+                "upload_pages_artifact:\nENABLE_DOCUMENTATION_PAGES\npages: write\nid-token: write\n"
+                "actions/configure-pages@v5\nactions/deploy-pages@v4\nname: github-pages\n",
+                encoding="utf-8",
+            )
+            (workflows / "required-pr-gate.yml").write_text(
+                "uses: ./.github/workflows/documentation.yml\npermissions:\n  contents: read\n",
+                encoding="utf-8",
+            )
+            with mock.patch.object(MODULE, "ROOT", root):
+                MODULE.validate_pages_security_boundaries()
+
 
 if __name__ == "__main__":
     unittest.main()

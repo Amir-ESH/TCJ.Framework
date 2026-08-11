@@ -252,21 +252,33 @@ public sealed class TransactionalOutboxTests(OutboxSqlServerFixture fixture)
             await context.SaveChangesAsync();
         }
 
-        Task<OutboxProcessingResult>[] workers = Enumerable.Range(0, 4).Select(async _ =>
-        {
-            await using AsyncServiceScope scope = fixture.Provider.CreateAsyncScope();
-            return await scope.ServiceProvider.GetRequiredService<IOutboxProcessor>().ProcessBatchAsync();
-        }).ToArray();
-        OutboxProcessingResult[] results = await Task.WhenAll(workers);
+        const int messageCount = 20;
+        const int workerCount = 4;
+        const int maximumRounds = messageCount / 5;
+        int processedCount = 0;
 
-        Assert.Equal(20, results.Sum(result => result.ProcessedCount));
+        for (int round = 0; round < maximumRounds && processedCount < messageCount; round++)
+        {
+            Task<OutboxProcessingResult>[] workers = Enumerable.Range(0, workerCount).Select(async _ =>
+            {
+                await using AsyncServiceScope scope = fixture.Provider.CreateAsyncScope();
+                return await scope.ServiceProvider.GetRequiredService<IOutboxProcessor>().ProcessBatchAsync();
+            }).ToArray();
+            OutboxProcessingResult[] results = await Task.WhenAll(workers);
+            processedCount += results.Sum(result => result.ProcessedCount);
+        }
+
+        Assert.Equal(messageCount, processedCount);
         await using AsyncServiceScope verifyScope = fixture.Provider.CreateAsyncScope();
         OutboxMessage[] rows = await verifyScope.ServiceProvider.GetRequiredService<OutboxTestDbContext>().Set<OutboxMessage>().AsNoTracking().ToArrayAsync();
-        Assert.Equal(20, rows.Length);
+        Assert.Equal(messageCount, rows.Length);
+        Assert.Equal(messageCount, fixture.Behavior.DeliveredMarkers.Count);
+        Assert.Equal(messageCount, fixture.Behavior.DeliveredMarkers.Distinct(StringComparer.Ordinal).Count());
         Assert.All(rows, row =>
         {
             Assert.NotNull(row.ProcessedAtUtc);
             Assert.Equal(1, row.AttemptCount);
+            Assert.Equal(1, fixture.Behavior.AttemptCount(row.Id));
             Assert.Null(row.LockId);
         });
     }

@@ -270,14 +270,51 @@ def validate_git_tracking(policy: dict) -> None:
             fail("eng/documentation-baseline.json must remain tracked and not ignored.")
 
 
+def validate_pages_security_boundaries() -> None:
+    validation_path = ROOT / ".github/workflows/documentation.yml"
+    pages_path = ROOT / ".github/workflows/documentation-pages.yml"
+    gate_path = ROOT / ".github/workflows/required-pr-gate.yml"
+
+    validation_text = validation_path.read_text(encoding="utf-8")
+    pages_text = pages_path.read_text(encoding="utf-8")
+    gate_text = gate_path.read_text(encoding="utf-8")
+
+    for forbidden in ("pages: write", "id-token: write", "actions/deploy-pages@v4", "actions/configure-pages@v5"):
+        if forbidden in validation_text:
+            fail(f"documentation.yml must remain PR-safe and cannot contain privileged Pages fragment: {forbidden}")
+        if forbidden in gate_text:
+            fail(f"Required PR Gate must not receive privileged Pages capability: {forbidden}")
+
+    for required in (
+        "uses: ./.github/workflows/documentation.yml",
+        "upload_pages_artifact:",
+        "ENABLE_DOCUMENTATION_PAGES",
+        "pages: write",
+        "id-token: write",
+        "actions/configure-pages@v5",
+        "actions/deploy-pages@v4",
+        "name: github-pages",
+    ):
+        if required not in pages_text:
+            fail(f"documentation-pages.yml is missing trusted Pages deployment fragment: {required}")
+
+
 def validate_workflow_integration() -> None:
     checks = {
         ".github/workflows/documentation.yml": [
-            "name: Documentation", "name: Build and validate documentation",
-            "dotnet tool restore", "verify-documentation.py validate-config",
-            "verify-documentation.py verify", "actions/upload-artifact@v7",
-            "actions/upload-pages-artifact@v4", "actions/deploy-pages@v4",
-            "github.ref == 'refs/heads/main'", "ENABLE_DOCUMENTATION_PAGES",
+            "name: Documentation", "workflow_call:", "upload_pages_artifact:",
+            "name: Build and validate documentation", "dotnet tool restore",
+            "verify-documentation.py validate-config", "verify-documentation.py verify",
+            "actions/upload-artifact@v7", "actions/upload-pages-artifact@v4",
+        ],
+        ".github/workflows/documentation-pages.yml": [
+            "name: Documentation Pages", "branches:", "- main",
+            "uses: ./.github/workflows/documentation.yml",
+            "ENABLE_DOCUMENTATION_PAGES", "actions/configure-pages@v5",
+            "actions/deploy-pages@v4", "pages: write", "id-token: write",
+        ],
+        ".github/workflows/required-pr-gate.yml": [
+            "uses: ./.github/workflows/documentation.yml", "name: Required PR Gate",
         ],
         ".github/workflows/ci.yml": ["verify-documentation.py validate-config", "verify-documentation.py verify"],
         ".github/workflows/release-preflight.yml": ["verify-documentation.py verify", "documentation-site"],
@@ -291,6 +328,7 @@ def validate_workflow_integration() -> None:
         for fragment in required_fragments:
             if fragment not in text:
                 fail(f"{rel} is missing documentation integration fragment: {fragment}")
+    validate_pages_security_boundaries()
 
 
 def validate_examples(policy: dict) -> None:
