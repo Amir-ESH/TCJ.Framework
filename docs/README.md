@@ -44,6 +44,7 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 - [Specifications and repositories](guides/specifications-and-repositories.md)
 - [Auditing, soft delete, and rowversion](guides/auditing-soft-delete-rowversion.md)
 - [Data seeding](guides/data-seeding.md)
+- [Native AOT and trimming compatibility](guides/native-aot-and-trimming.md)
 
 ## Important preview constraints
 

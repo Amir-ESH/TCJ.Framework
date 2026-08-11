@@ -32,6 +32,7 @@ Describe the problem and the approach taken.
 - [ ] New project references and dependency-direction changes are documented
 - [ ] Infrastructure types do not leak into lower-level public APIs
 - [ ] `architecture-policy` changes include justification
+- [ ] `aot-policy` changes are explicit and justified as compatibility changes
 - [ ] `dotnet pack TCJ.slnx -c Release --no-build` when packaging or release infrastructure changes
 - [ ] Deterministic-build configuration remains enabled
 - [ ] Independent package builds are reproducible

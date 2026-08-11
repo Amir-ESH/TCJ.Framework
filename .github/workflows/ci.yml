@@ -73,6 +73,9 @@ jobs:
       - name: Verify architecture policy
         run: python3 eng/verify-architecture-policy.py validate-config
 
+      - name: Verify Native AOT and trimming policy
+        run: python3 eng/verify-aot-policy.py validate-config
+
       - name: Verify SBOM configuration
         run: python3 eng/verify-sbom.py validate-config
 
