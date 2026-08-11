@@ -190,9 +190,9 @@ public sealed class InMemoryCompatibilityOutboxStorage(
 
         Set(message, nameof(OutboxMessage.AttemptCount), 0);
         Set(message, nameof(OutboxMessage.NextAttemptAtUtc), now);
-        Set<DateTimeOffset?>(message, nameof(OutboxMessage.DeadLetteredAtUtc), null);
-        Set<string?>(message, nameof(OutboxMessage.LastErrorType), null);
-        Set<string?>(message, nameof(OutboxMessage.LastError), null);
+        Set(message, nameof(OutboxMessage.DeadLetteredAtUtc), null);
+        Set(message, nameof(OutboxMessage.LastErrorType), null);
+        Set(message, nameof(OutboxMessage.LastError), null);
         Set(message, nameof(OutboxMessage.ReplayCount), message.ReplayCount + 1);
         Set(message, nameof(OutboxMessage.LastReplayedAtUtc), now);
         ClearLease(message, now);
@@ -235,12 +235,12 @@ public sealed class InMemoryCompatibilityOutboxStorage(
 
     private void ClearLease(OutboxMessage message, DateTimeOffset now)
     {
-        Set<Guid?>(message, nameof(OutboxMessage.LockId), null);
-        Set<DateTimeOffset?>(message, nameof(OutboxMessage.LockedAtUtc), null);
-        Set<DateTimeOffset?>(message, nameof(OutboxMessage.LockExpiresAtUtc), null);
+        Set(message, nameof(OutboxMessage.LockId), null);
+        Set(message, nameof(OutboxMessage.LockedAtUtc), null);
+        Set(message, nameof(OutboxMessage.LockExpiresAtUtc), null);
         Set(message, nameof(OutboxMessage.UpdatedAtUtc), now);
     }
 
-    private void Set<T>(OutboxMessage message, string propertyName, T value) =>
-        dbContext.Entry(message).Property<T>(propertyName).CurrentValue = value;
+    private void Set(OutboxMessage message, string propertyName, object? value) =>
+        dbContext.Entry(message).Property(propertyName).CurrentValue = value;
 }

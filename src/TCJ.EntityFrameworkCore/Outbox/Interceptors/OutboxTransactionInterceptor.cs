@@ -91,11 +91,16 @@ internal sealed class OutboxTransactionInterceptor : DbTransactionInterceptor
 
     private void CompleteTransaction(DbContext? context)
     {
-        if (context is null || !_captureTracker.TryGet(context, out OutboxCaptureState state))
+        if (context is null || !_captureTracker.TryGet(context, out OutboxCaptureState state) || !state.AwaitingExplicitCommit)
         {
             return;
         }
 
+        // EF Core commits the transaction it creates for an implicit SaveChanges before
+        // SavedChanges/SavedChangesAsync runs. Finalizing that transaction here would
+        // remove the capture state before the save interceptor can mark the messages as
+        // persisted. Only caller-managed explicit transactions are finalized here; the
+        // normal implicit SaveChanges path is completed by OutboxSaveChangesInterceptor.
         OutboxSaveChangesInterceptor.RecordCommittedPersistence(state);
         OutboxSaveChangesInterceptor.ClearCompletedDomainEvents(state);
         _captureTracker.Remove(context);
