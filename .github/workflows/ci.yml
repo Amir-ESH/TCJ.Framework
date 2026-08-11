@@ -112,6 +112,9 @@ jobs:
       - name: Validate health-check configuration
         run: python3 eng/verify-health-checks.py validate-config
 
+      - name: Validate transactional-outbox configuration
+        run: python3 eng/verify-outbox.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
@@ -121,6 +124,14 @@ jobs:
           --configuration Release
           --no-restore
 
+
+      - name: Run fast provider-independent outbox tests
+        run: >
+          dotnet test tests/TCJ.Outbox.Tests/TCJ.Outbox.Tests.csproj
+          --configuration Release --no-build
+          --filter "Category=OutboxFast"
+          --logger "trx;LogFileName=outbox-fast.trx"
+          --results-directory TestResults/Outbox/Fast
 
       - name: Run fast health-check tests
         run: >

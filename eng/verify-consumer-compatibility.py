@@ -86,7 +86,7 @@ def load_policy(root: Path = ROOT) -> dict[str, Any]:
     frameworks = data["supportedTargetFrameworks"]
     if not isinstance(frameworks, list) or not frameworks or any(not isinstance(item, str) or not item for item in frameworks):
         fail("supportedTargetFrameworks must be a non-empty string array.")
-    if int(data["minimumConsumerCount"]) < 6: fail("minimumConsumerCount must be at least 6.")
+    if int(data["minimumConsumerCount"]) < 7: fail("minimumConsumerCount must be at least 7 after the transactional-outbox package consumer was added.")
     for key in ("requirePackageOnlyReferences", "requireLocalPackageSource", "requireSourcePackageValidation", "requireSymbolPackageValidation", "requireSourceLinkValidation", "failOnWarnings"):
         if data[key] is not True: fail(f"{key} must be true.")
     consumers = data["consumers"]
@@ -96,6 +96,12 @@ def load_policy(root: Path = ROOT) -> dict[str, Any]:
     if len(names) != len(consumers) or len(names) != len(set(names)): fail("Consumer names must be unique strings.")
     if set(data["publishedConsumers"]) != {"Core.Console", "AspNetCore.MinimalApi", "FullStack.MinimalApi"}:
         fail("Published-package compatibility must reuse Core, ASP.NET Core, and full-stack consumers.")
+    outbox_consumers = [item for item in consumers if item.get("name") == "Outbox.Console"]
+    if len(outbox_consumers) != 1:
+        fail("Compatibility policy must define exactly one Outbox.Console package consumer.")
+    expected_outbox_packages = ["TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore"]
+    if outbox_consumers[0].get("packages") != expected_outbox_packages:
+        fail(f"Outbox.Console must declare exactly {expected_outbox_packages}.")
     expected_deps = data["expectedTcjDependencies"]
     if set(expected_deps) != REQUIRED_PACKAGE_IDS: fail("expectedTcjDependencies must cover all TCJ packages.")
     return data
@@ -219,6 +225,16 @@ def validate_config(root: Path = ROOT) -> dict[str, Any]:
         program = project.parent / "Program.cs"
         if not program.is_file(): fail(f"Missing consumer program: {program.relative_to(root)}")
         critical.append(program.relative_to(root))
+        if consumer["name"] == "Outbox.Console":
+            require_text(program, [
+                "AddTcjOutbox<OutboxConsumerDbContext>",
+                "AddTcjOutboxEvent<ConsumerCreatedEvent>",
+                "modelBuilder.AddTcjOutbox()",
+                "IOutboxStorage",
+                "IOutboxProcessor",
+                "ProcessBatchAsync",
+                "TCJ transactional outbox consumer passed",
+            ])
     required_combinations = {
         ("TCJ.Core",),
         ("TCJ.Core", "TCJ.DependencyInjection"),

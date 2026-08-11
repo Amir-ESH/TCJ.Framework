@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "testProject": "tests/TCJ.Outbox.Tests/TCJ.Outbox.Tests.csproj",
+  "tableName": "TCJ_OutboxMessages",
+  "minimumIntegrationTestCount": 20,
+  "minimumExecutedTestCount": 20,
+  "maximumBatchSize": 1000,
+  "maximumRetryAttempts": 20,
+  "maximumLockDurationSeconds": 300,
+  "maximumPollingIntervalSeconds": 60,
+  "maximumStoredErrorLength": 4096,
+  "requireStableMessageId": true,
+  "requireUniqueMessageConstraint": true,
+  "requireAtLeastOnceDocumentation": true,
+  "requireSensitiveDataProtection": true,
+  "requireSqlServerConcurrencyTests": true,
+  "requirePoisonMessageTests": true,
+  "requireReplayTests": true,
+  "requireCleanupTests": true,
+  "requireLeaseRecoveryTests": true,
+  "requireTransactionRollbackTests": true,
+  "requireTelemetryTests": true,
+  "requireHealthChecks": true,
+  "requirePublishedPackageSmoke": true,
+  "sqlServerContainerImage": "mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04",
+  "sensitiveMarkers": [
+    "TCJ_SECRET_MARKER",
+    "TCJ_OUTBOX_TEST_TOKEN",
+    "TCJ_OUTBOX_TEST_PASSWORD",
+    "TCJ_OUTBOX_TEST_CONNECTION_STRING"
+  ]
+}

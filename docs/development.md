@@ -269,3 +269,15 @@ Resilience changes must keep `eng/resilience-policy.json` and `eng/resilience-co
 ## Health-check validation
 
 Run `python3 eng/verify-health-checks.py validate-config` for static policy validation. Runtime evidence comes from `tests/TCJ.HealthChecks.Tests`; SQL Server cases require Docker/Testcontainers. Generated evidence is written under `TestResults/HealthChecks/` and `artifacts/health-checks/`.
+
+## Transactional outbox validation
+
+When changing persistence, domain events, SQL Server, resilience, observability, health checks, or release automation, also run the outbox gate:
+
+```bash
+python3 eng/verify-outbox.py validate-config
+dotnet test tests/TCJ.Outbox.Tests/TCJ.Outbox.Tests.csproj -c Release --logger "trx;LogFileName=outbox.trx" --results-directory TestResults/Outbox
+python3 eng/verify-outbox.py verify --results TestResults/Outbox --output artifacts/outbox
+```
+
+Docker is required for the SQL Server Testcontainer suite. Generated results are intentionally ignored by Git.

@@ -27,6 +27,7 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 21. [Diagnostics and OpenTelemetry observability](observability.md)
 22. [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
 23. [First preview release notes](release-notes/0.1.0-preview.1.md)
+24. [Transactional outbox](outbox.md)
 
 ## Package reference
 
@@ -48,7 +49,7 @@ This directory documents the public behavior of the current `0.1.0-preview.2` de
 
 - `0.1.0-preview.1` is the latest public preview; the repository currently develops `0.1.0-preview.2`. Pin exact public versions and review the changelog before upgrading.
 - Public APIs may change before `1.0.0`.
-- Domain-event dispatch is explicit; `SaveChangesAsync` does not dispatch events automatically.
+- Domain-event dispatch remains explicit by default; when the transactional outbox is enabled, `SaveChanges` persists events transactionally and a separate manual/hosted processor dispatches them only after commit.
 - Soft deletion is explicit through `ISoftDeleteRepository`; calling `Remove` performs physical deletion.
 - The sample uses `EnsureCreatedAsync` for local demonstration and is not a migration strategy for production.
 

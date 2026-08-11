@@ -175,3 +175,11 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] `python3 eng/verify-health-checks.py validate-config` passes.
 - [ ] Commit-matched liveness, readiness, SQL Server, migration, cancellation, timeout, cache, concurrency, sensitive-data, and telemetry health gates pass.
 - [ ] Published-package health endpoint smoke validation is enabled for the release version.
+
+## Transactional outbox gate
+
+- [ ] `python3 eng/verify-outbox.py validate-config` passes.
+- [ ] Transaction, rollback, retry/dead-letter, concurrent claim, lease recovery, replay, cleanup, sensitive-data, telemetry, and health scenarios pass on SQL Server.
+- [ ] `artifacts/outbox/OUTBOX_SUMMARY.md` reports no lost-message, duplicate-active-claim, duplicate-side-effect, or sensitive-data violations.
+- [ ] `eng/outbox-contract.json` matches the release candidate schema/defaults/telemetry/health names.
+- [ ] Published-package smoke coverage can configure the mapping, persist one event, process it, and shut down safely.

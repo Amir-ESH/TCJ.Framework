@@ -165,6 +165,22 @@ Describe the problem and the approach taken.
 - [ ] Health-check contracts are updated intentionally
 - [ ] Generated health-check artifacts are not committed
 
+## Transactional outbox
+
+- [ ] Business data and outbox records commit together
+- [ ] Transaction rollback leaves no outbox row
+- [ ] Stable outbox message IDs are preserved
+- [ ] Duplicate outbox persistence is prevented
+- [ ] Concurrent outbox claims are safe
+- [ ] Outbox lease recovery is tested
+- [ ] Transient outbox failures retry safely
+- [ ] Poison outbox messages are isolated
+- [ ] Outbox replay is explicit
+- [ ] Outbox cleanup preserves pending records
+- [ ] Outbox payloads remain out of logs and telemetry
+- [ ] Outbox schema and contract changes are documented
+- [ ] Generated outbox artifacts are not committed
+
 ## Related issue
 
 Refs #

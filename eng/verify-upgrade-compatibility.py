@@ -131,7 +131,8 @@ def load_policy(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any], dict
         "requireTargetBuild", "requireTargetRun", "requirePackageOnlyReferences", "requireSourceTreeHash",
         "requireDependencyDiff", "requireBehaviorComparison", "requireMigrationGuideForBreakingChanges",
         "requireApprovedBreakingChanges", "requireExplicitMigrationPatches", "failOnUndocumentedBehaviorChange",
-        "failOnDependencyDowngrade", "failOnWarnings", "publishedScenarios", "scenarios",
+        "failOnDependencyDowngrade", "failOnWarnings", "requireOutboxOptInCompatibility",
+        "requireOutboxSchemaMigrationGuidance", "requireOutboxEventNameMigrationGuidance", "publishedScenarios", "scenarios",
     }
     missing = sorted(required-set(policy))
     if missing: fail(f"Upgrade policy is missing fields: {', '.join(missing)}")
@@ -143,7 +144,8 @@ def load_policy(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any], dict
         "requireTargetBuild", "requireTargetRun", "requirePackageOnlyReferences", "requireSourceTreeHash",
         "requireDependencyDiff", "requireBehaviorComparison", "requireMigrationGuideForBreakingChanges",
         "requireApprovedBreakingChanges", "requireExplicitMigrationPatches", "failOnUndocumentedBehaviorChange",
-        "failOnDependencyDowngrade", "failOnWarnings",
+        "failOnDependencyDowngrade", "failOnWarnings", "requireOutboxOptInCompatibility",
+        "requireOutboxSchemaMigrationGuidance", "requireOutboxEventNameMigrationGuidance",
     ]
     for key in boolean_guarantees:
         if policy.get(key) is not True: fail(f"{key} must be true.")
@@ -186,6 +188,9 @@ def load_policy(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any], dict
         behavior = read_json(root / expected_rel)
         if behavior.get("scenario") != scenario["name"] or not isinstance(behavior.get("checks"), dict) or not behavior["checks"]:
             fail(f"Invalid expected behavior fixture for {scenario['name']}")
+        program_text = (root / project_rel).parent.joinpath("Program.cs").read_text(encoding="utf-8")
+        if "AddTcjOutbox" in program_text or "AddTcjOutboxProcessor" in program_text:
+            fail(f"Existing baseline/target scenario {scenario['name']} must remain outbox-disabled so direct-upgrade behavior proves explicit opt-in compatibility.")
         coverage.update(actual); critical.extend([project_rel, expected_rel])
     if coverage != REQUIRED_PACKAGES: fail("Upgrade scenarios do not cover all five TCJ packages.")
     validate_nuget_config(root / "upgrade-tests/NuGet.Baseline.Config", target=False)
@@ -199,6 +204,20 @@ def load_policy(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any], dict
     lower_guide = guide.casefold()
     missing_terms = [term for term in required_guide_terms if term.casefold() not in lower_guide]
     if missing_terms: fail(f"Migration guide is incomplete; missing topics: {', '.join(missing_terms)}")
+    required_outbox_guide = [
+        "transactional outbox is opt-in",
+        "TCJ_OutboxMessages",
+        "consumer-controlled migration",
+        "event type names are compatibility contracts",
+        "AddTcjOutbox",
+    ]
+    missing_outbox_guide = [term for term in required_outbox_guide if term.casefold() not in lower_guide]
+    if missing_outbox_guide:
+        fail(f"Migration guide is missing Step 44 outbox upgrade guidance: {', '.join(missing_outbox_guide)}")
+    outbox_docs = (root / "docs/outbox.md").read_text(encoding="utf-8")
+    for term in ("at-least-once", "consumer-controlled migration", "event names", "AddTcjOutbox"):
+        if term.casefold() not in outbox_docs.casefold():
+            fail(f"docs/outbox.md is missing upgrade compatibility guidance for {term!r}.")
 
     changes = manifest.get("changes")
     if not isinstance(changes, list): fail("breaking-changes.json changes must be an array.")

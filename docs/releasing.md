@@ -274,3 +274,7 @@ Release preflight and official tag publication call the reusable resilience work
 ## Health-check release gate
 
 Release preflight and official tag publication depend on the commit-matched `Health checks` reusable workflow. The release preserves the generated `HEALTH_CHECK_SUMMARY.md` evidence, and published-package validation maps and executes the released liveness/readiness endpoint APIs.
+
+## Transactional outbox release evidence
+
+Release preflight and the official tag workflow invoke the reusable `outbox.yml` gate and validate `eng/outbox-policy.json` / `eng/outbox-contract.json` against the exact source. Publication must not proceed when transaction consistency, SQL Server claim concurrency, retry/dead-letter, replay/cleanup, sensitive-data, telemetry, health, or contract verification fails. The `OUTBOX_SUMMARY.md` and sanitized JSON reports are retained with release evidence.

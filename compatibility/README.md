@@ -12,6 +12,7 @@ This workspace behaves like an external application set. It deliberately sits ou
 | `EntityFrameworkCore.SqlServer.Console` | Core + DependencyInjection + EntityFrameworkCore + SqlServer | SQL Server registration/options/provider resolution without opening a connection |
 | `AspNetCore.MinimalApi` | Core + DependencyInjection + AspNetCore | Kestrel startup, current user, success and handled-error HTTP requests |
 | `FullStack.MinimalApi` | all five packages | all modules restored and resolved together plus HTTP/EF/SQL Server wiring |
+| `Outbox.Console` | Core + DependencyInjection + EntityFrameworkCore | package-only outbox persistence, stable event-name registration, manual batch processing, and handler invocation through a custom provider storage |
 
 The required target framework is defined by `eng/compatibility-policy.json`; consumers read it through `TCJCompatibilityTargetFramework`. The current required framework is `net10.0`.
 
@@ -62,6 +63,6 @@ python3 eng/verify-consumer-compatibility.py verify \
   --commit-sha "$(git rev-parse HEAD)"
 ```
 
-To run one fixture, add `--consumer Core.Console` (or another policy consumer name) to `run-compatibility.py`.
+To run one fixture, add `--consumer Core.Console` (or another policy consumer name, such as `Outbox.Console`) to `run-compatibility.py`.
 
 Generated restore caches, builds, runtime logs, packages, and reports belong under `artifacts/compatibility/` or consumer `bin`/`obj` directories and are never committed.

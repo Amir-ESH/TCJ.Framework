@@ -545,3 +545,14 @@ tests/TCJ.HealthChecks.Tests/obj/
 !eng/verify-health-checks.py
 !tests/TCJ.HealthChecks.Tests/**/*.cs
 !tests/TCJ.HealthChecks.Tests/**/*.csproj
+
+# Transactional outbox generated output
+TestResults/Outbox/
+artifacts/outbox/
+tests/TCJ.Outbox.Tests/bin/
+tests/TCJ.Outbox.Tests/obj/
+!eng/outbox-policy.json
+!eng/outbox-contract.json
+!eng/verify-outbox.py
+!tests/TCJ.Outbox.Tests/**/*.cs
+!tests/TCJ.Outbox.Tests/**/*.csproj

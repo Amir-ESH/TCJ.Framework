@@ -30,9 +30,9 @@ Read repositories return no-tracking queries by default. Tracking must be reques
 
 Dependency registration scans only assemblies supplied to `AddTcjDependencyInjection`. The framework does not scan every loaded assembly implicitly.
 
-### Explicit domain-event dispatch
+### Explicit domain-event dispatch and optional transactional outbox
 
-Entities can collect pending domain events and `IDomainEventDispatcher` invokes registered handlers sequentially. Persistence does not automatically publish or clear domain events in the current preview.
+Entities can collect pending domain events and `IDomainEventDispatcher` invokes registered handlers sequentially. The default persistence path remains explicit. When `AddTcjOutbox` / `AddTcjSqlServerOutbox` is enabled, EF interceptors persist pending events in the same transaction as business state and clear them only after successful persistence/commit; dispatch still occurs separately after commit through `IOutboxProcessor`. The guarantee is at-least-once, not exactly-once.
 
 ### Host-owned configuration
 
@@ -61,8 +61,8 @@ HTTP endpoint
 
 ## What the framework does not currently provide
 
-- Automatic domain-event dispatch from `SaveChangesAsync`
-- An outbox implementation
+- Exactly-once domain-event delivery
+- Automatic public replay/admin endpoints for the transactional outbox
 - Authentication or authorization setup
 - Database migrations for consumer applications
 - Provider packages other than SQL Server
@@ -96,3 +96,8 @@ Resilience primitives live in existing packages rather than a vendor-specific re
 ## Health-check boundaries
 
 Step 43 keeps health support inside existing packages: contract/options/startup diagnostics live in `TCJ.Core`; standard health registrations live alongside dependency injection and EF integrations; SQL Server connectivity/migration checks remain provider-specific; ASP.NET Core owns endpoint mapping and JSON formatting. `TCJ.Core` does not acquire an ASP.NET Core dependency and no circular package edge is introduced.
+
+
+## Transactional-outbox boundary
+
+Step 44 keeps provider-neutral outbox contracts in `TCJ.Core`, EF persistence/serialization/processing in `TCJ.EntityFrameworkCore`, SQL Server claim SQL in `TCJ.EntityFrameworkCore.SqlServer`, and the optional hosted polling loop in `TCJ.AspNetCore`. `TCJ.AspNetCore` never references EF Core. Consumer-controlled migrations own the schema. See [Transactional outbox](outbox.md).

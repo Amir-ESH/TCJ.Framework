@@ -69,6 +69,20 @@ public static class TcjDiagnosticNames
         public const string ResilienceCircuitBreaker = "tcj.resilience.circuit_breaker";
         /// <summary>TCJ health-check execution.</summary>
         public const string HealthCheckExecute = "tcj.health_check.execute";
+        /// <summary>Transactional-outbox persistence operation.</summary>
+        public const string OutboxPersist = "tcj.outbox.persist";
+        /// <summary>Transactional-outbox claim operation.</summary>
+        public const string OutboxClaim = "tcj.outbox.claim";
+        /// <summary>Transactional-outbox delivery operation.</summary>
+        public const string OutboxProcess = "tcj.outbox.process";
+        /// <summary>Transactional-outbox retry scheduling operation.</summary>
+        public const string OutboxRetry = "tcj.outbox.retry";
+        /// <summary>Transactional-outbox dead-letter operation.</summary>
+        public const string OutboxDeadLetter = "tcj.outbox.dead_letter";
+        /// <summary>Transactional-outbox explicit replay operation.</summary>
+        public const string OutboxReplay = "tcj.outbox.replay";
+        /// <summary>Transactional-outbox retention cleanup operation.</summary>
+        public const string OutboxCleanup = "tcj.outbox.cleanup";
     }
 
     /// <summary>Stable metric instrument names.</summary>
@@ -116,6 +130,22 @@ public static class TcjDiagnosticNames
         public const string HealthCheckFailures = "tcj.health_checks.failures";
         /// <summary>Health-check result counts by bounded status.</summary>
         public const string HealthCheckStatus = "tcj.health_checks.status";
+        /// <summary>Outbox messages persisted in the business transaction.</summary>
+        public const string OutboxMessagesPersisted = "tcj.outbox.messages.persisted";
+        /// <summary>Outbox messages processed successfully.</summary>
+        public const string OutboxMessagesProcessed = "tcj.outbox.messages.processed";
+        /// <summary>Outbox processing failures.</summary>
+        public const string OutboxMessagesFailed = "tcj.outbox.messages.failed";
+        /// <summary>Outbox messages scheduled for retry.</summary>
+        public const string OutboxMessagesRetried = "tcj.outbox.messages.retried";
+        /// <summary>Outbox messages moved to dead-letter state.</summary>
+        public const string OutboxMessagesDeadLettered = "tcj.outbox.messages.dead_lettered";
+        /// <summary>Outbox message processing duration.</summary>
+        public const string OutboxProcessingDuration = "tcj.outbox.processing.duration";
+        /// <summary>Observed outbox pending-message count.</summary>
+        public const string OutboxPendingCount = "tcj.outbox.pending.count";
+        /// <summary>Observed age of the oldest pending outbox message.</summary>
+        public const string OutboxOldestPendingAge = "tcj.outbox.oldest_pending.age";
     }
 
     /// <summary>Stable activity-tag and metric-dimension names.</summary>
@@ -179,6 +209,14 @@ public static class TcjDiagnosticNames
         public const string HealthCheckCategory = "tcj.health_check.category";
         /// <summary>Stable bounded health-check status.</summary>
         public const string HealthCheckStatus = "tcj.health_check.status";
+        /// <summary>Stable logical outbox event type.</summary>
+        public const string OutboxEventType = "tcj.outbox.event_type";
+        /// <summary>One-based outbox delivery attempt.</summary>
+        public const string OutboxAttempt = "tcj.outbox.attempt";
+        /// <summary>Bounded outbox operation outcome.</summary>
+        public const string OutboxOutcome = "tcj.outbox.outcome";
+        /// <summary>Normalized outbox storage provider.</summary>
+        public const string OutboxProvider = "tcj.outbox.provider";
     }
 
     /// <summary>Bounded operation outcome values.</summary>

@@ -27,7 +27,7 @@
   "supportedTargetFrameworks": [
     "net10.0"
   ],
-  "minimumConsumerCount": 6,
+  "minimumConsumerCount": 7,
   "requirePackageOnlyReferences": true,
   "requireLocalPackageSource": true,
   "requireSourcePackageValidation": true,
@@ -94,6 +94,16 @@
         "TCJ.AspNetCore"
       ],
       "expectedOutput": "TCJ full-stack consumer passed"
+    },
+    {
+      "name": "Outbox.Console",
+      "project": "compatibility/Consumers/Outbox.Console/Outbox.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.EntityFrameworkCore"
+      ],
+      "expectedOutput": "TCJ transactional outbox consumer passed"
     }
   ],
   "publishedConsumers": [

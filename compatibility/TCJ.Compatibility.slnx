@@ -6,5 +6,6 @@
     <Project Path="Consumers/EntityFrameworkCore.SqlServer.Console/EntityFrameworkCore.SqlServer.Console.csproj" />
     <Project Path="Consumers/AspNetCore.MinimalApi/AspNetCore.MinimalApi.csproj" />
     <Project Path="Consumers/FullStack.MinimalApi/FullStack.MinimalApi.csproj" />
+    <Project Path="Consumers/Outbox.Console/Outbox.Console.csproj" />
   </Folder>
 </Solution>

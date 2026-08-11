@@ -25,6 +25,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Added an opt-in SQL Server transactional outbox with same-transaction domain-event persistence, stable message IDs, safe concurrent lease claiming, bounded retry/dead-letter processing, explicit replay, retention cleanup, idempotency metadata, OpenTelemetry diagnostics, health checks, SQL Server Testcontainers coverage, policy verification, and release gates.
+
 - Added explicit bounded retry, cooperative timeout, isolated circuit-breaker, opt-in domain-event handler retry, and transaction-safe SQL Server execution-strategy primitives, with deterministic fault injection, resilience telemetry/contracts, benchmarks, CI/release gates, and idempotency guidance.
 
 - Added backend-neutral tracing and metrics across domain-event dispatch, dependency registration, EF Core repositories and Unit of Work/transactions, SQL Server configuration, and ASP.NET Core exception handling, with stable versioned contracts, sensitive-data-safe defaults, dedicated observability tests/verifier, CI/release enforcement, benchmarks, and OpenTelemetry sample configuration.

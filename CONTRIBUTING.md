@@ -153,3 +153,7 @@ Do not add broad retry loops to make transient tests pass. Any resilience change
 ## Health-check changes
 
 Changes to public health-check names, tags, endpoint defaults, response fields, timeout/cache bounds, or telemetry require an intentional update to `eng/health-check-contract.json` and `eng/health-check-policy.json`. Run `python3 eng/verify-health-checks.py validate-config` and the health-check test project before opening a PR.
+
+## Transactional-outbox changes
+
+Outbox schema, delivery semantics, event naming, option defaults, telemetry, or health-check changes require an intentional update to `eng/outbox-contract.json` and `eng/outbox-policy.json`. Keep the guarantee at at-least-once unless an independently reviewed design can prove stronger semantics end to end; do not describe duplicate-prone delivery as exactly-once. Run `python3 eng/verify-outbox.py validate-config` and `tests/TCJ.Outbox.Tests` before opening a PR. Schema changes require consumer migration guidance. Never add payloads, aggregate identifiers, exception messages, credentials, or connection strings to outbox logs/telemetry/health responses.

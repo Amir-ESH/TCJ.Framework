@@ -29,5 +29,6 @@
     <Project Path="tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj" />
     <Project Path="tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj" />
     <Project Path="tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj" />
+    <Project Path="tests/TCJ.Outbox.Tests/TCJ.Outbox.Tests.csproj" />
   </Folder>
 </Solution>

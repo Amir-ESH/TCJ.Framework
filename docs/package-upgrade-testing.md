@@ -14,6 +14,8 @@ Each scenario has one source tree and TCJ PackageReferences use `$(TCJUpgradeVer
 
 The six scenarios cover Core, Dependency Injection, provider-independent EF Core, SQL Server registration, ASP.NET Core, and all five packages together. `EntityFrameworkCoreConsumer` persists a deterministic record to SQLite during the baseline run and reads that same database during the target run. SQL Server connectivity itself remains the responsibility of the container-backed integration suite.
 
+Step 44 deliberately keeps all six direct-upgrade scenarios **outbox-disabled**. Because the same scenario source runs first against the published baseline (which has no Step 44 API) and then against the target packages, unchanged behavior proves that adding transactional-outbox support does not alter existing SaveChanges or hosting behavior unless the consumer explicitly calls `AddTcjOutbox`/provider registration. New outbox usage is validated separately by the package-consumer fixture and SQL Server outbox suites. The version-specific migration guide is required to document the consumer-owned `TCJ_OutboxMessages` migration and compatibility treatment of stable event type names.
+
 ## Runtime behavior
 
 Each scenario writes a machine-readable `behavior.json`. Values are semantic booleans and deliberately exclude timestamps, ports, machine names, temporary paths, random IDs, and trace identifiers. Baseline and target behavior is classified as `Equivalent`, `Compatible improvement`, `Documented change`, `Intentional breaking change`, `Unexpected regression`, or narrowly documented `Environment noise`. Unexpected regressions are blocking.
