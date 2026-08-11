@@ -45,7 +45,13 @@ public sealed class OutboxFastTests
     [Fact]
     public void Explicit_event_name_is_stable_and_resolves_without_assembly_identity()
     {
-        var resolver = new OutboxEventTypeResolver([new OutboxEventRegistration(typeof(FastEvent), "fast.changed.v1")]);
+        var services = new ServiceCollection();
+        services.AddTcjOutbox<FastDbContext>();
+        services.AddTcjOutboxEvent<FastEvent>("fast.changed.v1");
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        IOutboxEventTypeResolver resolver = provider.GetRequiredService<IOutboxEventTypeResolver>();
+
         Assert.Equal("fast.changed.v1", resolver.GetName(typeof(FastEvent)));
         Assert.Equal(typeof(FastEvent), resolver.Resolve("fast.changed.v1"));
         Assert.DoesNotContain(typeof(FastEvent).Assembly.GetName().Name!, resolver.GetName(typeof(FastEvent)), StringComparison.Ordinal);

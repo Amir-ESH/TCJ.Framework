@@ -93,7 +93,7 @@ public sealed class OutboxConsumerAggregate : Entity<Guid>
 
 public sealed record ConsumerCreatedEvent(Guid AggregateId, DateTimeOffset OccurredOn) : IDomainEvent;
 
-public sealed class ConsumerCreatedEventHandler(OutboxConsumerProbe probe) : IDomainEventHandler<ConsumerCreatedEvent>
+public sealed class ConsumerCreatedHandler(OutboxConsumerProbe probe) : IDomainEventHandler<ConsumerCreatedEvent>
 {
     public Task HandleAsync(ConsumerCreatedEvent domainEvent, CancellationToken cancellationToken)
     {
