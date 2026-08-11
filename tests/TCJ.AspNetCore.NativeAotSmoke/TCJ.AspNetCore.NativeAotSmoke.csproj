@@ -5,7 +5,7 @@
     <PublishAot>true</PublishAot>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsNotAsErrors></WarningsNotAsErrors>
+    <WarningsNotAsErrors>IDE0011;CA1001;CA1512</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
