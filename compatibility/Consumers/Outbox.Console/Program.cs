@@ -16,6 +16,7 @@ public static class Program
     public static async Task Main()
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton<OutboxConsumerProbe>();
         services.AddTcjDependencyInjection(typeof(Program).Assembly);
         services.AddTcjEntityFrameworkCore<OutboxConsumerDbContext>(options =>

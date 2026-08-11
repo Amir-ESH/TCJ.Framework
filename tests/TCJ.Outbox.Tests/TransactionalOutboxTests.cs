@@ -363,13 +363,16 @@ public sealed class TransactionalOutboxTests(OutboxSqlServerFixture fixture)
             await processScope.ServiceProvider.GetRequiredService<IOutboxProcessor>().ProcessBatchAsync();
         }
 
-        _ = await fixture.PersistEventAsync("pending", "pending");
         fixture.Behavior.FailPermanently("dead");
         _ = await fixture.PersistEventAsync("dead", "dead");
         await using (AsyncServiceScope deadScope = fixture.Provider.CreateAsyncScope())
         {
             await deadScope.ServiceProvider.GetRequiredService<IOutboxProcessor>().ProcessBatchAsync();
         }
+
+        // Persist the pending row only after the poison batch has been processed so it
+        // remains genuinely pending and the cleanup assertion tests retention semantics.
+        _ = await fixture.PersistEventAsync("pending", "pending");
         fixture.Time.Advance(TimeSpan.FromHours(2));
 
         await using AsyncServiceScope cleanupScope = fixture.Provider.CreateAsyncScope();
@@ -633,12 +636,18 @@ public sealed class TransactionalOutboxTests(OutboxSqlServerFixture fixture)
     {
         var services = new ServiceCollection();
         services.AddTcjOutbox<OutboxTestDbContext>();
-        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
+        Assert.DoesNotContain(services, IsOutboxHostedServiceRegistration);
 
         services.AddTcjOutboxProcessor();
 
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
+        Assert.Contains(services, IsOutboxHostedServiceRegistration);
     }
+
+    private static bool IsOutboxHostedServiceRegistration(ServiceDescriptor descriptor) =>
+        descriptor.ServiceType == typeof(IHostedService)
+        && descriptor.ImplementationType is Type implementationType
+        && implementationType.Assembly == typeof(OutboxHostedServiceCollectionExtensions).Assembly
+        && string.Equals(implementationType.Name, "OutboxHostedService", StringComparison.Ordinal);
 
     private static void RestoreTelemetry(TcjTelemetryOptions options)
     {

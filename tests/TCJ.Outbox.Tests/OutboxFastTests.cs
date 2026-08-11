@@ -85,15 +85,16 @@ public sealed class OutboxFastTests
     {
         var services = new ServiceCollection();
         services.AddTcjOutbox<FastDbContext>();
-        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
+        Assert.DoesNotContain(services, IsOutboxHostedServiceRegistration);
         services.AddTcjOutboxProcessor();
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
+        Assert.Contains(services, IsOutboxHostedServiceRegistration);
     }
 
     [Fact]
     public async Task Conflicting_provider_storage_registrations_are_rejected_at_startup()
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddScoped<IDomainEventDispatcher, NoopDispatcher>();
         services.AddTcjEntityFrameworkCore<FastDbContext>(options =>
             options.UseInMemoryDatabase($"outbox-fast-{Guid.NewGuid():N}"));
@@ -121,6 +122,12 @@ public sealed class OutboxFastTests
         services.AddTcjOutbox<FastDbContext>();
         Assert.Throws<InvalidOperationException>(() => services.AddTcjOutbox<SecondFastDbContext>());
     }
+
+    private static bool IsOutboxHostedServiceRegistration(ServiceDescriptor descriptor) =>
+        descriptor.ServiceType == typeof(IHostedService)
+        && descriptor.ImplementationType is Type implementationType
+        && implementationType.Assembly == typeof(OutboxHostedServiceCollectionExtensions).Assembly
+        && string.Equals(implementationType.Name, "OutboxHostedService", StringComparison.Ordinal);
 
     private sealed record FastEvent(string Value, DateTimeOffset OccurredOn) : IDomainEvent;
 

@@ -168,10 +168,10 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
 
         foreach (CapturedOutboxEvent captured in state.Captured.Values)
         {
-            if (context.Entry(captured.Message).State == EntityState.Unchanged)
-            {
-                captured.Persisted = true;
-            }
+            // Reaching SavedChanges/SavedChangesAsync means this SaveChanges operation succeeded.
+            // Persistence must not depend on EF tracking-state transitions (including callers that
+            // disable AcceptAllChanges), because explicit transactions are finalized separately.
+            captured.Persisted = true;
         }
 
         if (state.AwaitingExplicitCommit)
