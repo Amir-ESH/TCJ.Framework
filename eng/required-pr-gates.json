@@ -1,6 +1,9 @@
 {
   "schemaVersion": 1,
-  "supportedTargets": ["develop", "main"],
+  "supportedTargets": [
+    "develop",
+    "main"
+  ],
   "alwaysRequired": [
     "ci",
     "dependency_review"
@@ -89,7 +92,8 @@
         "Directory.Build.props",
         "Directory.Packages.props",
         "global.json",
-        ".github/workflows/documentation.yml"
+        ".github/workflows/documentation.yml",
+        ".github/workflows/documentation-pages.yml"
       ]
     },
     "sqlserver_integration": {

@@ -131,16 +131,9 @@ CI metadata records the package version, source commit, release tag, and UTC bui
 
 ## GitHub Pages preparation
 
-The dedicated Documentation workflow produces a Pages-ready static-site artifact. Pull-request sites remain downloadable artifacts and are never deployed. To enable Pages later:
+The reusable `Documentation` workflow is validation-only from a permissions perspective: it keeps `contents: read` and cannot deploy Pages. When a trusted caller explicitly requests it, the same successful build can additionally upload the Pages artifact. Pull-request sites remain ordinary downloadable artifacts and are never deployable.
 
-1. allow only a trusted workflow on `main` to deploy;
-2. use the generated site artifact rather than rebuilding after approval;
-3. grant only `pages: write` and `id-token: write` to the deployment job;
-4. protect the `github-pages` environment;
-5. never deploy arbitrary pull-request content;
-6. keep secrets out of documentation metadata and generated pages.
-
-No Pages deployment is enabled by Step 34; the repository is prepared for a separate, reviewed activation.
+The separate `Documentation Pages` workflow is the only workflow allowed to deploy the site. It runs for trusted `main` activity, calls the validation workflow first, and grants `pages: write` plus `id-token: write` only to its final deployment job. This separation keeps PR orchestration unable to acquire deployment credentials while still avoiding a second documentation build.
 
 ## Diagnosing failures
 
@@ -159,4 +152,4 @@ Pull requests and `develop` builds upload preview sites only as ordinary workflo
 2. create the repository variable `ENABLE_DOCUMENTATION_PAGES` with value `true`;
 3. review protection rules for the `github-pages` environment.
 
-The deployment job receives only `contents: read`, `pages: write`, and `id-token: write`. It deploys the Pages artifact produced by the same successful documentation build; pull-request content is never deployed.
+The deployment job in `.github/workflows/documentation-pages.yml` receives only `contents: read`, `pages: write`, and `id-token: write`. The reusable `.github/workflows/documentation.yml` and `.github/workflows/required-pr-gate.yml` are statically verified to contain no Pages write or OIDC write capability. The deployment job consumes the Pages artifact produced by the same successful trusted build; pull-request content is never deployed.

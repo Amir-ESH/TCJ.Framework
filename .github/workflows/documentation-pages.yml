@@ -1,0 +1,59 @@
+name: Documentation Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "docs/**"
+      - "docfx/**"
+      - "eng/documentation-*.json"
+      - "eng/verify-documentation.py"
+      - "eng/tests/test_verify_documentation.py"
+      - ".config/dotnet-tools.json"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "global.json"
+      - ".github/workflows/documentation.yml"
+      - ".github/workflows/documentation-pages.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-documentation:
+    name: Build trusted main documentation
+    uses: ./.github/workflows/documentation.yml
+    with:
+      upload_pages_artifact: true
+    permissions:
+      contents: read
+
+  deploy-pages:
+    name: Deploy trusted main documentation
+    if: vars.ENABLE_DOCUMENTATION_PAGES == 'true'
+    needs: validate-documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Deploy documentation to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

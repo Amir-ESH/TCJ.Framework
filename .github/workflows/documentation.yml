@@ -2,24 +2,20 @@ name: Documentation
 
 on:
   workflow_call:
-
-  push:
-    branches:
-      - main
-      - develop
-    paths:
-      - "src/**"
-      - "docs/**"
-      - "docfx/**"
-      - "eng/documentation-*.json"
-      - "eng/verify-documentation.py"
-      - ".config/dotnet-tools.json"
-      - "Directory.Build.props"
-      - "Directory.Packages.props"
-      - "global.json"
-      - ".github/workflows/documentation.yml"
+    inputs:
+      upload_pages_artifact:
+        description: Upload the validated site as the GitHub Pages artifact for a trusted caller.
+        required: false
+        type: boolean
+        default: false
 
   workflow_dispatch:
+    inputs:
+      upload_pages_artifact:
+        description: Upload the validated site as a Pages-ready artifact without deploying it.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -122,12 +118,8 @@ jobs:
           cd artifacts/documentation
           zip -qr "TCJ.Framework.Documentation.${{ steps.package-version.outputs.value }}.zip" site
 
-      - name: Configure GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_DOCUMENTATION_PAGES == 'true'
-        uses: actions/configure-pages@v5
-
-      - name: Upload GitHub Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_DOCUMENTATION_PAGES == 'true'
+      - name: Upload GitHub Pages artifact for trusted caller
+        if: inputs.upload_pages_artifact == true
         uses: actions/upload-pages-artifact@v4
         with:
           path: artifacts/documentation/site
@@ -156,21 +148,3 @@ jobs:
             artifacts/documentation/TCJ.Framework.Documentation.*.zip
           if-no-files-found: warn
           retention-days: 14
-
-  deploy-pages:
-    name: Deploy trusted main documentation
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_DOCUMENTATION_PAGES == 'true'
-    needs: build-documentation
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy documentation to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
