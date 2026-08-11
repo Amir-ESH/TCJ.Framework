@@ -75,7 +75,7 @@
   },
   "sourceLevelExclusions": [
     {
-      "file": "src/TCJ.DependencyInjection/DomainEvents/DomainEventDispatcher.cs",
+      "file": "src/TCJ.DependencyInjection/DomainEvents/ReflectionDomainEventDispatch.cs",
       "declarationContains": "private static readonly ConcurrentDictionary<Type, ObjectFactory> InvokerFactories",
       "comment": "// Stryker disable once all: MTP 4.16 reuses the test host; mutating this process-wide cache can contaminate later mutant sessions.",
       "reason": "Stryker.NET 4.16 MTP reuses a process across mutant sessions; mutating a process-wide cache can produce cross-mutant false verdicts."

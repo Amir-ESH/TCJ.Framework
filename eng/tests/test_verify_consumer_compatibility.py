@@ -64,6 +64,25 @@ class ConsumerCompatibilityVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.VerificationError, "IsAotCompatible=true"):
                 MODULE.load_policy(root)
 
+    def test_di_aot_safe_consumer_requires_explicit_domain_event_dispatch_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            consumer = root / "compatibility/Consumers/DependencyInjection.AotSafe.Console"
+            (root / "eng").mkdir(parents=True)
+            consumer.mkdir(parents=True)
+            (root / "eng/compatibility-policy.json").write_text(json.dumps(REAL_POLICY), encoding="utf-8")
+            (consumer / "DependencyInjection.AotSafe.Console.csproj").write_text(
+                '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><IsAotCompatible>true</IsAotCompatible></PropertyGroup></Project>',
+                encoding="utf-8",
+            )
+            (consumer / "Program.cs").write_text(
+                'services.AddTcjDependencyInjection();',
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(MODULE.VerificationError, "closed domain-event route"):
+                MODULE.load_policy(root)
+
     def test_missing_policy_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaises(MODULE.VerificationError):

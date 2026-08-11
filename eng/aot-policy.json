@@ -46,31 +46,31 @@
     {
       "packageId": "TCJ.DependencyInjection",
       "tier": "Conditional",
-      "rationale": "The parameterless AddTcjDependencyInjection() overload is a dedicated reflection-free framework bootstrap. Convention-scanning overloads remain available for compatibility and are explicitly trimming-restricted; package-wide AOT analyzer compatibility is deferred to Important 5.",
+      "rationale": "TCJ.DependencyInjection declares IsAotCompatible=true and is analyzer-compatible on the explicit registration path: use the reflection-free AddTcjDependencyInjection() bootstrap, declare each dispatched event with AddTcjDomainEvent<TEvent>(), and register application services and IDomainEventHandler<TEvent> implementations explicitly with Microsoft DI. Convention scanning remains available for non-trimmed/JIT consumers and is explicitly restricted with RequiresUnreferencedCode and RequiresDynamicCode. The formal support tier remains Conditional until Important 8 records packed Native AOT publish-and-execute evidence.",
       "restrictions": [
         {
           "kind": "PublicApi",
           "symbol": "TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, params Assembly[])",
           "status": "Restricted",
-          "reason": "This overload invokes Assembly.GetTypes()-based convention scanning and is annotated with RequiresUnreferencedCode. Trimming-aware callers should use the parameterless bootstrap and explicit IServiceCollection registration instead."
+          "reason": "This overload invokes Assembly.GetTypes()-based convention scanning and enables runtime generic domain-event dispatch. It is annotated with RequiresUnreferencedCode and RequiresDynamicCode. Native AOT/trimming consumers must use the parameterless bootstrap, AddTcjDomainEvent<TEvent>(), and explicit registrations."
         },
         {
           "kind": "PublicApi",
           "symbol": "TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, Action<TcjDependencyInjectionOptions>)",
           "status": "Restricted",
-          "reason": "This scanner-capable overload is annotated with RequiresUnreferencedCode because the configure callback can select reflection-based assembly discovery. Use the parameterless bootstrap for the reflection-free path."
+          "reason": "This scanner-capable overload can select reflection-based assembly discovery and the runtime generic dispatch fallback. It is annotated with RequiresUnreferencedCode and RequiresDynamicCode. Use the explicit registration path for Native AOT/trimming."
         },
         {
           "kind": "PublicApi",
           "symbol": "TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, TcjDependencyInjectionOptions)",
           "status": "Restricted",
-          "reason": "This scanner-capable overload is annotated with RequiresUnreferencedCode because populated options are enumerated through runtime reflection. Use the parameterless bootstrap for the reflection-free path."
+          "reason": "This scanner-capable overload enumerates consumer assemblies through runtime reflection and enables the runtime generic dispatch fallback. It is annotated with RequiresUnreferencedCode and RequiresDynamicCode. Use the explicit registration path for Native AOT/trimming."
         },
         {
           "kind": "PublicApi",
           "symbol": "TCJ.DependencyInjection.Registration.TcjDependencyInjectionOptions.AddAssembly(Assembly) / AddAssemblies(IEnumerable<Assembly>) / AddAssemblyContaining<TMarker>()",
           "status": "Restricted",
-          "reason": "These APIs opt the caller into convention scanning and therefore into the reflection-based path described by this policy."
+          "reason": "These APIs opt callers into convention scanning. They are only consumed by the scanner-capable AddTcjDependencyInjection overloads, which surface the trimming and Native AOT restrictions."
         }
       ],
       "fullSupportEvidence": []

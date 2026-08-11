@@ -19,7 +19,11 @@ public static class ServiceCollectionExtensions
 {
     private const string ConventionScanningRequiresUnreferencedCodeMessage =
         "Convention-based dependency scanning uses runtime reflection over consumer assemblies and is not trimming-safe. " +
-        "Use the parameterless AddTcjDependencyInjection() overload and register application services explicitly.";
+        "Use AddTcjDependencyInjection(), AddTcjDomainEvent<TEvent>(), and explicit application registrations.";
+
+    private const string ConventionScanningRequiresDynamicCodeMessage =
+        "Convention-based dependency scanning enables runtime generic domain-event dispatch and is not Native AOT-safe. " +
+        "Use AddTcjDependencyInjection(), AddTcjDomainEvent<TEvent>(), and explicit application registrations.";
 
     // Stryker disable once all: MTP 4.16 reuses the test host; mutating this process-wide registration table can contaminate later mutant sessions.
     private static readonly DependencyLifetimeDefinition[] LifetimeDefinitions =
@@ -40,7 +44,8 @@ public static class ServiceCollectionExtensions
     /// <returns>The same service collection so additional registrations can be chained.</returns>
     /// <remarks>
     /// This is the trimming-safe bootstrap path. Register application services explicitly with
-    /// <see cref="IServiceCollection"/> after calling this method.
+    /// <see cref="IServiceCollection"/> after calling this method. For domain events, also declare
+    /// each closed event type with <see cref="AddTcjDomainEvent{TEvent}(IServiceCollection)"/>.
     /// </remarks>
     public static IServiceCollection AddTcjDependencyInjection(this IServiceCollection services)
     {
@@ -57,6 +62,31 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Declares an AOT-safe domain-event dispatch route for a closed event type.
+    /// </summary>
+    /// <typeparam name="TEvent">The domain-event type whose handlers will be resolved explicitly.</typeparam>
+    /// <param name="services">The service collection to configure.</param>
+    /// <returns>The same service collection so additional registrations can be chained.</returns>
+    /// <remarks>
+    /// This method does not discover or register handlers. Register
+    /// <c>IDomainEventHandler&lt;TEvent&gt;</c> implementations explicitly with normal
+    /// <see cref="IServiceCollection"/> methods. Repeated calls are idempotent.
+    /// </remarks>
+    public static IServiceCollection AddTcjDomainEvent<TEvent>(this IServiceCollection services)
+        where TEvent : IDomainEvent
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        lock (services)
+        {
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IDomainEventDispatchRoute, DomainEventDispatchRoute<TEvent>>());
+        }
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers TCJ framework defaults and scans the supplied assemblies for lifetime markers.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
@@ -66,6 +96,7 @@ public static class ServiceCollectionExtensions
     /// applications, use the parameterless overload and register application services explicitly.
     /// </remarks>
     [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
         this IServiceCollection services,
         params Assembly[] assemblies)
@@ -88,6 +119,7 @@ public static class ServiceCollectionExtensions
     /// Use the parameterless overload for the reflection-free framework bootstrap.
     /// </remarks>
     [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
         this IServiceCollection services,
         Action<TcjDependencyInjectionOptions> configure)
@@ -110,6 +142,7 @@ public static class ServiceCollectionExtensions
     /// Use the parameterless overload for the reflection-free framework bootstrap.
     /// </remarks>
     [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
         this IServiceCollection services,
         TcjDependencyInjectionOptions options)
@@ -132,6 +165,8 @@ public static class ServiceCollectionExtensions
                         RegisterFrameworkServices(services);
                     }
 
+                    RegisterReflectionDomainEventDispatchRoute(services);
+
                     Type[] implementationTypes = DependencyInjectionTelemetryDiagnostics.ObserveScan(
                         options.Assemblies.Count,
                         () => options.Assemblies
@@ -150,6 +185,18 @@ public static class ServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
+    private static void RegisterReflectionDomainEventDispatchRoute(IServiceCollection services)
+    {
+        Func<IServiceProvider, IDomainEvent, CancellationToken, Task> dispatch =
+            ReflectionDomainEventDispatch.DispatchAsync;
+
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IDomainEventDispatchRoute>(
+                new ReflectionDomainEventDispatchRoute(dispatch)));
     }
 
     private static void RegisterFrameworkServices(IServiceCollection services)
