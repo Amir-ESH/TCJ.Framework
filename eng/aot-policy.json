@@ -21,7 +21,8 @@
     },
     "suppressions": {
       "supportClaimsMayRelyOnSuppressions": false,
-      "newSuppressionsAllowedByThisPolicyIssue": false
+      "newSuppressionsAllowedByThisPolicyIssue": false,
+      "allowed": []
     }
   },
   "minimumFullSupportEvidence": {
