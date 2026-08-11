@@ -173,7 +173,7 @@ jobs:
           --no-restore
           --output artifacts/aspnetcore-native-aot
           -p:TreatWarningsAsErrors=true
-          '-p:WarningsNotAsErrors=IDE0011;CA1001;CA1512'
+          -p:WarningsNotAsErrors=IDE0011%3BCA1001%3BCA1512%3BCA1859
 
       - name: Execute Native AOT smoke host
         run: ./artifacts/aspnetcore-native-aot/TCJ.AspNetCore.NativeAotSmoke

@@ -83,6 +83,37 @@ class ConsumerCompatibilityVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.VerificationError, "closed domain-event route"):
                 MODULE.load_policy(root)
 
+    def test_aspnetcore_aot_consumer_requires_request_delegate_generator(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "eng").mkdir(parents=True)
+            (root / "eng/compatibility-policy.json").write_text(json.dumps(REAL_POLICY), encoding="utf-8")
+
+            di_consumer = root / "compatibility/Consumers/DependencyInjection.AotSafe.Console"
+            di_consumer.mkdir(parents=True)
+            (di_consumer / "DependencyInjection.AotSafe.Console.csproj").write_text(
+                '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><IsAotCompatible>true</IsAotCompatible></PropertyGroup></Project>',
+                encoding="utf-8",
+            )
+            (di_consumer / "Program.cs").write_text(
+                'services.AddTcjDependencyInjection(); services.AddTcjDomainEvent<Event>(); '
+                'services.AddTransient<IDomainEventHandler<Event>, Handler>(); dispatcher.DispatchAsync(evt);',
+                encoding="utf-8",
+            )
+
+            aspnet_consumer = root / "compatibility/Consumers/AspNetCore.MinimalApi"
+            aspnet_consumer.mkdir(parents=True)
+            (aspnet_consumer / "AspNetCore.MinimalApi.csproj").write_text(
+                '<Project Sdk="Microsoft.NET.Sdk.Web"><PropertyGroup>'
+                '<IsAotCompatible>true</IsAotCompatible>'
+                '<JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>'
+                '</PropertyGroup></Project>',
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(MODULE.VerificationError, "EnableRequestDelegateGenerator=true"):
+                MODULE.load_policy(root)
+
     def test_missing_policy_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaises(MODULE.VerificationError):
