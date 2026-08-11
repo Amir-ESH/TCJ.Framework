@@ -8,6 +8,7 @@ This workspace behaves like an external application set. It deliberately sits ou
 |---|---|---|
 | `Core.Console` | `TCJ.Core` | Result, guards, extensions, time/GUID abstractions; package-only AOT/trim analyzer fixture |
 | `DependencyInjection.Console` | Core + DependencyInjection | convention discovery and transient/scoped/singleton/self resolution |
+| `DependencyInjection.AotSafe.Console` | Core + DependencyInjection | package-only reflection-free bootstrap with SDK AOT/trim analyzers enabled |
 | `EntityFrameworkCore.Console` | Core + DependencyInjection + EntityFrameworkCore | InMemory repository, specification, Unit of Work, auditing, soft delete |
 | `EntityFrameworkCore.SqlServer.Console` | Core + DependencyInjection + EntityFrameworkCore + SqlServer | SQL Server registration/options/provider resolution without opening a connection |
 | `AspNetCore.MinimalApi` | Core + DependencyInjection + AspNetCore | Kestrel startup, current user, success and handled-error HTTP requests |
@@ -71,3 +72,10 @@ Generated restore caches, builds, runtime logs, packages, and reports belong und
 candidate NuGet feed, its normal compatibility build is the minimal package-level compile fixture
 for TCJ.Core's SDK trimming, single-file, and AOT analyzers. It intentionally does not set
 `PublishAot=true`; packaged Native AOT publish-and-execute release evidence is owned by Important 8.
+
+`DependencyInjection.AotSafe.Console` also sets `IsAotCompatible=true` and restores `TCJ.Core` plus
+`TCJ.DependencyInjection` only from the candidate package feed. It calls the parameterless
+`AddTcjDependencyInjection()` overload twice, verifies the three framework registrations remain
+deduplicated, and therefore acts as the package-only trim/AOT analyzer fixture for the reflection-free
+bootstrap. The convention-scanning `DependencyInjection.Console` remains separate so regular JIT
+scanning behavior continues to be exercised.

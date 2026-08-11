@@ -5,6 +5,11 @@ namespace TCJ.DependencyInjection.Registration;
 /// <summary>
 /// Configures TCJ convention-based dependency registration.
 /// </summary>
+/// <remarks>
+/// Adding assemblies selects the reflection-based scanning path. Trimmed and Native AOT applications
+/// should use the parameterless <c>AddTcjDependencyInjection()</c> bootstrap and register application
+/// services explicitly with <c>IServiceCollection</c>.
+/// </remarks>
 public sealed class TcjDependencyInjectionOptions
 {
     private readonly HashSet<Assembly> _assemblies = [];
@@ -25,7 +30,7 @@ public sealed class TcjDependencyInjectionOptions
     public bool RegisterDomainEventHandlers { get; set; } = true;
 
     /// <summary>
-    /// Adds an assembly to the explicit scan set.
+    /// Adds an assembly to the explicit reflection scan set.
     /// </summary>
     public TcjDependencyInjectionOptions AddAssembly(Assembly assembly)
     {
@@ -43,7 +48,7 @@ public sealed class TcjDependencyInjectionOptions
     }
 
     /// <summary>
-    /// Adds multiple assemblies to the explicit scan set.
+    /// Adds multiple assemblies to the explicit reflection scan set.
     /// </summary>
     public TcjDependencyInjectionOptions AddAssemblies(
         IEnumerable<Assembly> assemblies)
@@ -59,7 +64,7 @@ public sealed class TcjDependencyInjectionOptions
     }
 
     /// <summary>
-    /// Adds the assembly containing <typeparamref name="TMarker"/> to the scan set.
+    /// Adds the assembly containing <typeparamref name="TMarker"/> to the explicit reflection scan set.
     /// </summary>
     public TcjDependencyInjectionOptions AddAssemblyContaining<TMarker>() =>
         AddAssembly(typeof(TMarker).Assembly);

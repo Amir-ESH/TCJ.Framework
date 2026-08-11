@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using TCJ.Core.DomainEvents;
 using TCJ.Core.Identifiers;
@@ -22,6 +24,46 @@ public sealed class DependencyInjectionTests
         Assert.Equal(typeof(TestScopedService), scopedDescriptor.ImplementationType);
         Assert.Equal(ServiceLifetime.Singleton, selfSingletonDescriptor.Lifetime);
         Assert.Equal(typeof(SelfSingletonService), selfSingletonDescriptor.ImplementationType);
+    }
+
+    [Fact]
+    public void Reflection_free_bootstrap_registers_only_framework_services_once()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTcjDependencyInjection();
+        services.AddTcjDependencyInjection();
+
+        Assert.Single(collection: services.Where(descriptor => descriptor.ServiceType == typeof(TimeProvider)));
+        Assert.Single(collection: services.Where(descriptor => descriptor.ServiceType == typeof(IGuidGenerator)));
+        Assert.Single(collection: services.Where(descriptor => descriptor.ServiceType == typeof(IDomainEventDispatcher)));
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(ITestScopedService));
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IDomainEventHandler<TestDomainEvent>));
+    }
+
+    [Fact]
+    public void Scanning_overloads_are_trim_restricted_but_safe_bootstrap_is_not()
+    {
+        MethodInfo[] overloads = typeof(ServiceCollectionExtensions)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(method => method.Name == nameof(ServiceCollectionExtensions.AddTcjDependencyInjection))
+            .ToArray();
+
+        MethodInfo safeOverload = Assert.Single(
+            overloads.Where(method => method.GetParameters().Length == 1));
+        Assert.Null(safeOverload.GetCustomAttribute<RequiresUnreferencedCodeAttribute>());
+
+        MethodInfo[] scanningOverloads = overloads
+            .Where(method => method.GetParameters().Length == 2)
+            .ToArray();
+        Assert.Equal(3, scanningOverloads.Length);
+
+        Assert.All(scanningOverloads, method =>
+        {
+            RequiresUnreferencedCodeAttribute attribute = Assert.IsType<RequiresUnreferencedCodeAttribute>(
+                method.GetCustomAttribute<RequiresUnreferencedCodeAttribute>());
+            Assert.Contains("parameterless AddTcjDependencyInjection()", attribute.Message, StringComparison.Ordinal);
+        });
     }
 
     [Fact]

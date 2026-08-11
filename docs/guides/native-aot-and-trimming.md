@@ -32,7 +32,7 @@ The support tier keeps the stronger Important 1 contract: **Full** requires a pa
 | Package | Verified library compatibility | Support tier | Current boundary |
 |---|---|---|---|
 | `TCJ.Core` | **Full** | **Conditional** | `src/TCJ.Core/TCJ.Core.csproj` declares `<IsAotCompatible>true</IsAotCompatible>`. The package-only `Core.Console` compatibility consumer enables the SDK AOT/trim analyzers and must build without warnings. The formal support tier remains Conditional until Important 8 records packed Native AOT publish-and-execute evidence. |
-| `TCJ.DependencyInjection` | Not claimed | **Conditional** | Framework-service registration is usable only while the convention scan set is empty. Reflection-based assembly scanning is a restricted path. |
+| `TCJ.DependencyInjection` | Not claimed | **Conditional** | The parameterless `AddTcjDependencyInjection()` bootstrap is reflection-free and has a package-only AOT/trim analyzer consumer. Convention-scanning overloads remain restricted and package-wide analyzer compatibility is deferred to Important 5. |
 | `TCJ.EntityFrameworkCore` | Not claimed | **Experimental** | EF Core NativeAOT remains upstream-experimental, and TCJ has reflection/dynamic-generic usage paths that require explicit treatment. |
 | `TCJ.EntityFrameworkCore.SqlServer` | Not claimed | **Experimental** | The provider path inherits the upstream EF Core NativeAOT experimental boundary and has no qualifying packed-consumer evidence. |
 | `TCJ.AspNetCore` | Not claimed | **Conditional** | The application must remain inside ASP.NET Core features that are supported by Native AOT; ASP.NET Core's AOT support is feature-dependent. |
@@ -48,16 +48,20 @@ The fixture is intentionally compile/runtime-check only and does not set `Publis
 
 ## Restricted TCJ usage paths
 
-### Convention-based dependency scanning
+### TCJ.DependencyInjection bootstrap and convention scanning
+
+`TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection)` is the reflection-free framework bootstrap. It registers `TimeProvider`, `IGuidGenerator`, and `IDomainEventDispatcher` directly, never enters the assembly-scan telemetry path, and does not enumerate application assemblies. Application services and domain-event handlers are registered explicitly with normal `IServiceCollection` APIs.
+
+`compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj` consumes the packed `TCJ.Core` and `TCJ.DependencyInjection` packages and sets `IsAotCompatible=true`. Its build therefore runs the SDK trim/AOT analyzers at the safe bootstrap call site. The fixture is compile/runtime-check only; package-wide `TCJ.DependencyInjection` analyzer compatibility remains Important 5 work.
 
 The following APIs select or can select runtime assembly scanning and are **restricted** for Native AOT:
 
 - `TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, params Assembly[])`
-- `TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, Action<TcjDependencyInjectionOptions>)` when the options add assemblies
-- `TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, TcjDependencyInjectionOptions)` when `TcjDependencyInjectionOptions` contains assemblies
+- `TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, Action<TcjDependencyInjectionOptions>)`
+- `TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, TcjDependencyInjectionOptions)`
 - `TcjDependencyInjectionOptions.AddAssembly`, `AddAssemblies`, and `AddAssemblyContaining<TMarker>` because they opt into convention scanning
 
-The implementation calls `Assembly.GetTypes()` to discover public concrete types. Trimming cannot infer every type that an application expects reflection to discover. The documented safe path for the current **Conditional** tier is to keep the TCJ scan set empty and register application services explicitly with the application's DI configuration. TCJ does not add preservation annotations or suppressions in this issue.
+The three scanner-capable `AddTcjDependencyInjection` overloads are annotated with `RequiresUnreferencedCode`, so trimming-aware callers receive the platform diagnostic at the API boundary. Their implementation still calls `Assembly.GetTypes()` to discover public concrete types and remains available for regular JIT/non-trimmed applications. TCJ does not add linker-preservation XML or warning suppressions to make scanning appear trim-safe.
 
 ### EF Core reflection and dynamic generic paths
 

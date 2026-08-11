@@ -27,7 +27,7 @@
   "supportedTargetFrameworks": [
     "net10.0"
   ],
-  "minimumConsumerCount": 7,
+  "minimumConsumerCount": 8,
   "requirePackageOnlyReferences": true,
   "requireLocalPackageSource": true,
   "requireSourcePackageValidation": true,
@@ -51,6 +51,15 @@
         "TCJ.DependencyInjection"
       ],
       "expectedOutput": "TCJ.DependencyInjection consumer passed"
+    },
+    {
+      "name": "DependencyInjection.AotSafe.Console",
+      "project": "compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection"
+      ],
+      "expectedOutput": "TCJ.DependencyInjection AOT-safe bootstrap consumer passed"
     },
     {
       "name": "EntityFrameworkCore.Console",

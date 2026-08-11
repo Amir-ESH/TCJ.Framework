@@ -42,9 +42,27 @@ def write_package(path: Path, package_id: str, symbol: bool = False, include_xml
 class ConsumerCompatibilityVerifierTests(unittest.TestCase):
     def test_real_policy_loads(self) -> None:
         policy = MODULE.load_policy(REAL_ROOT)
-        self.assertEqual(7, len(policy["consumers"]))
+        self.assertEqual(8, len(policy["consumers"]))
+        aot_safe = next(item for item in policy["consumers"] if item["name"] == "DependencyInjection.AotSafe.Console")
+        self.assertEqual(["TCJ.Core", "TCJ.DependencyInjection"], aot_safe["packages"])
         self.assertEqual(["ubuntu-latest", "windows-latest", "macos-latest"], policy["requiredOperatingSystems"])
         self.assertEqual({"ubuntu-latest": "x64", "windows-latest": "x64", "macos-latest": "arm64"}, policy["requiredArchitectureByOperatingSystem"])
+
+    def test_di_aot_safe_consumer_requires_analyzer_property(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "eng").mkdir(parents=True)
+            (root / "compatibility/Consumers/DependencyInjection.AotSafe.Console").mkdir(parents=True)
+            policy = json.loads(json.dumps(REAL_POLICY))
+            (root / "eng/compatibility-policy.json").write_text(json.dumps(policy), encoding="utf-8")
+            project = root / "compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj"
+            project.write_text(
+                '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType></PropertyGroup></Project>',
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(MODULE.VerificationError, "IsAotCompatible=true"):
+                MODULE.load_policy(root)
 
     def test_missing_policy_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

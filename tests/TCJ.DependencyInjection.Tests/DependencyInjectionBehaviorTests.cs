@@ -17,6 +17,8 @@ public sealed class DependencyInjectionBehaviorTests
         Assembly[] nullAssemblies = null!;
 
         Assert.Throws<ArgumentNullException>(() =>
+            nullServices.AddTcjDependencyInjection());
+        Assert.Throws<ArgumentNullException>(() =>
             nullServices.AddTcjDependencyInjection(typeof(DependencyInjectionBehaviorTests).Assembly));
         Assert.Throws<ArgumentNullException>(() =>
             services.AddTcjDependencyInjection(nullAssemblies));

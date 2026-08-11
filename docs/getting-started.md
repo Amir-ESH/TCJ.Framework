@@ -88,6 +88,8 @@ builder.Services.AddTcjSqlServer<AppDbContext>(
     });
 ```
 
+For trimming-aware or Native AOT application code, do not use convention scanning. Call `builder.Services.AddTcjDependencyInjection()` with no assemblies and register application services and domain-event handlers explicitly through normal `IServiceCollection` methods. See [Native AOT and trimming](guides/native-aot-and-trimming.md) for the exact supported boundary.
+
 `AddTcjSqlServer` also registers the services from `TCJ.EntityFrameworkCore`, including repositories, the unit of work, auditing, seeding, and entity search.
 
 ## 4. Configure the request pipeline
