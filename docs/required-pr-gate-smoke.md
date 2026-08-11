@@ -1,0 +1,1 @@
+# Required PR Gate smoke test
