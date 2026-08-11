@@ -6,14 +6,6 @@ public sealed class ResultTests
 {
 	// Required PR Gate recovery smoke test.
 	
-	[Fact]
-	public void Required_gate_recovery_intentional_failure()
-	{
-		Assert.True(
-			false,
-			"Intentional failure for Required PR Gate recovery test.");
-	}
-	
     [Fact]
     public void Success_has_no_errors()
     {
