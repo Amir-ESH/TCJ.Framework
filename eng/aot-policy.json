@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "documentation": "docs/guides/native-aot-and-trimming.md",
+  "supportTiers": {
+    "Full": "A packed-NuGet consumer publishes and executes as Native AOT without TCJ-caused trimming or AOT warnings for the supported usage path.",
+    "Conditional": "The package is supported only through explicitly documented safe paths or while respecting named upstream restrictions.",
+    "Experimental": "The package may be exercised with Native AOT, but TCJ does not make a production-support promise for that path.",
+    "Unsupported": "TCJ does not support Native AOT consumption for the package or usage path."
+  },
+  "warningPolicy": {
+    "full": {
+      "tcjTrimWarnings": "Error",
+      "tcjAotWarnings": "Error"
+    },
+    "conditional": {
+      "undocumentedTcjWarnings": "Error",
+      "documentedRestrictionWarningsAllowed": true
+    },
+    "experimental": {
+      "warningsMustBeRecorded": true
+    },
+    "suppressions": {
+      "supportClaimsMayRelyOnSuppressions": false,
+      "newSuppressionsAllowedByThisPolicyIssue": false
+    }
+  },
+  "minimumFullSupportEvidence": {
+    "consumerSource": "PackedNuGet",
+    "projectReferenceEvidenceAccepted": false,
+    "publishAot": true,
+    "publishMustSucceed": true,
+    "publishedBinaryMustExecute": true,
+    "tcjTrimWarningCount": 0,
+    "tcjAotWarningCount": 0,
+    "minimumConsumerScenarios": 1
+  },
+  "packages": [
+    {
+      "packageId": "TCJ.Core",
+      "tier": "Conditional",
+      "rationale": "TCJ.Core can be consumed only as a conditional Native AOT path while its package metadata continues to opt out of an IsAotCompatible=true claim and no qualifying Full-support evidence has been recorded.",
+      "restrictions": [
+        {
+          "kind": "PackageMetadata",
+          "symbol": "src/TCJ.Core/TCJ.Core.csproj::<IsAotCompatible>false</IsAotCompatible>",
+          "status": "Restricted",
+          "reason": "The current package metadata explicitly declines an IsAotCompatible=true claim. This policy does not change that build property."
+        }
+      ],
+      "fullSupportEvidence": []
+    },
+    {
+      "packageId": "TCJ.DependencyInjection",
+      "tier": "Conditional",
+      "rationale": "Framework-service registration can be used without scanning application assemblies, but convention registration performs runtime reflection over supplied assemblies.",
+      "restrictions": [
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, params Assembly[])",
+          "status": "Restricted",
+          "reason": "Supplying one or more assemblies invokes Assembly.GetTypes()-based convention scanning. Native AOT callers must not rely on this reflection-discovery path unless the application independently preserves every discovered type."
+        },
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, Action<TcjDependencyInjectionOptions>)",
+          "status": "Restricted",
+          "reason": "The overload is AOT-safe only while the configured assembly scan set remains empty. Adding assemblies selects the reflection-discovery path."
+        },
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, TcjDependencyInjectionOptions)",
+          "status": "Restricted",
+          "reason": "The overload is AOT-safe only while TcjDependencyInjectionOptions.Assemblies is empty; populated scan sets are enumerated through runtime reflection."
+        },
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.DependencyInjection.Registration.TcjDependencyInjectionOptions.AddAssembly(Assembly) / AddAssemblies(IEnumerable<Assembly>) / AddAssemblyContaining<TMarker>()",
+          "status": "Restricted",
+          "reason": "These APIs opt the caller into convention scanning and therefore into the reflection-based path described by this policy."
+        }
+      ],
+      "fullSupportEvidence": []
+    },
+    {
+      "packageId": "TCJ.EntityFrameworkCore",
+      "tier": "Experimental",
+      "rationale": "EF Core NativeAOT support remains upstream-experimental and TCJ also exposes reflection-driven model-discovery and entity-search paths.",
+      "restrictions": [
+        {
+          "kind": "Upstream",
+          "symbol": "Microsoft.EntityFrameworkCore NativeAOT and precompiled queries",
+          "status": "Experimental",
+          "reason": "The upstream EF Core NativeAOT feature is documented as experimental, may emit trimming/AOT warnings, does not support dynamic queries, and has additional query/provider limitations."
+        },
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.EntityFrameworkCore.Extensions.ModelBuilderExtensions.RegisterEntityTypeConfiguration(ModelBuilder, params Assembly[])",
+          "status": "Restricted",
+          "reason": "The API discovers configuration types with reflection and invokes closed generic ApplyConfiguration methods dynamically."
+        },
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.EntityFrameworkCore.Extensions.ModelBuilderExtensions.RegisterAllEntities<TBaseType>(ModelBuilder, params Assembly[])",
+          "status": "Restricted",
+          "reason": "The API discovers entity types with Assembly.GetExportedTypes() at runtime."
+        },
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.EntityFrameworkCore.Searching.EntitySearcher.ExistsAsync(EntityRecordInput, CancellationToken) / FindAsync(EntityRecordInput, CancellationToken)",
+          "status": "Restricted",
+          "reason": "The search path constructs closed generic executor types dynamically from EF model metadata."
+        },
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.EntityFrameworkCore.Outbox.Extensions.OutboxServiceCollectionExtensions.AddTcjOutbox<TDbContext>(IServiceCollection, Action<TcjOutboxOptions>?)",
+          "status": "Restricted",
+          "reason": "Resolving an unregistered convention event name falls back to scanning loaded assemblies. Native AOT consumers must explicitly register persisted event contracts with AddTcjOutboxEvent<TEvent>."
+        }
+      ],
+      "fullSupportEvidence": []
+    },
+    {
+      "packageId": "TCJ.EntityFrameworkCore.SqlServer",
+      "tier": "Experimental",
+      "rationale": "The package inherits the upstream experimental EF Core NativeAOT contract and cannot be promoted beyond that upstream boundary without packaged-consumer evidence for the provider path.",
+      "restrictions": [
+        {
+          "kind": "Upstream",
+          "symbol": "Microsoft.EntityFrameworkCore NativeAOT and precompiled queries / provider support",
+          "status": "Experimental",
+          "reason": "EF Core NativeAOT is upstream-experimental, and EF providers participate in precompiled-query support; TCJ therefore makes no Full production-support claim for the SQL Server path."
+        }
+      ],
+      "fullSupportEvidence": []
+    },
+    {
+      "packageId": "TCJ.AspNetCore",
+      "tier": "Conditional",
+      "rationale": "ASP.NET Core supports Native AOT only for a defined subset of framework features, so TCJ.AspNetCore support is bounded by the application's selected ASP.NET Core feature set and future packaged-consumer evidence.",
+      "restrictions": [
+        {
+          "kind": "Upstream",
+          "symbol": "ASP.NET Core Native AOT feature compatibility matrix for net10.0",
+          "status": "Restricted",
+          "reason": "Native AOT support varies by ASP.NET Core feature; for example Minimal APIs are only partially supported while MVC, Blazor Server, and SignalR are not supported. TCJ.AspNetCore is supported only inside upstream-supported application paths."
+        }
+      ],
+      "fullSupportEvidence": []
+    }
+  ]
+}
