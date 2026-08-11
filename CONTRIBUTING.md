@@ -21,6 +21,7 @@ python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
 python3 eng/verify-mutation-results.py validate-config
 python3 eng/verify-performance-results.py validate-config
 python3 eng/verify-architecture-policy.py validate-config
+python3 eng/verify-aot.py verify
 python3 eng/verify-sbom.py validate-config
 python3 eng/verify-sqlserver-integration.py validate-config
 python3 eng/verify-aspnetcore-integration.py validate-config
@@ -70,6 +71,7 @@ Use prefixes such as `feature/`, `fix/`, `docs/`, `test/`, `build/`, and `chore/
 - Do not weaken deterministic-build settings or add broad reproducibility normalizations merely to make package comparison pass.
 - Package-layout, SDK, compiler, Source Link, or reproducibility-policy changes require focused review and a successful full double build.
 - Treat `eng/architecture-policy.json` as executable design documentation; dependency-direction changes require architectural justification.
+- Treat `eng/aot-policy.json` as executable compatibility documentation. Run `python3 eng/verify-aot.py verify` after AOT-policy, production project-property, or warning-suppression changes; broad trim/AOT suppressions are prohibited and generated `artifacts/aot/` output must not be committed.
 - Do not weaken, suppress, or broadly exclude architecture rules merely to make CI green.
 - Update relevant pages under `docs/`.
 
@@ -88,6 +90,10 @@ test: cover current user resolution
 
 Pull requests targeting `develop` or `main` must pass the `Build, test and pack` check and dependency review. Restore audits the complete resolved NuGet graph and fails on moderate-or-higher known vulnerabilities or an unavailable audit source. The Pack phase includes SDK package validation against the latest published TCJ version and rejects accidental binary-breaking API changes. CI also enforces the line and branch coverage policy and verifies the complete package checksum manifest. The separate `Mutation testing / Run mutation tests` check must pass for mutation-relevant changes; during the one-time baseline bootstrap, a candidate must be reviewed and committed before normal verification can pass. The separate `Performance benchmarks / Run benchmarks` workflow executes a short job for relevant pull requests and full jobs for scheduled or manual runs; it preserves within-run measurements and policy results for review. Architecture tests run inside the normal solution test command and enforce module dependency directions, namespace ownership, and public API boundaries from `eng/architecture-policy.json`. CI also generates and verifies a CycloneDX release SBOM from locally packed artifacts and restored production dependencies; policy changes, missing license data, or dependency-graph changes require explicit review. The separate `Reproducible builds / Compare package builds` workflow performs isolated Build A and Build B package production for relevant changes and scheduled/manual validation. Extracted package, assembly, PDB, Source Link, XML documentation, source, and NuGet metadata differences are blocking; raw ZIP-only differences are reported under the narrow documented policy. Trusted provenance attestations are created only by the official tagged Release workflow after the verified Build A package set is promoted. For changes affecting the EF Core or SQL Server integration paths, the separate `SQL Server integration / Run database tests` check must also pass against the pinned disposable SQL Server container; see [`docs/sqlserver-integration-testing.md`](docs/sqlserver-integration-testing.md). For changes affecting `TCJ.AspNetCore`, shared DI/current-user behavior, or common HTTP error mapping, the dedicated `ASP.NET Core integration / Test on Linux`, `Test on Windows`, and cross-platform verification jobs must pass; see [`docs/aspnetcore-integration-testing.md`](docs/aspnetcore-integration-testing.md). Do not bypass required checks for normal changes. Release tags and NuGet publishing are maintainer-only operations described in [`docs/releasing.md`](docs/releasing.md).
 
+
+## Native AOT policy verification
+
+Native AOT/trimming policy verification is local-only until Important 8. Run `python3 eng/verify-aot.py verify` to validate `eng/aot-policy.json` against production package project settings and to write the deterministic baseline report under `artifacts/aot/`. Do not add this verifier to `ci.yml`, `release-preflight.yml`, or `release.yml` as part of Important 2. See [`docs/guides/native-aot-and-trimming.md`](docs/guides/native-aot-and-trimming.md) for the support contract and suppression rules.
 
 ## Package consumer compatibility
 

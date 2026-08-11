@@ -18,11 +18,6 @@ VALID_RESTRICTION_KINDS = ("PublicApi", "Upstream", "PackageMetadata")
 VALID_RESTRICTION_STATUSES = ("Restricted", "Experimental", "Unsupported")
 RELEASE_MANIFEST = "eng/release-manifest.json"
 PR_TEMPLATE = ".github/PULL_REQUEST_TEMPLATE.md"
-REQUIRED_WORKFLOWS = (
-    ".github/workflows/ci.yml",
-    ".github/workflows/release-preflight.yml",
-    ".github/workflows/release.yml",
-)
 
 
 class AotPolicyError(RuntimeError):
@@ -115,6 +110,11 @@ def require_exact_keys(mapping: dict[str, Any], expected: set[str], description:
 
 def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
     raw = require_object(read_json(path, "AOT policy"), "AOT policy")
+    require_exact_keys(
+        raw,
+        {"schemaVersion", "documentation", "supportTiers", "warningPolicy", "minimumFullSupportEvidence", "packages"},
+        "AOT policy",
+    )
     if raw.get("schemaVersion") != 1:
         fail("AOT policy schemaVersion must be 1.")
 
@@ -155,6 +155,11 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
         "warningPolicy.experimental.warningsMustBeRecorded",
     )
     suppressions = require_object(warning_policy["suppressions"], "warningPolicy.suppressions")
+    require_exact_keys(
+        suppressions,
+        {"supportClaimsMayRelyOnSuppressions", "newSuppressionsAllowedByThisPolicyIssue", "allowed"},
+        "warningPolicy.suppressions",
+    )
     if require_bool(
         suppressions.get("supportClaimsMayRelyOnSuppressions"),
         "warningPolicy.suppressions.supportClaimsMayRelyOnSuppressions",
@@ -165,6 +170,32 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
         "warningPolicy.suppressions.newSuppressionsAllowedByThisPolicyIssue",
     ):
         fail("This policy issue must not allow new warning suppressions.")
+
+    allowed_suppressions = suppressions.get("allowed")
+    if not isinstance(allowed_suppressions, list):
+        fail("warningPolicy.suppressions.allowed must be an array.")
+    seen_suppressions: set[tuple[str, str, str, str]] = set()
+    for index, value in enumerate(allowed_suppressions):
+        description = f"warningPolicy.suppressions.allowed[{index}]"
+        item = require_object(value, description)
+        require_exact_keys(
+            item,
+            {"packageId", "project", "property", "diagnostic", "reason"},
+            description,
+        )
+        package_id = require_string(item.get("packageId"), f"{description}.packageId")
+        project = require_relative_path(item.get("project"), f"{description}.project")
+        property_name = require_string(item.get("property"), f"{description}.property")
+        if property_name not in ("NoWarn", "WarningsNotAsErrors"):
+            fail(f"{description}.property must be NoWarn or WarningsNotAsErrors.")
+        diagnostic = require_string(item.get("diagnostic"), f"{description}.diagnostic").upper()
+        if len(diagnostic) != 6 or not diagnostic.startswith(("IL2", "IL3")) or not diagnostic[2:].isdigit():
+            fail(f"{description}.diagnostic must be one exact IL2xxx or IL3xxx diagnostic ID.")
+        require_string(item.get("reason"), f"{description}.reason")
+        key = (package_id, project, property_name, diagnostic)
+        if key in seen_suppressions:
+            fail(f"Duplicate allowed AOT suppression for {package_id} {project} {property_name} {diagnostic}.")
+        seen_suppressions.add(key)
 
     evidence = require_object(
         raw.get("minimumFullSupportEvidence"), "minimumFullSupportEvidence"
@@ -195,6 +226,11 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
     seen: set[str] = set()
     for index, item in enumerate(packages_raw):
         package = require_object(item, f"packages[{index}]")
+        require_exact_keys(
+            package,
+            {"packageId", "tier", "rationale", "restrictions", "fullSupportEvidence"},
+            f"packages[{index}]",
+        )
         package_id = require_string(package.get("packageId"), f"packages[{index}].packageId")
         if package_id in seen:
             fail(f"Package '{package_id}' appears more than once in the AOT policy.")
@@ -215,6 +251,7 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
         for restriction_index, restriction_value in enumerate(restrictions_raw):
             description = f"packages[{index}].restrictions[{restriction_index}]"
             restriction = require_object(restriction_value, description)
+            require_exact_keys(restriction, {"kind", "symbol", "status", "reason"}, description)
             kind = require_string(restriction.get("kind"), f"{description}.kind")
             if kind not in VALID_RESTRICTION_KINDS:
                 fail(
@@ -246,6 +283,11 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
         for evidence_index, evidence_value in enumerate(full_support_evidence_raw):
             description = f"packages[{index}].fullSupportEvidence[{evidence_index}]"
             evidence_item = require_object(evidence_value, description)
+            require_exact_keys(
+                evidence_item,
+                {"scenario", "consumerProject", "workflow", "consumerSource", "usesProjectReference", "publishAot", "publishSucceeded", "publishedBinaryExecuted", "tcjTrimWarningCount", "tcjAotWarningCount"},
+                description,
+            )
             scenario = require_string(evidence_item.get("scenario"), f"{description}.scenario")
             consumer_project = require_relative_path(
                 evidence_item.get("consumerProject"), f"{description}.consumerProject"
@@ -289,6 +331,14 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
                 restrictions=tuple(restrictions),
                 full_support_evidence=tuple(validated_evidence),
             )
+        )
+
+    package_ids = {package.package_id for package in packages}
+    unknown_suppression_packages = sorted({key[0] for key in seen_suppressions} - package_ids)
+    if unknown_suppression_packages:
+        fail(
+            "Allowed AOT suppressions reference unknown packages: "
+            + ", ".join(unknown_suppression_packages)
         )
 
     return AotPolicy(
@@ -399,12 +449,6 @@ def validate_documentation(root: Path, policy: AotPolicy) -> None:
 
 
 def validate_repository_wiring(root: Path) -> None:
-    command = "python3 eng/verify-aot-policy.py validate-config"
-    for workflow in REQUIRED_WORKFLOWS:
-        path = root / workflow
-        if not path.is_file() or command not in path.read_text(encoding="utf-8"):
-            fail(f"{workflow} must run '{command}'.")
-
     template = root / PR_TEMPLATE
     if not template.is_file():
         fail(f"Missing pull request template: {PR_TEMPLATE}")

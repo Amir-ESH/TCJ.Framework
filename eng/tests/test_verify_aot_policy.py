@@ -181,6 +181,7 @@ class AotPolicyVerifierTests(unittest.TestCase):
                 "suppressions": {
                     "supportClaimsMayRelyOnSuppressions": False,
                     "newSuppressionsAllowedByThisPolicyIssue": False,
+                    "allowed": [],
                 },
             },
             "minimumFullSupportEvidence": {
@@ -201,10 +202,6 @@ class AotPolicyVerifierTests(unittest.TestCase):
         (self.root / "docs/guides/native-aot-and-trimming.md").write_text(documentation, encoding="utf-8")
         (self.root / "docs/toc.yml").write_text("href: guides/native-aot-and-trimming.md\n", encoding="utf-8")
         (self.root / "docs/README.md").write_text("[AOT](guides/native-aot-and-trimming.md)\n", encoding="utf-8")
-
-        workflow_content = "python3 eng/verify-aot-policy.py validate-config\n"
-        for workflow in MODULE.REQUIRED_WORKFLOWS:
-            (self.root / workflow).write_text(workflow_content, encoding="utf-8")
 
         (self.root / ".github/PULL_REQUEST_TEMPLATE.md").write_text(
             "- [ ] `aot-policy` changes are explicit and justified as compatibility changes\n",

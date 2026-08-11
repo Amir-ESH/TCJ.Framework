@@ -89,6 +89,22 @@ Before changing a package tier to **Full**, the compatibility change must includ
 
 A project-reference build, a clean library build, or setting `IsAotCompatible=true` without packed-consumer publish-and-run evidence is insufficient.
 
+## Local policy verification
+
+Run the repository-native verifier before opening a pull request that changes AOT policy, production package project settings, or warning configuration:
+
+```bash
+python3 eng/verify-aot.py verify
+```
+
+The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, and rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns. A package declared **Full** fails verification if an evaluated repository project/props file explicitly sets `IsAotCompatible=false`.
+
+Every run writes the deterministic machine-readable result to `artifacts/aot/aot-verification.json`. The report contains no timestamp or machine-specific absolute path, keeps packages and findings in stable order, and records the package, rule, offending project/props file, property, and value for each violation. Generated `artifacts/aot/` output is local evidence and must not be committed.
+
+This verifier is intentionally a **local, non-blocking** validation command in Important 2. It is not wired into CI, release preflight, or release workflows yet; CI enforcement is deferred to Important 8.
+
+Allowed suppressions are exceptional. A suppression must name one exact `IL2xxx` or `IL3xxx` diagnostic, the affected package, repository project/props file, MSBuild property, and a concrete reason in `warningPolicy.suppressions.allowed`. Wildcard/family suppressions and analyzer-wide disabling are rejected.
+
 ## Change policy
 
-Changing a tier, warning rule, restriction, or Full-evidence requirement changes the framework's compatibility contract. Such changes must be explicit in the pull request and justified as compatibility changes. This policy does not itself change runtime behavior, enable `PublishAot` on libraries, or add warning suppressions.
+Changing a tier, warning rule, restriction, allowed suppression, or Full-evidence requirement changes the framework's compatibility contract. Such changes must be explicit in the pull request and justified as compatibility changes. This policy does not itself change runtime behavior or enable `PublishAot` on libraries.
