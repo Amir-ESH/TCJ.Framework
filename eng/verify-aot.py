@@ -36,6 +36,9 @@ ANALYZER_PROPERTIES = (
     "EnableAotAnalyzer",
 )
 REPORT_SCHEMA_VERSION = 1
+ANALYZER_FIXTURES = {
+    "TCJ.Core": "compatibility/Consumers/Core.Console/Core.Console.csproj",
+}
 
 
 @dataclass(frozen=True, order=True)
@@ -280,6 +283,110 @@ def _validate_full_project_contract(
     return findings
 
 
+def _validate_analyzer_fixture(package_id: str, root: Path) -> list[Finding]:
+    relative_fixture = ANALYZER_FIXTURES.get(package_id)
+    if relative_fixture is None:
+        return []
+
+    fixture = root / relative_fixture
+    if not fixture.is_file():
+        return [
+            Finding(
+                package_id,
+                "AOT006",
+                relative_fixture,
+                "analyzerFixture",
+                "missing",
+                "The package-level AOT/trim analyzer fixture is missing.",
+            )
+        ]
+
+    try:
+        xml_root = ET.parse(fixture).getroot()
+    except ET.ParseError as error:
+        return [
+            Finding(
+                package_id,
+                "AOT006",
+                relative_fixture,
+                "analyzerFixture",
+                "invalid XML",
+                f"The package-level analyzer fixture is invalid XML: {error}",
+            )
+        ]
+
+    findings: list[Finding] = []
+    aot_values = _property_values(fixture, "IsAotCompatible")
+    if not any(value.lower() == "true" and not condition for value, condition in aot_values):
+        findings.append(
+            Finding(
+                package_id,
+                "AOT006",
+                relative_fixture,
+                "IsAotCompatible",
+                " | ".join(value for value, _ in aot_values) or "<missing>",
+                "The package-level compile fixture must enable SDK AOT/trim analyzers with IsAotCompatible=true.",
+            )
+        )
+
+    package_references = [
+        (element.attrib.get("Include") or "").strip()
+        for element in xml_root.iter()
+        if _tag_name(element) == "PackageReference"
+    ]
+    tcj_package_references = sorted(
+        value for value in package_references if value.startswith("TCJ.")
+    )
+    if tcj_package_references != [package_id]:
+        findings.append(
+            Finding(
+                package_id,
+                "AOT006",
+                relative_fixture,
+                "PackageReference",
+                ", ".join(tcj_package_references) or "<missing>",
+                f"The analyzer fixture must consume only the packed {package_id} package from the TCJ package set.",
+            )
+        )
+
+    project_references = [
+        (element.attrib.get("Include") or "").strip()
+        for element in xml_root.iter()
+        if _tag_name(element) == "ProjectReference"
+    ]
+    if project_references:
+        findings.append(
+            Finding(
+                package_id,
+                "AOT006",
+                relative_fixture,
+                "ProjectReference",
+                ", ".join(sorted(project_references)),
+                "The package-level analyzer fixture must not use repository project references.",
+            )
+        )
+
+    for property_name in ("PublishAot", "PublishTrimmed"):
+        enabled = [
+            value
+            for value, _ in _property_values(fixture, property_name)
+            if value.lower() == "true"
+        ]
+        if enabled:
+            findings.append(
+                Finding(
+                    package_id,
+                    "AOT006",
+                    relative_fixture,
+                    property_name,
+                    "true",
+                    f"{property_name}=true is outside this compile-only analyzer fixture; packaged Native AOT publish/run belongs to Important 8.",
+                )
+            )
+
+    return findings
+
+
 def _snapshot(package: Any, project: Path, root: Path) -> PackageSnapshot:
     tracked = ("IsAotCompatible", "PublishTrimmed", "EnableTrimAnalyzer", "EnableAotAnalyzer")
     properties: dict[str, str | None] = {}
@@ -348,6 +455,7 @@ def verify_repository(
             packages.append(_snapshot(package, project, root))
             evaluation_files = _project_evaluation_files(project, root)
             findings.extend(_validate_full_project_contract(package, evaluation_files, root))
+            findings.extend(_validate_analyzer_fixture(package.package_id, root))
             findings.extend(
                 _detect_suppressions(
                     package.package_id,

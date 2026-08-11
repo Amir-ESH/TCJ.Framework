@@ -104,6 +104,14 @@ class AotVerifierTests(unittest.TestCase):
         package["fullSupportEvidence"] = [self._full_evidence()]
         self._write_policy(policy)
         self._write_evidence_files()
+        core_project = self.root / "src/TCJ.Core/TCJ.Core.csproj"
+        core_project.write_text(
+            core_project.read_text(encoding="utf-8").replace(
+                "<IsAotCompatible>true</IsAotCompatible>",
+                "<IsAotCompatible>false</IsAotCompatible>",
+            ),
+            encoding="utf-8",
+        )
 
         payload, success = MODULE.verify_repository(self.root, output_path=self.output)
 
@@ -155,6 +163,39 @@ class AotVerifierTests(unittest.TestCase):
         payload, success = MODULE.verify_repository(self.root, output_path=self.output)
         self.assertTrue(success)
         self.assertEqual([], payload["findings"])
+
+    def test_core_analyzer_fixture_must_remain_package_only_and_aot_analyzed(self) -> None:
+        fixture = self.root / "compatibility/Consumers/Core.Console/Core.Console.csproj"
+        fixture.write_text(
+            """<Project Sdk=\"Microsoft.NET.Sdk\">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup><ProjectReference Include=\"../../../src/TCJ.Core/TCJ.Core.csproj\" /></ItemGroup>
+</Project>
+""",
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [item for item in payload["findings"] if item["rule"] == "AOT006"]
+        self.assertTrue(any(item["property"] == "IsAotCompatible" for item in findings))
+        self.assertTrue(any(item["property"] == "PackageReference" for item in findings))
+        self.assertTrue(any(item["property"] == "ProjectReference" for item in findings))
+
+    def test_core_analyzer_fixture_must_stay_compile_only(self) -> None:
+        fixture = self.root / "compatibility/Consumers/Core.Console/Core.Console.csproj"
+        text = fixture.read_text(encoding="utf-8").replace(
+            "<IsAotCompatible>true</IsAotCompatible>",
+            "<IsAotCompatible>true</IsAotCompatible><PublishAot>true</PublishAot>",
+        )
+        fixture.write_text(text, encoding="utf-8")
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(item for item in payload["findings"] if item["property"] == "PublishAot")
+        self.assertEqual("AOT006", finding["rule"])
 
     def test_current_repository_does_not_wire_aot_verification_into_blocking_workflows(self) -> None:
         repository_root = MODULE.ROOT
@@ -209,6 +250,7 @@ class AotVerifierTests(unittest.TestCase):
             "eng/DependencySecurity.props",
             "eng/Packaging.props",
             "eng/PackageValidation.props",
+            "compatibility/Consumers/Core.Console/Core.Console.csproj",
         ):
             source = source_root / relative
             target = self.root / relative

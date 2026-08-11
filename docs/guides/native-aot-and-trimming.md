@@ -23,17 +23,28 @@ A package is not promoted to **Full** from project-reference builds. The minimum
 
 TCJ does not enable `PublishAot` on production library projects as part of this policy.
 
-## Initial package matrix
+## Package matrix
 
-| Package | Tier | Initial boundary |
-|---|---|---|
-| `TCJ.Core` | **Conditional** | `src/TCJ.Core/TCJ.Core.csproj` currently declares `<IsAotCompatible>false</IsAotCompatible>`. Native AOT consumption therefore remains conditional and is not a library-level Full compatibility claim; this issue does not change the metadata. |
-| `TCJ.DependencyInjection` | **Conditional** | Framework-service registration is usable only while the convention scan set is empty. Reflection-based assembly scanning is a restricted path. |
-| `TCJ.EntityFrameworkCore` | **Experimental** | EF Core NativeAOT remains upstream-experimental, and TCJ has reflection/dynamic-generic usage paths that require explicit treatment. |
-| `TCJ.EntityFrameworkCore.SqlServer` | **Experimental** | The provider path inherits the upstream EF Core NativeAOT experimental boundary and has no qualifying packed-consumer evidence. |
-| `TCJ.AspNetCore` | **Conditional** | The application must remain inside ASP.NET Core features that are supported by Native AOT; ASP.NET Core's AOT support is feature-dependent. |
+The matrix separates **verified library compatibility** from the repository's end-to-end **support tier**.
+The library-compatibility column answers whether a package itself is declared and analyzer-verified as AOT/trim compatible.
+The support tier keeps the stronger Important 1 contract: **Full** requires a packed NuGet consumer to Native-AOT publish and execute successfully.
 
-No production package is labeled **Full** in this baseline.
+| Package | Verified library compatibility | Support tier | Current boundary |
+|---|---|---|---|
+| `TCJ.Core` | **Full** | **Conditional** | `src/TCJ.Core/TCJ.Core.csproj` declares `<IsAotCompatible>true</IsAotCompatible>`. The package-only `Core.Console` compatibility consumer enables the SDK AOT/trim analyzers and must build without warnings. The formal support tier remains Conditional until Important 8 records packed Native AOT publish-and-execute evidence. |
+| `TCJ.DependencyInjection` | Not claimed | **Conditional** | Framework-service registration is usable only while the convention scan set is empty. Reflection-based assembly scanning is a restricted path. |
+| `TCJ.EntityFrameworkCore` | Not claimed | **Experimental** | EF Core NativeAOT remains upstream-experimental, and TCJ has reflection/dynamic-generic usage paths that require explicit treatment. |
+| `TCJ.EntityFrameworkCore.SqlServer` | Not claimed | **Experimental** | The provider path inherits the upstream EF Core NativeAOT experimental boundary and has no qualifying packed-consumer evidence. |
+| `TCJ.AspNetCore` | Not claimed | **Conditional** | The application must remain inside ASP.NET Core features that are supported by Native AOT; ASP.NET Core's AOT support is feature-dependent. |
+
+`TCJ.Core` is therefore the first TCJ package with a **Full library-level AOT/trimming compatibility** claim. No production package is promoted to the formal **Full support tier** until the stronger packed publish-and-run evidence contract is satisfied.
+
+### `TCJ.Core` analyzer fixture
+
+`compatibility/Consumers/Core.Console/Core.Console.csproj` is the package-level analyzer fixture for `TCJ.Core`.
+It references `TCJ.Core` only through `PackageReference`, sets `IsAotCompatible=true`, and is built by the existing package-consumer compatibility path from the candidate local NuGet feed. Because `IsAotCompatible=true` enables the SDK trimming, single-file, and AOT analyzers, warnings surface during the normal consumer build instead of being hidden behind project references.
+
+The fixture is intentionally compile/runtime-check only and does not set `PublishAot=true` or `PublishTrimmed=true`. Native AOT publish-and-execute release evidence remains the responsibility of Important 8.
 
 ## Restricted TCJ usage paths
 
@@ -97,7 +108,7 @@ Run the repository-native verifier before opening a pull request that changes AO
 python3 eng/verify-aot.py verify
 ```
 
-The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, and rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns. A package declared **Full** fails verification if an evaluated repository project/props file explicitly sets `IsAotCompatible=false`.
+The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, and rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns. A package declared **Full** fails verification if an evaluated repository project/props file explicitly sets `IsAotCompatible=false`. It also validates the `TCJ.Core` package-level analyzer fixture: the fixture must enable `IsAotCompatible`, consume only the packed `TCJ.Core` package from the TCJ package set, contain no project reference, and remain compile-only rather than taking over Important 8's publish responsibility.
 
 Every run writes the deterministic machine-readable result to `artifacts/aot/aot-verification.json`. The report contains no timestamp or machine-specific absolute path, keeps packages and findings in stable order, and records the package, rule, offending project/props file, property, and value for each violation. Generated `artifacts/aot/` output is local evidence and must not be committed.
 
