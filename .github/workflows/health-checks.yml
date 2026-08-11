@@ -19,21 +19,6 @@ on:
       - ".github/workflows/health-checks.yml"
       - "Directory.Packages.props"
       - "TCJ.slnx"
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - "src/TCJ.Core/**"
-      - "src/TCJ.DependencyInjection/**"
-      - "src/TCJ.EntityFrameworkCore/**"
-      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
-      - "src/TCJ.AspNetCore/**"
-      - "tests/TCJ.HealthChecks.Tests/**"
-      - "eng/health-check-*.json"
-      - "eng/verify-health-checks.py"
-      - ".github/workflows/health-checks.yml"
-      - "Directory.Packages.props"
-      - "TCJ.slnx"
-
 permissions:
   contents: read
 

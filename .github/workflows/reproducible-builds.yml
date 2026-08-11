@@ -1,26 +1,11 @@
 name: Reproducible builds
 
 on:
+  workflow_call:
+
   workflow_dispatch:
   schedule:
     - cron: "23 4 * * 3"
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - "src/**"
-      - "eng/**"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/release-preflight.yml"
-      - ".github/workflows/release.yml"
-      - ".github/workflows/reproducible-builds.yml"
-      - "Directory.Build.props"
-      - "Directory.Packages.props"
-      - "global.json"
-      - "NuGet.Config"
-      - "TCJ.slnx"
-
 permissions:
   contents: read
 

@@ -466,7 +466,7 @@ def validate_configuration(
         "name: Mutation testing",
         "workflow_dispatch:",
         "schedule:",
-        "pull_request:",
+        "workflow_call:",
         "push:",
         "name: Run mutation tests",
         "Run TCJ.Core mutation tests",
@@ -479,8 +479,12 @@ def validate_configuration(
             fail(f"Mutation workflow is missing required fragment: {fragment}")
     if "Require a recorded baseline" in workflow:
         fail("Mutation workflow must not stop before Stryker runs when the baseline is pending.")
-    if "pull_request:\n    paths:" in workflow or "pull_request:\r\n    paths:" in workflow:
-        fail("A required mutation workflow must not use a top-level pull_request paths filter.")
+    gate_workflow = (root / ".github/workflows/required-pr-gate.yml").read_text(encoding="utf-8")
+    for fragment in ("pull_request:", "uses: ./.github/workflows/mutation-testing.yml", "name: Required PR Gate"):
+        if fragment not in gate_workflow:
+            fail(f"Required PR Gate is missing mutation integration fragment: {fragment}")
+    if "pull_request:\n    paths:" in gate_workflow or "pull_request:\r\n    paths:" in gate_workflow:
+        fail("Required PR Gate must not use a top-level pull_request paths filter.")
 
 
     for exclusion in policy.source_exclusions:

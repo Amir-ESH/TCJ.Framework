@@ -263,7 +263,6 @@ def validate_workflows() -> None:
 
     required_dedicated_markers = [
         "name: SQL Server integration",
-        "pull_request:",
         "push:",
         "workflow_dispatch:",
         "workflow_call:",
@@ -280,6 +279,10 @@ def validate_workflows() -> None:
     missing = [marker for marker in required_dedicated_markers if marker not in dedicated]
     if missing:
         fail("Dedicated SQL Server integration workflow is missing required integration markers: " + ", ".join(missing))
+
+    gate = (ROOT / ".github/workflows/required-pr-gate.yml").read_text(encoding="utf-8")
+    if "pull_request:" not in gate or "uses: ./.github/workflows/sqlserver-integration.yml" not in gate:
+        fail("Required PR Gate must route relevant pull requests through SQL Server integration.")
 
     ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     if "verify-sqlserver-integration.py validate-config" not in ci:

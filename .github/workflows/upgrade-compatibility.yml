@@ -24,29 +24,6 @@ on:
       - ".github/workflows/release-preflight.yml"
       - ".github/workflows/release.yml"
       - ".github/workflows/published-package-smoke.yml"
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - "src/**"
-      - "eng/Packaging.props"
-      - "eng/PackageValidation.props"
-      - "eng/published-release.json"
-      - "eng/release-manifest.json"
-      - "eng/upgrade-compatibility-policy.json"
-      - "eng/breaking-changes.json"
-      - "eng/verify-upgrade-compatibility.py"
-      - "eng/tests/test_run_upgrade_tests.py"
-      - "eng/tests/test_verify_upgrade_compatibility.py"
-      - "Directory.Build.props"
-      - "Directory.Packages.props"
-      - "NuGet.Config"
-      - "global.json"
-      - "upgrade-tests/**"
-      - "docs/migrations/**"
-      - ".github/workflows/upgrade-compatibility.yml"
-      - ".github/workflows/release-preflight.yml"
-      - ".github/workflows/release.yml"
-      - ".github/workflows/published-package-smoke.yml"
   workflow_dispatch:
   workflow_call:
   schedule:

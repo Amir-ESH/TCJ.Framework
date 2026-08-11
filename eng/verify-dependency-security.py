@@ -116,12 +116,20 @@ def verify_workflows() -> None:
     require_workflow_fragments(
         ROOT / ".github" / "workflows" / "dependency-review.yml",
         (
-            "pull_request:",
-            "- main",
-            "- develop",
+            "workflow_call:",
             "actions/dependency-review-action@v4",
             "fail-on-severity: moderate",
             "fail-on-scopes: runtime, development",
+        ),
+    )
+    require_workflow_fragments(
+        ROOT / ".github" / "workflows" / "required-pr-gate.yml",
+        (
+            "pull_request:",
+            "- develop",
+            "- main",
+            "uses: ./.github/workflows/dependency-review.yml",
+            "name: Required PR Gate",
         ),
     )
     require_workflow_fragments(

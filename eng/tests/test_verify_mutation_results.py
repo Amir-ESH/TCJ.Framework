@@ -30,6 +30,7 @@ class MutationVerifierTests(unittest.TestCase):
         self.config_path = self.root / "stryker-config.json"
         self.manifest_path = self.root / ".config/dotnet-tools.json"
         self.workflow_path = self.root / ".github/workflows/mutation-testing.yml"
+        self.required_gate_path = self.root / ".github/workflows/required-pr-gate.yml"
         self.test_props_path = self.root / "tests/TestProject.props"
         self.summary_path = self.root / "artifacts/mutation/MUTATION_SUMMARY.md"
         self.json_path = self.root / "artifacts/mutation/mutation-summary.json"
@@ -105,9 +106,9 @@ class MutationVerifierTests(unittest.TestCase):
         self.workflow_path.write_text(
             """name: Mutation testing
 on:
+  workflow_call:
   workflow_dispatch:
   schedule:
-  pull_request:
   push:
 jobs:
   gate:
@@ -118,6 +119,18 @@ jobs:
       - name: Upload mutation reports
         with:
           path: artifacts/mutation/mutation-baseline-candidate.json
+""",
+            encoding="utf-8",
+        )
+        self.required_gate_path.write_text(
+            """name: Required PR orchestration
+on:
+  pull_request:
+jobs:
+  mutation:
+    uses: ./.github/workflows/mutation-testing.yml
+  required:
+    name: Required PR Gate
 """,
             encoding="utf-8",
         )

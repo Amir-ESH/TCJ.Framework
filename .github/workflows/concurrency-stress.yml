@@ -23,28 +23,6 @@ on:
       - "global.json"
       - ".github/workflows/concurrency-stress.yml"
 
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - "src/TCJ.Core/**"
-      - "src/TCJ.DependencyInjection/**"
-      - "src/TCJ.EntityFrameworkCore/**"
-      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
-      - "src/TCJ.AspNetCore/**"
-      - "tests/TCJ.Concurrency.Tests/**"
-      - "tests/TCJ.Resilience.Tests/**"
-      - "eng/resilience-policy.json"
-      - "eng/resilience-contract.json"
-      - "eng/verify-resilience.py"
-      - "eng/concurrency-policy.json"
-      - "eng/verify-concurrency.py"
-      - "Directory.Build.props"
-      - "Directory.Packages.props"
-      - "global.json"
-      - ".github/workflows/concurrency-stress.yml"
-
   workflow_dispatch:
 
   workflow_call:

@@ -341,7 +341,7 @@ def validate_configuration(
             "name: Performance benchmarks",
             "workflow_dispatch:",
             "schedule:",
-            "pull_request:",
+            "workflow_call:",
             "push:",
             "name: Run benchmarks",
             "python3 eng/verify-dependency-security.py",
@@ -351,6 +351,11 @@ def validate_configuration(
             "artifacts/performance/PERFORMANCE_SUMMARY.md",
             "actions/upload-artifact@v7",
         ),
+        root,
+    )
+    require_text(
+        root / ".github/workflows/required-pr-gate.yml",
+        ("pull_request:", "uses: ./.github/workflows/performance-benchmarks.yml", "name: Required PR Gate"),
         root,
     )
     require_text(

@@ -1,20 +1,9 @@
 name: Property and fuzz testing
 
 on:
+  workflow_call:
+
   push:
-    branches: [main, develop]
-    paths:
-      - "src/TCJ.Core/**"
-      - "src/TCJ.DependencyInjection/**"
-      - "tests/TCJ.PropertyTests/**"
-      - "fuzz/**"
-      - "eng/fuzzing-policy.json"
-      - "eng/verify-fuzzing.py"
-      - "Directory.Build.props"
-      - "Directory.Packages.props"
-      - "global.json"
-      - ".github/workflows/fuzzing.yml"
-  pull_request:
     branches: [main, develop]
     paths:
       - "src/TCJ.Core/**"

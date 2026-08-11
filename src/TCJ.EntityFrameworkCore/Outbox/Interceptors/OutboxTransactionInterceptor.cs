@@ -91,7 +91,9 @@ internal sealed class OutboxTransactionInterceptor : DbTransactionInterceptor
 
     private void CompleteTransaction(DbContext? context)
     {
-        if (context is null || !_captureTracker.TryGet(context, out OutboxCaptureState state) || !state.AwaitingExplicitCommit)
+        if (context is null ||
+            !_captureTracker.TryGet(context, out OutboxCaptureState state) ||
+            !state.AwaitingExplicitCommit)
         {
             return;
         }

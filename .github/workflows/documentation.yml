@@ -1,6 +1,8 @@
 name: Documentation
 
 on:
+  workflow_call:
+
   push:
     branches:
       - main
@@ -11,23 +13,6 @@ on:
       - "docfx/**"
       - "eng/documentation-*.json"
       - "eng/verify-documentation.py"
-      - ".config/dotnet-tools.json"
-      - "Directory.Build.props"
-      - "Directory.Packages.props"
-      - "global.json"
-      - ".github/workflows/documentation.yml"
-
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - "src/**"
-      - "docs/**"
-      - "docfx/**"
-      - "eng/documentation-*.json"
-      - "eng/verify-documentation.py"
-      - "eng/tests/test_verify_documentation.py"
       - ".config/dotnet-tools.json"
       - "Directory.Build.props"
       - "Directory.Packages.props"

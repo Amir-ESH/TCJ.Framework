@@ -46,29 +46,6 @@ on:
       - "Directory.Packages.props"
       - "TCJ.slnx"
 
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - "benchmarks/**"
-      - "src/TCJ.Core/**"
-      - "src/TCJ.DependencyInjection/**"
-      - "src/TCJ.EntityFrameworkCore/**"
-      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
-      - "src/TCJ.AspNetCore/**"
-      - "eng/observability-policy.json"
-      - "eng/observability-contract.json"
-      - "eng/verify-resilience.py"
-      - "eng/resilience-contract.json"
-      - "eng/resilience-policy.json"
-      - "eng/performance-policy.json"
-      - "eng/verify-performance-results.py"
-      - "eng/tests/test_verify_performance_results.py"
-      - ".github/workflows/performance-benchmarks.yml"
-      - "Directory.Packages.props"
-      - "TCJ.slnx"
-
 permissions:
   contents: read
 
