@@ -20,6 +20,12 @@ public static class TcjHealthCheckNames
         public const string SqlServer = "tcj.sqlserver";
         /// <summary>The optional SQL Server pending-migrations readiness check.</summary>
         public const string SqlServerMigrations = "tcj.sqlserver.migrations";
+        /// <summary>The outbox processor-state readiness check.</summary>
+        public const string OutboxProcessor = "tcj.outbox.processor";
+        /// <summary>The outbox pending-backlog readiness check.</summary>
+        public const string OutboxBacklog = "tcj.outbox.backlog";
+        /// <summary>The outbox dead-letter readiness check.</summary>
+        public const string OutboxDeadLetters = "tcj.outbox.dead_letters";
     }
 
     /// <summary>Stable tags used to select TCJ health checks.</summary>
@@ -41,6 +47,8 @@ public static class TcjHealthCheckNames
         public const string SqlServer = "sqlserver";
         /// <summary>Identifies configuration checks.</summary>
         public const string Configuration = "configuration";
+        /// <summary>Identifies transactional-outbox checks.</summary>
+        public const string Outbox = "outbox";
     }
 
     /// <summary>Bounded category values used by health-check telemetry.</summary>
@@ -60,5 +68,7 @@ public static class TcjHealthCheckNames
         public const string SqlServer = "sqlserver";
         /// <summary>The configuration category.</summary>
         public const string Configuration = "configuration";
+        /// <summary>The transactional-outbox category.</summary>
+        public const string Outbox = "outbox";
     }
 }

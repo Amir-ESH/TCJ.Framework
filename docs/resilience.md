@@ -219,3 +219,7 @@ Avoid these patterns:
 ## Health-check interaction
 
 Health checks keep their own total timeout bounded and do not add broad retries. SQL connectivity can observe provider-level resilience only within the health deadline; invalid configuration is never retried and circuit-breaker state must not hide dependency recovery. See [health checks](health-checks.md).
+
+## Outbox delivery retries
+
+Transactional-outbox delivery uses `ITransientFailureDetector` for transient/permanent classification but schedules retries durably in the outbox row instead of holding an in-process retry loop around external handlers. Exponential backoff is bounded by `MaxRetryDelay`, jitter is bounded, attempts are preserved, and poison messages stop after the configured budget. Database claim/status failures surface to the poll loop and are retried by later bounded polls; handler side effects still require idempotency because at-least-once delivery permits duplicates after crash or lease expiry.

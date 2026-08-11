@@ -295,7 +295,7 @@ def validate_configuration(
     )
     catalog_benchmarks = set(
         re.findall(
-            r"(?:Core|DependencyInjection|Observability|Resilience|HealthChecks)\(\s*\"([^\"]+)\"\s*,\s*\"([^\"]+)\"",
+            r"(?:Core|DependencyInjection|Observability|Resilience|HealthChecks|Outbox)\(\s*\"([^\"]+)\"\s*,\s*\"([^\"]+)\"",
             catalog,
         )
     )

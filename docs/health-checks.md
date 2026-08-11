@@ -159,3 +159,7 @@ SQL Server scenarios use the repository-pinned Testcontainers image. Generated `
 ## Security and compatibility
 
 Do not put credentials, raw provider error messages, connection strings, SQL, user identifiers, tenant identifiers, or arbitrary application labels into health descriptions or telemetry tags. Public check names and endpoint defaults are operational APIs: changing them requires compatibility review. Detailed diagnostics should stay disabled or authorization-protected on publicly reachable networks.
+
+## Transactional outbox readiness
+
+When the outbox is registered, `tcj.outbox.processor`, `tcj.outbox.backlog`, and `tcj.outbox.dead_letters` participate in readiness. They expose processor state and aggregate counts/ages only—never payloads, exception messages, server/database identifiers, or connection strings. Backlog and dead-letter thresholds are configurable. Liveness remains independent of temporary handler/external-system availability.

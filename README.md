@@ -211,3 +211,7 @@ TCJ documents and continuously verifies concurrency boundaries rather than assum
 ## Health checks
 
 TCJ provides composable liveness, readiness, startup-diagnostic, EF Core, and SQL Server health checks plus ASP.NET Core endpoint mapping. See [`docs/health-checks.md`](docs/health-checks.md) for safe defaults, Kubernetes guidance, timeout/caching rules, and migration behavior.
+
+## Transactional outbox
+
+TCJ includes an opt-in SQL Server transactional outbox for reliable post-commit domain-event delivery. Business state and `TCJ_OutboxMessages` are persisted in one transaction; bounded leases support multiple processors; retries, dead letters, explicit replay, cleanup, health checks, and telemetry are included. Delivery is **at-least-once**, so handlers with non-repeatable side effects must be idempotent. See [`docs/outbox.md`](docs/outbox.md).

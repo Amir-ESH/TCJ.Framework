@@ -16,14 +16,15 @@ The architecture claim is intentionally platform-specific: the required standard
 
 ## Approved package combinations
 
-The six maintained consumers cover these supported combinations:
+Seven maintained consumers cover the supported package combinations plus an explicit transactional-outbox package scenario:
 
 1. `TCJ.Core`;
 2. `TCJ.Core` + `TCJ.DependencyInjection`;
 3. `TCJ.Core` + `TCJ.DependencyInjection` + `TCJ.EntityFrameworkCore`;
 4. the previous set + `TCJ.EntityFrameworkCore.SqlServer`;
 5. `TCJ.Core` + `TCJ.DependencyInjection` + `TCJ.AspNetCore`;
-6. all five packages together.
+6. all five packages together;
+7. `TCJ.Core` + `TCJ.DependencyInjection` + `TCJ.EntityFrameworkCore` with transactional outbox enabled through the public provider SPI.
 
 The consumer projects live under [`compatibility/Consumers/`](https://github.com/Amir-ESH/TCJ.Framework/tree/develop/compatibility/Consumers) and are intentionally not part of the main production solution. They must never reference a project below `src/`.
 
@@ -53,6 +54,8 @@ The runner also isolates:
 `AspNetCore.MinimalApi` starts Kestrel on loopback, runs `AddTcjAspNetCore`/`UseTcjAspNetCore`, resolves current-user services, and performs successful and handled-error HTTP requests.
 
 `FullStack.MinimalApi` restores all five packages together, configures DI, ASP.NET Core, EF Core, and SQL Server, and performs an HTTP request that resolves representative TCJ services. This is the ambiguity/conflict check for the complete package graph.
+
+`Outbox.Console` is the Step 44 clean-room consumer. It enables `AddTcjOutbox`, registers a stable versioned event name, maps `TCJ_OutboxMessages`, persists a domain event through the package interceptors, and invokes `IOutboxProcessor.ProcessBatchAsync`. The fixture supplies a tiny InMemory `IOutboxStorage` implementation so the package-only scenario executes identically on all three compatibility operating systems without pretending that EF InMemory validates SQL Server locking. SQL Server claiming, leases, crash recovery, and transaction semantics remain covered by the Testcontainers outbox suite and the published SQL Server smoke test.
 
 ## Package, symbol, and Source Link validation
 
@@ -117,7 +120,7 @@ python3 eng/verify-consumer-compatibility.py verify \
 Run a single consumer by appending, for example:
 
 ```text
---consumer AspNetCore.MinimalApi
+--consumer Outbox.Console
 ```
 
 The full three-OS matrix is a GitHub Actions responsibility because a single developer machine cannot truthfully claim all three hosted-runner environments.

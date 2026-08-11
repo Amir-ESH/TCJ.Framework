@@ -173,3 +173,15 @@ A regression may be accepted when it buys a reviewed correctness, security, comp
 ## Health-check benchmarks
 
 `HealthCheckBenchmarks` measures the lightweight core liveness path, cached readiness, uncached readiness with a fast in-process dependency, sanitized public-response serialization, and health telemetry disabled/enabled. The `HealthChecks` category is required by `eng/performance-policy.json`. Database network latency is intentionally excluded from the shared regression ratio; SQL Server behavior is validated by integration tests while the benchmarks catch framework overhead, allocation, and cache regressions.
+
+## Transactional-outbox benchmarks
+
+Step 44 adds an `Outbox` benchmark category for the provider-independent persistence path. `OutboxBenchmarks` records:
+
+- `SaveChangesWithoutOutbox` as the informational class baseline;
+- `SaveChangesWithOneEvent`;
+- `SaveChangesWithFiveEvents`;
+- `SerializeOneEvent`;
+- `DeserializeOneEvent`.
+
+The SaveChanges measurements use a fresh EF Core InMemory database root per operation so database growth does not contaminate later measurements. These methods are intentionally not placed in a blocking comparison group: persisting and serializing durable outbox messages performs additional correctness work, so treating it as equivalent to a SaveChanges call with no outbox would create a misleading regression ratio. SQL Server claim throughput remains covered by the dedicated outbox integration/concurrency evidence rather than a hosted-runner microbenchmark with external database latency.

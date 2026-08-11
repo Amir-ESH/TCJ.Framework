@@ -2,6 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using TCJ.AspNetCore.Extensions;
 using TCJ.AspNetCore.Options;
 using TCJ.Core.Entities;
+#if TCJ_OUTBOX_SMOKE
+using TCJ.Core.DomainEvents;
+using TCJ.Core.Outbox;
+#endif
 using TCJ.Core.Identifiers;
 using TCJ.Core.Results;
 #if TCJ_RESILIENCE_SMOKE
@@ -16,6 +20,11 @@ using TCJ.DependencyInjection.HealthChecks;
 using TCJ.DependencyInjection.Registration;
 using TCJ.EntityFrameworkCore.Abstractions;
 using TCJ.EntityFrameworkCore.Extensions;
+#if TCJ_OUTBOX_SMOKE
+using TCJ.EntityFrameworkCore.Outbox;
+using TCJ.EntityFrameworkCore.Outbox.Extensions;
+using TCJ.EntityFrameworkCore.SqlServer.Outbox.Extensions;
+#endif
 using TCJ.EntityFrameworkCore.Repositories;
 using TCJ.EntityFrameworkCore.SqlServer.Extensions;
 using TCJ.EntityFrameworkCore.SqlServer.Options;
@@ -36,16 +45,33 @@ internal static class Program
 
         builder.Services.AddTcjDependencyInjection(typeof(Program).Assembly);
         builder.Services.AddTcjAspNetCore();
+#if TCJ_OUTBOX_SMOKE
+        builder.Services.AddSingleton<SmokeDeliveryProbe>();
+        builder.Services.AddTransient<IDomainEventHandler<SmokeChanged>, SmokeChangedHandler>();
+#endif
 #if TCJ_HEALTH_CHECK_SMOKE
         builder.Services.AddTcjHealthChecks()
             .AddTcjDependencyInjection()
             .AddTcjDomainEvents();
 #endif
 
+        string sqlServerConnection = Environment.GetEnvironmentVariable("TCJ_OUTBOX_SMOKE_CONNECTION")
+            ?? "Server=localhost;Database=TCJ_PublishedPackageSmoke;User Id=sa;Password=NotUsed_123!;TrustServerCertificate=True";
+
         builder.Services.AddTcjSqlServer<SmokeDbContext>(
-            "Server=localhost;Database=TCJ_PublishedPackageSmoke;User Id=sa;Password=NotUsed_123!;TrustServerCertificate=True",
+            sqlServerConnection,
             configureTcjSqlServer: options =>
                 options.EnableRetryOnFailure = false);
+#if TCJ_OUTBOX_SMOKE
+        builder.Services.AddTcjOutboxEvent<SmokeChanged>("smoke.changed.v1");
+        builder.Services.AddTcjSqlServerOutbox<SmokeDbContext>(options =>
+        {
+            options.BatchSize = 10;
+            options.PollingInterval = TimeSpan.FromMilliseconds(50);
+            options.LockDuration = TimeSpan.FromSeconds(10);
+            options.MaxRetryAttempts = 1;
+        });
+#endif
 
         await using WebApplication app = builder.Build();
 
@@ -110,6 +136,10 @@ internal static class Program
         await VerifyPublishedResilienceAsync();
 #endif
 
+#if TCJ_OUTBOX_SMOKE
+        await VerifyPublishedOutboxAsync(services);
+#endif
+
 #if TCJ_HEALTH_CHECK_SMOKE
         await VerifyPublishedHealthChecksAsync(app);
 #endif
@@ -117,6 +147,37 @@ internal static class Program
         Console.WriteLine(
             $"Published package smoke test succeeded. Generated UUID: {id}");
     }
+
+#if TCJ_OUTBOX_SMOKE
+    private static async Task VerifyPublishedOutboxAsync(IServiceProvider services)
+    {
+        SmokeDbContext dbContext = services.GetRequiredService<SmokeDbContext>();
+        await dbContext.Database.EnsureCreatedAsync().ConfigureAwait(false);
+
+        var entity = new SmokeEntity(Guid.CreateVersion7(), "outbox-smoke");
+        entity.RaiseChanged("published", DateTimeOffset.UtcNow);
+        dbContext.SmokeEntities.Add(entity);
+        await dbContext.SaveChangesAsync().ConfigureAwait(false);
+
+        OutboxMessage persisted = await dbContext.Set<OutboxMessage>().AsNoTracking().SingleAsync().ConfigureAwait(false);
+        if (persisted.EventType != "smoke.changed.v1" || persisted.Id == Guid.Empty)
+        {
+            throw new InvalidOperationException("Published transactional outbox persistence smoke failed for TCJ_OutboxMessages.");
+        }
+
+        IOutboxProcessor processor = services.GetRequiredService<IOutboxProcessor>();
+        OutboxProcessingResult result = await processor.ProcessBatchAsync().ConfigureAwait(false);
+        dbContext.ChangeTracker.Clear();
+        OutboxMessage processed = await dbContext.Set<OutboxMessage>().AsNoTracking().SingleAsync(message => message.Id == persisted.Id).ConfigureAwait(false);
+        SmokeDeliveryProbe probe = services.GetRequiredService<SmokeDeliveryProbe>();
+        if (result.ProcessedCount != 1 || processed.ProcessedAtUtc is null || probe.Count != 1)
+        {
+            throw new InvalidOperationException("Published transactional outbox processing smoke failed.");
+        }
+
+        Console.WriteLine("TCJ_OUTBOX_SMOKE succeeded for TCJ_OutboxMessages.");
+    }
+#endif
 
 #if TCJ_HEALTH_CHECK_SMOKE
     private static async Task VerifyPublishedHealthChecksAsync(WebApplication app)
@@ -201,6 +262,9 @@ public sealed class SmokeDbContext(
 
         modelBuilder.ApplySoftDeleteQueryFilters();
         modelBuilder.ApplyTcjSqlServerConventions();
+#if TCJ_OUTBOX_SMOKE
+        modelBuilder.AddTcjOutbox();
+#endif
     }
 }
 
@@ -219,4 +283,30 @@ public sealed class SmokeEntity
 
     public string Name { get; private set; } =
         string.Empty;
+
+#if TCJ_OUTBOX_SMOKE
+    public void RaiseChanged(string marker, DateTimeOffset occurredOn)
+        => AddDomainEvent(new SmokeChanged(Id, marker, occurredOn));
+#endif
 }
+
+#if TCJ_OUTBOX_SMOKE
+public sealed record SmokeChanged(Guid EntityId, string Marker, DateTimeOffset OccurredOn) : IDomainEvent;
+
+public sealed class SmokeDeliveryProbe
+{
+    private int _count;
+    public int Count => Volatile.Read(ref _count);
+    public void Record() => Interlocked.Increment(ref _count);
+}
+
+public sealed class SmokeChangedHandler(SmokeDeliveryProbe probe) : IDomainEventHandler<SmokeChanged>
+{
+    public Task HandleAsync(SmokeChanged domainEvent, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        probe.Record();
+        return Task.CompletedTask;
+    }
+}
+#endif

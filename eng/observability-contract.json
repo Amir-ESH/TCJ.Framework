@@ -125,6 +125,34 @@
     {
       "name": "tcj.health_check.execute",
       "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.outbox.persist",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.claim",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.process",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.retry",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.dead_letter",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.replay",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.cleanup",
+      "source": "TCJ.EntityFrameworkCore"
     }
   ],
   "metrics": [
@@ -253,6 +281,54 @@
       "meter": "TCJ.Core",
       "type": "counter",
       "unit": "{check}"
+    },
+    {
+      "name": "tcj.outbox.messages.persisted",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.messages.processed",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.messages.failed",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.messages.retried",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.messages.dead_lettered",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.processing.duration",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "ms"
+    },
+    {
+      "name": "tcj.outbox.pending.count",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.oldest_pending.age",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "s"
     }
   ],
   "tags": [
@@ -283,7 +359,11 @@
     "tcj.resilience.circuit_state",
     "tcj.health_check.name",
     "tcj.health_check.category",
-    "tcj.health_check.status"
+    "tcj.health_check.status",
+    "tcj.outbox.event_type",
+    "tcj.outbox.attempt",
+    "tcj.outbox.outcome",
+    "tcj.outbox.provider"
   ],
   "optInSensitiveTags": [
     "tcj.exception.message"

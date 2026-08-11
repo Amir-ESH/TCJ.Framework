@@ -287,3 +287,9 @@ Resilience dimensions are bounded strategy, outcome, attempt number, failure cat
 ## Health-check telemetry
 
 Health probes emit `tcj.health_check.execute` plus `tcj.health_checks.executed`, `tcj.health_checks.duration`, `tcj.health_checks.failures`, and `tcj.health_checks.status`. Dimensions are bounded to stable health-check name/category/status and operation outcome values; provider errors and secrets are not tags. See [health checks](health-checks.md).
+
+## Transactional outbox observability
+
+Step 44 adds `tcj.outbox.persist`, `tcj.outbox.claim`, `tcj.outbox.process`, `tcj.outbox.retry`, `tcj.outbox.dead_letter`, `tcj.outbox.replay`, and `tcj.outbox.cleanup` activities.
+
+Outbox metrics are `tcj.outbox.messages.persisted`, `tcj.outbox.messages.processed`, `tcj.outbox.messages.failed`, `tcj.outbox.messages.retried`, `tcj.outbox.messages.dead_lettered`, `tcj.outbox.processing.duration`, `tcj.outbox.pending.count`, and `tcj.outbox.oldest_pending.age`. Tags are limited to stable event type, attempt, provider, outcome, and cancellation. Payloads and aggregate identifiers are forbidden from default telemetry; exception messages are also excluded because they can echo sensitive payload data. The stable names are versioned in both `eng/observability-contract.json` and `eng/outbox-contract.json`.

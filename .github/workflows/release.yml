@@ -54,8 +54,12 @@ jobs:
     name: Health-check contract gate
     uses: ./.github/workflows/health-checks.yml
 
+  outbox:
+    name: Transactional outbox contract gate
+    uses: ./.github/workflows/outbox.yml
+
   build-and-pack:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -129,6 +133,9 @@ jobs:
       - name: Validate health-check configuration
         run: python3 eng/verify-health-checks.py validate-config
 
+      - name: Validate transactional-outbox configuration
+        run: python3 eng/verify-outbox.py validate-config
+
       - name: Validate release tag
         id: release-version
         shell: bash
@@ -192,6 +199,21 @@ jobs:
           test -d artifacts/health-check-release
           find artifacts/health-check-release -type f -name 'HEALTH_CHECK_SUMMARY.md' -print -quit | grep -q .
           zip -qr "artifacts/release/TCJ.Framework.HealthChecks.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/health-check-release
+
+      - name: Download exact tagged-source outbox evidence
+        uses: actions/download-artifact@v8
+        with:
+          pattern: outbox-*-${{ github.run_id }}
+          path: artifacts/outbox-release
+
+      - name: Preserve transactional-outbox evidence with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          test -d artifacts/outbox-release
+          find artifacts/outbox-release -type f -name 'OUTBOX_SUMMARY.md' -print -quit | grep -q .
+          zip -qr "artifacts/release/TCJ.Framework.Outbox.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/outbox-release
 
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx

@@ -54,7 +54,13 @@ internal static class BenchmarkCatalog
         HealthChecks("HealthCheckBenchmarks", "UncachedReadinessPath"),
         HealthChecks("HealthCheckBenchmarks", "PublicResponseSerialization"),
         HealthChecks("HealthCheckBenchmarks", "TelemetryDisabled"),
-        HealthChecks("HealthCheckBenchmarks", "TelemetryEnabled")
+        HealthChecks("HealthCheckBenchmarks", "TelemetryEnabled"),
+
+        Outbox("OutboxBenchmarks", "SaveChangesWithoutOutbox", baseline: true),
+        Outbox("OutboxBenchmarks", "SaveChangesWithOneEvent"),
+        Outbox("OutboxBenchmarks", "SaveChangesWithFiveEvents"),
+        Outbox("OutboxBenchmarks", "SerializeOneEvent"),
+        Outbox("OutboxBenchmarks", "DeserializeOneEvent")
     ];
 
     internal static void WriteManifest()
@@ -114,6 +120,12 @@ internal static class BenchmarkCatalog
         string method,
         bool baseline = false)
         => new(type, method, ["TCJ.Core", "HealthChecks"], null, baseline);
+
+    private static BenchmarkDefinition Outbox(
+        string type,
+        string method,
+        bool baseline = false)
+        => new(type, method, ["TCJ.Core", "TCJ.EntityFrameworkCore", "Outbox"], null, baseline);
 
     private sealed record BenchmarkDefinition(
         string Type,

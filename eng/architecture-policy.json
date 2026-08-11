@@ -97,6 +97,7 @@
     "TCJ.AspNetCore.Options.TcjAspNetCoreOptions",
     "TCJ.Core.Diagnostics.TcjTelemetryOptions",
     "TCJ.Core.HealthChecks.TcjHealthCheckOptions",
+    "TCJ.Core.Outbox.TcjOutboxOptions",
     "TCJ.Core.Resilience.TcjCircuitBreakerOptions",
     "TCJ.Core.Resilience.TcjResilienceOptions",
     "TCJ.Core.Resilience.TcjRetryOptions",

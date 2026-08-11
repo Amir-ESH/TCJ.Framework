@@ -17,6 +17,8 @@ Every scenario uses `$(TCJUpgradeVersion)` for TCJ PackageReferences. The runner
 
 `EntityFrameworkCoreConsumer` uses a SQLite file persisted between the baseline and target phases so the target package must read data written while the baseline package was active. The SQL Server scenario validates provider registration and options without opening a database connection; real SQL Server behavior remains covered by the SQL Server integration suite.
 
+All direct-upgrade scenarios intentionally remain transactional-outbox disabled. This proves the Step 44 feature is explicit opt-in and that existing consumer behavior remains compatible. Outbox-enabled package usage is exercised by `compatibility/Consumers/Outbox.Console`; SQL Server schema, claims, leases, retries, and recovery are exercised by the dedicated outbox integration workflow.
+
 ## Local run
 
 First pack the target packages:

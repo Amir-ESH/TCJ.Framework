@@ -30,6 +30,9 @@
   "failOnUndocumentedBehaviorChange": true,
   "failOnDependencyDowngrade": true,
   "failOnWarnings": true,
+  "requireOutboxOptInCompatibility": true,
+  "requireOutboxSchemaMigrationGuidance": true,
+  "requireOutboxEventNameMigrationGuidance": true,
   "publishedScenarios": [
     "CoreConsumer",
     "AspNetCoreConsumer",

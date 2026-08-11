@@ -66,3 +66,7 @@ Resilience telemetry uses bounded failure categories and circuit states rather t
 ## Health endpoint exposure
 
 Public TCJ health responses intentionally omit exception messages, stack traces, connection strings, server/database names, SQL, credentials, environment variables, and file-system paths. Detailed health diagnostics require authorization by default; applications should keep them disabled or protected on public networks.
+
+## Transactional outbox data
+
+Outbox payloads are durable application data and can contain sensitive fields. TCJ never emits payloads through default logs, traces, metric tags, health responses, or workflow summaries, and it stores only bounded generic failure diagnostics rather than exception messages/stack traces. Applications own database encryption at rest, key management, access control, backup protection, retention, and any custom serializer/redaction policy. Do not put access tokens, passwords, connection strings, or credentials into domain-event payloads.

@@ -107,3 +107,7 @@ The dedicated GitHub Actions workflow runs the same suite on Linux and Windows a
 ## Health-check integration tests
 
 `TCJ.HealthChecks.Tests` validates liveness/readiness HTTP endpoints, startup diagnostics, duplicate registration, safe JSON, bounded cache/single-flight concurrency, cancellation, telemetry, and SQL Server connectivity/migration state through the pinned Testcontainers image. Run `python3 eng/verify-health-checks.py validate-config` before the suite and `verify` against `TestResults/HealthChecks/` afterward.
+
+## Transactional outbox tests
+
+`TCJ.Outbox.Tests` is the Step 44 SQL Server Testcontainers suite. It covers transactional persistence/rollback, stable message IDs across SaveChanges retry, synchronous/asynchronous capture, manual processing, bounded retry, poison isolation, concurrent workers, lease expiration, cancellation recovery, idempotent duplicate delivery, replay, cleanup, sensitive payload handling, schema/indexes, serialization, and health checks. Use `TestResults/Outbox/` for TRX output and `eng/verify-outbox.py` to generate sanitized evidence.

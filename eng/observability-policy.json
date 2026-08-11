@@ -35,7 +35,14 @@
     "tcj.resilience.retry",
     "tcj.resilience.timeout",
     "tcj.resilience.circuit_breaker",
-    "tcj.health_check.execute"
+    "tcj.health_check.execute",
+    "tcj.outbox.persist",
+    "tcj.outbox.claim",
+    "tcj.outbox.process",
+    "tcj.outbox.retry",
+    "tcj.outbox.dead_letter",
+    "tcj.outbox.replay",
+    "tcj.outbox.cleanup"
   ],
   "requiredMetrics": [
     "tcj.domain_events.dispatched",
@@ -58,7 +65,15 @@
     "tcj.health_checks.executed",
     "tcj.health_checks.duration",
     "tcj.health_checks.failures",
-    "tcj.health_checks.status"
+    "tcj.health_checks.status",
+    "tcj.outbox.messages.persisted",
+    "tcj.outbox.messages.processed",
+    "tcj.outbox.messages.failed",
+    "tcj.outbox.messages.retried",
+    "tcj.outbox.messages.dead_lettered",
+    "tcj.outbox.processing.duration",
+    "tcj.outbox.pending.count",
+    "tcj.outbox.oldest_pending.age"
   ],
   "allowedMetricDimensions": [
     "tcj.operation.name",
@@ -73,7 +88,11 @@
     "tcj.resilience.circuit_state",
     "tcj.health_check.name",
     "tcj.health_check.category",
-    "tcj.health_check.status"
+    "tcj.health_check.status",
+    "tcj.outbox.event_type",
+    "tcj.outbox.attempt",
+    "tcj.outbox.outcome",
+    "tcj.outbox.provider"
   ],
   "forbiddenTagPatterns": [
     "password",

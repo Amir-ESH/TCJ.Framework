@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TCJ.EntityFrameworkCore.Interceptors;
+using TCJ.EntityFrameworkCore.Outbox.Interceptors;
 
 namespace TCJ.EntityFrameworkCore.Extensions;
 
@@ -10,7 +11,7 @@ namespace TCJ.EntityFrameworkCore.Extensions;
 public static class DbContextOptionsBuilderExtensions
 {
     /// <summary>
-    /// Adds the TCJ auditing interceptor to a DbContext that is registered manually.
+    /// Adds TCJ persistence interceptors, including transactional-outbox interceptors when outbox services are registered.
     /// </summary>
     public static DbContextOptionsBuilder AddTcjPersistenceInterceptors(this DbContextOptionsBuilder optionsBuilder,
                                                                         IServiceProvider serviceProvider)
@@ -18,7 +19,22 @@ public static class DbContextOptionsBuilderExtensions
         ArgumentNullException.ThrowIfNull(optionsBuilder);
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
-        return optionsBuilder.AddInterceptors(
-            serviceProvider.GetRequiredService<AuditingSaveChangesInterceptor>());
+        var interceptors = new List<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>
+        {
+            serviceProvider.GetRequiredService<AuditingSaveChangesInterceptor>()
+        };
+
+        OutboxSaveChangesInterceptor? outboxSaveChanges = serviceProvider.GetService<OutboxSaveChangesInterceptor>();
+        OutboxTransactionInterceptor? outboxTransaction = serviceProvider.GetService<OutboxTransactionInterceptor>();
+        if (outboxSaveChanges is not null)
+        {
+            interceptors.Add(outboxSaveChanges);
+        }
+        if (outboxTransaction is not null)
+        {
+            interceptors.Add(outboxTransaction);
+        }
+
+        return optionsBuilder.AddInterceptors(interceptors);
     }
 }
