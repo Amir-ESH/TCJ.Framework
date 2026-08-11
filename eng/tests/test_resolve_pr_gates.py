@@ -4,6 +4,8 @@ import sys
 import unittest
 from pathlib import Path
 
+### This is for Self-Protection fan-out test
+
 ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = ROOT / "eng" / "resolve-pr-gates.py"
 SPEC = importlib.util.spec_from_file_location("resolve_pr_gates", MODULE_PATH)
