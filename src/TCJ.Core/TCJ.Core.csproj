@@ -8,6 +8,6 @@
     <PackageTags>tcj;dotnet;ddd;domain-driven-design;result-pattern;domain-events;entities</PackageTags>
 
     <PublishTrimmed>false</PublishTrimmed>
-    <IsAotCompatible>false</IsAotCompatible>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 </Project>

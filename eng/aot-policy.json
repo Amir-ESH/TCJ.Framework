@@ -39,15 +39,8 @@
     {
       "packageId": "TCJ.Core",
       "tier": "Conditional",
-      "rationale": "TCJ.Core can be consumed only as a conditional Native AOT path while its package metadata continues to opt out of an IsAotCompatible=true claim and no qualifying Full-support evidence has been recorded.",
-      "restrictions": [
-        {
-          "kind": "PackageMetadata",
-          "symbol": "src/TCJ.Core/TCJ.Core.csproj::<IsAotCompatible>false</IsAotCompatible>",
-          "status": "Restricted",
-          "reason": "The current package metadata explicitly declines an IsAotCompatible=true claim. This policy does not change that build property."
-        }
-      ],
+      "rationale": "TCJ.Core is library-level Native AOT and trimming compatible: its production project declares IsAotCompatible=true and the packed-package Core.Console consumer builds with the SDK AOT/trim analyzers enabled. The repository support tier remains Conditional until the packed Native AOT publish-and-execute evidence required for a formal Full support claim is introduced by Important 8.",
+      "restrictions": [],
       "fullSupportEvidence": []
     },
     {

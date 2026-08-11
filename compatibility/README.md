@@ -6,7 +6,7 @@ This workspace behaves like an external application set. It deliberately sits ou
 
 | Consumer | TCJ packages | Runtime check |
 |---|---|---|
-| `Core.Console` | `TCJ.Core` | Result, guards, extensions, time/GUID abstractions |
+| `Core.Console` | `TCJ.Core` | Result, guards, extensions, time/GUID abstractions; package-only AOT/trim analyzer fixture |
 | `DependencyInjection.Console` | Core + DependencyInjection | convention discovery and transient/scoped/singleton/self resolution |
 | `EntityFrameworkCore.Console` | Core + DependencyInjection + EntityFrameworkCore | InMemory repository, specification, Unit of Work, auditing, soft delete |
 | `EntityFrameworkCore.SqlServer.Console` | Core + DependencyInjection + EntityFrameworkCore + SqlServer | SQL Server registration/options/provider resolution without opening a connection |
@@ -66,3 +66,8 @@ python3 eng/verify-consumer-compatibility.py verify \
 To run one fixture, add `--consumer Core.Console` (or another policy consumer name, such as `Outbox.Console`) to `run-compatibility.py`.
 
 Generated restore caches, builds, runtime logs, packages, and reports belong under `artifacts/compatibility/` or consumer `bin`/`obj` directories and are never committed.
+
+`Core.Console` also sets `IsAotCompatible=true`. Because it restores `TCJ.Core` only from the
+candidate NuGet feed, its normal compatibility build is the minimal package-level compile fixture
+for TCJ.Core's SDK trimming, single-file, and AOT analyzers. It intentionally does not set
+`PublishAot=true`; packaged Native AOT publish-and-execute release evidence is owned by Important 8.
