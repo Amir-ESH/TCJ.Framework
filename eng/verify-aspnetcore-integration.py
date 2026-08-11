@@ -226,7 +226,7 @@ def validate_native_aot_smoke() -> None:
     if properties.get("JsonSerializerIsReflectionEnabledByDefault", "").casefold() != "false":
         fail("ASP.NET Core Native AOT smoke project must disable reflection-based System.Text.Json defaults.")
     warning_exceptions = {value.strip() for value in properties.get("WarningsNotAsErrors", "").split(";") if value.strip()}
-    expected_warning_exceptions = {"IDE0011", "CA1001", "CA1512", "CA1859"}
+    expected_warning_exceptions = {"IDE0005", "IDE0011", "CA1001", "CA1512", "CA1859"}
     if warning_exceptions != expected_warning_exceptions:
         fail("ASP.NET Core Native AOT smoke must exempt only the known non-AOT Core diagnostics from warnings-as-errors.")
     project_refs = {item.attrib.get("Include", "").replace("\\", "/") for item in project.findall(".//ProjectReference")}
@@ -275,7 +275,7 @@ def validate_workflows() -> None:
         "tests/TCJ.AspNetCore.NativeAotSmoke/TCJ.AspNetCore.NativeAotSmoke.csproj",
         "dotnet publish",
         "--runtime linux-x64",
-        "-p:WarningsNotAsErrors=IDE0011%3BCA1001%3BCA1512%3BCA1859",
+        "-p:WarningsNotAsErrors=IDE0005%3BIDE0011%3BCA1001%3BCA1512%3BCA1859",
         "Execute Native AOT smoke host",
     ]
     missing = [marker for marker in markers if marker not in workflow]
