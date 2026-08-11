@@ -86,7 +86,7 @@ def load_policy(root: Path = ROOT) -> dict[str, Any]:
     frameworks = data["supportedTargetFrameworks"]
     if not isinstance(frameworks, list) or not frameworks or any(not isinstance(item, str) or not item for item in frameworks):
         fail("supportedTargetFrameworks must be a non-empty string array.")
-    if int(data["minimumConsumerCount"]) < 7: fail("minimumConsumerCount must be at least 7 after the transactional-outbox package consumer was added.")
+    if int(data["minimumConsumerCount"]) < 8: fail("minimumConsumerCount must be at least 8 after the DI AOT-safe analyzer consumer was added.")
     for key in ("requirePackageOnlyReferences", "requireLocalPackageSource", "requireSourcePackageValidation", "requireSymbolPackageValidation", "requireSourceLinkValidation", "failOnWarnings"):
         if data[key] is not True: fail(f"{key} must be true.")
     consumers = data["consumers"]
@@ -96,6 +96,25 @@ def load_policy(root: Path = ROOT) -> dict[str, Any]:
     if len(names) != len(consumers) or len(names) != len(set(names)): fail("Consumer names must be unique strings.")
     if set(data["publishedConsumers"]) != {"Core.Console", "AspNetCore.MinimalApi", "FullStack.MinimalApi"}:
         fail("Published-package compatibility must reuse Core, ASP.NET Core, and full-stack consumers.")
+    aot_safe_consumers = [item for item in consumers if item.get("name") == "DependencyInjection.AotSafe.Console"]
+    if len(aot_safe_consumers) != 1:
+        fail("Compatibility policy must define exactly one DependencyInjection.AotSafe.Console package consumer.")
+    expected_aot_safe_packages = ["TCJ.Core", "TCJ.DependencyInjection"]
+    if aot_safe_consumers[0].get("packages") != expected_aot_safe_packages:
+        fail(f"DependencyInjection.AotSafe.Console must declare exactly {expected_aot_safe_packages}.")
+    aot_safe_project = root / str(aot_safe_consumers[0].get("project", ""))
+    try:
+        aot_safe_root = ET.parse(aot_safe_project).getroot()
+    except (FileNotFoundError, ET.ParseError) as error:
+        fail(f"Invalid DependencyInjection.AotSafe.Console project: {error}")
+    aot_properties = [
+        (node.text or "").strip().casefold()
+        for node in aot_safe_root.iter()
+        if strip_namespace(node.tag) == "IsAotCompatible"
+    ]
+    if aot_properties != ["true"]:
+        fail("DependencyInjection.AotSafe.Console must set IsAotCompatible=true so SDK trim/AOT analyzers run at the safe bootstrap call site.")
+
     outbox_consumers = [item for item in consumers if item.get("name") == "Outbox.Console"]
     if len(outbox_consumers) != 1:
         fail("Compatibility policy must define exactly one Outbox.Console package consumer.")

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,10 @@ namespace TCJ.DependencyInjection.Extensions;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    private const string ConventionScanningRequiresUnreferencedCodeMessage =
+        "Convention-based dependency scanning uses runtime reflection over consumer assemblies and is not trimming-safe. " +
+        "Use the parameterless AddTcjDependencyInjection() overload and register application services explicitly.";
+
     // Stryker disable once all: MTP 4.16 reuses the test host; mutating this process-wide registration table can contaminate later mutant sessions.
     private static readonly DependencyLifetimeDefinition[] LifetimeDefinitions =
     [
@@ -29,10 +34,38 @@ public static class ServiceCollectionExtensions
     ];
 
     /// <summary>
+    /// Registers the reflection-free TCJ framework defaults without scanning application assemblies.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    /// <returns>The same service collection so additional registrations can be chained.</returns>
+    /// <remarks>
+    /// This is the trimming-safe bootstrap path. Register application services explicitly with
+    /// <see cref="IServiceCollection"/> after calling this method.
+    /// </remarks>
+    public static IServiceCollection AddTcjDependencyInjection(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        lock (services)
+        {
+            DependencyInjectionTelemetryDiagnostics.ObserveRegistration(
+                services,
+                () => RegisterFrameworkServices(services));
+        }
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers TCJ framework defaults and scans the supplied assemblies for lifetime markers.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
     /// <param name="assemblies">The explicit assemblies to scan.</param>
+    /// <remarks>
+    /// This overload uses runtime reflection to discover application types. In trimmed or Native AOT
+    /// applications, use the parameterless overload and register application services explicitly.
+    /// </remarks>
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
         this IServiceCollection services,
         params Assembly[] assemblies)
@@ -50,6 +83,11 @@ public static class ServiceCollectionExtensions
     /// Registers TCJ framework defaults and convention-based dependencies using
     /// caller-provided options.
     /// </summary>
+    /// <remarks>
+    /// This overload can select runtime assembly scanning and is therefore trimming-restricted.
+    /// Use the parameterless overload for the reflection-free framework bootstrap.
+    /// </remarks>
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
         this IServiceCollection services,
         Action<TcjDependencyInjectionOptions> configure)
@@ -67,6 +105,11 @@ public static class ServiceCollectionExtensions
     /// Registers TCJ framework defaults and convention-based dependencies using
     /// an existing options instance.
     /// </summary>
+    /// <remarks>
+    /// This overload can select runtime assembly scanning and is therefore trimming-restricted.
+    /// Use the parameterless overload for the reflection-free framework bootstrap.
+    /// </remarks>
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
         this IServiceCollection services,
         TcjDependencyInjectionOptions options)
@@ -233,6 +276,7 @@ public static class ServiceCollectionExtensions
         return serviceType;
     }
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static IEnumerable<Type> GetPublicConcreteTypes(Assembly assembly)
     {
         try

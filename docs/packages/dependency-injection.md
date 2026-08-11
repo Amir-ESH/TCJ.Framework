@@ -1,8 +1,30 @@
 # TCJ.DependencyInjection
 
-This package adds explicit assembly scanning, lifetime markers, framework defaults, and sequential domain-event dispatching.
+This package provides a reflection-free TCJ framework bootstrap, opt-in convention scanning, lifetime markers, framework defaults, and sequential domain-event dispatching.
 
-## Registration
+## Reflection-free bootstrap
+
+Use the parameterless overload when application code must remain trimming-aware or Native AOT friendly:
+
+```csharp
+builder.Services.AddTcjDependencyInjection();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddTransient<IDomainEventHandler<ProductCreated>, ProductCreatedHandler>();
+```
+
+`AddTcjDependencyInjection()` registers only TCJ framework defaults. It does not enumerate or scan application assemblies. Application services and domain-event handlers are registered explicitly through normal `IServiceCollection` APIs.
+
+The framework defaults are:
+
+- `TimeProvider.System`
+- `IGuidGenerator` as a singleton
+- `IDomainEventDispatcher` as scoped
+
+Repeated calls are safe because these framework registrations use duplicate protection.
+
+## Convention scanning
+
+Existing non-trimmed applications can continue to scan explicitly supplied assemblies:
 
 ```csharp
 builder.Services.AddTcjDependencyInjection(typeof(Program).Assembly);
@@ -18,7 +40,7 @@ builder.Services.AddTcjDependencyInjection(options =>
 });
 ```
 
-Only public, concrete types in the supplied assemblies are scanned.
+Only public, concrete types in the supplied assemblies are scanned. The assembly/options overloads are annotated with `RequiresUnreferencedCode` because arbitrary runtime assembly discovery is not a reliable trimming contract. Those overloads remain available for regular JIT/non-trimmed applications.
 
 ## Lifetime markers
 
@@ -50,15 +72,9 @@ Available self-registration markers:
 
 A type must not implement more than one TCJ lifetime marker. A non-self marker also requires at least one service interface.
 
-## Framework services
+## Framework services with scanning options
 
-With `RegisterFrameworkServices = true`, the package registers:
-
-- `TimeProvider.System`
-- `IGuidGenerator` as a singleton
-- `IDomainEventDispatcher` as scoped
-
-Disable these defaults only when the host supplies replacements:
+`RegisterFrameworkServices` remains available on the convention-scanning options for existing consumers. Disable these defaults only when the host supplies replacements:
 
 ```csharp
 builder.Services.AddTcjDependencyInjection(options =>
@@ -70,7 +86,7 @@ builder.Services.AddTcjDependencyInjection(options =>
 
 ## Domain-event handlers
 
-Public implementations of `IDomainEventHandler<TEvent>` are registered as transient services when `RegisterDomainEventHandlers` is enabled.
+Public implementations of `IDomainEventHandler<TEvent>` are registered as transient services when convention scanning is used and `RegisterDomainEventHandlers` is enabled.
 
 ```csharp
 public sealed class ProductCreatedHandler
@@ -85,4 +101,6 @@ public sealed class ProductCreatedHandler
 }
 ```
 
-The dispatcher invokes events in collection order and handlers sequentially. An exception stops the current dispatch; the dispatcher does not swallow failures or execute handlers in parallel.
+On the reflection-free path, register handlers explicitly with `IServiceCollection`, as shown above. The dispatcher invokes events in collection order and handlers sequentially. An exception stops the current dispatch; the dispatcher does not swallow failures or execute handlers in parallel.
+
+See [Native AOT and trimming](../guides/native-aot-and-trimming.md) for the supported and restricted DI paths.

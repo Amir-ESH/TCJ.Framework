@@ -46,25 +46,25 @@
     {
       "packageId": "TCJ.DependencyInjection",
       "tier": "Conditional",
-      "rationale": "Framework-service registration can be used without scanning application assemblies, but convention registration performs runtime reflection over supplied assemblies.",
+      "rationale": "The parameterless AddTcjDependencyInjection() overload is a dedicated reflection-free framework bootstrap. Convention-scanning overloads remain available for compatibility and are explicitly trimming-restricted; package-wide AOT analyzer compatibility is deferred to Important 5.",
       "restrictions": [
         {
           "kind": "PublicApi",
           "symbol": "TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, params Assembly[])",
           "status": "Restricted",
-          "reason": "Supplying one or more assemblies invokes Assembly.GetTypes()-based convention scanning. Native AOT callers must not rely on this reflection-discovery path unless the application independently preserves every discovered type."
+          "reason": "This overload invokes Assembly.GetTypes()-based convention scanning and is annotated with RequiresUnreferencedCode. Trimming-aware callers should use the parameterless bootstrap and explicit IServiceCollection registration instead."
         },
         {
           "kind": "PublicApi",
           "symbol": "TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, Action<TcjDependencyInjectionOptions>)",
           "status": "Restricted",
-          "reason": "The overload is AOT-safe only while the configured assembly scan set remains empty. Adding assemblies selects the reflection-discovery path."
+          "reason": "This scanner-capable overload is annotated with RequiresUnreferencedCode because the configure callback can select reflection-based assembly discovery. Use the parameterless bootstrap for the reflection-free path."
         },
         {
           "kind": "PublicApi",
           "symbol": "TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, TcjDependencyInjectionOptions)",
           "status": "Restricted",
-          "reason": "The overload is AOT-safe only while TcjDependencyInjectionOptions.Assemblies is empty; populated scan sets are enumerated through runtime reflection."
+          "reason": "This scanner-capable overload is annotated with RequiresUnreferencedCode because populated options are enumerated through runtime reflection. Use the parameterless bootstrap for the reflection-free path."
         },
         {
           "kind": "PublicApi",
