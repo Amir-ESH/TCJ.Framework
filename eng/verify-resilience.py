@@ -188,10 +188,12 @@ def validate_automation_and_docs() -> None:
     require_text(ROOT / ".github/workflows/ci.yml", [
         "verify-resilience.py validate-config", "TCJ.Resilience.Tests.csproj", "TestResults/Resilience"])
     dedicated = require_text(ROOT / ".github/workflows/resilience.yml", [
-        "workflow_call:", "pull_request:", "schedule:", "Category=SqlServer", "RESILIENCE_SUMMARY.md",
+        "workflow_call:", "schedule:", "Category=SqlServer", "RESILIENCE_SUMMARY.md",
         "artifacts/resilience/traces", "actions/upload-artifact"])
     if "paths:" not in dedicated:
-        fail("Dedicated resilience workflow must use relevant path triggers.")
+        fail("Dedicated resilience workflow must use relevant push path triggers.")
+    require_text(ROOT / ".github/workflows/required-pr-gate.yml", [
+        "pull_request:", "uses: ./.github/workflows/resilience.yml", "name: Required PR Gate"])
     require_text(ROOT / ".github/workflows/release-preflight.yml", ["resilience", "./.github/workflows/resilience.yml"])
     require_text(ROOT / ".github/workflows/release.yml", ["resilience", "./.github/workflows/resilience.yml"])
     require_text(ROOT / ".github/workflows/published-package-smoke.yml", ["resilience", "TCJ_RESILIENCE_SMOKE"])

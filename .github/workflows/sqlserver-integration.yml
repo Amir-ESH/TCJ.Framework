@@ -39,44 +39,6 @@ on:
       - "global.json"
       - ".github/workflows/sqlserver-integration.yml"
 
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - "src/TCJ.Core/**"
-      - "compatibility/Consumers/EntityFrameworkCore.Console/**"
-      - "compatibility/Consumers/EntityFrameworkCore.SqlServer.Console/**"
-      - "compatibility/Consumers/FullStack.MinimalApi/**"
-      - "compatibility/Directory.Build.props"
-      - "compatibility/Directory.Packages.props"
-      - "compatibility/NuGet.Config"
-      - "compatibility/NuGet.Published.Config"
-      - "upgrade-tests/Scenarios/EntityFrameworkCoreConsumer/**"
-      - "upgrade-tests/Scenarios/EntityFrameworkCore.SqlServerConsumer/**"
-      - "upgrade-tests/Scenarios/FullStackConsumer/**"
-      - "upgrade-tests/Directory.Build.props"
-      - "upgrade-tests/Directory.Packages.props"
-      - "upgrade-tests/NuGet.Baseline.Config"
-      - "upgrade-tests/NuGet.Target.Config"
-      - "eng/upgrade-compatibility-policy.json"
-      - "eng/breaking-changes.json"
-      - "src/TCJ.DependencyInjection/**"
-      - "src/TCJ.EntityFrameworkCore/**"
-      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
-      - "tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/**"
-      - "tests/TCJ.Resilience.Tests/**"
-      - "eng/resilience-policy.json"
-      - "eng/resilience-contract.json"
-      - "eng/verify-resilience.py"
-      - "eng/sqlserver-integration-policy.json"
-      - "eng/verify-sqlserver-integration.py"
-      - "Directory.Build.props"
-      - "Directory.Packages.props"
-      - "NuGet.Config"
-      - "global.json"
-      - ".github/workflows/sqlserver-integration.yml"
-
   workflow_dispatch:
 
   workflow_call:

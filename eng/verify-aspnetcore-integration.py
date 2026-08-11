@@ -216,7 +216,6 @@ def validate_workflows() -> None:
         fail(f"Dedicated ASP.NET Core integration workflow is missing: {EXPECTED_WORKFLOW}")
     markers = [
         "name: ASP.NET Core integration",
-        "pull_request:",
         "push:",
         "workflow_dispatch:",
         "workflow_call:",
@@ -234,6 +233,10 @@ def validate_workflows() -> None:
     missing = [marker for marker in markers if marker not in workflow]
     if missing:
         fail("Dedicated ASP.NET Core workflow is missing required markers: " + ", ".join(missing))
+
+    gate = (ROOT / ".github/workflows/required-pr-gate.yml").read_text(encoding="utf-8")
+    if "pull_request:" not in gate or "uses: ./.github/workflows/aspnetcore-integration.yml" not in gate:
+        fail("Required PR Gate must route relevant pull requests through ASP.NET Core integration.")
 
     ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     if "verify-aspnetcore-integration.py validate-config" not in ci:

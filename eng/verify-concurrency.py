@@ -220,7 +220,7 @@ def validate_workflows() -> None:
     require(EXPECTED_WORKFLOW.is_file(), "Dedicated concurrency stress workflow is missing.")
     workflow = EXPECTED_WORKFLOW.read_text(encoding="utf-8")
     markers = [
-        "name: Concurrency stress", "pull_request:", "push:", "workflow_dispatch:", "workflow_call:", "schedule:",
+        "name: Concurrency stress", "push:", "workflow_dispatch:", "workflow_call:", "schedule:",
         "Run core stress tests", "Run ASP.NET Core stress tests", "Run SQL Server stress tests",
         "verify-concurrency.py validate-config", "verify-concurrency.py verify", "GITHUB_STEP_SUMMARY",
         "actions/upload-artifact", "TCJ_STRESS_SEED", "scheduledSeeds", "cancel-in-progress:",
@@ -229,6 +229,10 @@ def validate_workflows() -> None:
     missing = [marker for marker in markers if marker not in workflow]
     require(not missing, f"Concurrency workflow is missing required markers: {missing}")
     require("retry" not in workflow.lower(), "Concurrency workflow must not hide failures with automatic retries.")
+
+    gate = (ROOT / ".github/workflows/required-pr-gate.yml").read_text(encoding="utf-8")
+    require("pull_request:" in gate and "uses: ./.github/workflows/concurrency-stress.yml" in gate,
+            "Required PR Gate must route relevant pull requests through concurrency stress validation.")
 
     ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     require("verify-concurrency.py validate-config" in ci, "Normal CI must validate concurrency configuration.")

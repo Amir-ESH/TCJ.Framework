@@ -1,6 +1,8 @@
 name: Mutation testing
 
 on:
+  workflow_call:
+
   workflow_dispatch:
     inputs:
       mode:
@@ -16,11 +18,6 @@ on:
     - cron: "17 3 * * 1"
 
   push:
-    branches:
-      - main
-      - develop
-
-  pull_request:
     branches:
       - main
       - develop

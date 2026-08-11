@@ -36,25 +36,6 @@ on:
       - ".github/workflows/release.yml"
       - "Directory.Packages.props"
       - "TCJ.slnx"
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - "src/TCJ.Core/**"
-      - "src/TCJ.DependencyInjection/**"
-      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
-      - "tests/TCJ.Resilience.Tests/**"
-      - "eng/resilience-policy.json"
-      - "eng/resilience-contract.json"
-      - "eng/verify-resilience.py"
-      - "eng/observability-*.json"
-      - "benchmarks/TCJ.Benchmarks/**"
-      - "docs/resilience.md"
-      - ".github/workflows/resilience.yml"
-      - ".github/workflows/release-preflight.yml"
-      - ".github/workflows/release.yml"
-      - "Directory.Packages.props"
-      - "TCJ.slnx"
-
 permissions:
   contents: read
 

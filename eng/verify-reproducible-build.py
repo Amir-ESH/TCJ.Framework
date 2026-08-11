@@ -417,10 +417,14 @@ def validate_configuration(root: Path = ROOT, *, check_git: bool = True) -> Poli
             "name: Reproducible builds",
             "workflow_dispatch:",
             "schedule:",
-            "pull_request:",
+            "workflow_call:",
             "name: Compare package builds",
             "uses: actions/upload-artifact@v7",
         ),
+    )
+    require_fragments(
+        root / ".github/workflows/required-pr-gate.yml",
+        ("pull_request:", "uses: ./.github/workflows/reproducible-builds.yml", "name: Required PR Gate"),
     )
     isolated_workflows = (
         dedicated,

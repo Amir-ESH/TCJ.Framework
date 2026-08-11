@@ -1,0 +1,224 @@
+name: Required PR orchestration
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - edited
+
+permissions:
+  contents: read
+
+concurrency:
+  group: required-pr-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Resolve required checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      ci: ${{ steps.resolve.outputs.ci }}
+      dependency_review: ${{ steps.resolve.outputs.dependency_review }}
+      mutation: ${{ steps.resolve.outputs.mutation }}
+      reproducible_builds: ${{ steps.resolve.outputs.reproducible_builds }}
+      documentation: ${{ steps.resolve.outputs.documentation }}
+      sqlserver_integration: ${{ steps.resolve.outputs.sqlserver_integration }}
+      aspnetcore_integration: ${{ steps.resolve.outputs.aspnetcore_integration }}
+      consumer_compatibility: ${{ steps.resolve.outputs.consumer_compatibility }}
+      upgrade_compatibility: ${{ steps.resolve.outputs.upgrade_compatibility }}
+      property_fuzz: ${{ steps.resolve.outputs.property_fuzz }}
+      concurrency_stress: ${{ steps.resolve.outputs.concurrency_stress }}
+      resilience: ${{ steps.resolve.outputs.resilience }}
+      health_checks: ${{ steps.resolve.outputs.health_checks }}
+      transactional_outbox: ${{ steps.resolve.outputs.transactional_outbox }}
+      performance: ${{ steps.resolve.outputs.performance }}
+      plan_json: ${{ steps.resolve.outputs.plan_json }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate gate resolver
+        run: |
+          python3 -m py_compile eng/resolve-pr-gates.py
+          python3 -m unittest eng.tests.test_resolve_pr_gates
+
+      - name: Resolve branch-aware PR checks
+        id: resolve
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+        run: >
+          python3 eng/resolve-pr-gates.py resolve
+          --base "$BASE_SHA"
+          --head "$HEAD_SHA"
+          --target "$TARGET_BRANCH"
+          --github-output "$GITHUB_OUTPUT"
+          --summary artifacts/required-pr-gate/PLAN.md
+
+      - name: Publish selected gate plan
+        run: cat artifacts/required-pr-gate/PLAN.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload gate plan
+        uses: actions/upload-artifact@v7
+        with:
+          name: required-pr-gate-plan-${{ github.run_id }}
+          path: artifacts/required-pr-gate/PLAN.md
+          if-no-files-found: error
+          retention-days: 14
+
+  ci:
+    name: Core CI
+    needs: plan
+    if: needs.plan.outputs.ci == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  dependency_review:
+    name: Dependency review
+    needs: plan
+    if: needs.plan.outputs.dependency_review == 'true'
+    uses: ./.github/workflows/dependency-review.yml
+
+  mutation:
+    name: Mutation testing
+    needs: plan
+    if: needs.plan.outputs.mutation == 'true'
+    uses: ./.github/workflows/mutation-testing.yml
+
+  reproducible_builds:
+    name: Reproducible builds
+    needs: plan
+    if: needs.plan.outputs.reproducible_builds == 'true'
+    uses: ./.github/workflows/reproducible-builds.yml
+
+  documentation:
+    name: Documentation
+    needs: plan
+    if: needs.plan.outputs.documentation == 'true'
+    uses: ./.github/workflows/documentation.yml
+
+  sqlserver_integration:
+    name: SQL Server integration
+    needs: plan
+    if: needs.plan.outputs.sqlserver_integration == 'true'
+    uses: ./.github/workflows/sqlserver-integration.yml
+
+  aspnetcore_integration:
+    name: ASP.NET Core integration
+    needs: plan
+    if: needs.plan.outputs.aspnetcore_integration == 'true'
+    uses: ./.github/workflows/aspnetcore-integration.yml
+
+  consumer_compatibility:
+    name: Package consumer compatibility
+    needs: plan
+    if: needs.plan.outputs.consumer_compatibility == 'true'
+    uses: ./.github/workflows/consumer-compatibility.yml
+    with:
+      version_source: packaging-props
+
+  upgrade_compatibility:
+    name: Package upgrade compatibility
+    needs: plan
+    if: needs.plan.outputs.upgrade_compatibility == 'true'
+    uses: ./.github/workflows/upgrade-compatibility.yml
+
+  property_fuzz:
+    name: Property and fuzz testing
+    needs: plan
+    if: needs.plan.outputs.property_fuzz == 'true'
+    uses: ./.github/workflows/fuzzing.yml
+
+  concurrency_stress:
+    name: Concurrency stress
+    needs: plan
+    if: needs.plan.outputs.concurrency_stress == 'true'
+    uses: ./.github/workflows/concurrency-stress.yml
+    with:
+      mode: release
+
+  resilience:
+    name: Resilience fault injection
+    needs: plan
+    if: needs.plan.outputs.resilience == 'true'
+    uses: ./.github/workflows/resilience.yml
+    with:
+      mode: full
+
+  health_checks:
+    name: Health checks
+    needs: plan
+    if: needs.plan.outputs.health_checks == 'true'
+    uses: ./.github/workflows/health-checks.yml
+
+  transactional_outbox:
+    name: Transactional outbox
+    needs: plan
+    if: needs.plan.outputs.transactional_outbox == 'true'
+    uses: ./.github/workflows/outbox.yml
+
+  performance:
+    name: Performance benchmarks
+    needs: plan
+    if: needs.plan.outputs.performance == 'true'
+    uses: ./.github/workflows/performance-benchmarks.yml
+    with:
+      mode: short
+
+  required:
+    name: Required PR Gate
+    if: ${{ always() }}
+    needs:
+      - plan
+      - ci
+      - dependency_review
+      - mutation
+      - reproducible_builds
+      - documentation
+      - sqlserver_integration
+      - aspnetcore_integration
+      - consumer_compatibility
+      - upgrade_compatibility
+      - property_fuzz
+      - concurrency_stress
+      - resilience
+      - health_checks
+      - transactional_outbox
+      - performance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify every selected workflow passed
+        env:
+          PLAN_JSON: ${{ needs.plan.outputs.plan_json }}
+          RESULTS_JSON: >-
+            {"ci":"${{ needs.ci.result }}","dependency_review":"${{ needs.dependency_review.result }}","mutation":"${{ needs.mutation.result }}","reproducible_builds":"${{ needs.reproducible_builds.result }}","documentation":"${{ needs.documentation.result }}","sqlserver_integration":"${{ needs.sqlserver_integration.result }}","aspnetcore_integration":"${{ needs.aspnetcore_integration.result }}","consumer_compatibility":"${{ needs.consumer_compatibility.result }}","upgrade_compatibility":"${{ needs.upgrade_compatibility.result }}","property_fuzz":"${{ needs.property_fuzz.result }}","concurrency_stress":"${{ needs.concurrency_stress.result }}","resilience":"${{ needs.resilience.result }}","health_checks":"${{ needs.health_checks.result }}","transactional_outbox":"${{ needs.transactional_outbox.result }}","performance":"${{ needs.performance.result }}"}
+        run: >
+          python3 eng/resolve-pr-gates.py verify-results
+          --plan-json "$PLAN_JSON"
+          --results-json "$RESULTS_JSON"
+
+      - name: Publish aggregate result
+        if: always()
+        env:
+          TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+        run: |
+          echo "# Required PR Gate" >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo "Target: \`$TARGET_BRANCH\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "All checks selected by the branch-aware gate policy must succeed before merge." >> "$GITHUB_STEP_SUMMARY"

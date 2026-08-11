@@ -22,24 +22,6 @@ on:
       - ".github/workflows/release.yml"
       - "Directory.Packages.props"
       - "TCJ.slnx"
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - "src/TCJ.Core/**"
-      - "src/TCJ.EntityFrameworkCore/**"
-      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
-      - "src/TCJ.AspNetCore/**"
-      - "tests/TCJ.Outbox.Tests/**"
-      - "eng/outbox-*.json"
-      - "eng/verify-outbox.py"
-      - "docs/outbox.md"
-      - ".github/workflows/outbox.yml"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/release-preflight.yml"
-      - ".github/workflows/release.yml"
-      - "Directory.Packages.props"
-      - "TCJ.slnx"
-
 permissions:
   contents: read
 
