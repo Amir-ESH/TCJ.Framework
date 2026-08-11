@@ -8,11 +8,12 @@ Use the parameterless overload when application code must remain trimming-aware 
 
 ```csharp
 builder.Services.AddTcjDependencyInjection();
+builder.Services.AddTcjDomainEvent<ProductCreated>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddTransient<IDomainEventHandler<ProductCreated>, ProductCreatedHandler>();
 ```
 
-`AddTcjDependencyInjection()` registers only TCJ framework defaults. It does not enumerate or scan application assemblies. Application services and domain-event handlers are registered explicitly through normal `IServiceCollection` APIs.
+`AddTcjDependencyInjection()` registers only TCJ framework defaults. It does not enumerate or scan application assemblies. `AddTcjDomainEvent<TEvent>()` declares the closed event type used by the reflection-free dispatcher and does not discover handlers. Application services and handlers are registered explicitly through normal `IServiceCollection` APIs.
 
 The framework defaults are:
 
@@ -20,7 +21,7 @@ The framework defaults are:
 - `IGuidGenerator` as a singleton
 - `IDomainEventDispatcher` as scoped
 
-Repeated calls are safe because these framework registrations use duplicate protection.
+Repeated bootstrap and closed event-route registrations are safe because they use duplicate protection.
 
 ## Convention scanning
 
@@ -40,7 +41,7 @@ builder.Services.AddTcjDependencyInjection(options =>
 });
 ```
 
-Only public, concrete types in the supplied assemblies are scanned. The assembly/options overloads are annotated with `RequiresUnreferencedCode` because arbitrary runtime assembly discovery is not a reliable trimming contract. Those overloads remain available for regular JIT/non-trimmed applications.
+Only public, concrete types in the supplied assemblies are scanned. The assembly/options overloads are annotated with both `RequiresUnreferencedCode` and `RequiresDynamicCode` because arbitrary runtime assembly discovery and the scanner-compatible runtime-generic dispatch fallback are not reliable trimming/Native AOT contracts. Those overloads remain available for regular JIT/non-trimmed applications.
 
 ## Lifetime markers
 
@@ -101,6 +102,6 @@ public sealed class ProductCreatedHandler
 }
 ```
 
-On the reflection-free path, register handlers explicitly with `IServiceCollection`, as shown above. The dispatcher invokes events in collection order and handlers sequentially. An exception stops the current dispatch; the dispatcher does not swallow failures or execute handlers in parallel.
+On the reflection-free path, declare every dispatched event type with `AddTcjDomainEvent<TEvent>()` and register handlers explicitly with `IServiceCollection`, as shown above. Handler lifetimes remain exactly the lifetime chosen by the application. The dispatcher invokes events in collection order and handlers sequentially. An exception stops the current dispatch; the dispatcher does not swallow failures or execute handlers in parallel.
 
 See [Native AOT and trimming](../guides/native-aot-and-trimming.md) for the supported and restricted DI paths.

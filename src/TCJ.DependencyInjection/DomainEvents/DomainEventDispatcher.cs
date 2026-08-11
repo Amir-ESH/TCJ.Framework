@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using TCJ.Core.DomainEvents;
 
@@ -16,9 +15,6 @@ namespace TCJ.DependencyInjection.DomainEvents;
 /// </remarks>
 public sealed class DomainEventDispatcher : IDomainEventDispatcher
 {
-    // Stryker disable once all: MTP 4.16 reuses the test host; mutating this process-wide cache can contaminate later mutant sessions.
-    private static readonly ConcurrentDictionary<Type, ObjectFactory> InvokerFactories = new();
-
     private readonly IServiceProvider _serviceProvider;
 
     public DomainEventDispatcher(IServiceProvider serviceProvider)
@@ -45,30 +41,23 @@ public sealed class DomainEventDispatcher : IDomainEventDispatcher
                     nameof(domainEvents));
             }
 
-            var invoker = CreateInvoker(domainEvent.GetType());
+            Type eventType = domainEvent.GetType();
+            IDomainEventDispatchRoute[] routes = _serviceProvider
+                .GetServices<IDomainEventDispatchRoute>()
+                .ToArray();
 
-            await invoker
-                .InvokeAsync(domainEvent, cancellationToken)
+            IDomainEventDispatchRoute? route = routes
+                .FirstOrDefault(candidate => candidate.EventType == eventType)
+                ?? routes.FirstOrDefault(candidate => candidate.EventType is null);
+
+            if (route is null)
+            {
+                continue;
+            }
+
+            await route
+                .InvokeAsync(_serviceProvider, domainEvent, cancellationToken)
                 .ConfigureAwait(false);
         }
-    }
-
-    private IDomainEventHandlerInvoker CreateInvoker(Type eventType)
-    {
-        var factory = InvokerFactories.GetOrAdd(
-            eventType,
-            static type =>
-            {
-                var invokerType = typeof(DomainEventHandlerInvoker<>)
-                    .MakeGenericType(type);
-
-                return ActivatorUtilities.CreateFactory(
-                    invokerType,
-                    new[] { typeof(IServiceProvider) });
-            });
-
-        return (IDomainEventHandlerInvoker)factory(
-            _serviceProvider,
-            new object[] { _serviceProvider });
     }
 }

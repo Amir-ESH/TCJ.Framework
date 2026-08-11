@@ -6,6 +6,8 @@
     <Title>TCJ Dependency Injection</Title>
     <Description>Convention-based dependency registration and sequential domain-event dispatching for modular .NET applications.</Description>
     <PackageTags>tcj;dotnet;dependency-injection;di;domain-events;modular</PackageTags>
+
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

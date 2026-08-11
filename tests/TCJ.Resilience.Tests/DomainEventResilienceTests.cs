@@ -169,6 +169,7 @@ public sealed class DomainEventResilienceTests
     {
         var services = new ServiceCollection();
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+        services.AddTcjDomainEvent<TestEvent>();
         foreach (IDomainEventHandler<TestEvent> handler in handlers)
         {
             services.AddSingleton(typeof(IDomainEventHandler<TestEvent>), handler);

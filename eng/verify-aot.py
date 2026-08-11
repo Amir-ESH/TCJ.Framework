@@ -37,7 +37,14 @@ ANALYZER_PROPERTIES = (
 )
 REPORT_SCHEMA_VERSION = 1
 ANALYZER_FIXTURES = {
-    "TCJ.Core": "compatibility/Consumers/Core.Console/Core.Console.csproj",
+    "TCJ.Core": (
+        "compatibility/Consumers/Core.Console/Core.Console.csproj",
+        ("TCJ.Core",),
+    ),
+    "TCJ.DependencyInjection": (
+        "compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj",
+        ("TCJ.Core", "TCJ.DependencyInjection"),
+    ),
 }
 
 
@@ -283,14 +290,30 @@ def _validate_full_project_contract(
     return findings
 
 
-def _validate_analyzer_fixture(package_id: str, root: Path) -> list[Finding]:
-    relative_fixture = ANALYZER_FIXTURES.get(package_id)
-    if relative_fixture is None:
+def _validate_analyzer_fixture(package_id: str, project: Path, root: Path) -> list[Finding]:
+    fixture_definition = ANALYZER_FIXTURES.get(package_id)
+    if fixture_definition is None:
         return []
+
+    relative_fixture, expected_tcj_packages = fixture_definition
+    findings: list[Finding] = []
+
+    project_aot_values = _property_values(project, "IsAotCompatible")
+    if not any(value.lower() == "true" and not condition for value, condition in project_aot_values):
+        findings.append(
+            Finding(
+                package_id,
+                "AOT006",
+                repo_relative(project, root),
+                "IsAotCompatible",
+                " | ".join(value for value, _ in project_aot_values) or "<missing>",
+                "A package with an analyzer fixture must unconditionally declare IsAotCompatible=true so its own SDK AOT/trim analyzers run.",
+            )
+        )
 
     fixture = root / relative_fixture
     if not fixture.is_file():
-        return [
+        findings.append(
             Finding(
                 package_id,
                 "AOT006",
@@ -299,12 +322,13 @@ def _validate_analyzer_fixture(package_id: str, root: Path) -> list[Finding]:
                 "missing",
                 "The package-level AOT/trim analyzer fixture is missing.",
             )
-        ]
+        )
+        return findings
 
     try:
         xml_root = ET.parse(fixture).getroot()
     except ET.ParseError as error:
-        return [
+        findings.append(
             Finding(
                 package_id,
                 "AOT006",
@@ -313,9 +337,9 @@ def _validate_analyzer_fixture(package_id: str, root: Path) -> list[Finding]:
                 "invalid XML",
                 f"The package-level analyzer fixture is invalid XML: {error}",
             )
-        ]
+        )
+        return findings
 
-    findings: list[Finding] = []
     aot_values = _property_values(fixture, "IsAotCompatible")
     if not any(value.lower() == "true" and not condition for value, condition in aot_values):
         findings.append(
@@ -337,7 +361,8 @@ def _validate_analyzer_fixture(package_id: str, root: Path) -> list[Finding]:
     tcj_package_references = sorted(
         value for value in package_references if value.startswith("TCJ.")
     )
-    if tcj_package_references != [package_id]:
+    expected_references = sorted(expected_tcj_packages)
+    if tcj_package_references != expected_references:
         findings.append(
             Finding(
                 package_id,
@@ -345,7 +370,9 @@ def _validate_analyzer_fixture(package_id: str, root: Path) -> list[Finding]:
                 relative_fixture,
                 "PackageReference",
                 ", ".join(tcj_package_references) or "<missing>",
-                f"The analyzer fixture must consume only the packed {package_id} package from the TCJ package set.",
+                "The analyzer fixture must consume exactly the expected packed TCJ package closure: "
+                + ", ".join(expected_references)
+                + ".",
             )
         )
 
@@ -455,7 +482,7 @@ def verify_repository(
             packages.append(_snapshot(package, project, root))
             evaluation_files = _project_evaluation_files(project, root)
             findings.extend(_validate_full_project_contract(package, evaluation_files, root))
-            findings.extend(_validate_analyzer_fixture(package.package_id, root))
+            findings.extend(_validate_analyzer_fixture(package.package_id, project, root))
             findings.extend(
                 _detect_suppressions(
                     package.package_id,

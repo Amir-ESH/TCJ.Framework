@@ -115,6 +115,24 @@ def load_policy(root: Path = ROOT) -> dict[str, Any]:
     if aot_properties != ["true"]:
         fail("DependencyInjection.AotSafe.Console must set IsAotCompatible=true so SDK trim/AOT analyzers run at the safe bootstrap call site.")
 
+    aot_safe_program = aot_safe_project.parent / "Program.cs"
+    try:
+        aot_safe_source = aot_safe_program.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        fail("DependencyInjection.AotSafe.Console must include Program.cs with explicit AOT-safe domain-event dispatch coverage.")
+    for required_fragment in (
+        "AddTcjDependencyInjection()",
+        "AddTcjDomainEvent<",
+        "AddTransient<IDomainEventHandler<",
+        "DispatchAsync(",
+    ):
+        if required_fragment not in aot_safe_source:
+            fail(
+                "DependencyInjection.AotSafe.Console must exercise the reflection-free bootstrap, "
+                "a closed domain-event route, explicit handler registration, and dispatch; "
+                f"missing {required_fragment!r}."
+            )
+
     outbox_consumers = [item for item in consumers if item.get("name") == "Outbox.Console"]
     if len(outbox_consumers) != 1:
         fail("Compatibility policy must define exactly one Outbox.Console package consumer.")

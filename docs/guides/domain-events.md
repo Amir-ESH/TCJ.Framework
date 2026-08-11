@@ -41,7 +41,17 @@ public sealed class ProductCreatedHandler
 }
 ```
 
-Handlers are discovered when their public assembly is supplied to `AddTcjDependencyInjection`.
+In regular JIT/non-trimmed applications, handlers can be discovered when their public assembly is supplied to the convention-scanning `AddTcjDependencyInjection` overload.
+
+For Native AOT or trimming, use the explicit path instead:
+
+```csharp
+services.AddTcjDependencyInjection();
+services.AddTcjDomainEvent<ProductCreated>();
+services.AddTransient<IDomainEventHandler<ProductCreated>, ProductCreatedHandler>();
+```
+
+`AddTcjDomainEvent<TEvent>()` declares a closed dispatch route only; handler lifetime remains controlled by the normal Microsoft DI registration. Convention scanning stays available but is explicitly restricted for trimming and Native AOT.
 
 ## Dispatch explicitly
 

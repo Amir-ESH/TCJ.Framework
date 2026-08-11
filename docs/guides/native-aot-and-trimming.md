@@ -32,7 +32,7 @@ The support tier keeps the stronger Important 1 contract: **Full** requires a pa
 | Package | Verified library compatibility | Support tier | Current boundary |
 |---|---|---|---|
 | `TCJ.Core` | **Full** | **Conditional** | `src/TCJ.Core/TCJ.Core.csproj` declares `<IsAotCompatible>true</IsAotCompatible>`. The package-only `Core.Console` compatibility consumer enables the SDK AOT/trim analyzers and must build without warnings. The formal support tier remains Conditional until Important 8 records packed Native AOT publish-and-execute evidence. |
-| `TCJ.DependencyInjection` | Not claimed | **Conditional** | The parameterless `AddTcjDependencyInjection()` bootstrap is reflection-free and has a package-only AOT/trim analyzer consumer. Convention-scanning overloads remain restricted and package-wide analyzer compatibility is deferred to Important 5. |
+| `TCJ.DependencyInjection` | **Conditional (explicit path)** | **Conditional** | `src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj` declares `<IsAotCompatible>true</IsAotCompatible>`. The supported analyzer-clean path is `AddTcjDependencyInjection()` + `AddTcjDomainEvent<TEvent>()` + explicit Microsoft DI registrations. Convention scanning remains available but is annotated as trimming- and dynamic-code-restricted. Formal Full support still requires Important 8 packed publish-and-execute evidence. |
 | `TCJ.EntityFrameworkCore` | Not claimed | **Experimental** | EF Core NativeAOT remains upstream-experimental, and TCJ has reflection/dynamic-generic usage paths that require explicit treatment. |
 | `TCJ.EntityFrameworkCore.SqlServer` | Not claimed | **Experimental** | The provider path inherits the upstream EF Core NativeAOT experimental boundary and has no qualifying packed-consumer evidence. |
 | `TCJ.AspNetCore` | Not claimed | **Conditional** | The application must remain inside ASP.NET Core features that are supported by Native AOT; ASP.NET Core's AOT support is feature-dependent. |
@@ -48,11 +48,19 @@ The fixture is intentionally compile/runtime-check only and does not set `Publis
 
 ## Restricted TCJ usage paths
 
-### TCJ.DependencyInjection bootstrap and convention scanning
+### TCJ.DependencyInjection explicit path and convention scanning
 
-`TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection)` is the reflection-free framework bootstrap. It registers `TimeProvider`, `IGuidGenerator`, and `IDomainEventDispatcher` directly, never enters the assembly-scan telemetry path, and does not enumerate application assemblies. Application services and domain-event handlers are registered explicitly with normal `IServiceCollection` APIs.
+`TCJ.DependencyInjection` declares `IsAotCompatible=true`. Its supported Native AOT/trimming path is explicit and has three parts:
 
-`compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj` consumes the packed `TCJ.Core` and `TCJ.DependencyInjection` packages and sets `IsAotCompatible=true`. Its build therefore runs the SDK trim/AOT analyzers at the safe bootstrap call site. The fixture is compile/runtime-check only; package-wide `TCJ.DependencyInjection` analyzer compatibility remains Important 5 work.
+```csharp
+services.AddTcjDependencyInjection();
+services.AddTcjDomainEvent<OrderPlaced>();
+services.AddTransient<IDomainEventHandler<OrderPlaced>, OrderPlacedHandler>();
+```
+
+The parameterless `AddTcjDependencyInjection()` overload registers `TimeProvider`, `IGuidGenerator`, and `IDomainEventDispatcher` without assembly enumeration. `AddTcjDomainEvent<TEvent>()` declares a closed generic dispatch route for each event type; it performs no handler discovery. Application services and handlers are then registered with normal Microsoft DI APIs, so their chosen transient/scoped/singleton lifetimes remain consumer-controlled. Domain-event dispatch on this path resolves the closed generic handler collection directly and does not construct generic types from runtime `Type` values.
+
+`compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj` consumes the packed `TCJ.Core` and `TCJ.DependencyInjection` packages, sets `IsAotCompatible=true`, registers a closed event route and handler explicitly, and dispatches a real event. Its normal compatibility build therefore exercises the supported call sites with SDK trim/AOT analyzers enabled. The fixture intentionally remains compile/runtime-check only; Important 8 owns packed `PublishAot=true` publish-and-execute evidence.
 
 The following APIs select or can select runtime assembly scanning and are **restricted** for Native AOT:
 
@@ -61,7 +69,7 @@ The following APIs select or can select runtime assembly scanning and are **rest
 - `TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions.AddTcjDependencyInjection(IServiceCollection, TcjDependencyInjectionOptions)`
 - `TcjDependencyInjectionOptions.AddAssembly`, `AddAssemblies`, and `AddAssemblyContaining<TMarker>` because they opt into convention scanning
 
-The three scanner-capable `AddTcjDependencyInjection` overloads are annotated with `RequiresUnreferencedCode`, so trimming-aware callers receive the platform diagnostic at the API boundary. Their implementation still calls `Assembly.GetTypes()` to discover public concrete types and remains available for regular JIT/non-trimmed applications. TCJ does not add linker-preservation XML or warning suppressions to make scanning appear trim-safe.
+The three scanner-capable `AddTcjDependencyInjection` overloads are annotated with both `RequiresUnreferencedCode` and `RequiresDynamicCode`. They keep the existing `Assembly.GetTypes()` convention discovery and a restricted runtime-generic domain-event dispatch fallback for regular JIT/non-trimmed applications. Trimming/Native AOT callers therefore see the platform restrictions at the public API boundary instead of receiving a silent preservation workaround. TCJ adds no linker-preservation XML and no broad trim/AOT warning suppression for scanning.
 
 ### EF Core reflection and dynamic generic paths
 
@@ -112,7 +120,7 @@ Run the repository-native verifier before opening a pull request that changes AO
 python3 eng/verify-aot.py verify
 ```
 
-The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, and rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns. A package declared **Full** fails verification if an evaluated repository project/props file explicitly sets `IsAotCompatible=false`. It also validates the `TCJ.Core` package-level analyzer fixture: the fixture must enable `IsAotCompatible`, consume only the packed `TCJ.Core` package from the TCJ package set, contain no project reference, and remain compile-only rather than taking over Important 8's publish responsibility.
+The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, and rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns. A package declared **Full** fails verification if an evaluated repository project/props file explicitly sets `IsAotCompatible=false`. It also validates the package-level analyzer fixtures for `TCJ.Core` and `TCJ.DependencyInjection`: each production package must declare `IsAotCompatible=true`, each fixture must enable `IsAotCompatible`, consume the exact expected packed TCJ package closure, contain no project reference, and remain compile-only rather than taking over Important 8's publish responsibility.
 
 Every run writes the deterministic machine-readable result to `artifacts/aot/aot-verification.json`. The report contains no timestamp or machine-specific absolute path, keeps packages and findings in stable order, and records the package, rule, offending project/props file, property, and value for each violation. Generated `artifacts/aot/` output is local evidence and must not be committed.
 
