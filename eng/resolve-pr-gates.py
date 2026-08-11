@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+raise RuntimeError("intentional Required PR Gate fail-closed test")
+
 DEFAULT_POLICY = Path(__file__).with_name("required-pr-gates.json")
 SUCCESS_RESULT = "success"
 ALLOWED_NON_REQUIRED_RESULTS = {"success", "skipped"}
