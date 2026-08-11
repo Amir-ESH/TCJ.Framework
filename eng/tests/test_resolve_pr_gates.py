@@ -31,6 +31,12 @@ class RequiredPrGateTests(unittest.TestCase):
             self.required("develop", "docs/getting-started.md"),
         )
 
+    def test_documentation_pages_workflow_change_runs_documentation_gate(self):
+        self.assertEqual(
+            {"ci", "dependency_review", "documentation"},
+            self.required("develop", ".github/workflows/documentation-pages.yml"),
+        )
+
     def test_outbox_documentation_also_runs_outbox_contract_gate(self):
         selected = self.required("develop", "docs/outbox.md")
         self.assertIn("documentation", selected)
