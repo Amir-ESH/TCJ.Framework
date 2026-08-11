@@ -154,6 +154,7 @@
         "src/TCJ.DependencyInjection/**",
         "src/TCJ.AspNetCore/**",
         "tests/TCJ.AspNetCore.IntegrationTests/**",
+        "tests/TCJ.AspNetCore.NativeAotSmoke/**",
         "eng/aspnetcore-integration-policy.json",
         "eng/verify-aspnetcore-integration.py",
         "Directory.Build.props",

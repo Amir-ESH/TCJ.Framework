@@ -25,6 +25,8 @@ EXPECTED_TEST_ROOT = ROOT / "tests/TCJ.AspNetCore.IntegrationTests"
 EXPECTED_FACTORY = EXPECTED_TEST_ROOT / "Fixtures/TcjWebApplicationFactory.cs"
 EXPECTED_AUTH_HANDLER = EXPECTED_TEST_ROOT / "TestHost/TestAuthenticationHandler.cs"
 EXPECTED_WORKFLOW = ROOT / ".github/workflows/aspnetcore-integration.yml"
+EXPECTED_NATIVE_AOT_PROJECT = ROOT / "tests/TCJ.AspNetCore.NativeAotSmoke/TCJ.AspNetCore.NativeAotSmoke.csproj"
+EXPECTED_NATIVE_AOT_PROGRAM = EXPECTED_NATIVE_AOT_PROJECT.parent / "Program.cs"
 
 
 class AspNetCoreIntegrationError(RuntimeError):
@@ -209,6 +211,42 @@ def validate_test_inventory(policy: Policy) -> None:
             fail(f"ASP.NET Core integration tests are missing required {description} scenario.")
 
 
+
+def validate_native_aot_smoke() -> None:
+    project = read_xml(EXPECTED_NATIVE_AOT_PROJECT, "ASP.NET Core Native AOT smoke project")
+    properties = {
+        child.tag.rsplit("}", 1)[-1]: (child.text or "").strip()
+        for group in project.findall("./PropertyGroup")
+        for child in group
+    }
+    if properties.get("TargetFramework") != "net10.0":
+        fail("ASP.NET Core Native AOT smoke project must target net10.0.")
+    if properties.get("PublishAot", "").casefold() != "true":
+        fail("ASP.NET Core Native AOT smoke project must set PublishAot=true.")
+    if properties.get("JsonSerializerIsReflectionEnabledByDefault", "").casefold() != "false":
+        fail("ASP.NET Core Native AOT smoke project must disable reflection-based System.Text.Json defaults.")
+    project_refs = {item.attrib.get("Include", "").replace("\\", "/") for item in project.findall(".//ProjectReference")}
+    if "../../src/TCJ.AspNetCore/TCJ.AspNetCore.csproj" not in project_refs:
+        fail("ASP.NET Core Native AOT smoke project must reference TCJ.AspNetCore.")
+    source = EXPECTED_NATIVE_AOT_PROGRAM.read_text(encoding="utf-8")
+    required = [
+        "WebApplication.CreateSlimBuilder",
+        "NativeAotSmokeJsonContext.Default",
+        '"/success"',
+        '"/validation"',
+        '"/not-found"',
+        '"/conflict"',
+        '"/unhandled"',
+        "UNEXPECTED_ERROR",
+        "TCJ.AspNetCore Native AOT smoke passed",
+    ]
+    missing = [marker for marker in required if marker not in source]
+    if missing:
+        fail("ASP.NET Core Native AOT smoke source is missing required markers: " + ", ".join(missing))
+    forbidden = [marker for marker in ("AddControllers", "MapControllers", "Newtonsoft.Json") if marker in source]
+    if forbidden:
+        fail("ASP.NET Core Native AOT smoke must remain Minimal-API-only; forbidden markers: " + ", ".join(forbidden))
+
 def validate_workflows() -> None:
     try:
         workflow = EXPECTED_WORKFLOW.read_text(encoding="utf-8")
@@ -229,6 +267,11 @@ def validate_workflows() -> None:
         "verify-platforms",
         "GITHUB_STEP_SUMMARY",
         "actions/upload-artifact",
+        "Native AOT Minimal API smoke",
+        "tests/TCJ.AspNetCore.NativeAotSmoke/TCJ.AspNetCore.NativeAotSmoke.csproj",
+        "dotnet publish",
+        "--runtime linux-x64",
+        "Execute Native AOT smoke host",
     ]
     missing = [marker for marker in markers if marker not in workflow]
     if missing:
@@ -300,6 +343,7 @@ def validate_config() -> Policy:
     validate_project(policy)
     validate_test_host()
     validate_test_inventory(policy)
+    validate_native_aot_smoke()
     validate_workflows()
     validate_repository_wiring(policy)
     return policy

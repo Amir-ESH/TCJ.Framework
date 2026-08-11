@@ -130,13 +130,13 @@
     {
       "packageId": "TCJ.AspNetCore",
       "tier": "Conditional",
-      "rationale": "ASP.NET Core supports Native AOT only for a defined subset of framework features, so TCJ.AspNetCore support is bounded by the application's selected ASP.NET Core feature set and future packaged-consumer evidence.",
+      "rationale": "TCJ.AspNetCore declares IsAotCompatible=true and is analyzer-compatible for supported ASP.NET Core Native AOT Minimal API scenarios. TCJ-owned health JSON uses source-generated System.Text.Json metadata, Problem Details metadata is registered with the framework JSON resolver chain, and a CreateSlimBuilder project-reference smoke host publishes and executes success, validation, not-found, conflict, and unhandled-exception paths. The formal support tier remains Conditional because ASP.NET Core Native AOT is feature-dependent and Important 8 still owns packed-NuGet publish-and-execute release evidence.",
       "restrictions": [
         {
           "kind": "Upstream",
           "symbol": "ASP.NET Core Native AOT feature compatibility matrix for net10.0",
           "status": "Restricted",
-          "reason": "Native AOT support varies by ASP.NET Core feature; for example Minimal APIs are only partially supported while MVC, Blazor Server, and SignalR are not supported. TCJ.AspNetCore is supported only inside upstream-supported application paths."
+          "reason": "TCJ.AspNetCore supports Native AOT only inside upstream-supported ASP.NET Core feature families. The verified TCJ path uses Minimal APIs and framework-native Problem Details/current-user/health primitives. MVC controllers, Blazor Server, SignalR, and other upstream-unsupported feature families are not made AOT-compatible by TCJ."
         }
       ],
       "fullSupportEvidence": []

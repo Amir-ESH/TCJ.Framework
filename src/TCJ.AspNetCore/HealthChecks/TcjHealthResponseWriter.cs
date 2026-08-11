@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using TCJ.AspNetCore.Serialization;
 using TCJ.Core.Diagnostics;
 using TCJ.Core.HealthChecks;
 
@@ -9,7 +10,6 @@ namespace TCJ.AspNetCore.HealthChecks;
 /// <summary>Writes sanitized JSON responses for TCJ health endpoints.</summary>
 public static class TcjHealthResponseWriter
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly HashSet<string> StableCheckNames = new(StringComparer.Ordinal)
     {
         TcjHealthCheckNames.Checks.Core,
@@ -43,7 +43,7 @@ public static class TcjHealthResponseWriter
         return JsonSerializer.SerializeAsync(
             httpContext.Response.Body,
             new PublicHealthResponse(report.Status.ToString(), report.TotalDuration.ToString("c"), TcjTelemetry.FrameworkVersion),
-            SerializerOptions,
+            TcjAspNetCoreJsonSerializerContext.Default.PublicHealthResponse,
             cancellationToken: httpContext.RequestAborted);
     }
 
@@ -73,7 +73,7 @@ public static class TcjHealthResponseWriter
         return JsonSerializer.SerializeAsync(
             httpContext.Response.Body,
             new DetailedHealthResponse(report.Status.ToString(), report.TotalDuration.ToString("c"), TcjTelemetry.FrameworkVersion, checks),
-            SerializerOptions,
+            TcjAspNetCoreJsonSerializerContext.Default.DetailedHealthResponse,
             cancellationToken: httpContext.RequestAborted);
     }
 
@@ -83,7 +83,18 @@ public static class TcjHealthResponseWriter
         context.Response.Headers.CacheControl = "no-store";
     }
 
-    private sealed record PublicHealthResponse(string Status, string Duration, string Version);
-    private sealed record DetailedHealthResponse(string Status, string Duration, string Version, IReadOnlyList<DetailedHealthCheckResponse> Checks);
-    private sealed record DetailedHealthCheckResponse(string Name, string Status, string Duration, IReadOnlyList<string> Tags);
 }
+
+internal sealed record PublicHealthResponse(string Status, string Duration, string Version);
+
+internal sealed record DetailedHealthResponse(
+    string Status,
+    string Duration,
+    string Version,
+    DetailedHealthCheckResponse[] Checks);
+
+internal sealed record DetailedHealthCheckResponse(
+    string Name,
+    string Status,
+    string Duration,
+    string[] Tags);

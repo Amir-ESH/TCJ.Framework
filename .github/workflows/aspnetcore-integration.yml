@@ -24,6 +24,7 @@ on:
       - "src/TCJ.DependencyInjection/**"
       - "src/TCJ.AspNetCore/**"
       - "tests/TCJ.AspNetCore.IntegrationTests/**"
+      - "tests/TCJ.AspNetCore.NativeAotSmoke/**"
       - "eng/aspnetcore-integration-policy.json"
       - "eng/verify-aspnetcore-integration.py"
       - "Directory.Build.props"
@@ -138,6 +139,43 @@ jobs:
       - name: Enforce platform integration result
         if: always()
         run: ${{ matrix.python }} -c "import sys; sys.exit(0 if '${{ steps.integration-tests.outcome }}' == 'success' and '${{ steps.verify-results.outcome }}' == 'success' else 1)"
+
+  native-aot-smoke:
+    name: Native AOT Minimal API smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install Native AOT prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
+      - name: Restore Native AOT smoke host
+        run: dotnet restore tests/TCJ.AspNetCore.NativeAotSmoke/TCJ.AspNetCore.NativeAotSmoke.csproj --runtime linux-x64 --force-evaluate
+
+      - name: Publish Native AOT smoke host
+        run: >-
+          dotnet publish tests/TCJ.AspNetCore.NativeAotSmoke/TCJ.AspNetCore.NativeAotSmoke.csproj
+          --configuration Release
+          --runtime linux-x64
+          --self-contained true
+          --no-restore
+          --output artifacts/aspnetcore-native-aot
+          -p:TreatWarningsAsErrors=true
+
+      - name: Execute Native AOT smoke host
+        run: ./artifacts/aspnetcore-native-aot/TCJ.AspNetCore.NativeAotSmoke
 
   cross-platform:
     name: Verify Linux and Windows results

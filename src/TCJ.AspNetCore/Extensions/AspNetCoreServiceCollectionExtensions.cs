@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using TCJ.AspNetCore.Diagnostics;
 using TCJ.AspNetCore.Options;
 using TCJ.AspNetCore.Security;
+using TCJ.AspNetCore.Serialization;
 using TCJ.Core.Security;
 
 namespace TCJ.AspNetCore.Extensions;
@@ -57,6 +58,14 @@ public static class AspNetCoreServiceCollectionExtensions
                                                                     context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
                                                                 }
                                                             };
+        });
+
+        services.ConfigureHttpJsonOptions(static jsonOptions =>
+        {
+            if (!jsonOptions.SerializerOptions.TypeInfoResolverChain.Contains(TcjAspNetCoreJsonSerializerContext.Default))
+            {
+                jsonOptions.SerializerOptions.TypeInfoResolverChain.Add(TcjAspNetCoreJsonSerializerContext.Default);
+            }
         });
 
         bool handlerRegistered = services.Any(static descriptor => descriptor.ServiceType == typeof(IExceptionHandler)
