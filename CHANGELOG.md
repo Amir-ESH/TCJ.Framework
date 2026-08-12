@@ -65,6 +65,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Changed
 
+- Added formal project governance, a Contributor License Agreement, repository-wide CODEOWNERS review ownership, and contributor acknowledgements so independent/commercial forks remain permitted while official upstream merges, releases, relicensing, and project identity stay under Project Owner authority.
+- Fixed the README banner and legal-document links to use branch-relative repository paths so they render correctly on `develop`, tags, and forks instead of depending on files already existing on `main`.
+
 - Relicensed the current development line under GNU LGPL v3.0 only (`LGPL-3.0-only`) and added a separate TCJ trademark/brand policy so software freedoms and project identity are governed independently. Previously distributed MIT-licensed copies retain the permissions granted with those copies.
 - Updated current and published release metadata so package verification enforces the correct SPDX license expression for each release generation (`MIT` for the immutable published preview and `LGPL-3.0-only` for the current development line).
 

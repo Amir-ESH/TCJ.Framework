@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Amir-ESH/TCJ.Framework/main/.github/assets/tcj-framework-banner.png" alt="TCJ Framework — Modular, Reliable, Extensible" width="100%" />
+  <img src=".github/assets/tcj-framework-banner.png" alt="TCJ Framework — Modular, Reliable, Extensible" width="100%" />
 </p>
 
 <p align="center">
@@ -7,7 +7,7 @@
   <a href="https://www.nuget.org/packages/TCJ.Core"><img alt="NuGet" src="https://img.shields.io/nuget/v/TCJ.Core.svg?style=flat-square&label=NuGet"></a>
   <a href="https://www.nuget.org/packages/TCJ.Core"><img alt="NuGet downloads" src="https://img.shields.io/nuget/dt/TCJ.Core.svg?style=flat-square&label=downloads"></a>
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square">
-  <a href="https://github.com/Amir-ESH/TCJ.Framework/blob/main/LICENSE.txt"><img alt="License: LGPL-3.0-only" src="https://img.shields.io/badge/license-LGPL--3.0--only-blue.svg?style=flat-square"></a>
+  <a href="LICENSE.txt"><img alt="License: LGPL-3.0-only" src="https://img.shields.io/badge/license-LGPL--3.0--only-blue.svg?style=flat-square"></a>
 </p>
 
 <p align="center">
@@ -101,29 +101,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
 For a complete runnable example, see [`samples/TCJ.Empty`](samples/TCJ.Empty/README.md).
 
-## Architecture
+<a id="architecture"></a>
 
-TCJ keeps dependencies directional so consumers can stop at the layer they actually need:
-
-```text
-                         ┌─────────────────────┐
-                         │   TCJ.AspNetCore    │
-                         └──────────┬──────────┘
-                                    │
-                         ┌──────────▼──────────┐
-                         │ TCJ.DependencyInjection │
-                         └──────────┬──────────┘
-                                    │
-┌──────────────────────────────┐    │    ┌─────────────────────────────┐
-│ TCJ.EntityFrameworkCore      │────┼────│ TCJ.EntityFrameworkCore    │
-│          .SqlServer          │    │    │                             │
-└──────────────┬───────────────┘    │    └──────────────┬──────────────┘
-               │                    │                   │
-               └────────────────────▼───────────────────┘
-                              ┌──────────┐
-                              │ TCJ.Core │
-                              └──────────┘
-```
+<p align="center">
+  <a href="docs/architecture.md">
+    <img src=".github/assets/tcj-framework-architecture-banner.png" alt="TCJ Framework package architecture: ASP.NET Core and dependency injection flow toward TCJ.Core, while Entity Framework Core and SQL Server integration preserve directional package boundaries." width="100%" />
+  </a>
+</p>
 
 The executable architecture-test suite validates the approved package graph, detects cycles, enforces namespace ownership, and prevents infrastructure types from leaking into lower-level public APIs. See [Architecture and package boundaries](docs/architecture.md) and [Architecture tests](docs/architecture-tests.md).
 
@@ -195,6 +179,9 @@ Start here:
 - [Health checks](docs/health-checks.md)
 - [Transactional outbox](docs/outbox.md)
 - [Security](SECURITY.md)
+- [Project governance](GOVERNANCE.md)
+- [Contributor License Agreement](CLA.md)
+- [Trademark and brand policy](TRADEMARKS.md)
 - [Support](SUPPORT.md)
 - [Changelog](CHANGELOG.md)
 
@@ -202,17 +189,19 @@ Start here:
 
 Focused issues and pull requests are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before starting a change. Public API and architecture changes should be discussed before implementation, and new behavior is expected to arrive with focused validation rather than by weakening an existing gate.
 
-Contributions to the framework are accepted under the repository's **GNU LGPL v3.0-only** terms.
+Contributions are accepted under the [TCJ Contributor License Agreement](CLA.md). Contributors retain copyright in their original Contributions while granting the Official TCJ Project the rights needed to maintain, distribute, sublicense, and relicense accepted work. See [Project Governance](GOVERNANCE.md) for owner-reserved decisions and upstream authority.
 
 ## License and brand
 
-The TCJ Framework code in this development line is licensed under the **GNU Lesser General Public License v3.0 only (`LGPL-3.0-only`)**. See [`LICENSE.txt`](https://github.com/Amir-ESH/TCJ.Framework/blob/main/LICENSE.txt).
+The TCJ Framework code in this development line is licensed under the **GNU Lesser General Public License v3.0 only (`LGPL-3.0-only`)**. See [`LICENSE.txt`](LICENSE.txt).
 
 The LGPL is intended for libraries and permits use in applications licensed under different terms, including proprietary applications, subject to the LGPL's conditions. If you distribute a Combined Work using a static-link-like model—including Native AOT—review the LGPL's Combined Work and relinking/recombination requirements for your distribution model.
 
-The software license and the project brand are separate. The LGPL does not grant a general right to present an unofficial fork, modified package, hosted service, or other product as an official TCJ release. Truthful references such as **"built with TCJ Framework"** are welcome; use of the TCJ name, logo, banner, or official `TCJ.*` package identity must avoid confusion about origin or endorsement. See [`TRADEMARKS.md`](https://github.com/Amir-ESH/TCJ.Framework/blob/main/TRADEMARKS.md).
+The software license and the project brand are separate. The LGPL does not grant a general right to present an unofficial fork, modified package, hosted service, or other product as an official TCJ release. Truthful references such as **"built with TCJ Framework"** are welcome; use of the TCJ name, logo, banner, or official `TCJ.*` package identity must avoid confusion about origin or endorsement. See [`TRADEMARKS.md`](TRADEMARKS.md).
 
 > **License history:** copies and releases previously distributed under the MIT License keep the permissions already granted with those copies. The current development line is licensed under LGPL-3.0-only for new distributions that identify this license.
+
+Independent forks may be developed and distributed commercially under the applicable LGPL terms. Forking or contributing does not grant ownership, merge/release authority, or governance control over the **Official TCJ Project**. Those responsibilities are defined in [`GOVERNANCE.md`](GOVERNANCE.md).
 
 ---
 
