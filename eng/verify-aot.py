@@ -618,6 +618,7 @@ def _validate_packed_native_aot_smoke(root: Path, policy: Any) -> list[Finding]:
         "IsAotCompatible": "true",
         "JsonSerializerIsReflectionEnabledByDefault": "false",
         "TreatWarningsAsErrors": "true",
+        "ManagePackageVersionsCentrally": "false",
         "RuntimeIdentifier": PACKED_AOT_RID,
     }
     for property_name, expected in required_properties.items():

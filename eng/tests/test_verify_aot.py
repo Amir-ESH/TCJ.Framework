@@ -334,6 +334,26 @@ class AotVerifierTests(unittest.TestCase):
             findings,
         )
 
+    def test_packed_native_aot_smoke_requires_central_package_management_disabled(self) -> None:
+        fixture = self.root / MODULE.PACKED_AOT_FIXTURE
+        text = fixture.read_text(encoding="utf-8").replace(
+            "    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>\n",
+            "",
+            1,
+        )
+        fixture.write_text(text, encoding="utf-8")
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(
+            item for item in payload["findings"]
+            if item["rule"] == "AOT008"
+            and item["property"] == "ManagePackageVersionsCentrally"
+        )
+        self.assertEqual("<missing>", finding["value"])
+        self.assertIn("false", finding["message"])
+
     def test_packed_native_aot_smoke_rejects_repository_project_references(self) -> None:
         fixture = self.root / MODULE.PACKED_AOT_FIXTURE
         text = fixture.read_text(encoding="utf-8").replace(
