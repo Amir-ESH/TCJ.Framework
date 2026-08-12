@@ -46,6 +46,13 @@ class RequiredPrGateTests(unittest.TestCase):
         selected = self.required("develop", "tests/TCJ.AspNetCore.NativeAotSmoke/Program.cs")
         self.assertIn("aspnetcore_integration", selected)
 
+    def test_ef_nativeaot_experimental_fixture_selects_sqlserver_gate(self):
+        selected = self.required(
+            "develop",
+            "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/Program.cs",
+        )
+        self.assertIn("sqlserver_integration", selected)
+
     def test_entity_framework_change_selects_relevant_specialized_gates(self):
         selected = self.required("develop", "src/TCJ.EntityFrameworkCore/Outbox/Processor.cs")
         for gate in (

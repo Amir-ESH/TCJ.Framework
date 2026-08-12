@@ -254,6 +254,73 @@ class AotVerifierTests(unittest.TestCase):
         self.assertTrue(any(item["project"] == "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj" and item["property"] == "IsAotCompatible" for item in findings))
         self.assertTrue(any(item["property"] == "PackageReference" for item in findings))
 
+    def test_ef_nativeaot_fixture_requires_compiled_model_and_query_precompile_prerequisites(self) -> None:
+        fixture = self.root / MODULE.EF_NATIVEAOT_FIXTURE
+        text = fixture.read_text(encoding="utf-8")
+        text = text.replace("<EFOptimizeContext>true</EFOptimizeContext>", "")
+        text = text.replace(";Microsoft.EntityFrameworkCore.GeneratedInterceptors", "")
+        text = text.replace("<PackageReference Include=\"Microsoft.EntityFrameworkCore.Tasks\">", "<PackageReference Include=\"Microsoft.EntityFrameworkCore.Tasks.Missing\">")
+        fixture.write_text(text, encoding="utf-8")
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [item for item in payload["findings"] if item["rule"] == "AOT007"]
+        self.assertTrue(any(item["property"] == "EFOptimizeContext" for item in findings))
+        self.assertTrue(any(item["property"] == "InterceptorsNamespaces" for item in findings))
+        self.assertTrue(any(item["property"] == "Microsoft.EntityFrameworkCore.Tasks" for item in findings))
+        self.assertTrue(any("compiled model" in item["message"].lower() for item in findings))
+
+    def test_ef_nativeaot_fixture_rejects_restricted_runtime_discovery_paths(self) -> None:
+        program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
+        program.write_text(
+            program.read_text(encoding="utf-8") + "\n// RegisterAllEntities<Fake>();\n",
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(
+            item for item in payload["findings"]
+            if item["rule"] == "AOT007" and item["value"] == "RegisterAllEntities<"
+        )
+        self.assertIn("documented static path", finding["message"])
+
+    def test_ef_nativeaot_fixture_rejects_dbcontext_method_parameter_query_root(self) -> None:
+        program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
+        text = program.read_text(encoding="utf-8")
+        text = text.replace(
+            'public static async Task Main(string[] args)',
+            'private static Task LoadNamesAsync(ExperimentalNativeAotDbContext dbContext)'
+        )
+        program.write_text(text + "\n// LoadNamesAsync(ExperimentalNativeAotDbContext dbContext)\n", encoding="utf-8")
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(
+            item for item in payload["findings"]
+            if item["rule"] == "AOT007" and item["value"] == "DbContext method parameter query root"
+        )
+        self.assertIn("local startup DbContext", finding["message"])
+
+    def test_ef_nativeaot_fixture_rejects_compiled_model_unsupported_soft_delete_filter(self) -> None:
+        program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
+        program.write_text(
+            program.read_text(encoding="utf-8") + "\n// ApplySoftDeleteQueryFilters();\n",
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(
+            item for item in payload["findings"]
+            if item["rule"] == "AOT007" and item["value"] == "ApplySoftDeleteQueryFilters("
+        )
+        self.assertIn("documented static path", finding["message"])
+
     def test_current_repository_does_not_wire_aot_verification_into_blocking_workflows(self) -> None:
         repository_root = MODULE.ROOT
         commands = ("eng/verify-aot.py", "eng/verify-aot-policy.py")
@@ -262,6 +329,19 @@ class AotVerifierTests(unittest.TestCase):
             text = workflow.read_text(encoding="utf-8")
             for command in commands:
                 self.assertNotIn(command, text, f"{name} must stay non-blocking until Important 8")
+
+    def test_ef_nativeaot_fixture_rejects_static_query_lambda_modifiers(self) -> None:
+        self._write_valid_repository()
+        program = self.root / "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/Program.cs"
+        text = program.read_text(encoding="utf-8")
+        text = text.replace(".Where(record =>", ".Where(static record =>", 1)
+        program.write_text(text, encoding="utf-8")
+
+        findings = MODULE._validate_ef_nativeaot_fixture(self.root)
+        self.assertTrue(
+            any(f.rule == "AOT007" and f.property == "Program.cs" and f.value == "static query lambda modifier" for f in findings),
+            findings,
+        )
 
     def _read_policy(self) -> dict:
         return json.loads((self.root / "eng/aot-policy.json").read_text(encoding="utf-8"))
@@ -310,6 +390,8 @@ class AotVerifierTests(unittest.TestCase):
             "compatibility/Consumers/Core.Console/Core.Console.csproj",
             "compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj",
             "compatibility/Consumers/AspNetCore.MinimalApi/AspNetCore.MinimalApi.csproj",
+            "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/TCJ.EntityFrameworkCore.NativeAotExperimental.csproj",
+            "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/Program.cs",
         ):
             source = source_root / relative
             target = self.root / relative

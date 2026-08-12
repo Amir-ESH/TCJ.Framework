@@ -57,6 +57,35 @@ def require_text(path: Path, fragments: list[str]) -> str:
     return text
 
 
+
+
+def validate_system_text_json_serializer_source(text: str) -> None:
+    required = (
+        "JsonTypeInfo",
+        "_options.GetTypeInfo(",
+        "JsonSerializer.Serialize(domainEvent, typeInfo)",
+        "JsonSerializer.Deserialize(payload, typeInfo)",
+        "if (_options.TypeInfoResolver is null && JsonSerializer.IsReflectionEnabledByDefault)",
+        "_options.TypeInfoResolver = new DefaultJsonTypeInfoResolver()",
+    )
+    missing = [fragment for fragment in required if fragment not in text]
+    if missing:
+        fail(
+            "The default outbox serializer must resolve JsonTypeInfo from the configured JsonSerializerOptions "
+            "and use metadata-based System.Text.Json overloads. Missing: " + ", ".join(missing)
+        )
+
+    forbidden = (
+        "JsonSerializer.Serialize(domainEvent, domainEvent.GetType()",
+        "JsonSerializer.Deserialize(payload, eventType",
+    )
+    used = [fragment for fragment in forbidden if fragment in text]
+    if used:
+        fail(
+            "The default outbox serializer must not regress to runtime Type-based System.Text.Json overloads: "
+            + ", ".join(used)
+        )
+
 def ensure_tracked(path: Path) -> None:
     if not (ROOT / ".git").exists():
         return
@@ -182,7 +211,11 @@ def validate_config() -> tuple[dict[str, Any], dict[str, Any]]:
     resolver = require_text(ROOT / "src/TCJ.EntityFrameworkCore/Outbox/Serialization/OutboxEventTypeResolver.cs", [".v1", "Register an explicit unique logical event name"])
     if "AssemblyQualifiedName" in resolver:
         fail("The default event type resolver must never persist AssemblyQualifiedName values.")
-    require_text(ROOT / "src/TCJ.EntityFrameworkCore/Outbox/Serialization/SystemTextJsonOutboxSerializer.cs", ["System.Text.Json", "JsonSerializer.Deserialize(payload, eventType"])
+    serializer = require_text(
+        ROOT / "src/TCJ.EntityFrameworkCore/Outbox/Serialization/SystemTextJsonOutboxSerializer.cs",
+        ["System.Text.Json"],
+    )
+    validate_system_text_json_serializer_source(serializer)
     storage = require_text(ROOT / "src/TCJ.EntityFrameworkCore.SqlServer/Outbox/SqlServerOutboxStorage.cs", [
         "UPDLOCK", "READPAST", "READCOMMITTEDLOCK", "TOP (", "LockExpiresAtUtc", "ORDER BY [NextAttemptAtUtc], [OccurredAtUtc], [Id]",
         "ExecuteUpdateAsync", "ExecuteDeleteAsync"

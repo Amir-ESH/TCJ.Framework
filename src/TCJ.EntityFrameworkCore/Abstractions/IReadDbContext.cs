@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
@@ -16,5 +17,15 @@ public interface IReadDbContext
     /// <summary>
     /// Returns the queryable set for the specified entity type.
     /// </summary>
-    DbSet<TEntity> Set<TEntity>() where TEntity : class;
+    DbSet<TEntity> Set<
+        [DynamicallyAccessedMembers(
+            DynamicallyAccessedMemberTypes.PublicConstructors
+            | DynamicallyAccessedMemberTypes.NonPublicConstructors
+            | DynamicallyAccessedMemberTypes.PublicProperties
+            | DynamicallyAccessedMemberTypes.PublicFields
+            | DynamicallyAccessedMemberTypes.NonPublicProperties
+            | DynamicallyAccessedMemberTypes.NonPublicFields
+            | DynamicallyAccessedMemberTypes.Interfaces)]
+        TEntity>()
+        where TEntity : class;
 }

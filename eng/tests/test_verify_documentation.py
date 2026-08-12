@@ -160,6 +160,39 @@ class DocumentationVerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.DocumentationError, "coverage .* below policy minimum"):
             MODULE.assess_source_documentation(policy, [item], baseline)
 
+    def test_generic_parameter_attribute_is_not_misparsed_as_member_name(self):
+        scope = MODULE.TypeScope(
+            name="IReadDbContext",
+            full_name="Example.IReadDbContext",
+            kind="interface",
+            visibility="public",
+            start_line=1,
+            body_depth=1,
+            end_line=20,
+            type_parameters=(),
+        )
+        signature = (
+            "DbSet<TEntity> Set<[DynamicallyAccessedMembers("
+            "DynamicallyAccessedMemberTypes.PublicConstructors | "
+            "DynamicallyAccessedMemberTypes.Interfaces)] TEntity>() where TEntity : class;"
+        )
+
+        item = MODULE._member_item(
+            "Example",
+            "src/Example/IReadDbContext.cs",
+            10,
+            "Example",
+            scope,
+            signature,
+            (False, True, (), ("TEntity",), True),
+        )
+
+        self.assertIsNotNone(item)
+        assert item is not None
+        self.assertEqual("Set", item.name)
+        self.assertEqual("M:Example.IReadDbContext.Set()", item.documentation_id)
+        self.assertEqual(("TEntity",), item.type_parameter_names)
+
     def test_invalid_required_snippet_is_blocking(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

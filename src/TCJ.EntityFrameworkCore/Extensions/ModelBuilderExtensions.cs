@@ -18,6 +18,7 @@
 //   - System.Reflection
 // ****************************************************************************************************************************************************
 
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Pluralize.Core;
@@ -31,6 +32,10 @@ namespace TCJ.EntityFrameworkCore.Extensions;
 public static class ModelBuilderExtensions
 {
     private const string ModuleSuffix = "Module";
+    private const string ReflectionModelDiscoveryRequiresUnreferencedCodeMessage =
+        "Convention-based EF model discovery scans arbitrary assemblies and is not trimming-safe. Native AOT consumers should register entity types and IEntityTypeConfiguration<T> instances explicitly before generating the compiled model.";
+    private const string ReflectionModelDiscoveryRequiresDynamicCodeMessage =
+        "Convention-based EF model discovery closes generic configuration methods from runtime Type values. Native AOT consumers should use explicit generic model configuration and EF compiled-model tooling.";
     private static readonly Pluralizer Pluralizer = new();
 
     /// <summary>
@@ -39,6 +44,8 @@ public static class ModelBuilderExtensions
     /// </summary>
     /// <param name="modelBuilder">The model builder instance.</param>
     /// <param name="assemblies">Assemblies containing entity configurations.</param>
+    [RequiresUnreferencedCode(ReflectionModelDiscoveryRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ReflectionModelDiscoveryRequiresDynamicCodeMessage)]
     public static void RegisterEntityTypeConfiguration(this ModelBuilder modelBuilder, params Assembly[] assemblies)
     {
         modelBuilder.NotNull(parameterName: nameof(modelBuilder));
@@ -93,6 +100,8 @@ public static class ModelBuilderExtensions
     /// <typeparam name="TBaseType">The base type/interface that entities must implement.</typeparam>
     /// <param name="modelBuilder">The model builder instance.</param>
     /// <param name="assemblies">Assemblies containing entity types.</param>
+    [RequiresUnreferencedCode(ReflectionModelDiscoveryRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ReflectionModelDiscoveryRequiresDynamicCodeMessage)]
     public static void RegisterAllEntities<TBaseType>(this ModelBuilder modelBuilder, params Assembly[] assemblies)
     {
         modelBuilder.NotNull(parameterName: nameof(modelBuilder));
@@ -242,6 +251,7 @@ public static class ModelBuilderExtensions
     /// TODO: add summary
     /// </summary>
     /// <returns>Array of module assemblies.</returns>
+    [RequiresUnreferencedCode("Runtime module assembly discovery is not trimming-safe. Native AOT consumers should keep model registration explicit and use EF compiled-model tooling.")]
     public static Assembly[] GetModuleAssemblies() // TODO fixed this
     {
         return AppDomain.CurrentDomain

@@ -43,3 +43,9 @@ The convention locates mapped properties corresponding to `IRowVersion.RowVersio
 ## Transactions and retry strategies
 
 When retry-on-failure is enabled, application-created transactions may require execution-strategy orchestration. The current sample disables retry because its data seeder owns an explicit transaction. Do not copy that sample setting blindly into production; choose retry and transaction behavior together.
+
+## Native AOT (experimental)
+
+The SQL Server NativeAOT path is separately **Experimental**. The dedicated project-reference fixture configures SQL Server, applies TCJ rowversion conventions, and relies on EF Core's compiled-model/query-precompile MSBuild tooling during NativeAOT publish.
+
+TCJ does not turn this into a production-support claim: EF provider participation remains an upstream capability boundary, and the SQL Server path inherits the provider-neutral compiled-model limitations (including the exclusion of TCJ soft-delete global query filters). A future support-tier upgrade requires packaged-consumer execution evidence. Normal SQL Server/JIT consumers continue to use `AddTcjSqlServer<TDbContext>` without any NativeAOT-specific setup.

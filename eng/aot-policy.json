@@ -78,37 +78,55 @@
     {
       "packageId": "TCJ.EntityFrameworkCore",
       "tier": "Experimental",
-      "rationale": "EF Core NativeAOT support remains upstream-experimental and TCJ also exposes reflection-driven model-discovery and entity-search paths.",
+      "rationale": "TCJ exercises a project-reference EF Core NativeAOT fixture with EF compiled-model and query-precompilation tooling, and trims TCJ-owned runtime Type usage from the static model-convention/serialization path where practical. The package remains Experimental because EF Core NativeAOT is upstream-experimental and TCJ retains explicitly restricted runtime-discovery APIs.",
       "restrictions": [
         {
           "kind": "Upstream",
-          "symbol": "Microsoft.EntityFrameworkCore NativeAOT and precompiled queries",
+          "symbol": "Microsoft.EntityFrameworkCore NativeAOT compiled models and precompiled queries",
           "status": "Experimental",
-          "reason": "The upstream EF Core NativeAOT feature is documented as experimental, may emit trimming/AOT warnings, does not support dynamic queries, and has additional query/provider limitations."
+          "reason": "EF Core NativeAOT and query precompilation are upstream-experimental. NativeAOT consumers require EF publish tooling that generates a compiled model and precompiled queries; dynamic queries, query-expression syntax, captured-state value converters, and some provider scenarios remain limited. EF compiled models also do not support global query filters, lazy-loading/change-tracking proxies, or custom IModelCacheKeyFactory implementations."
         },
         {
           "kind": "PublicApi",
           "symbol": "TCJ.EntityFrameworkCore.Extensions.ModelBuilderExtensions.RegisterEntityTypeConfiguration(ModelBuilder, params Assembly[])",
           "status": "Restricted",
-          "reason": "The API discovers configuration types with reflection and invokes closed generic ApplyConfiguration methods dynamically."
+          "reason": "The API scans arbitrary assemblies and closes generic ApplyConfiguration methods from runtime Type values. It is annotated with RequiresUnreferencedCode and RequiresDynamicCode; NativeAOT consumers must configure the model explicitly before EF compiled-model generation."
         },
         {
           "kind": "PublicApi",
           "symbol": "TCJ.EntityFrameworkCore.Extensions.ModelBuilderExtensions.RegisterAllEntities<TBaseType>(ModelBuilder, params Assembly[])",
           "status": "Restricted",
-          "reason": "The API discovers entity types with Assembly.GetExportedTypes() at runtime."
+          "reason": "The API discovers entity types with Assembly.GetExportedTypes() and registers runtime Type values. It is annotated with RequiresUnreferencedCode and RequiresDynamicCode; NativeAOT consumers must register entity types explicitly."
         },
         {
           "kind": "PublicApi",
-          "symbol": "TCJ.EntityFrameworkCore.Searching.EntitySearcher.ExistsAsync(EntityRecordInput, CancellationToken) / FindAsync(EntityRecordInput, CancellationToken)",
+          "symbol": "TCJ.EntityFrameworkCore.Extensions.ModelBuilderExtensions.GetModuleAssemblies()",
           "status": "Restricted",
-          "reason": "The search path constructs closed generic executor types dynamically from EF model metadata."
+          "reason": "The API discovers loaded module assemblies at runtime. It is annotated with RequiresUnreferencedCode and is excluded from the experimental NativeAOT fixture."
+        },
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.EntityFrameworkCore.Extensions.SoftDeleteModelBuilderExtensions.ApplySoftDeleteQueryFilters(ModelBuilder)",
+          "status": "Unsupported",
+          "reason": "The TCJ soft-delete convention installs EF global query filters. EF compiled models required by the current NativeAOT path do not support global query filters, so this convention is outside the experimental NativeAOT path while normal JIT usage remains supported."
+        },
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.EntityFrameworkCore.Searching.IEntitySearcher.ExistsAsync(EntityRecordInput, CancellationToken) / FindAsync(EntityRecordInput, CancellationToken)",
+          "status": "Restricted",
+          "reason": "Entity search builds predicates and closes generic executor types from runtime EF model metadata. The contract and implementation are annotated with RequiresUnreferencedCode and RequiresDynamicCode; NativeAOT consumers should use statically typed repository/DbContext queries that EF tooling can precompile."
         },
         {
           "kind": "PublicApi",
           "symbol": "TCJ.EntityFrameworkCore.Outbox.Extensions.OutboxServiceCollectionExtensions.AddTcjOutbox<TDbContext>(IServiceCollection, Action<TcjOutboxOptions>?)",
           "status": "Restricted",
-          "reason": "Resolving an unregistered convention event name falls back to scanning loaded assemblies. Native AOT consumers must explicitly register persisted event contracts with AddTcjOutboxEvent<TEvent>."
+          "reason": "The default event resolver can scan loaded assemblies when a persisted convention event name is not explicitly registered. NativeAOT experiments must register persisted event contracts with AddTcjOutboxEvent<TEvent> and provide System.Text.Json metadata for event payload types; the Important 7 fixture intentionally does not claim the outbox path."
+        },
+        {
+          "kind": "PackageMetadata",
+          "symbol": "tests/TCJ.EntityFrameworkCore.NativeAotExperimental",
+          "status": "Experimental",
+          "reason": "The fixture is project-reference evidence only. It requires PublishAot, a concrete RID, Microsoft.EntityFrameworkCore.Tasks, EFOptimizeContext for EF Core 10, generated-interceptor opt-in, and publish-stage compiled-model/query precompilation. It does not qualify as packed-package production support evidence."
         }
       ],
       "fullSupportEvidence": []
@@ -116,13 +134,19 @@
     {
       "packageId": "TCJ.EntityFrameworkCore.SqlServer",
       "tier": "Experimental",
-      "rationale": "The package inherits the upstream experimental EF Core NativeAOT contract and cannot be promoted beyond that upstream boundary without packaged-consumer evidence for the provider path.",
+      "rationale": "The SQL Server provider path is exercised by the same project-reference EF NativeAOT fixture and TCJ rowversion conventions avoid runtime Entity(Type) configuration, but support remains Experimental because EF provider participation and NativeAOT query precompilation are upstream-experimental and there is no packed-consumer production evidence.",
       "restrictions": [
         {
           "kind": "Upstream",
-          "symbol": "Microsoft.EntityFrameworkCore NativeAOT and precompiled queries / provider support",
+          "symbol": "Microsoft.EntityFrameworkCore.SqlServer NativeAOT / precompiled-query provider support",
           "status": "Experimental",
-          "reason": "EF Core NativeAOT is upstream-experimental, and EF providers participate in precompiled-query support; TCJ therefore makes no Full production-support claim for the SQL Server path."
+          "reason": "EF Core NativeAOT is upstream-experimental and providers participate in precompiled-query support. The provider path also inherits the provider-neutral compiled-model limitations documented for TCJ.EntityFrameworkCore, including the global-query-filter boundary. TCJ therefore makes no Full or production-ready claim for SQL Server NativeAOT."
+        },
+        {
+          "kind": "PackageMetadata",
+          "symbol": "tests/TCJ.EntityFrameworkCore.NativeAotExperimental",
+          "status": "Experimental",
+          "reason": "The fixture configures SQL Server, generates the compiled model and precompiled queries during linux-x64 NativeAOT publish, and executes without contacting a database. It is project-reference experiment evidence, not a packaged provider guarantee."
         }
       ],
       "fullSupportEvidence": []
