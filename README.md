@@ -101,29 +101,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
 For a complete runnable example, see [`samples/TCJ.Empty`](samples/TCJ.Empty/README.md).
 
-## Architecture
+<a id="architecture"></a>
 
-TCJ keeps dependencies directional so consumers can stop at the layer they actually need:
-
-```text
-                         ┌─────────────────────┐
-                         │   TCJ.AspNetCore    │
-                         └──────────┬──────────┘
-                                    │
-                         ┌──────────▼──────────┐
-                         │ TCJ.DependencyInjection │
-                         └──────────┬──────────┘
-                                    │
-┌──────────────────────────────┐    │    ┌─────────────────────────────┐
-│ TCJ.EntityFrameworkCore      │────┼────│ TCJ.EntityFrameworkCore    │
-│          .SqlServer          │    │    │                             │
-└──────────────┬───────────────┘    │    └──────────────┬──────────────┘
-               │                    │                   │
-               └────────────────────▼───────────────────┘
-                              ┌──────────┐
-                              │ TCJ.Core │
-                              └──────────┘
-```
+<p align="center">
+  <a href="docs/architecture.md">
+    <img src=".github/assets/tcj-framework-architecture-banner.png" alt="TCJ Framework package architecture: ASP.NET Core and dependency injection flow toward TCJ.Core, while Entity Framework Core and SQL Server integration preserve directional package boundaries." width="100%" />
+  </a>
+</p>
 
 The executable architecture-test suite validates the approved package graph, detects cycles, enforces namespace ownership, and prevents infrastructure types from leaking into lower-level public APIs. See [Architecture and package boundaries](docs/architecture.md) and [Architecture tests](docs/architecture-tests.md).
 
