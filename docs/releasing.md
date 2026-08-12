@@ -166,6 +166,12 @@ Release preflight and the tagged release both call `.github/workflows/sqlserver-
 
 Release preflight and the tagged release both call `.github/workflows/aspnetcore-integration.yml` for the exact release source. The reusable workflow runs the in-memory `Category=AspNetCore` suite on Linux and Windows, verifies Production-safe error responses, Development diagnostics, current-user/request-scope isolation, cancellation, sanitized host diagnostics, and the configured minimum test count, then requires a successful cross-platform aggregate before packaging or publication can continue. See [ASP.NET Core end-to-end integration testing](aspnetcore-integration-testing.md).
 
+### Packaged Native AOT release gate
+
+Release preflight and the tagged release run `python3 eng/verify-aot.py verify`, then consume the exact locally packed release-candidate packages through `smoke/TCJ.NativeAot.SmokeTest`. The supported release RID is `linux-x64`. The runner restores `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.AspNetCore` only from the local package feed, publishes with `PublishAot=true`, executes the native host, verifies representative DI/domain-event and Minimal API behavior, and confirms that each loaded TCJ assembly reports the candidate `PackageVersion`. Any `IL2xxx`/`IL3xxx` diagnostic fails the Full-support gate; no warning-count baseline is accepted.
+
+The tag workflow retains `native-aot-result.json`, `aot-runtime-verification.json`, and a versioned Native AOT evidence archive with release metadata. The protected publish job downloads the retained result and re-runs `verify-result` against the exact package set before NuGet publication. `TCJ.EntityFrameworkCore` and `TCJ.EntityFrameworkCore.SqlServer` remain separately Experimental and are not promoted by this gate. See [Native AOT and trimming compatibility](guides/native-aot-and-trimming.md).
+
 ### Package consumer compatibility gate
 
 Release preflight and the tagged release both depend on `.github/workflows/consumer-compatibility.yml`. That reusable gate packs the release-manifest version and requires all six package-only consumers to restore, build, and run on Linux, Windows, and macOS with exact version/source verification. After reproducible Build A is promoted, the release job additionally copies those exact verified package bytes into the local compatibility feed and runs all six consumers again on Ubuntu before SBOM/checksum/publication stages can continue. Primary and symbol package metadata, XML documentation, portable PDBs, and Source Link are validated against the release commit, and compatibility summaries are retained with release artifacts. See [Package consumer compatibility](package-consumer-compatibility.md).
@@ -197,16 +203,17 @@ The release workflow performs these operations:
 3. creates two isolated builds of all primary and symbol packages;
 4. blocks on unexplained package-content, assembly, PDB, Source Link, XML documentation, source, or NuGet metadata differences;
 5. promotes the exact verified Build A package set and deeply inspects it;
-6. generates and strictly verifies the versioned CycloneDX JSON SBOM from that verified set;
-7. extracts release notes from the matching changelog section;
-8. generates and verifies `SHA256SUMS` for the verified package files and the SBOM;
-9. creates signed GitHub build-provenance attestations for the verified packages, SBOM, and checksum manifest;
-10. transfers packages, release metadata, and SBOM to the protected publish job;
-11. restores dependency metadata and re-verifies the downloaded SBOM and checksums;
-12. pauses for the `nuget-production` environment approval;
-13. exchanges the GitHub OIDC token for a short-lived NuGet API key;
-14. publishes all packages and associated symbol packages;
-15. creates the GitHub pre-release and attaches `.nupkg`, `.snupkg`, the versioned `.cdx.json`, and `SHA256SUMS` assets.
+6. publishes and executes the packed `linux-x64` Native AOT smoke, verifies exact loaded TCJ versions and zero trim/AOT warning baseline, and retains the result;
+7. generates and strictly verifies the versioned CycloneDX JSON SBOM from that verified set;
+8. extracts release notes from the matching changelog section;
+9. generates and verifies `SHA256SUMS` for the verified package files and the SBOM;
+10. creates signed GitHub build-provenance attestations for the verified packages, SBOM, checksum manifest, and retained Native AOT evidence;
+11. transfers packages, release metadata, Native AOT evidence, and SBOM to the protected publish job;
+12. re-verifies the downloaded Native AOT result against the exact package set, then re-verifies dependency metadata, SBOM, and checksums;
+13. pauses for the `nuget-production` environment approval;
+14. exchanges the GitHub OIDC token for a short-lived NuGet API key;
+15. publishes all packages and associated symbol packages;
+16. creates the GitHub pre-release and attaches the package, SBOM, checksum, and Native AOT evidence assets.
 
 `--skip-duplicate` allows a safe rerun after a partial NuGet.org outage. The immutable tag guarantees that reruns use the same source commit and package version.
 

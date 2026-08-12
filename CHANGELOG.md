@@ -25,6 +25,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Added
 
+- Blocking packaged Native AOT release evidence for `TCJ.Core`, the explicit AOT-safe `TCJ.DependencyInjection` path, and the supported `TCJ.AspNetCore` Minimal API path, including exact local NuGet/version verification, `linux-x64` native publish/execute coverage, zero-warning enforcement, retained release evidence, and publish-time re-verification.
+
 - Added an opt-in SQL Server transactional outbox with same-transaction domain-event persistence, stable message IDs, safe concurrent lease claiming, bounded retry/dead-letter processing, explicit replay, retention cleanup, idempotency metadata, OpenTelemetry diagnostics, health checks, SQL Server Testcontainers coverage, policy verification, and release gates.
 
 - Added explicit bounded retry, cooperative timeout, isolated circuit-breaker, opt-in domain-event handler retry, and transaction-safe SQL Server execution-strategy primitives, with deterministic fault injection, resilience telemetry/contracts, benchmarks, CI/release gates, and idempotency guidance.

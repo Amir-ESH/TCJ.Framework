@@ -321,27 +321,89 @@ class AotVerifierTests(unittest.TestCase):
         )
         self.assertIn("documented static path", finding["message"])
 
-    def test_current_repository_does_not_wire_aot_verification_into_blocking_workflows(self) -> None:
+    def test_packed_native_aot_smoke_rejects_repository_project_references(self) -> None:
+        fixture = self.root / MODULE.PACKED_AOT_FIXTURE
+        text = fixture.read_text(encoding="utf-8").replace(
+            "</Project>",
+            '<ItemGroup><ProjectReference Include="../../src/TCJ.Core/TCJ.Core.csproj" /></ItemGroup></Project>',
+        )
+        fixture.write_text(text, encoding="utf-8")
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(
+            item for item in payload["findings"]
+            if item["rule"] == "AOT008" and item["property"] == "ProjectReference"
+        )
+        self.assertIn("TCJ.Core.csproj", finding["value"])
+
+    def test_full_support_tier_cannot_drift_from_packed_execution_evidence(self) -> None:
+        policy = self._read_policy()
+        core = next(item for item in policy["packages"] if item["packageId"] == "TCJ.Core")
+        ef = next(item for item in policy["packages"] if item["packageId"] == "TCJ.EntityFrameworkCore")
+        ef["tier"] = "Full"
+        ef["fullSupportEvidence"] = [dict(core["fullSupportEvidence"][0])]
+        self._write_policy(policy)
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [item for item in payload["findings"] if item["rule"] == "AOT009"]
+        self.assertTrue(any(item["property"] == "FullPackages" for item in findings))
+        self.assertTrue(any(item["property"] == "TCJ.EntityFrameworkCore" for item in findings))
+
+    def test_current_repository_wires_blocking_packed_aot_gates_into_ci_and_release(self) -> None:
         repository_root = MODULE.ROOT
-        commands = ("eng/verify-aot.py", "eng/verify-aot-policy.py")
+        commands = (
+            "python3 eng/verify-aot.py verify",
+            "python3 eng/run-native-aot-smoke.py",
+            "python3 eng/verify-aot.py verify-result",
+            "linux-x64",
+        )
         for name in ("ci.yml", "release-preflight.yml", "release.yml"):
             workflow = repository_root / ".github/workflows" / name
             text = workflow.read_text(encoding="utf-8")
             for command in commands:
-                self.assertNotIn(command, text, f"{name} must stay non-blocking until Important 8")
+                self.assertIn(command, text, f"{name} must block on the Important 8 Native AOT gate")
 
-    def test_ef_nativeaot_fixture_rejects_static_query_lambda_modifiers(self) -> None:
-        self._write_valid_repository()
-        program = self.root / "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/Program.cs"
-        text = program.read_text(encoding="utf-8")
-        text = text.replace(".Where(record =>", ".Where(static record =>", 1)
-        program.write_text(text, encoding="utf-8")
+    def test_runtime_result_accepts_exact_full_package_execution_evidence(self) -> None:
+        version = "9.9.9-test"
+        result_path, package_directory = self._write_runtime_result_fixture(version=version)
 
-        findings = MODULE._validate_ef_nativeaot_fixture(self.root)
-        self.assertTrue(
-            any(f.rule == "AOT007" and f.property == "Program.cs" and f.value == "static query lambda modifier" for f in findings),
-            findings,
+        payload, success = MODULE.verify_runtime_result(
+            root=self.root,
+            expected_version=version,
+            result_path=result_path,
+            package_directory=package_directory,
+            output_path=self.root / "artifacts/aot/runtime-result.json",
         )
+
+        self.assertTrue(success)
+        self.assertEqual("passed", payload["status"])
+        self.assertEqual(sorted(MODULE.PACKED_AOT_PACKAGES), payload["fullPackages"])
+        self.assertEqual([], payload["findings"])
+
+    def test_runtime_result_rejects_intentionally_broken_loaded_package_version(self) -> None:
+        version = "9.9.9-test"
+        result_path, package_directory = self._write_runtime_result_fixture(version=version)
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        result["loadedPackageVersions"]["TCJ.AspNetCore"] = "9.9.8-broken"
+        result_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+
+        payload, success = MODULE.verify_runtime_result(
+            root=self.root,
+            expected_version=version,
+            result_path=result_path,
+            package_directory=package_directory,
+            output_path=self.root / "artifacts/aot/runtime-result.json",
+        )
+
+        self.assertFalse(success)
+        self.assertEqual("failed", payload["status"])
+        finding = next(item for item in payload["findings"] if item["property"] == "loadedPackageVersions")
+        self.assertEqual("AOT100", finding["rule"])
+        self.assertIn(version, finding["message"])
 
     def _read_policy(self) -> dict:
         return json.loads((self.root / "eng/aot-policy.json").read_text(encoding="utf-8"))
@@ -357,6 +419,8 @@ class AotVerifierTests(unittest.TestCase):
             "scenario": "fixture",
             "consumerProject": "compatibility/Consumer/Consumer.csproj",
             "workflow": ".github/workflows/aot-fixture.yml",
+            "runtimeIdentifier": "linux-x64",
+            "resultArtifact": "artifacts/aot/native-aot-smoke/native-aot-result.json",
             "consumerSource": "PackedNuGet",
             "usesProjectReference": False,
             "publishAot": True,
@@ -365,6 +429,42 @@ class AotVerifierTests(unittest.TestCase):
             "tcjTrimWarningCount": 0,
             "tcjAotWarningCount": 0,
         }
+
+    def _write_runtime_result_fixture(self, *, version: str) -> tuple[Path, Path]:
+        package_directory = self.root / "artifacts/packages"
+        package_directory.mkdir(parents=True, exist_ok=True)
+        packages = sorted(MODULE.PACKED_AOT_PACKAGES)
+        for package_id in packages:
+            (package_directory / f"{package_id}.{version}.nupkg").write_bytes(b"fixture")
+
+        result_path = self.root / MODULE.PACKED_AOT_RESULT
+        result_path.parent.mkdir(parents=True, exist_ok=True)
+        result = {
+            "schemaVersion": 1,
+            "status": "passed",
+            "packageVersion": version,
+            "runtimeIdentifier": "linux-x64",
+            "consumerProject": MODULE.PACKED_AOT_FIXTURE,
+            "consumerSource": "PackedNuGet",
+            "usesProjectReference": False,
+            "publishAot": True,
+            "packageSourceStatus": "pass",
+            "restoreStatus": "pass",
+            "publishStatus": "pass",
+            "executionStatus": "pass",
+            "expectedPackages": packages,
+            "resolvedPackages": {package_id: version for package_id in packages},
+            "loadedPackageVersions": {package_id: version for package_id in packages},
+            "trimWarnings": [],
+            "aotWarnings": [],
+            "tcjWarnings": [],
+            "upstreamWarnings": [],
+            "unexpectedAotWarningCount": 0,
+            "warningCount": 0,
+            "failure": None,
+        }
+        result_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        return result_path, package_directory
 
     def _write_evidence_files(self) -> None:
         consumer = self.root / "compatibility/Consumer/Consumer.csproj"
@@ -380,6 +480,13 @@ class AotVerifierTests(unittest.TestCase):
             "eng/aot-policy.json",
             "eng/release-manifest.json",
             ".github/PULL_REQUEST_TEMPLATE.md",
+            ".github/workflows/ci.yml",
+            ".github/workflows/release-preflight.yml",
+            ".github/workflows/release.yml",
+            "eng/run-native-aot-smoke.py",
+            "smoke/NuGet.Config",
+            "smoke/TCJ.NativeAot.SmokeTest/TCJ.NativeAot.SmokeTest.csproj",
+            "smoke/TCJ.NativeAot.SmokeTest/Program.cs",
             "docs/guides/native-aot-and-trimming.md",
             "docs/toc.yml",
             "docs/README.md",

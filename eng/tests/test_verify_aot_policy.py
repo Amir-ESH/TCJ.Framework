@@ -163,7 +163,7 @@ class AotPolicyVerifierTests(unittest.TestCase):
             )
 
         policy = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "documentation": "docs/guides/native-aot-and-trimming.md",
             "supportTiers": {
                 "Full": "full",
@@ -184,6 +184,7 @@ class AotPolicyVerifierTests(unittest.TestCase):
                     "allowed": [],
                 },
             },
+            "supportedCiRuntimeIdentifiers": ["linux-x64"],
             "minimumFullSupportEvidence": {
                 "consumerSource": "PackedNuGet",
                 "projectReferenceEvidenceAccepted": False,

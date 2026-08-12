@@ -18,9 +18,9 @@ public static class Program
         if (args.Contains("--execute-query", StringComparer.Ordinal))
         {
             _ = await dbContext.Records
-                .Where(record => record.Name.StartsWith('A'))
-                .OrderBy(record => record.Name)
-                .Select(record => record.Name)
+                .Where(static record => record.Name.StartsWith("A"))
+                .OrderBy(static record => record.Name)
+                .Select(static record => record.Name)
                 .ToListAsync();
         }
 

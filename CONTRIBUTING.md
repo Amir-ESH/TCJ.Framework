@@ -93,7 +93,9 @@ Pull requests targeting `develop` or `main` must pass the `Build, test and pack`
 
 ## Native AOT policy verification
 
-Native AOT/trimming policy verification is local-only until Important 8. Run `python3 eng/verify-aot.py verify` to validate `eng/aot-policy.json` against production package project settings and to write the deterministic baseline report under `artifacts/aot/`. Do not add this verifier to `ci.yml`, `release-preflight.yml`, or `release.yml` as part of Important 2. See [`docs/guides/native-aot-and-trimming.md`](docs/guides/native-aot-and-trimming.md) for the support contract and suppression rules.
+Native AOT/trimming policy verification is a blocking CI and release contract. Run `python3 eng/verify-aot.py verify` after AOT policy, production package AOT metadata, smoke-fixture, or workflow changes. The verifier validates the current Full support-tier closure against `smoke/TCJ.NativeAot.SmokeTest`, the supported `linux-x64` RID, local packed-package source mapping, absence of TCJ project references, and blocking CI/release wiring.
+
+The workflow-only publish/execute gate runs `python3 eng/run-native-aot-smoke.py --version <candidate-version>` against `artifacts/packages`, then runs `python3 eng/verify-aot.py verify-result --version <candidate-version>` to prove that the native process loaded exactly the candidate `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.AspNetCore` packages and emitted no `IL2xxx`/`IL3xxx` warning baseline. Release builds retain the AOT logs and JSON evidence, and the publishing job re-verifies that retained result before NuGet publishing. The EF NativeAOT fixture remains separately Experimental. See [`docs/guides/native-aot-and-trimming.md`](docs/guides/native-aot-and-trimming.md) for the exact support contract and suppression rules.
 
 ## Package consumer compatibility
 

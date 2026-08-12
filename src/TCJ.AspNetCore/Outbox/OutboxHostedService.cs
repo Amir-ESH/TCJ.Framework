@@ -11,12 +11,6 @@ internal sealed class OutboxHostedService(
     TimeProvider timeProvider,
     ILogger<OutboxHostedService> logger) : BackgroundService
 {
-    private static readonly Action<ILogger, string, Exception?> LogProcessingPollFailed =
-        LoggerMessage.Define<string>(
-            LogLevel.Error,
-            new EventId(0),
-            "TCJ outbox processing poll failed with failure type {FailureType}. The next bounded poll will retry eligible work.");
-
     private DateTimeOffset _nextCleanupAtUtc = DateTimeOffset.MinValue;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -48,7 +42,7 @@ internal sealed class OutboxHostedService(
             catch (Exception exception)
             {
                 // Deliberately avoid logging exception messages because third-party exceptions can contain serialized data.
-                LogProcessingPollFailed(logger, NormalizeType(exception.GetType()), null);
+                logger.LogError("TCJ outbox processing poll failed with failure type {FailureType}. The next bounded poll will retry eligible work.", NormalizeType(exception.GetType()));
                 hadWork = false;
             }
 

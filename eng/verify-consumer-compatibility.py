@@ -133,33 +133,6 @@ def load_policy(root: Path = ROOT) -> dict[str, Any]:
                 f"missing {required_fragment!r}."
             )
 
-    aspnet_aot_consumers = [item for item in consumers if item.get("name") == "AspNetCore.MinimalApi"]
-    if len(aspnet_aot_consumers) != 1:
-        fail("Compatibility policy must define exactly one AspNetCore.MinimalApi package consumer.")
-    expected_aspnet_aot_packages = ["TCJ.Core", "TCJ.DependencyInjection", "TCJ.AspNetCore"]
-    if aspnet_aot_consumers[0].get("packages") != expected_aspnet_aot_packages:
-        fail(f"AspNetCore.MinimalApi must declare exactly {expected_aspnet_aot_packages}.")
-    aspnet_aot_project = root / str(aspnet_aot_consumers[0].get("project", ""))
-    try:
-        aspnet_aot_root = ET.parse(aspnet_aot_project).getroot()
-    except (FileNotFoundError, ET.ParseError) as error:
-        fail(f"Invalid AspNetCore.MinimalApi project: {error}")
-    aspnet_aot_properties = {
-        strip_namespace(node.tag): (node.text or "").strip().casefold()
-        for node in aspnet_aot_root.iter()
-    }
-    required_aspnet_aot_properties = {
-        "IsAotCompatible": "true",
-        "EnableRequestDelegateGenerator": "true",
-        "JsonSerializerIsReflectionEnabledByDefault": "false",
-    }
-    for property_name, expected_value in required_aspnet_aot_properties.items():
-        if aspnet_aot_properties.get(property_name) != expected_value:
-            fail(
-                f"AspNetCore.MinimalApi must set {property_name}={expected_value} so its package-only "
-                "Minimal API path is analyzed through the Native AOT request-delegate generator."
-            )
-
     outbox_consumers = [item for item in consumers if item.get("name") == "Outbox.Console"]
     if len(outbox_consumers) != 1:
         fail("Compatibility policy must define exactly one Outbox.Console package consumer.")
