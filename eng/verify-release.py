@@ -40,6 +40,7 @@ def read_manifest(root: Path) -> dict[str, object]:
         "tag",
         "releaseDate",
         "repository",
+        "licenseExpression",
         "packages",
     }
     missing = sorted(required.difference(data))
@@ -69,6 +70,10 @@ def read_manifest(root: Path) -> dict[str, object]:
     ):
         fail("A ready manifest must use YYYY-MM-DD for releaseDate.")
 
+    license_expression = str(data["licenseExpression"]).strip()
+    if not license_expression:
+        fail("Manifest licenseExpression must be a non-empty SPDX expression.")
+
     packages = data["packages"]
     if not isinstance(packages, list) or not packages:
         fail("Manifest packages must be a non-empty array.")
@@ -88,6 +93,14 @@ def read_msbuild_version(root: Path) -> str:
     return version.strip()
 
 
+def read_msbuild_license_expression(root: Path) -> str:
+    packaging = ET.parse(root / "eng" / "Packaging.props").getroot()
+    license_expression = packaging.findtext("./PropertyGroup/PackageLicenseExpression")
+    if not license_expression or not license_expression.strip():
+        fail("eng/Packaging.props does not define PackageLicenseExpression.")
+    return license_expression.strip()
+
+
 def read_published_manifest(root: Path) -> dict[str, object]:
     path = root / "eng" / "published-release.json"
     data = json.loads(read_text(path))
@@ -98,6 +111,7 @@ def read_published_manifest(root: Path) -> dict[str, object]:
         "tag",
         "releaseDate",
         "repository",
+        "licenseExpression",
         "packages",
     }
     missing = sorted(required.difference(data))
@@ -111,6 +125,10 @@ def read_published_manifest(root: Path) -> dict[str, object]:
         fail(f"Published version is not valid semantic versioning: {version}")
     if data["tag"] != f"v{version}":
         fail("Published release tag must be the version prefixed with 'v'.")
+
+    license_expression = str(data["licenseExpression"]).strip()
+    if not license_expression:
+        fail("Published release licenseExpression must be a non-empty SPDX expression.")
 
     packages = data["packages"]
     if not isinstance(packages, list) or not packages:
@@ -270,6 +288,7 @@ def validate_primary_package(
     package_id: str,
     version: str,
     repository: str,
+    expected_license_expression: str,
 ) -> None:
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
@@ -287,7 +306,7 @@ def validate_primary_package(
             "projectUrl": expected_project_url,
             "repositoryUrl": expected_repository_url,
             "repositoryType": "git",
-            "license": "MIT",
+            "license": expected_license_expression,
             "licenseType": "expression",
             "readme": "README.md",
         }
@@ -353,6 +372,7 @@ def validate_packages(root: Path, package_directory: Path, manifest: dict[str, o
             package_id,
             version,
             repository,
+            str(manifest["licenseExpression"]),
         )
         validate_symbol_package(
             package_directory / f"{package_id}.{version}.snupkg"
@@ -391,6 +411,14 @@ def main() -> int:
         fail(
             f"eng/Packaging.props version {packaging_version!r} does not match "
             f"release manifest version {version!r}."
+        )
+
+    packaging_license = read_msbuild_license_expression(root)
+    manifest_license = str(manifest["licenseExpression"])
+    if packaging_license != manifest_license:
+        fail(
+            f"eng/Packaging.props license {packaging_license!r} does not match "
+            f"release manifest license {manifest_license!r}."
         )
 
     published_manifest = read_published_manifest(root)

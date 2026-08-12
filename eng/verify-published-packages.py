@@ -67,7 +67,7 @@ def request_json(url: str) -> dict[str, object]:
 
 def load_manifest(path: Path) -> dict[str, object]:
     data = json.loads(path.read_text(encoding="utf-8"))
-    required = {"schemaVersion", "version", "tag", "releaseDate", "repository", "packages"}
+    required = {"schemaVersion", "version", "tag", "releaseDate", "repository", "licenseExpression", "packages"}
     missing = sorted(required.difference(data))
     if missing:
         fail(f"Published release manifest is missing fields: {', '.join(missing)}")
@@ -162,6 +162,7 @@ def download_package(
 def verify_once(
     manifest: dict[str, object],
     version: str,
+    expected_license_expression: str,
     output_directory: Path,
     flat_container_base_url: str,
     registration_base_url: str,
@@ -193,7 +194,13 @@ def verify_once(
             flat_container_base_url,
         )
         try:
-            validate_primary_package(package_path, package_id, version, repository)
+            validate_primary_package(
+                package_path,
+                package_id,
+                version,
+                repository,
+                expected_license_expression,
+            )
         except (ValueError, OSError, zipfile.BadZipFile) as error:
             failures.append(f"{package_id} {version} content validation failed: {error}")
             continue
@@ -201,6 +208,32 @@ def verify_once(
         print(f"{package_id} {version}: LISTED, DOWNLOADED, VERIFIED")
 
     return failures
+
+
+def resolve_expected_license_expression(
+    version: str,
+    published_manifest: dict[str, object],
+    release_manifest_path: Path,
+    explicit_license_expression: str | None = None,
+) -> str:
+    if explicit_license_expression is not None and explicit_license_expression.strip():
+        return explicit_license_expression.strip()
+
+    if version.casefold() == str(published_manifest["version"]).casefold():
+        return str(published_manifest["licenseExpression"]).strip()
+
+    release_manifest = json.loads(release_manifest_path.read_text(encoding="utf-8"))
+    if version.casefold() == str(release_manifest.get("version", "")).casefold():
+        license_expression = str(release_manifest.get("licenseExpression", "")).strip()
+        if not license_expression:
+            fail("eng/release-manifest.json has no licenseExpression for the requested version.")
+        return license_expression
+
+    fail(
+        f"No expected license expression is recorded for {version}. "
+        "Pass --license-expression explicitly when verifying a historical version "
+        "that is not represented by the current release manifests."
+    )
 
 
 def main() -> int:
@@ -211,6 +244,15 @@ def main() -> int:
         default=Path(__file__).resolve().with_name("published-release.json"),
     )
     parser.add_argument("--version")
+    parser.add_argument(
+        "--license-expression",
+        help="Expected SPDX license expression for an explicitly selected historical version.",
+    )
+    parser.add_argument(
+        "--release-manifest",
+        type=Path,
+        default=Path(__file__).resolve().with_name("release-manifest.json"),
+    )
     parser.add_argument(
         "--output-directory",
         type=Path,
@@ -230,11 +272,19 @@ def main() -> int:
     if not SEMVER_PATTERN.fullmatch(version):
         fail(f"Requested version is not valid semantic versioning: {version}")
 
+    expected_license_expression = resolve_expected_license_expression(
+        version,
+        manifest,
+        args.release_manifest.resolve(),
+        args.license_expression,
+    )
+
     deadline = time.monotonic() + args.wait_seconds
     while True:
         failures = verify_once(
             manifest,
             version,
+            expected_license_expression,
             args.output_directory.resolve(),
             args.flat_container_base_url,
             args.registration_base_url,

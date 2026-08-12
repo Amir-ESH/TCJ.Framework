@@ -118,7 +118,7 @@ A pull request should explain:
 - architecture-policy and documentation changes when module boundaries are intentionally changed;
 - reproducibility-policy or normalization justification when build/package comparison behavior changes.
 
-By contributing, you agree that your contribution is licensed under the repository's MIT License.
+By contributing, you agree that your contribution may be distributed under the repository's **GNU Lesser General Public License v3.0 only (`LGPL-3.0-only`)**. Contributions do not grant ownership of, or broader permission to use, the TCJ project marks; brand use is governed separately by [`TRADEMARKS.md`](TRADEMARKS.md).
 
 ## API documentation changes
 

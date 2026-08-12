@@ -143,7 +143,7 @@ class Fixture:
     <id>{package_id}</id>
     <version>{version}</version>
     <authors>TCJ Contributors</authors>
-    <license type="expression">MIT</license>
+    <license type="expression">LGPL-3.0-only</license>
     <projectUrl>https://example.test/{package_id}</projectUrl>
     <repository type="git" url="https://github.com/Amir-ESH/TCJ.Framework.git" commit="{COMMIT}" />
     <dependencies><group targetFramework="net10.0">{dependencies_xml}</group></dependencies>

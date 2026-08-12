@@ -15,7 +15,7 @@ A release is rejected unless all of the following are true:
 - restore, Release build, tests, coverage quality gate, and pack succeed;
 - the packed APIs remain compatible with the latest published TCJ baseline, except for reviewed suppressions;
 - exactly five `.nupkg` and five `.snupkg` files are produced;
-- each package contains the expected ID, version, repository metadata, MIT license expression, README, license file, assembly, and portable symbols;
+- each package contains the expected ID, version, repository metadata, the release-manifest license expression, README, license file, assembly, and portable symbols;
 - one versioned CycloneDX JSON SBOM contains all five TCJ packages, restored direct/transitive dependencies, dependency relationships, licenses, hashes, repository identity, release metadata, and source commit;
 - `SHA256SUMS` covers all ten package files and the SBOM.
 
@@ -228,7 +228,7 @@ If any package was published, increment the version, update `eng/Packaging.props
 
 ## After publication
 
-1. update `eng/published-release.json` to the immutable version and tag that reached NuGet.org;
+1. update `eng/published-release.json` to the immutable version, tag, date, package set, and `licenseExpression` that reached NuGet.org;
 2. update `TCJPublishedPackageVersion` in `eng/PackageValidation.props` to that same version;
 3. increment `eng/Packaging.props` and `eng/release-manifest.json`;
 4. set the release manifest to `status: development` and `releaseDate: null`;

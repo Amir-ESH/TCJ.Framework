@@ -1,0 +1,90 @@
+from __future__ import annotations
+
+import importlib.util
+import tempfile
+import unittest
+import zipfile
+from pathlib import Path
+
+
+SCRIPT = Path(__file__).resolve().parents[1] / "verify-release.py"
+SPEC = importlib.util.spec_from_file_location("verify_release", SCRIPT)
+assert SPEC is not None and SPEC.loader is not None
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+
+
+class ReleasePackageLicenseTests(unittest.TestCase):
+    PACKAGE_ID = "TCJ.Core"
+    VERSION = "0.1.0-preview.2"
+    REPOSITORY = "Amir-ESH/TCJ.Framework"
+
+    def write_package(
+        self,
+        path: Path,
+        *,
+        license_expression: str = "LGPL-3.0-only",
+    ) -> None:
+        nuspec = f'''<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>{self.PACKAGE_ID}</id>
+    <version>{self.VERSION}</version>
+    <authors>TCJ Contributors</authors>
+    <description>TCJ release verification fixture.</description>
+    <projectUrl>https://github.com/{self.REPOSITORY}</projectUrl>
+    <repository type="git" url="https://github.com/{self.REPOSITORY}.git" />
+    <license type="expression">{license_expression}</license>
+    <readme>README.md</readme>
+  </metadata>
+</package>
+'''
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr(f"{self.PACKAGE_ID}.nuspec", nuspec)
+            archive.writestr("README.md", "readme")
+            archive.writestr("LICENSE.txt", "license")
+            archive.writestr(f"lib/net10.0/{self.PACKAGE_ID}.dll", b"fixture")
+
+    def test_lgpl_expression_is_accepted_for_current_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / f"{self.PACKAGE_ID}.{self.VERSION}.nupkg"
+            self.write_package(package)
+
+            MODULE.validate_primary_package(
+                package,
+                self.PACKAGE_ID,
+                self.VERSION,
+                self.REPOSITORY,
+                "LGPL-3.0-only",
+            )
+
+    def test_legacy_mit_package_is_accepted_when_manifest_expects_mit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / f"{self.PACKAGE_ID}.{self.VERSION}.nupkg"
+            self.write_package(package, license_expression="MIT")
+
+            MODULE.validate_primary_package(
+                package,
+                self.PACKAGE_ID,
+                self.VERSION,
+                self.REPOSITORY,
+                "MIT",
+            )
+
+    def test_wrong_license_expression_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / f"{self.PACKAGE_ID}.{self.VERSION}.nupkg"
+            self.write_package(package, license_expression="MIT")
+
+            with self.assertRaisesRegex(ValueError, "LGPL-3.0-only"):
+                MODULE.validate_primary_package(
+                    package,
+                    self.PACKAGE_ID,
+                    self.VERSION,
+                    self.REPOSITORY,
+                    "LGPL-3.0-only",
+                )
+
+
+if __name__ == "__main__":
+    unittest.main()
