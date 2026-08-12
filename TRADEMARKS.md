@@ -45,6 +45,16 @@ If you distribute a materially modified fork, derivative distribution, or repack
 
 Renaming code, namespaces, assemblies, or package identifiers as part of a fork is a software modification governed by the LGPL. The restriction here is not on making that modification; it is on using the TCJ Marks in a confusing or misleading way after the modification.
 
+## Independent and commercial forks
+
+The TCJ trademark policy is **not** a non-commercial restriction.
+
+Subject to the applicable software license and third-party licenses, an independent fork may be developed, maintained, hosted, supported, distributed, or sold for money. Its authors may use their own project name, company name, package identifiers, domain, logo, and commercial branding.
+
+A fork author may claim ownership of their own original modifications and fork-specific brand to the extent provided by law. Forking TCJ Framework does not transfer ownership or governance of the Official TCJ Project, official upstream repository, official TCJ releases, or TCJ-controlled marks.
+
+When describing lineage, truthful statements such as **"Based on TCJ Framework"**, **"Forked from TCJ Framework"**, or **"Compatible with TCJ Framework"** are welcome when presented in a way that does not imply official status, sponsorship, certification, or endorsement.
+
 ## Permission is required
 
 Please obtain written permission before using a TCJ Mark:

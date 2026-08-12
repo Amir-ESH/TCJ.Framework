@@ -2,6 +2,24 @@
 
 Thank you for helping improve TCJ Framework.
 
+## Contributor License Agreement
+
+All contributions intended for inclusion in the Official TCJ Project are subject to the [TCJ Contributor License Agreement](CLA.md).
+
+By submitting a pull request you must affirm that you have read and agree to the CLA and that you have authority to grant its rights. If an employer or another organization may own the contribution, obtain the required authorization before submitting it. Project Owners may require a separately signed individual or corporate agreement before accepting substantial or legally sensitive contributions.
+
+The CLA does **not** transfer ownership of your unrelated work or independent fork. You retain copyright in your original Contribution while granting the Official TCJ Project broad rights to use, modify, distribute, sublicense, and relicense accepted Contributions.
+
+## Project governance and upstream authority
+
+Read [`GOVERNANCE.md`](GOVERNANCE.md) before proposing changes to ownership, licensing, release infrastructure, package identity, or project branding.
+
+Contributors may propose changes through pull requests, but contribution does not grant ownership, merge authority, release authority, trademark rights, or control over the Official TCJ Project. Protected upstream changes become official only after the required validation and Project Owner approval.
+
+Only Project Owners may approve changes to the Official TCJ Project's outbound license, CLA, governance policy, trademark policy, owner list, or official release/package identity.
+
+Independent forks remain permitted under the applicable LGPL terms and may be developed or sold separately. Fork authors own their original modifications and fork-specific branding, but an independent fork is not the Official TCJ Project and must follow [`TRADEMARKS.md`](TRADEMARKS.md) when referring to TCJ.
+
 ## Before opening work
 
 - Search existing issues and pull requests.

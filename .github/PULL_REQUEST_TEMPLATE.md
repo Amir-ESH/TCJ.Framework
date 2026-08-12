@@ -2,6 +2,12 @@
 
 Describe the problem and the approach taken.
 
+## Contributor agreement
+
+- [ ] I have read and agree to the [TCJ Contributor License Agreement](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/CLA.md).
+- [ ] I confirm that I have the right and authority to submit this contribution under the CLA, including any required employer/organization authorization.
+- [ ] I understand that contributing does not grant ownership, merge/release authority, governance control, or trademark rights in the Official TCJ Project.
+
 ## Changes
 
 -
