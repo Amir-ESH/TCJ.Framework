@@ -321,6 +321,19 @@ class AotVerifierTests(unittest.TestCase):
         )
         self.assertIn("documented static path", finding["message"])
 
+    def test_ef_nativeaot_fixture_rejects_static_query_lambda_modifiers(self) -> None:
+        self._write_valid_repository()
+        program = self.root / "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/Program.cs"
+        text = program.read_text(encoding="utf-8")
+        text = text.replace(".Where(record =>", ".Where(static record =>", 1)
+        program.write_text(text, encoding="utf-8")
+
+        findings = MODULE._validate_ef_nativeaot_fixture(self.root)
+        self.assertTrue(
+            any(f.rule == "AOT007" and f.property == "Program.cs" and f.value == "static query lambda modifier" for f in findings),
+            findings,
+        )
+
     def test_packed_native_aot_smoke_rejects_repository_project_references(self) -> None:
         fixture = self.root / MODULE.PACKED_AOT_FIXTURE
         text = fixture.read_text(encoding="utf-8").replace(
