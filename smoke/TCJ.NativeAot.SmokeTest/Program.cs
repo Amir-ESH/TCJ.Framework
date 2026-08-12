@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.Extensions.DependencyInjection;
 using TCJ.AspNetCore.Extensions;
 using TCJ.AspNetCore.Results;
 using TCJ.Core.DomainEvents;
