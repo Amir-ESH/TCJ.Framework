@@ -6,6 +6,8 @@
     <Title>TCJ ASP.NET Core</Title>
     <Description>ASP.NET Core integration for TCJ, including current-user resolution, Result-to-HTTP mapping, Problem Details, and centralized exception handling.</Description>
     <PackageTags>tcj;dotnet;aspnetcore;web-api;problem-details;result-pattern;exception-handling</PackageTags>
+
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

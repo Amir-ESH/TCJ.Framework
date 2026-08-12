@@ -11,7 +11,7 @@ This workspace behaves like an external application set. It deliberately sits ou
 | `DependencyInjection.AotSafe.Console` | Core + DependencyInjection | package-only explicit AOT path: bootstrap, closed event route, manual handler registration, and dispatch under SDK AOT/trim analyzers |
 | `EntityFrameworkCore.Console` | Core + DependencyInjection + EntityFrameworkCore | InMemory repository, specification, Unit of Work, auditing, soft delete |
 | `EntityFrameworkCore.SqlServer.Console` | Core + DependencyInjection + EntityFrameworkCore + SqlServer | SQL Server registration/options/provider resolution without opening a connection |
-| `AspNetCore.MinimalApi` | Core + DependencyInjection + AspNetCore | Kestrel startup, current user, success and handled-error HTTP requests |
+| `AspNetCore.MinimalApi` | Core + DependencyInjection + AspNetCore | package-only AOT/trim analyzer fixture using `CreateSlimBuilder`, reflection-free DI, source-generated JSON, and success/error HTTP paths |
 | `FullStack.MinimalApi` | all five packages | all modules restored and resolved together plus HTTP/EF/SQL Server wiring |
 | `Outbox.Console` | Core + DependencyInjection + EntityFrameworkCore | package-only outbox persistence, stable event-name registration, manual batch processing, and handler invocation through a custom provider storage |
 
@@ -80,3 +80,11 @@ registers the handler through normal Microsoft DI, dispatches a real event, and 
 and route registration remain idempotent. It therefore acts as the package-only trim/AOT analyzer fixture
 for the supported explicit path. The convention-scanning `DependencyInjection.Console` remains separate so
 regular JIT scanning behavior continues to be exercised.
+
+`AspNetCore.MinimalApi` sets `IsAotCompatible=true` and disables reflection-based System.Text.Json defaults.
+It uses `WebApplication.CreateSlimBuilder()`, the reflection-free DI bootstrap, an application `JsonSerializerContext`,
+and the candidate packed `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.AspNetCore` packages. Its normal
+compatibility build therefore surfaces trim/AOT diagnostics at supported package call sites while its runtime check
+exercises success, validation, not-found, conflict, and unhandled-exception behavior. The project intentionally does
+not set `PublishAot=true`; the project-reference Native AOT execution smoke belongs to Important 6, while packed
+Native AOT release evidence remains scoped to Important 8.

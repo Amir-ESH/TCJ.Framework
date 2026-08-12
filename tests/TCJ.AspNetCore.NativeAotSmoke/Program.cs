@@ -6,27 +6,23 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using TCJ.AspNetCore.Extensions;
 using TCJ.AspNetCore.Results;
 using TCJ.Core.Results;
-using TCJ.Core.Security;
-using TCJ.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.WebHost.UseUrls("http://127.0.0.1:0");
 builder.Services.ConfigureHttpJsonOptions(options =>
-    options.SerializerOptions.TypeInfoResolverChain.Insert(0, AspNetCoreCompatibilityJsonContext.Default));
-builder.Services.AddTcjDependencyInjection();
+    options.SerializerOptions.TypeInfoResolverChain.Insert(0, NativeAotSmokeJsonContext.Default));
 builder.Services.AddTcjAspNetCore();
 
 await using WebApplication app = builder.Build();
 app.UseTcjAspNetCore();
-app.MapGet("/ok", (ICurrentUserProvider currentUser) =>
-    Result.Success(new CompatibilityResponse(true, currentUser.UserId)).ToHttpResult());
+app.MapGet("/success", () => Result.Success(new SmokeResponse("ok")).ToHttpResult());
 app.MapGet("/validation", () =>
     Result.Failure(CommonErrors.ValidationForField("Name", "Name is required.")).ToHttpResult());
 app.MapGet("/not-found", () =>
     Result.Failure(CommonErrors.NotFound("Widget", 42)).ToHttpResult());
 app.MapGet("/conflict", () =>
     Result.Failure(CommonErrors.Conflict("The widget already exists.")).ToHttpResult());
-app.MapGet("/handled-error", ThrowHandledError);
+app.MapGet("/unhandled", ThrowUnhandled);
 
 await app.StartAsync();
 IServer server = app.Services.GetRequiredService<IServer>();
@@ -35,21 +31,21 @@ IServerAddressesFeature addresses = server.Features.Get<IServerAddressesFeature>
 string address = addresses.Addresses.Single();
 
 using var client = new HttpClient { BaseAddress = new Uri(address) };
-await AssertResponseAsync(client, "/ok", HttpStatusCode.OK, "\"ok\":true");
+await AssertResponseAsync(client, "/success", HttpStatusCode.OK, "\"value\":\"ok\"");
 await AssertResponseAsync(client, "/validation", HttpStatusCode.BadRequest, "Name is required.", "VALIDATION_FAILED");
 await AssertResponseAsync(client, "/not-found", HttpStatusCode.NotFound, "NOT_FOUND");
 await AssertResponseAsync(client, "/conflict", HttpStatusCode.Conflict, "CONFLICT");
-string unhandledBody = await AssertResponseAsync(client, "/handled-error", HttpStatusCode.InternalServerError, "UNEXPECTED_ERROR");
-if (unhandledBody.Contains("compatibility-secret", StringComparison.Ordinal))
+string unhandledBody = await AssertResponseAsync(client, "/unhandled", HttpStatusCode.InternalServerError, "UNEXPECTED_ERROR");
+if (unhandledBody.Contains("native-aot-sensitive-detail", StringComparison.Ordinal))
 {
-    throw new InvalidOperationException("Unhandled exception details leaked to the response.");
+    throw new InvalidOperationException("Unhandled exception details leaked from the Native AOT host.");
 }
 
 await app.StopAsync();
-Console.WriteLine("TCJ.AspNetCore consumer passed");
+Console.WriteLine("TCJ.AspNetCore Native AOT smoke passed");
 
-static Microsoft.AspNetCore.Http.IResult ThrowHandledError() =>
-    throw new InvalidOperationException("compatibility-secret");
+static Microsoft.AspNetCore.Http.IResult ThrowUnhandled() =>
+    throw new InvalidOperationException("native-aot-sensitive-detail");
 
 static async Task<string> AssertResponseAsync(HttpClient client, string path, HttpStatusCode expectedStatus, params string[] requiredFragments)
 {
@@ -71,10 +67,10 @@ static async Task<string> AssertResponseAsync(HttpClient client, string path, Ht
     return body;
 }
 
-internal sealed record CompatibilityResponse(bool Ok, long? UserId);
+internal sealed record SmokeResponse(string Value);
 
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, GenerationMode = JsonSourceGenerationMode.Metadata)]
-[JsonSerializable(typeof(CompatibilityResponse))]
-internal sealed partial class AspNetCoreCompatibilityJsonContext : JsonSerializerContext
+[JsonSerializable(typeof(SmokeResponse))]
+internal sealed partial class NativeAotSmokeJsonContext : JsonSerializerContext
 {
 }

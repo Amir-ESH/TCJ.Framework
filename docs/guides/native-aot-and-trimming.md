@@ -35,9 +35,9 @@ The support tier keeps the stronger Important 1 contract: **Full** requires a pa
 | `TCJ.DependencyInjection` | **Conditional (explicit path)** | **Conditional** | `src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj` declares `<IsAotCompatible>true</IsAotCompatible>`. The supported analyzer-clean path is `AddTcjDependencyInjection()` + `AddTcjDomainEvent<TEvent>()` + explicit Microsoft DI registrations. Convention scanning remains available but is annotated as trimming- and dynamic-code-restricted. Formal Full support still requires Important 8 packed publish-and-execute evidence. |
 | `TCJ.EntityFrameworkCore` | Not claimed | **Experimental** | EF Core NativeAOT remains upstream-experimental, and TCJ has reflection/dynamic-generic usage paths that require explicit treatment. |
 | `TCJ.EntityFrameworkCore.SqlServer` | Not claimed | **Experimental** | The provider path inherits the upstream EF Core NativeAOT experimental boundary and has no qualifying packed-consumer evidence. |
-| `TCJ.AspNetCore` | Not claimed | **Conditional** | The application must remain inside ASP.NET Core features that are supported by Native AOT; ASP.NET Core's AOT support is feature-dependent. |
+| `TCJ.AspNetCore` | **Full (supported Minimal API path)** | **Conditional** | `src/TCJ.AspNetCore/TCJ.AspNetCore.csproj` declares `<IsAotCompatible>true</IsAotCompatible>`. The package-only `AspNetCore.MinimalApi` consumer enables AOT/trim analysis with reflection-based JSON disabled, while `TCJ.AspNetCore.NativeAotSmoke` publishes a `CreateSlimBuilder()` host and executes success, validation, not-found, conflict, and unhandled-exception paths. MVC and other upstream-unsupported ASP.NET Core feature families are not covered, and formal Full support still requires Important 8 packed-package evidence. |
 
-`TCJ.Core` is therefore the first TCJ package with a **Full library-level AOT/trimming compatibility** claim. No production package is promoted to the formal **Full support tier** until the stronger packed publish-and-run evidence contract is satisfied.
+`TCJ.Core` remains the first TCJ package with a **Full library-level AOT/trimming compatibility** claim, and `TCJ.AspNetCore` now joins it for the documented supported Minimal API path. No production package is promoted to the formal **Full support tier** until the stronger packed publish-and-run evidence contract is satisfied.
 
 ### `TCJ.Core` analyzer fixture
 
@@ -70,6 +70,19 @@ The following APIs select or can select runtime assembly scanning and are **rest
 - `TcjDependencyInjectionOptions.AddAssembly`, `AddAssemblies`, and `AddAssemblyContaining<TMarker>` because they opt into convention scanning
 
 The three scanner-capable `AddTcjDependencyInjection` overloads are annotated with both `RequiresUnreferencedCode` and `RequiresDynamicCode`. They keep the existing `Assembly.GetTypes()` convention discovery and a restricted runtime-generic domain-event dispatch fallback for regular JIT/non-trimmed applications. Trimming/Native AOT callers therefore see the platform restrictions at the public API boundary instead of receiving a silent preservation workaround. TCJ adds no linker-preservation XML and no broad trim/AOT warning suppression for scanning.
+
+### ASP.NET Core supported Native AOT path
+
+`TCJ.AspNetCore` declares `IsAotCompatible=true` and supports the TCJ-owned integration surface when the application stays inside ASP.NET Core's Native-AOT-supported Minimal API feature set. The supported TCJ path uses `WebApplication.CreateSlimBuilder()` (or the current framework-supported equivalent), `AddTcjAspNetCore()`, `UseTcjAspNetCore()`, Minimal API endpoints, framework Problem Details, current-user resolution, and TCJ health endpoints.
+
+TCJ-owned JSON paths do not depend on reflection metadata. Health responses use an internal source-generated `JsonSerializerContext`, and `AddTcjAspNetCore()` contributes TCJ's generated Problem Details metadata to the ASP.NET Core HTTP JSON resolver chain. Native AOT applications remain responsible for source-generating metadata for their own response DTOs and for custom object types placed in `ResultError.Metadata`.
+
+Two fixtures verify different layers without conflating them:
+
+- `compatibility/Consumers/AspNetCore.MinimalApi` consumes the packed `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.AspNetCore` candidates, sets `IsAotCompatible=true`, disables reflection-based System.Text.Json defaults, and exercises the supported Minimal API call sites under SDK AOT/trim analysis. It intentionally does not set `PublishAot`; Important 8 owns packed-package publish evidence.
+- `tests/TCJ.AspNetCore.NativeAotSmoke` is a project-reference executable with `PublishAot=true`. The ASP.NET Core integration workflow publishes it for `linux-x64`, starts the native host, and verifies success, validation/bad-request, not-found, conflict, and unhandled-exception behavior, including that the exception detail is not leaked. This proves the package source is Native-AOT-compatible before Important 8 turns packed artifacts into a release guarantee.
+
+This compatibility claim does **not** extend to MVC controllers or other ASP.NET Core feature families that the platform does not support for Native AOT. TCJ adds no controller-generation layer, Newtonsoft.Json dependency, or preservation descriptor to change those upstream boundaries.
 
 ### EF Core reflection and dynamic generic paths
 
@@ -120,7 +133,7 @@ Run the repository-native verifier before opening a pull request that changes AO
 python3 eng/verify-aot.py verify
 ```
 
-The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, and rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns. A package declared **Full** fails verification if an evaluated repository project/props file explicitly sets `IsAotCompatible=false`. It also validates the package-level analyzer fixtures for `TCJ.Core` and `TCJ.DependencyInjection`: each production package must declare `IsAotCompatible=true`, each fixture must enable `IsAotCompatible`, consume the exact expected packed TCJ package closure, contain no project reference, and remain compile-only rather than taking over Important 8's publish responsibility.
+The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, and rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns. A package declared **Full** fails verification if an evaluated repository project/props file explicitly sets `IsAotCompatible=false`. It also validates the package-level analyzer fixtures for `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.AspNetCore`: each production package must declare `IsAotCompatible=true`, each fixture must enable `IsAotCompatible`, consume the exact expected packed TCJ package closure, contain no project reference, and remain compile-only rather than taking over Important 8's packed publish responsibility. The separate ASP.NET Core integration verifier additionally pins the project-reference Native AOT smoke host to `PublishAot=true`, reflection-free JSON defaults, the required HTTP scenarios, and a Minimal-API-only surface.
 
 Every run writes the deterministic machine-readable result to `artifacts/aot/aot-verification.json`. The report contains no timestamp or machine-specific absolute path, keeps packages and findings in stable order, and records the package, rule, offending project/props file, property, and value for each violation. Generated `artifacts/aot/` output is local evidence and must not be committed.
 

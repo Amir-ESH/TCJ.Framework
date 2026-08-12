@@ -45,6 +45,10 @@ ANALYZER_FIXTURES = {
         "compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj",
         ("TCJ.Core", "TCJ.DependencyInjection"),
     ),
+    "TCJ.AspNetCore": (
+        "compatibility/Consumers/AspNetCore.MinimalApi/AspNetCore.MinimalApi.csproj",
+        ("TCJ.Core", "TCJ.DependencyInjection", "TCJ.AspNetCore"),
+    ),
 }
 
 

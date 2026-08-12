@@ -42,6 +42,10 @@ class RequiredPrGateTests(unittest.TestCase):
         self.assertIn("documentation", selected)
         self.assertIn("transactional_outbox", selected)
 
+    def test_aspnetcore_native_aot_smoke_selects_aspnetcore_gate(self):
+        selected = self.required("develop", "tests/TCJ.AspNetCore.NativeAotSmoke/Program.cs")
+        self.assertIn("aspnetcore_integration", selected)
+
     def test_entity_framework_change_selects_relevant_specialized_gates(self):
         selected = self.required("develop", "src/TCJ.EntityFrameworkCore/Outbox/Processor.cs")
         for gate in (

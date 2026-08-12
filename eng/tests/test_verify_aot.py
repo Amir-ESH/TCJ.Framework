@@ -225,6 +225,35 @@ class AotVerifierTests(unittest.TestCase):
         self.assertTrue(any(item["project"] == "src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj" and item["property"] == "IsAotCompatible" for item in findings))
         self.assertTrue(any(item["property"] == "PackageReference" for item in findings))
 
+
+    def test_aspnetcore_analyzer_fixture_requires_package_aot_contract_and_expected_package_closure(self) -> None:
+        project = self.root / "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj"
+        project.write_text(
+            project.read_text(encoding="utf-8").replace(
+                "<IsAotCompatible>true</IsAotCompatible>",
+                "<IsAotCompatible>false</IsAotCompatible>",
+            ),
+            encoding="utf-8",
+        )
+        fixture = self.root / "compatibility/Consumers/AspNetCore.MinimalApi/AspNetCore.MinimalApi.csproj"
+        fixture.write_text(
+            fixture.read_text(encoding="utf-8").replace(
+                '<PackageReference Include="TCJ.AspNetCore" Version="$(TCJCompatibilityVersion)" />',
+                '',
+            ),
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [
+            item for item in payload["findings"]
+            if item["rule"] == "AOT006" and item["package"] == "TCJ.AspNetCore"
+        ]
+        self.assertTrue(any(item["project"] == "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj" and item["property"] == "IsAotCompatible" for item in findings))
+        self.assertTrue(any(item["property"] == "PackageReference" for item in findings))
+
     def test_current_repository_does_not_wire_aot_verification_into_blocking_workflows(self) -> None:
         repository_root = MODULE.ROOT
         commands = ("eng/verify-aot.py", "eng/verify-aot-policy.py")
@@ -280,6 +309,7 @@ class AotVerifierTests(unittest.TestCase):
             "eng/PackageValidation.props",
             "compatibility/Consumers/Core.Console/Core.Console.csproj",
             "compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj",
+            "compatibility/Consumers/AspNetCore.MinimalApi/AspNetCore.MinimalApi.csproj",
         ):
             source = source_root / relative
             target = self.root / relative

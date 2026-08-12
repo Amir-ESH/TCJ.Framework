@@ -79,6 +79,9 @@ class AspNetCoreIntegrationVerifierTests(unittest.TestCase):
             self.assertNotIn("Secret", text)
             self.assertIn("<redacted>", text)
 
+    def test_native_aot_smoke_configuration_is_valid(self) -> None:
+        MODULE.validate_native_aot_smoke()
+
     def test_parse_trx_rejects_missing_results(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaises(MODULE.AspNetCoreIntegrationError):
