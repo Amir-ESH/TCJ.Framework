@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "documentation": "docs/guides/native-aot-and-trimming.md",
   "supportTiers": {
     "Full": "A packed-NuGet consumer publishes and executes as Native AOT without TCJ-caused trimming or AOT warnings for the supported usage path.",
@@ -38,15 +38,30 @@
   "packages": [
     {
       "packageId": "TCJ.Core",
-      "tier": "Conditional",
-      "rationale": "TCJ.Core is library-level Native AOT and trimming compatible: its production project declares IsAotCompatible=true and the packed-package Core.Console consumer builds with the SDK AOT/trim analyzers enabled. The repository support tier remains Conditional until the packed Native AOT publish-and-execute evidence required for a formal Full support claim is introduced by Important 8.",
+      "tier": "Full",
+      "rationale": "TCJ.Core is Full for the supported package-consumer path. The release gate consumes the locally packed TCJ.Core package, publishes the linux-x64 smoke application with PublishAot=true, executes the native binary, verifies the loaded assembly PackageVersion metadata, and rejects any IL2xxx/IL3xxx diagnostics.",
       "restrictions": [],
-      "fullSupportEvidence": []
+      "fullSupportEvidence": [
+        {
+          "scenario": "packed-native-aot-http-di",
+          "consumerProject": "smoke/TCJ.NativeAot.SmokeTest/TCJ.NativeAot.SmokeTest.csproj",
+          "workflow": ".github/workflows/ci.yml",
+          "runtimeIdentifier": "linux-x64",
+          "resultArtifact": "artifacts/aot/native-aot-smoke/native-aot-result.json",
+          "consumerSource": "PackedNuGet",
+          "usesProjectReference": false,
+          "publishAot": true,
+          "publishSucceeded": true,
+          "publishedBinaryExecuted": true,
+          "tcjTrimWarningCount": 0,
+          "tcjAotWarningCount": 0
+        }
+      ]
     },
     {
       "packageId": "TCJ.DependencyInjection",
-      "tier": "Conditional",
-      "rationale": "TCJ.DependencyInjection declares IsAotCompatible=true and is analyzer-compatible on the explicit registration path: use the reflection-free AddTcjDependencyInjection() bootstrap, declare each dispatched event with AddTcjDomainEvent<TEvent>(), and register application services and IDomainEventHandler<TEvent> implementations explicitly with Microsoft DI. Convention scanning remains available for non-trimmed/JIT consumers and is explicitly restricted with RequiresUnreferencedCode and RequiresDynamicCode. The formal support tier remains Conditional until Important 8 records packed Native AOT publish-and-execute evidence.",
+      "tier": "Full",
+      "rationale": "TCJ.DependencyInjection is Full for the explicit Native AOT-safe path: AddTcjDependencyInjection(), AddTcjDomainEvent<TEvent>(), and explicit Microsoft DI handler/service registration. The linux-x64 packed-package smoke publishes and executes that path and validates the loaded package version. Reflection-based convention scanning remains individually restricted and is not part of the Full path.",
       "restrictions": [
         {
           "kind": "PublicApi",
@@ -73,7 +88,22 @@
           "reason": "These APIs opt callers into convention scanning. They are only consumed by the scanner-capable AddTcjDependencyInjection overloads, which surface the trimming and Native AOT restrictions."
         }
       ],
-      "fullSupportEvidence": []
+      "fullSupportEvidence": [
+        {
+          "scenario": "packed-native-aot-http-di",
+          "consumerProject": "smoke/TCJ.NativeAot.SmokeTest/TCJ.NativeAot.SmokeTest.csproj",
+          "workflow": ".github/workflows/ci.yml",
+          "runtimeIdentifier": "linux-x64",
+          "resultArtifact": "artifacts/aot/native-aot-smoke/native-aot-result.json",
+          "consumerSource": "PackedNuGet",
+          "usesProjectReference": false,
+          "publishAot": true,
+          "publishSucceeded": true,
+          "publishedBinaryExecuted": true,
+          "tcjTrimWarningCount": 0,
+          "tcjAotWarningCount": 0
+        }
+      ]
     },
     {
       "packageId": "TCJ.EntityFrameworkCore",
@@ -153,8 +183,8 @@
     },
     {
       "packageId": "TCJ.AspNetCore",
-      "tier": "Conditional",
-      "rationale": "TCJ.AspNetCore declares IsAotCompatible=true and is analyzer-compatible for supported ASP.NET Core Native AOT Minimal API scenarios. TCJ-owned health JSON uses source-generated System.Text.Json metadata, Problem Details metadata is registered with the framework JSON resolver chain, and a CreateSlimBuilder project-reference smoke host publishes and executes success, validation, not-found, conflict, and unhandled-exception paths. The formal support tier remains Conditional because ASP.NET Core Native AOT is feature-dependent and Important 8 still owns packed-NuGet publish-and-execute release evidence.",
+      "tier": "Full",
+      "rationale": "TCJ.AspNetCore is Full for the documented ASP.NET Core Native AOT Minimal API path. The linux-x64 release gate consumes the packed Core, DependencyInjection, and AspNetCore packages, publishes with PublishAot=true, starts the native host, verifies representative HTTP/error behavior and explicit domain-event dispatch, checks loaded package versions, and rejects new IL2xxx/IL3xxx diagnostics. Upstream-unsupported ASP.NET Core feature families remain outside this support path.",
       "restrictions": [
         {
           "kind": "Upstream",
@@ -163,7 +193,25 @@
           "reason": "TCJ.AspNetCore supports Native AOT only inside upstream-supported ASP.NET Core feature families. The verified TCJ path uses Minimal APIs and framework-native Problem Details/current-user/health primitives. MVC controllers, Blazor Server, SignalR, and other upstream-unsupported feature families are not made AOT-compatible by TCJ."
         }
       ],
-      "fullSupportEvidence": []
+      "fullSupportEvidence": [
+        {
+          "scenario": "packed-native-aot-http-di",
+          "consumerProject": "smoke/TCJ.NativeAot.SmokeTest/TCJ.NativeAot.SmokeTest.csproj",
+          "workflow": ".github/workflows/ci.yml",
+          "runtimeIdentifier": "linux-x64",
+          "resultArtifact": "artifacts/aot/native-aot-smoke/native-aot-result.json",
+          "consumerSource": "PackedNuGet",
+          "usesProjectReference": false,
+          "publishAot": true,
+          "publishSucceeded": true,
+          "publishedBinaryExecuted": true,
+          "tcjTrimWarningCount": 0,
+          "tcjAotWarningCount": 0
+        }
+      ]
     }
+  ],
+  "supportedCiRuntimeIdentifiers": [
+    "linux-x64"
   ]
 }

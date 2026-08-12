@@ -164,7 +164,13 @@
         "Directory.Build.props",
         "Directory.Packages.props",
         "global.json",
-        ".github/workflows/aspnetcore-integration.yml"
+        ".github/workflows/aspnetcore-integration.yml",
+        "smoke/TCJ.NativeAot.SmokeTest/**",
+        "smoke/NuGet.Config",
+        "eng/aot-policy.json",
+        "eng/verify-aot.py",
+        "eng/run-native-aot-smoke.py",
+        "eng/tests/test_verify_aot.py"
       ]
     },
     "consumer_compatibility": {

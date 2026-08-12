@@ -144,6 +144,9 @@ jobs:
       - name: Validate transactional-outbox configuration
         run: python3 eng/verify-outbox.py validate-config
 
+      - name: Verify Native AOT policy and release wiring
+        run: python3 eng/verify-aot.py verify
+
       - name: Check NuGet package IDs
         run: >
           python3 eng/check-nuget-package-ids.py
@@ -474,6 +477,42 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Install packaged Native AOT prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
+      - name: Run packed Native AOT release-candidate smoke
+        run: >
+          python3 eng/run-native-aot-smoke.py
+          --version "${{ steps.release-version.outputs.value }}"
+          --rid linux-x64
+          --packages artifacts/packages
+          --output artifacts/aot/native-aot-smoke
+
+      - name: Verify packed Native AOT release-candidate evidence
+        if: always()
+        run: >
+          python3 eng/verify-aot.py verify-result
+          --version "${{ steps.release-version.outputs.value }}"
+          --result artifacts/aot/native-aot-smoke/native-aot-result.json
+          --packages artifacts/packages
+          --output artifacts/aot/aot-runtime-verification.json
+
+      - name: Upload release-preflight Native AOT evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-native-aot-${{ github.run_id }}
+          path: |
+            artifacts/aot/native-aot-smoke/logs/**
+            artifacts/aot/native-aot-smoke/native-aot-result.json
+            artifacts/aot/aot-runtime-verification.json
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Prepare exact release-candidate compatibility feed
         shell: bash
         run: |
@@ -701,6 +740,8 @@ jobs:
             artifacts/release/SHA256SUMS
             artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md
             artifacts/compatibility/report/compatibility-summary.json
+            artifacts/aot/native-aot-smoke/native-aot-result.json
+            artifacts/aot/aot-runtime-verification.json
             eng/release-manifest.json
           if-no-files-found: error
           retention-days: 30

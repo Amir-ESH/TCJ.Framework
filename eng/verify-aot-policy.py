@@ -36,6 +36,7 @@ class PackagePolicy:
 @dataclass(frozen=True)
 class AotPolicy:
     documentation: str
+    supported_ci_runtime_identifiers: tuple[str, ...]
     support_tiers: dict[str, str]
     warning_policy: dict[str, Any]
     minimum_full_support_evidence: dict[str, Any]
@@ -112,13 +113,24 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
     raw = require_object(read_json(path, "AOT policy"), "AOT policy")
     require_exact_keys(
         raw,
-        {"schemaVersion", "documentation", "supportTiers", "warningPolicy", "minimumFullSupportEvidence", "packages"},
+        {"schemaVersion", "documentation", "supportedCiRuntimeIdentifiers", "supportTiers", "warningPolicy", "minimumFullSupportEvidence", "packages"},
         "AOT policy",
     )
-    if raw.get("schemaVersion") != 1:
-        fail("AOT policy schemaVersion must be 1.")
+    if raw.get("schemaVersion") != 2:
+        fail("AOT policy schemaVersion must be 2.")
 
     documentation = require_relative_path(raw.get("documentation"), "documentation")
+    supported_rids_raw = raw.get("supportedCiRuntimeIdentifiers")
+    if not isinstance(supported_rids_raw, list) or not supported_rids_raw:
+        fail("supportedCiRuntimeIdentifiers must be a non-empty array.")
+    supported_ci_runtime_identifiers = tuple(
+        require_string(value, f"supportedCiRuntimeIdentifiers[{index}]")
+        for index, value in enumerate(supported_rids_raw)
+    )
+    if len(supported_ci_runtime_identifiers) != len(set(supported_ci_runtime_identifiers)):
+        fail("supportedCiRuntimeIdentifiers must not contain duplicates.")
+    if "linux-x64" not in supported_ci_runtime_identifiers:
+        fail("supportedCiRuntimeIdentifiers must include linux-x64 for the packaged Native AOT release gate.")
 
     support_tiers_raw = require_object(raw.get("supportTiers"), "supportTiers")
     require_exact_keys(support_tiers_raw, set(VALID_TIERS), "supportTiers")
@@ -285,7 +297,7 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
             evidence_item = require_object(evidence_value, description)
             require_exact_keys(
                 evidence_item,
-                {"scenario", "consumerProject", "workflow", "consumerSource", "usesProjectReference", "publishAot", "publishSucceeded", "publishedBinaryExecuted", "tcjTrimWarningCount", "tcjAotWarningCount"},
+                {"scenario", "consumerProject", "workflow", "runtimeIdentifier", "resultArtifact", "consumerSource", "usesProjectReference", "publishAot", "publishSucceeded", "publishedBinaryExecuted", "tcjTrimWarningCount", "tcjAotWarningCount"},
                 description,
             )
             scenario = require_string(evidence_item.get("scenario"), f"{description}.scenario")
@@ -295,6 +307,18 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
             workflow = require_relative_path(
                 evidence_item.get("workflow"), f"{description}.workflow"
             )
+            runtime_identifier = require_string(
+                evidence_item.get("runtimeIdentifier"), f"{description}.runtimeIdentifier"
+            )
+            if runtime_identifier not in supported_ci_runtime_identifiers:
+                fail(
+                    f"{description}.runtimeIdentifier '{runtime_identifier}' is not listed in supportedCiRuntimeIdentifiers."
+                )
+            result_artifact = require_relative_path(
+                evidence_item.get("resultArtifact"), f"{description}.resultArtifact"
+            )
+            if not result_artifact.startswith("artifacts/aot/"):
+                fail(f"{description}.resultArtifact must be generated under artifacts/aot/.")
             if evidence_item.get("consumerSource") != "PackedNuGet":
                 fail(f"{description}.consumerSource must be 'PackedNuGet'.")
             if require_bool(
@@ -313,6 +337,8 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
                     "scenario": scenario,
                     "consumerProject": consumer_project,
                     "workflow": workflow,
+                    "runtimeIdentifier": runtime_identifier,
+                    "resultArtifact": result_artifact,
                     "consumerSource": "PackedNuGet",
                     "usesProjectReference": False,
                     "publishAot": True,
@@ -343,6 +369,7 @@ def load_policy(path: Path = DEFAULT_POLICY) -> AotPolicy:
 
     return AotPolicy(
         documentation=documentation,
+        supported_ci_runtime_identifiers=supported_ci_runtime_identifiers,
         support_tiers=support_tiers,
         warning_policy=warning_policy,
         minimum_full_support_evidence=evidence,

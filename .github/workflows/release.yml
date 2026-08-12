@@ -136,6 +136,9 @@ jobs:
       - name: Validate transactional-outbox configuration
         run: python3 eng/verify-outbox.py validate-config
 
+      - name: Verify Native AOT policy and release wiring
+        run: python3 eng/verify-aot.py verify
+
       - name: Validate release tag
         id: release-version
         shell: bash
@@ -552,6 +555,59 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Install packaged Native AOT prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
+      - name: Run packed Native AOT tagged-package smoke
+        run: >
+          python3 eng/run-native-aot-smoke.py
+          --version "${{ steps.release-version.outputs.value }}"
+          --rid linux-x64
+          --packages artifacts/packages
+          --output artifacts/aot/native-aot-smoke
+
+      - name: Verify packed Native AOT tagged-package evidence
+        if: always()
+        run: >
+          python3 eng/verify-aot.py verify-result
+          --version "${{ steps.release-version.outputs.value }}"
+          --result artifacts/aot/native-aot-smoke/native-aot-result.json
+          --packages artifacts/packages
+          --output artifacts/aot/aot-runtime-verification.json
+
+      - name: Retain Native AOT release evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.release-version.outputs.value }}"
+          mkdir -p artifacts/release
+          if [[ -f artifacts/aot/native-aot-smoke/native-aot-result.json ]]; then
+            cp artifacts/aot/native-aot-smoke/native-aot-result.json artifacts/release/native-aot-result.json
+          fi
+          if [[ -f artifacts/aot/aot-runtime-verification.json ]]; then
+            cp artifacts/aot/aot-runtime-verification.json artifacts/release/aot-runtime-verification.json
+          fi
+          if [[ -f artifacts/aot/native-aot-smoke/native-aot-result.json && -f artifacts/aot/aot-runtime-verification.json ]]; then
+            (cd artifacts/aot && zip -qr "$GITHUB_WORKSPACE/artifacts/release/TCJ.Framework.NativeAot.Evidence.$version.zip" native-aot-smoke aot-runtime-verification.json)
+          fi
+
+      - name: Upload tagged Native AOT logs and results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-native-aot-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/aot/native-aot-smoke/logs/**
+            artifacts/aot/native-aot-smoke/native-aot-result.json
+            artifacts/aot/aot-runtime-verification.json
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Prepare exact tagged-package compatibility feed
         shell: bash
         run: |
@@ -720,6 +776,9 @@ jobs:
             artifacts/release/upgrade-compatibility-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
+            artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
+            artifacts/release/native-aot-result.json
+            artifacts/release/aot-runtime-verification.json
             artifacts/release/PROPERTY_TEST_SUMMARY.md
             artifacts/release/property-test-summary.json
             artifacts/release/FUZZ_SUMMARY.md
@@ -777,6 +836,9 @@ jobs:
             artifacts/release/observability-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
+            artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
+            artifacts/release/native-aot-result.json
+            artifacts/release/aot-runtime-verification.json
           if-no-files-found: error
           retention-days: 30
 
@@ -859,6 +921,17 @@ jobs:
         run: >
           python3 eng/verify-release.py
           --package-directory artifacts/packages
+
+      - name: Verify downloaded Native AOT policy
+        run: python3 eng/verify-aot.py verify
+
+      - name: Verify downloaded Native AOT release evidence
+        run: >
+          python3 eng/verify-aot.py verify-result
+          --version "${{ needs.build-and-pack.outputs.version }}"
+          --result artifacts/release/native-aot-result.json
+          --packages artifacts/packages
+          --output artifacts/release/aot-publish-verification.json
 
       - name: Verify downloaded release SBOM
         run: >
@@ -945,6 +1018,9 @@ jobs:
             artifacts/release/observability-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
+            artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
+            artifacts/release/native-aot-result.json
+            artifacts/release/aot-runtime-verification.json
           )
           release_args=(
             "$GITHUB_REF_NAME"

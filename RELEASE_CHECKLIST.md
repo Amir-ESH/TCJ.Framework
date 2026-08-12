@@ -20,6 +20,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] The published-package smoke workflow is green for the previous release.
 - [ ] SQL Server integration policy validation is green and the container image remains pinned.
 - [ ] ASP.NET Core integration policy validation is green; Production/Development, current-user isolation, and sanitized diagnostics requirements remain enforced.
+- [ ] Native AOT policy verification is green; the Full package set still matches the packed `linux-x64` smoke evidence and both EF packages remain Experimental.
 
 ## Prepare release metadata
 
@@ -54,6 +55,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Review the architecture-test summary and confirm no policy weakening was introduced.
 - [ ] Review `SQLSERVER_INTEGRATION_SUMMARY.md`, TRX results, and sanitized SQL Server diagnostics; migrations and transaction scenarios are green.
 - [ ] Review `ASPNETCORE_INTEGRATION_SUMMARY.md`, both platform TRX files, and sanitized host/HTTP diagnostics; Production safety and current-user/request-scope isolation are green.
+- [ ] Review the packed Native AOT `native-aot-result.json` and `aot-runtime-verification.json`; `linux-x64` publish/execution passed, loaded TCJ versions equal the candidate version, and no `IL2xxx`/`IL3xxx` baseline was accepted.
 - [ ] Review `REPRODUCIBILITY_SUMMARY.md`, both five-package build sets, and any focused difference reports.
 - [ ] Confirm assemblies, portable PDBs, Source Link metadata, XML documentation, NuSpec metadata, and extracted package contents match.
 - [ ] Confirm any raw archive-only warning is explained by an approved container normalization.
@@ -68,7 +70,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not cr
 - [ ] Confirm the tag workflow completes reproducibility comparison before checksums, SBOM generation, attestation, or publication.
 - [ ] Approve the `nuget-production` deployment after validation succeeds.
 - [ ] Confirm all five versions are listed on NuGet.org.
-- [ ] Confirm the GitHub pre-release contains ten package assets, one versioned CycloneDX SBOM, and `SHA256SUMS`.
+- [ ] Confirm the GitHub pre-release contains ten package assets, one versioned CycloneDX SBOM, `SHA256SUMS`, and the retained Native AOT evidence assets.
 - [ ] Confirm GitHub shows provenance attestations for the package assets, SBOM, and checksum manifest.
 - [ ] Verify at least one release asset with `gh attestation verify`.
 - [ ] Never move the tag or republish different bits with the same version.
