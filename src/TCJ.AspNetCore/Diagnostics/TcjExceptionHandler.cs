@@ -16,6 +16,12 @@ public sealed class TcjExceptionHandler(ILogger<TcjExceptionHandler> logger, IOp
 {
     private const string UnexpectedErrorCode = "UNEXPECTED_ERROR";
 
+    private static readonly Action<ILogger, string, string, string, Exception?> LogUnhandledException =
+        LoggerMessage.Define<string, string, string>(
+            LogLevel.Error,
+            new EventId(0),
+            "Unhandled exception of type {ExceptionType} while processing {Method}. Trace identifier: {TraceIdentifier}");
+
     private readonly ILogger<TcjExceptionHandler> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     private readonly TcjAspNetCoreOptions _options = options.Value ?? throw new ArgumentNullException(nameof(options));
@@ -40,11 +46,12 @@ public sealed class TcjExceptionHandler(ILogger<TcjExceptionHandler> logger, IOp
             // Do not include the exception object, message, request path, query string,
             // headers, or body in the default framework log. Consumers can attach richer
             // diagnostics explicitly at their application boundary when appropriate.
-            _logger.LogError(
-                "Unhandled exception of type {ExceptionType} while processing {Method}. Trace identifier: {TraceIdentifier}",
+            LogUnhandledException(
+                _logger,
                 TcjTelemetry.NormalizeTypeName(exception.GetType()),
                 httpContext.Request.Method,
-                httpContext.TraceIdentifier);
+                httpContext.TraceIdentifier,
+                null);
 
             var problemDetails = new ProblemDetails
             {

@@ -553,6 +553,14 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
             "EF Core 10 query precompilation does not recognize a DbContext method parameter as a static query root. Keep the representative query rooted in the local startup DbContext.",
         )
 
+    unsupported_static_query_lambdas = re.findall(r"\.(?:Where|OrderBy|Select)\(\s*static\s+", source)
+    if unsupported_static_query_lambdas:
+        add(
+            "Program.cs",
+            "static query lambda modifier",
+            "EF Core 10 query precompilation does not support static lambda modifiers in the representative query. Keep the query statically analyzable, but use ordinary lambdas.",
+        )
+
     restricted_fragments = (
         "RegisterEntityTypeConfiguration(",
         "RegisterAllEntities<",
