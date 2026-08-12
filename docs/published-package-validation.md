@@ -10,12 +10,13 @@ The `Published package smoke tests` workflow performs two independent layers of 
 
 `eng/verify-published-packages.py`:
 
-- reads the package IDs and default version from `eng/published-release.json`;
+- reads the package IDs, default version, and expected SPDX license expression from `eng/published-release.json`;
 - confirms the exact version exists in the NuGet V3 flat container;
 - confirms registration metadata reports the version as listed;
 - rejects the NuGet.org unlisted timestamp convention;
 - downloads every `.nupkg` from NuGet.org;
-- validates ID, version, repository metadata, license expression, README, license file, and `net10.0` assembly contents.
+- validates ID, version, repository metadata, the release-specific license expression, README, license file, and `net10.0` assembly contents;
+- when the tagged release workflow verifies the just-published candidate before `eng/published-release.json` is advanced, resolves that candidate's expected license expression from `eng/release-manifest.json`.
 
 ### Consumer smoke test
 

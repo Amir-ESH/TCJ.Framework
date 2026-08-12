@@ -10,7 +10,7 @@
     <Product>TCJ</Product>
     <Copyright>Copyright © 2026 TCJ Contributors</Copyright>
 
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/Amir-ESH/TCJ.Framework</PackageProjectUrl>

@@ -24,11 +24,11 @@ Adding a compatible public API is allowed, but it must still be documented and t
 
 ## Sources of truth
 
-The immutable published release is recorded in `eng/published-release.json`. MSBuild reads the same baseline version from `eng/PackageValidation.props`. `eng/verify-release.py` rejects CI when these values, package IDs, or repositories diverge.
+The immutable published release is recorded in `eng/published-release.json`. MSBuild reads the same baseline version from `eng/PackageValidation.props`. The development and published manifests keep their own `licenseExpression` values so historical package licensing remains explicit. `eng/verify-release.py` rejects CI when release metadata, package IDs, repository identity, or current package-license metadata diverge.
 
 After each successful public release:
 
-1. update `eng/published-release.json`;
+1. update `eng/published-release.json`, including the released `licenseExpression`;
 2. update `TCJPublishedPackageVersion` in `eng/PackageValidation.props`;
 3. increment the development version in `eng/Packaging.props` and `eng/release-manifest.json`;
 4. run CI and the published-package smoke workflow.

@@ -65,6 +65,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Changed
 
+- Relicensed the current development line under GNU LGPL v3.0 only (`LGPL-3.0-only`) and added a separate TCJ trademark/brand policy so software freedoms and project identity are governed independently. Previously distributed MIT-licensed copies retain the permissions granted with those copies.
+- Updated current and published release metadata so package verification enforces the correct SPDX license expression for each release generation (`MIT` for the immutable published preview and `LGPL-3.0-only` for the current development line).
+
 - Opened the next development cycle as `0.1.0-preview.2`.
 - Separated immutable published-release metadata from mutable next-release metadata.
 - Release preflight and tag publication now require an explicitly `ready` release manifest.

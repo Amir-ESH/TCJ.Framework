@@ -16,7 +16,7 @@ Current development version:
 0.1.0-preview.2
 ```
 
-The mutable next-release state is stored in `eng/release-manifest.json`. The latest immutable public release is recorded separately in `eng/published-release.json` and mirrored for MSBuild package validation in `eng/PackageValidation.props`.
+The mutable next-release state is stored in `eng/release-manifest.json`. The latest immutable public release is recorded separately in `eng/published-release.json` and mirrored for MSBuild package validation in `eng/PackageValidation.props`. Both release manifests also record the SPDX `licenseExpression` that belongs to that release generation, so a license transition does not rewrite the metadata of an already-published package.
 
 ## Release-manifest lifecycle
 
@@ -36,10 +36,10 @@ When a release candidate is finalized:
 1. move the completed notes from `[Unreleased]` to a dated version section in `CHANGELOG.md`;
 2. set `status` to `ready`;
 3. set `releaseDate` to the publication date;
-4. verify that `version`, `tag`, and `eng/Packaging.props` match;
+4. verify that `version`, `tag`, `licenseExpression`, and `eng/Packaging.props` match;
 5. run `Release preflight` from `main`.
 
-After publication, copy the released values to `eng/published-release.json`, increment the development version, return the release manifest to `development`, and set `releaseDate` back to `null`.
+After publication, copy the released version, tag, date, package set, and `licenseExpression` to `eng/published-release.json`, increment the development version, return the release manifest to `development`, and set `releaseDate` back to `null`.
 
 ## Preview versions
 
