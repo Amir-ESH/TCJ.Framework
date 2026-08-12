@@ -27,6 +27,10 @@ on:
       - "src/TCJ.EntityFrameworkCore/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/**"
+      - "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/**"
+      - "eng/aot-policy.json"
+      - "eng/verify-aot.py"
+      - "eng/tests/test_verify_aot.py"
       - "tests/TCJ.Resilience.Tests/**"
       - "eng/resilience-policy.json"
       - "eng/resilience-contract.json"
@@ -223,3 +227,83 @@ jobs:
             echo "SQL Server integration result verification failed." >&2
             exit 1
           fi
+  ef-nativeaot-experimental:
+    name: Experimental EF Native AOT publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install Native AOT prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
+      - name: Validate EF Native AOT fixture contract
+        run: |
+          python3 -m py_compile eng/verify-aot.py
+          python3 -m unittest eng.tests.test_verify_aot
+          python3 eng/verify-aot.py verify
+
+      - name: Restore experimental EF Native AOT fixture
+        run: >
+          dotnet restore
+          tests/TCJ.EntityFrameworkCore.NativeAotExperimental/TCJ.EntityFrameworkCore.NativeAotExperimental.csproj
+          --runtime linux-x64
+          --force-evaluate
+
+      - name: Publish experimental EF Native AOT fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ef-nativeaot-experimental
+          dotnet publish \
+            tests/TCJ.EntityFrameworkCore.NativeAotExperimental/TCJ.EntityFrameworkCore.NativeAotExperimental.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --no-restore \
+            --output artifacts/ef-nativeaot-experimental/publish \
+            2>&1 | tee artifacts/ef-nativeaot-experimental/publish.log
+
+      - name: Execute experimental native fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="artifacts/ef-nativeaot-experimental/publish/TCJ.EntityFrameworkCore.NativeAotExperimental"
+          test -x "$executable"
+          "$executable" | tee artifacts/ef-nativeaot-experimental/runtime.log
+          grep -F "TCJ EF Core NativeAOT experimental fixture initialized" artifacts/ef-nativeaot-experimental/runtime.log
+
+      - name: Publish experimental Native AOT summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## EF Core Native AOT experimental fixture"
+            echo
+            echo "This project-reference fixture validates EF Core compiled-model/query-precompile tooling and does not promote either TCJ EF package beyond the Experimental support tier."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload experimental Native AOT evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ef-nativeaot-experimental-${{ github.run_id }}
+          path: |
+            artifacts/ef-nativeaot-experimental/publish.log
+            artifacts/ef-nativeaot-experimental/runtime.log
+          if-no-files-found: warn
+          retention-days: 14
+

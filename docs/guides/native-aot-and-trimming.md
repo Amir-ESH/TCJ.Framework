@@ -33,8 +33,8 @@ The support tier keeps the stronger Important 1 contract: **Full** requires a pa
 |---|---|---|---|
 | `TCJ.Core` | **Full** | **Conditional** | `src/TCJ.Core/TCJ.Core.csproj` declares `<IsAotCompatible>true</IsAotCompatible>`. The package-only `Core.Console` compatibility consumer enables the SDK AOT/trim analyzers and must build without warnings. The formal support tier remains Conditional until Important 8 records packed Native AOT publish-and-execute evidence. |
 | `TCJ.DependencyInjection` | **Conditional (explicit path)** | **Conditional** | `src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj` declares `<IsAotCompatible>true</IsAotCompatible>`. The supported analyzer-clean path is `AddTcjDependencyInjection()` + `AddTcjDomainEvent<TEvent>()` + explicit Microsoft DI registrations. Convention scanning remains available but is annotated as trimming- and dynamic-code-restricted. Formal Full support still requires Important 8 packed publish-and-execute evidence. |
-| `TCJ.EntityFrameworkCore` | Not claimed | **Experimental** | EF Core NativeAOT remains upstream-experimental, and TCJ has reflection/dynamic-generic usage paths that require explicit treatment. |
-| `TCJ.EntityFrameworkCore.SqlServer` | Not claimed | **Experimental** | The provider path inherits the upstream EF Core NativeAOT experimental boundary and has no qualifying packed-consumer evidence. |
+| `TCJ.EntityFrameworkCore` | **Experimental static path** | **Experimental** | A project-reference NativeAOT fixture uses EF compiled-model/query-precompile tooling and avoids TCJ runtime-discovery APIs. Reflection-driven model discovery, runtime entity search, the outbox fallback resolver, and TCJ soft-delete global filters are outside the experiment; upstream EF NativeAOT is not production-ready. |
+| `TCJ.EntityFrameworkCore.SqlServer` | **Experimental provider path** | **Experimental** | The experimental fixture configures SQL Server and TCJ rowversion conventions while EF generates a compiled model and precompiled queries. Provider support inherits both EF Core's experimental provider boundary and the provider-neutral compiled-model limitations; there is no qualifying packed-consumer evidence. |
 | `TCJ.AspNetCore` | **Full (supported Minimal API path)** | **Conditional** | `src/TCJ.AspNetCore/TCJ.AspNetCore.csproj` declares `<IsAotCompatible>true</IsAotCompatible>`. The package-only `AspNetCore.MinimalApi` consumer enables AOT/trim analysis with reflection-based JSON disabled, while `TCJ.AspNetCore.NativeAotSmoke` publishes a `CreateSlimBuilder()` host and executes success, validation, not-found, conflict, and unhandled-exception paths. MVC and other upstream-unsupported ASP.NET Core feature families are not covered, and formal Full support still requires Important 8 packed-package evidence. |
 
 `TCJ.Core` remains the first TCJ package with a **Full library-level AOT/trimming compatibility** claim, and `TCJ.AspNetCore` now joins it for the documented supported Minimal API path. No production package is promoted to the formal **Full support tier** until the stronger packed publish-and-run evidence contract is satisfied.
@@ -84,20 +84,52 @@ Two fixtures verify different layers without conflating them:
 
 This compatibility claim does **not** extend to MVC controllers or other ASP.NET Core feature families that the platform does not support for Native AOT. TCJ adds no controller-generation layer, Newtonsoft.Json dependency, or preservation descriptor to change those upstream boundaries.
 
-### EF Core reflection and dynamic generic paths
+### EF Core experimental NativeAOT path
 
-The following public paths are restricted in addition to EF Core's upstream NativeAOT limitations:
+`TCJ.EntityFrameworkCore` and `TCJ.EntityFrameworkCore.SqlServer` remain **Experimental** for NativeAOT. Important 7 adds evidence for a deliberately narrow static path; it does not turn EF Core NativeAOT into a production-supported TCJ feature.
 
-- `ModelBuilderExtensions.RegisterEntityTypeConfiguration(ModelBuilder, params Assembly[])` discovers configuration types and invokes generic configuration methods dynamically.
-- `ModelBuilderExtensions.RegisterAllEntities<TBaseType>(ModelBuilder, params Assembly[])` discovers entity types through `Assembly.GetExportedTypes()`.
-- `EntitySearcher.ExistsAsync(...)` and `EntitySearcher.FindAsync(...)` construct closed generic executor types from runtime EF model metadata.
-- `OutboxServiceCollectionExtensions.AddTcjOutbox<TDbContext>(...)` can fall back to scanning loaded assemblies when resolving an event type that was not explicitly registered. A Native AOT experiment must register persisted event contracts explicitly with `AddTcjOutboxEvent<TEvent>` and must not rely on fallback discovery.
+The repository fixture `tests/TCJ.EntityFrameworkCore.NativeAotExperimental` is a project-reference executable. It sets `PublishAot=true` and a concrete `linux-x64` runtime identifier, references `Microsoft.EntityFrameworkCore.Tasks`, enables the EF Core 10 `EFOptimizeContext` integration, opts into `Microsoft.EntityFrameworkCore.GeneratedInterceptors`, and generates the compiled model plus precompiled queries during publish. The fixture configures the SQL Server provider, applies `ApplyTcjSqlServerConventions()`, contains a representative statically analyzable LINQ query, publishes as Native AOT, and starts without opening a database connection.
 
-These restrictions are recorded by exact API in `eng/aot-policy.json`; they are not package-wide blanket exemptions.
+For an EF Core 10 NativeAOT application, the relevant project settings are:
+
+```xml
+<PropertyGroup>
+  <PublishAot>true</PublishAot>
+  <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+  <EFOptimizeContext>true</EFOptimizeContext>
+  <EFScaffoldModelStage>publish</EFScaffoldModelStage>
+  <EFPrecompileQueriesStage>publish</EFPrecompileQueriesStage>
+  <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.EntityFrameworkCore.GeneratedInterceptors</InterceptorsNamespaces>
+</PropertyGroup>
+
+<ItemGroup>
+  <PackageReference Include="Microsoft.EntityFrameworkCore.Tasks">
+    <PrivateAssets>all</PrivateAssets>
+    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+  </PackageReference>
+</ItemGroup>
+```
+
+`Microsoft.EntityFrameworkCore.Tasks` is a consumer build dependency rather than a TCJ runtime dependency. Normal JIT applications do not need `PublishAot`, compiled-model generation, or precompiled-query tooling merely because they reference a TCJ EF package.
+
+The following TCJ APIs are **restricted** on the NativeAOT path:
+
+- `ModelBuilderExtensions.RegisterEntityTypeConfiguration(...)` scans assemblies and closes generic configuration methods from runtime `Type` values. It is annotated with `RequiresUnreferencedCode` and `RequiresDynamicCode`.
+- `ModelBuilderExtensions.RegisterAllEntities<TBaseType>(...)` discovers entity types at runtime. It is annotated with `RequiresUnreferencedCode` and `RequiresDynamicCode`.
+- `ModelBuilderExtensions.GetModuleAssemblies()` performs runtime module-assembly discovery and is annotated with `RequiresUnreferencedCode`.
+- `SoftDeleteModelBuilderExtensions.ApplySoftDeleteQueryFilters()` is outside the NativeAOT experiment because it installs EF global query filters, and the compiled-model path required by current EF NativeAOT does not support global query filters. Normal JIT soft-delete behavior is unchanged.
+- `IEntitySearcher.ExistsAsync(...)` and `FindAsync(...)` construct runtime entity-specific predicates/executors and are annotated with `RequiresUnreferencedCode` and `RequiresDynamicCode`. NativeAOT consumers should prefer statically typed repository or `DbContext` queries that EF tooling can precompile.
+- The transactional-outbox convention resolver can scan loaded assemblies for a persisted event name that was not explicitly registered. An AOT experiment must register persisted event contracts with `AddTcjOutboxEvent<TEvent>` and provide source-generated `System.Text.Json` metadata for event payload types. The Important 7 fixture does **not** claim the outbox path.
+
+TCJ-owned static-path cleanup avoids runtime `ModelBuilder.Entity(Type)` calls in the SQL Server rowversion convention, and the default outbox serializer now resolves `JsonTypeInfo` before calling the metadata-based `JsonSerializer` overloads. The normal JIT soft-delete implementation is deliberately left unchanged because EF compiled models currently exclude global query filters rather than providing an AOT-safe equivalent.
+
+`eng/verify-aot.py` validates the fixture contract with `AOT007`. Missing `Microsoft.EntityFrameworkCore.Tasks`, `EFOptimizeContext`, publish stages, generated-interceptor namespace, concrete RID, or representative static query/provider setup produces an actionable configuration failure before CI attempts NativeAOT publish. The SQL Server integration workflow then publishes and executes the experimental native fixture.
+
+This evidence is intentionally weaker than a support-tier upgrade: it uses project references and does not execute a packaged NuGet consumer against a real database. A future upgrade beyond **Experimental** requires packaged-consumer publish-and-execute evidence under the repository AOT policy.
 
 ## Upstream boundaries
 
-EF Core documentation currently describes NativeAOT and precompiled queries as experimental and not yet suited for production use. It also documents limitations including unsupported dynamic queries and provider participation in precompiled-query support. For that reason neither `TCJ.EntityFrameworkCore` nor `TCJ.EntityFrameworkCore.SqlServer` can be promoted to **Full** merely because TCJ code compiles cleanly.
+EF Core documentation currently describes NativeAOT and precompiled queries as experimental and not yet suited for production use. It documents unsupported dynamic queries, provider participation in precompiled-query support, and compiled-model limitations such as global query filters, lazy-loading/change-tracking proxies, and custom model-cache keys. For that reason neither `TCJ.EntityFrameworkCore` nor `TCJ.EntityFrameworkCore.SqlServer` can be promoted to **Full** merely because TCJ code compiles cleanly.
 
 ASP.NET Core Native AOT support is feature-dependent. A TCJ application that uses `TCJ.AspNetCore` must remain inside the upstream-supported feature set; for example, ASP.NET Core documents Minimal APIs as partially supported while MVC, Blazor Server, and SignalR are not supported in Native AOT. That upstream boundary is why the initial package tier is **Conditional**, not **Full**.
 
@@ -133,7 +165,7 @@ Run the repository-native verifier before opening a pull request that changes AO
 python3 eng/verify-aot.py verify
 ```
 
-The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, and rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns. A package declared **Full** fails verification if an evaluated repository project/props file explicitly sets `IsAotCompatible=false`. It also validates the package-level analyzer fixtures for `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.AspNetCore`: each production package must declare `IsAotCompatible=true`, each fixture must enable `IsAotCompatible`, consume the exact expected packed TCJ package closure, contain no project reference, and remain compile-only rather than taking over Important 8's packed publish responsibility. The separate ASP.NET Core integration verifier additionally pins the project-reference Native AOT smoke host to `PublishAot=true`, reflection-free JSON defaults, the required HTTP scenarios, and a Minimal-API-only surface.
+The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, and rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns. A package declared **Full** fails verification if an evaluated repository project/props file explicitly sets `IsAotCompatible=false`. It validates the package-level analyzer fixtures for `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.AspNetCore`, and separately validates the experimental EF NativeAOT project-reference fixture with `AOT007`, including its EF Tasks package, compiled-model/query-precompile publish stages, generated-interceptor opt-in, concrete RID, TCJ project closure, and restricted-API exclusions. The separate ASP.NET Core integration verifier additionally pins the project-reference Native AOT smoke host to `PublishAot=true`, reflection-free JSON defaults, the required HTTP scenarios, and a Minimal-API-only surface.
 
 Every run writes the deterministic machine-readable result to `artifacts/aot/aot-verification.json`. The report contains no timestamp or machine-specific absolute path, keeps packages and findings in stable order, and records the package, rule, offending project/props file, property, and value for each violation. Generated `artifacts/aot/` output is local evidence and must not be committed.
 

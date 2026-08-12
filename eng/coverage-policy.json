@@ -13,6 +13,7 @@
   ],
   "excludedTestProjects": [
     "tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj",
+    "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/TCJ.EntityFrameworkCore.NativeAotExperimental.csproj",
     "tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj",
     "tests/TCJ.AspNetCore.NativeAotSmoke/TCJ.AspNetCore.NativeAotSmoke.csproj",
     "tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj"

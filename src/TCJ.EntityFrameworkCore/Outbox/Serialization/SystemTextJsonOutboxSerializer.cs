@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using TCJ.Core.DomainEvents;
 using TCJ.Core.Outbox;
 
@@ -23,7 +24,8 @@ public sealed class SystemTextJsonOutboxSerializer : IOutboxSerializer
     public string Serialize(IDomainEvent domainEvent)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
-        return JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), _options);
+        JsonTypeInfo typeInfo = _options.GetTypeInfo(domainEvent.GetType());
+        return JsonSerializer.Serialize(domainEvent, typeInfo);
     }
 
     /// <inheritdoc />
@@ -37,7 +39,8 @@ public sealed class SystemTextJsonOutboxSerializer : IOutboxSerializer
             throw new InvalidOperationException($"Resolved outbox type '{eventType.FullName}' does not implement IDomainEvent.");
         }
 
-        object? value = JsonSerializer.Deserialize(payload, eventType, _options);
+        JsonTypeInfo typeInfo = _options.GetTypeInfo(eventType);
+        object? value = JsonSerializer.Deserialize(payload, typeInfo);
         return value as IDomainEvent
             ?? throw new JsonException($"The outbox payload could not be deserialized as '{eventType.FullName}'.");
     }

@@ -36,6 +36,14 @@ ANALYZER_PROPERTIES = (
     "EnableAotAnalyzer",
 )
 REPORT_SCHEMA_VERSION = 1
+EF_NATIVEAOT_FIXTURE = "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/TCJ.EntityFrameworkCore.NativeAotExperimental.csproj"
+EF_NATIVEAOT_PROGRAM = "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/Program.cs"
+EF_NATIVEAOT_PROJECT_REFERENCES = (
+    "../../src/TCJ.Core/TCJ.Core.csproj",
+    "../../src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
+    "../../src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
+)
+
 ANALYZER_FIXTURES = {
     "TCJ.Core": (
         "compatibility/Consumers/Core.Console/Core.Console.csproj",
@@ -418,6 +426,144 @@ def _validate_analyzer_fixture(package_id: str, project: Path, root: Path) -> li
     return findings
 
 
+
+def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    fixture = root / EF_NATIVEAOT_FIXTURE
+    package_id = "TCJ.EntityFrameworkCore"
+
+    def add(property_name: str, value: str, message: str) -> None:
+        findings.append(Finding(package_id, "AOT007", EF_NATIVEAOT_FIXTURE, property_name, value, message))
+
+    if not fixture.is_file():
+        add(
+            "experimentalFixture",
+            "missing",
+            "The experimental EF NativeAOT fixture is missing. Add the project-reference fixture with PublishAot=true and EF compiled-model/query-precompile tooling.",
+        )
+        return findings
+
+    try:
+        xml_root = ET.parse(fixture).getroot()
+    except ET.ParseError as error:
+        add("experimentalFixture", "invalid XML", f"The experimental EF NativeAOT fixture is invalid XML: {error}")
+        return findings
+
+    required_properties = {
+        "PublishAot": "true",
+        "IsAotCompatible": "true",
+        "EFOptimizeContext": "true",
+        "EFScaffoldModelStage": "publish",
+        "EFPrecompileQueriesStage": "publish",
+    }
+    for property_name, expected in required_properties.items():
+        values = _property_values(fixture, property_name)
+        if not any(value.lower() == expected and not condition for value, condition in values):
+            add(
+                property_name,
+                " | ".join(value for value, _ in values) or "<missing>",
+                f"The experimental EF NativeAOT fixture must set {property_name}={expected} unconditionally so EF Core generates the compiled model and precompiled queries during publish.",
+            )
+
+    runtime_values = _property_values(fixture, "RuntimeIdentifier")
+    if not any(value and "$(" not in value and not condition for value, condition in runtime_values):
+        add(
+            "RuntimeIdentifier",
+            " | ".join(value for value, _ in runtime_values) or "<missing>",
+            "The EF MSBuild publish integration requires an explicit RuntimeIdentifier in the startup project; set a concrete RID such as linux-x64.",
+        )
+
+    interceptors = _property_values(fixture, "InterceptorsNamespaces")
+    if not any("Microsoft.EntityFrameworkCore.GeneratedInterceptors" in value and not condition for value, condition in interceptors):
+        add(
+            "InterceptorsNamespaces",
+            " | ".join(value for value, _ in interceptors) or "<missing>",
+            "EF NativeAOT query precompilation requires Microsoft.EntityFrameworkCore.GeneratedInterceptors in InterceptorsNamespaces.",
+        )
+
+    task_references = [
+        element for element in xml_root.iter()
+        if _tag_name(element) == "PackageReference"
+        and (element.attrib.get("Include") or "").strip() == "Microsoft.EntityFrameworkCore.Tasks"
+    ]
+    if len(task_references) != 1:
+        add(
+            "Microsoft.EntityFrameworkCore.Tasks",
+            str(len(task_references)),
+            "The experimental EF NativeAOT fixture must reference Microsoft.EntityFrameworkCore.Tasks exactly once; the EF compiled-model/query-precompile MSBuild integration is not transitive.",
+        )
+    else:
+        task = task_references[0]
+        child_values = {
+            _tag_name(child): (child.text or "").strip()
+            for child in task
+        }
+        if child_values.get("PrivateAssets", "").lower() != "all":
+            add(
+                "Microsoft.EntityFrameworkCore.Tasks.PrivateAssets",
+                child_values.get("PrivateAssets", "<missing>"),
+                "Microsoft.EntityFrameworkCore.Tasks must use PrivateAssets=all in the experimental fixture.",
+            )
+        include_assets = {token.strip().lower() for token in child_values.get("IncludeAssets", "").split(";") if token.strip()}
+        required_assets = {"build", "analyzers", "buildtransitive"}
+        if not required_assets.issubset(include_assets):
+            add(
+                "Microsoft.EntityFrameworkCore.Tasks.IncludeAssets",
+                child_values.get("IncludeAssets", "<missing>"),
+                "Microsoft.EntityFrameworkCore.Tasks must expose its build, analyzers, and buildtransitive assets to the experimental fixture.",
+            )
+
+    project_references = sorted(
+        (element.attrib.get("Include") or "").strip().replace("\\", "/")
+        for element in xml_root.iter()
+        if _tag_name(element) == "ProjectReference"
+    )
+    expected_references = sorted(EF_NATIVEAOT_PROJECT_REFERENCES)
+    if project_references != expected_references:
+        add(
+            "ProjectReference",
+            ", ".join(project_references) or "<missing>",
+            "The experimental fixture must exercise exactly TCJ.Core, TCJ.EntityFrameworkCore, and TCJ.EntityFrameworkCore.SqlServer by project reference. Packed-package publish/execute evidence belongs to Important 8.",
+        )
+
+    program = root / EF_NATIVEAOT_PROGRAM
+    if not program.is_file():
+        add("Program.cs", "missing", "The experimental EF NativeAOT fixture must include a self-contained startup DbContext and representative static LINQ query.")
+        return findings
+
+    source = program.read_text(encoding="utf-8")
+    required_fragments = (
+        "UseSqlServer(",
+        "ApplyTcjSqlServerConventions()",
+        "ToListAsync()",
+    )
+    for fragment in required_fragments:
+        if fragment not in source:
+            add(
+                "Program.cs",
+                fragment,
+                f"The experimental EF NativeAOT fixture must include '{fragment}' so provider setup, TCJ SQL Server conventions, and a statically analyzable EF query are exercised.",
+            )
+
+    restricted_fragments = (
+        "RegisterEntityTypeConfiguration(",
+        "RegisterAllEntities<",
+        "GetModuleAssemblies(",
+        "ApplySoftDeleteQueryFilters(",
+        "IEntitySearcher",
+        "EntitySearcher",
+        "AddTcjOutbox",
+    )
+    for fragment in restricted_fragments:
+        if fragment in source:
+            add(
+                "Program.cs",
+                fragment,
+                f"The experimental EF NativeAOT fixture must stay on the documented static path and must not use restricted or compiled-model-unsupported API '{fragment}'.",
+            )
+
+    return findings
+
 def _snapshot(package: Any, project: Path, root: Path) -> PackageSnapshot:
     tracked = ("IsAotCompatible", "PublishTrimmed", "EnableTrimAnalyzer", "EnableAotAnalyzer")
     properties: dict[str, str | None] = {}
@@ -495,6 +641,7 @@ def verify_repository(
                     allowed,
                 )
             )
+        findings.extend(_validate_ef_nativeaot_fixture(root))
     except POLICY.AotPolicyError as error:
         findings.append(
             Finding(

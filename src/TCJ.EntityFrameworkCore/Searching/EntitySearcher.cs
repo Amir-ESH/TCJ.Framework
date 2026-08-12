@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -13,6 +14,10 @@ namespace TCJ.EntityFrameworkCore.Searching;
 /// </summary>
 public sealed class EntitySearcher : IEntitySearcher
 {
+    private const string SearchRequiresUnreferencedCodeMessage =
+        "Entity search creates entity-specific executors from runtime EF model metadata. Native AOT consumers should use statically typed repository or DbContext queries that EF tooling can precompile.";
+    private const string SearchRequiresDynamicCodeMessage =
+        "Entity search closes generic predicate and executor types from runtime EF model metadata. Native AOT consumers should use statically typed repository or DbContext queries that EF tooling can precompile.";
     private static readonly ConcurrentDictionary<Type, IEntitySearchExecutor> Executors = new();
 
     private readonly IReadDbContext _readDb;
@@ -33,6 +38,8 @@ public sealed class EntitySearcher : IEntitySearcher
     }
 
     /// <inheritdoc />
+    [RequiresUnreferencedCode(SearchRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(SearchRequiresDynamicCodeMessage)]
     public Task<bool> ExistsAsync(
         EntityRecordInput input,
         CancellationToken cancellationToken = default)
@@ -48,6 +55,8 @@ public sealed class EntitySearcher : IEntitySearcher
     }
 
     /// <inheritdoc />
+    [RequiresUnreferencedCode(SearchRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(SearchRequiresDynamicCodeMessage)]
     public Task<object?> FindAsync(
         EntityRecordInput input,
         CancellationToken cancellationToken = default)
@@ -143,6 +152,8 @@ public sealed class EntitySearcher : IEntitySearcher
         };
     }
 
+    [RequiresUnreferencedCode(SearchRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(SearchRequiresDynamicCodeMessage)]
     private static LambdaExpression CreatePrimaryKeyPredicate(
         IEntityType entityType,
         IReadOnlyDictionary<string, string> suppliedValues)
@@ -207,6 +218,8 @@ public sealed class EntitySearcher : IEntitySearcher
         return Expression.Lambda(predicateType, body!, parameter);
     }
 
+    [RequiresUnreferencedCode(SearchRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(SearchRequiresDynamicCodeMessage)]
     private static IEntitySearchExecutor GetExecutor(Type entityType)
     {
         return Executors.GetOrAdd(
