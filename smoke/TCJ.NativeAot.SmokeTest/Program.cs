@@ -10,13 +10,11 @@ using TCJ.AspNetCore.Results;
 using TCJ.Core.DomainEvents;
 using TCJ.Core.Results;
 using TCJ.DependencyInjection.Extensions;
-using AspNetCoreServiceCollectionExtensions = TCJ.AspNetCore.Extensions.ServiceCollectionExtensions;
-using DependencyInjectionServiceCollectionExtensions = TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions;
 
 var expectedVersion = ReadAssemblyMetadata(typeof(Program).Assembly, "ExpectedTcjPackageVersion");
 AssertPackageVersion("TCJ.Core", typeof(Result).Assembly, expectedVersion);
-AssertPackageVersion("TCJ.DependencyInjection", typeof(DependencyInjectionServiceCollectionExtensions).Assembly, expectedVersion);
-AssertPackageVersion("TCJ.AspNetCore", typeof(AspNetCoreServiceCollectionExtensions).Assembly, expectedVersion);
+AssertPackageVersion("TCJ.DependencyInjection", typeof(TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions).Assembly, expectedVersion);
+AssertPackageVersion("TCJ.AspNetCore", typeof(TCJ.AspNetCore.Extensions.AspNetCoreServiceCollectionExtensions).Assembly, expectedVersion);
 
 var dispatchProbe = new DispatchProbe();
 var builder = WebApplication.CreateSlimBuilder(args);

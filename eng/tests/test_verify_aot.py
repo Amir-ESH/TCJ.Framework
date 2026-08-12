@@ -354,6 +354,46 @@ class AotVerifierTests(unittest.TestCase):
         self.assertEqual("<missing>", finding["value"])
         self.assertIn("false", finding["message"])
 
+    def test_packed_native_aot_smoke_requires_real_aspnetcore_assembly_witness(self) -> None:
+        program = self.root / MODULE.PACKED_AOT_PROGRAM
+        text = program.read_text(encoding="utf-8").replace(
+            "typeof(TCJ.AspNetCore.Extensions.AspNetCoreServiceCollectionExtensions).Assembly",
+            "typeof(TCJ.AspNetCore.Extensions.ServiceCollectionExtensions).Assembly",
+            1,
+        )
+        program.write_text(text, encoding="utf-8")
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(
+            item for item in payload["findings"]
+            if item["rule"] == "AOT008"
+            and item["project"] == MODULE.PACKED_AOT_PROGRAM
+            and item["value"] == "typeof(TCJ.AspNetCore.Extensions.AspNetCoreServiceCollectionExtensions).Assembly"
+        )
+        self.assertIn("required behavior", finding["message"])
+
+    def test_packed_native_aot_workflows_require_ubuntu_native_toolchain(self) -> None:
+        workflow = self.root / ".github/workflows/ci.yml"
+        text = workflow.read_text(encoding="utf-8").replace(
+            "          sudo apt-get install -y clang zlib1g-dev\n",
+            "",
+            1,
+        )
+        workflow.write_text(text, encoding="utf-8")
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(
+            item for item in payload["findings"]
+            if item["rule"] == "AOT009"
+            and item["project"] == ".github/workflows/ci.yml"
+            and item["value"] == "sudo apt-get install -y clang zlib1g-dev"
+        )
+        self.assertIn("blocking packed Native AOT", finding["message"])
+
     def test_packed_native_aot_smoke_rejects_repository_project_references(self) -> None:
         fixture = self.root / MODULE.PACKED_AOT_FIXTURE
         text = fixture.read_text(encoding="utf-8").replace(
@@ -392,6 +432,7 @@ class AotVerifierTests(unittest.TestCase):
             "python3 eng/verify-aot.py verify",
             "python3 eng/run-native-aot-smoke.py",
             "python3 eng/verify-aot.py verify-result",
+            "sudo apt-get install -y clang zlib1g-dev",
             "linux-x64",
         )
         for name in ("ci.yml", "release-preflight.yml", "release.yml"):

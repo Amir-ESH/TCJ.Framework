@@ -722,6 +722,8 @@ def _validate_packed_native_aot_smoke(root: Path, policy: Any) -> list[Finding]:
             '"/unhandled"',
             '"/domain-event"',
             'ReadAssemblyMetadata(assembly, "PackageVersion")',
+            "typeof(TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions).Assembly",
+            "typeof(TCJ.AspNetCore.Extensions.AspNetCoreServiceCollectionExtensions).Assembly",
             "TCJ_PACKAGE_VERSION",
             "TCJ Native AOT packed-package smoke passed",
         )
@@ -769,6 +771,7 @@ def _validate_packed_native_aot_smoke(root: Path, policy: Any) -> list[Finding]:
         "python3 eng/verify-aot.py verify",
         "python3 eng/run-native-aot-smoke.py",
         "python3 eng/verify-aot.py verify-result",
+        "sudo apt-get install -y clang zlib1g-dev",
         PACKED_AOT_RID,
     )
     for workflow_name in BLOCKING_AOT_WORKFLOWS:

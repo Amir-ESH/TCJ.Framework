@@ -477,6 +477,13 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Install packaged Native AOT prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
       - name: Run packed Native AOT release-candidate smoke
         run: >
           python3 eng/run-native-aot-smoke.py
