@@ -16,6 +16,10 @@ class OutboxVerifierTests(unittest.TestCase):
     def test_metadata_based_system_text_json_contract_is_accepted(self):
         source = """
         using System.Text.Json.Serialization.Metadata;
+        if (_options.TypeInfoResolver is null && JsonSerializer.IsReflectionEnabledByDefault)
+        {
+            _options.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
+        }
         JsonTypeInfo typeInfo = _options.GetTypeInfo(eventType);
         JsonSerializer.Serialize(domainEvent, typeInfo);
         JsonSerializer.Deserialize(payload, typeInfo);
@@ -25,6 +29,10 @@ class OutboxVerifierTests(unittest.TestCase):
 
     def test_runtime_type_based_system_text_json_contract_is_rejected(self):
         source = """
+        if (_options.TypeInfoResolver is null && JsonSerializer.IsReflectionEnabledByDefault)
+        {
+            _options.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
+        }
         JsonTypeInfo typeInfo = _options.GetTypeInfo(eventType);
         JsonSerializer.Serialize(domainEvent, typeInfo);
         JsonSerializer.Deserialize(payload, typeInfo);

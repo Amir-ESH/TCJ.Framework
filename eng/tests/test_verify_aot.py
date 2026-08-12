@@ -287,6 +287,24 @@ class AotVerifierTests(unittest.TestCase):
         )
         self.assertIn("documented static path", finding["message"])
 
+    def test_ef_nativeaot_fixture_rejects_dbcontext_method_parameter_query_root(self) -> None:
+        program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
+        text = program.read_text(encoding="utf-8")
+        text = text.replace(
+            'public static async Task Main(string[] args)',
+            'private static Task LoadNamesAsync(ExperimentalNativeAotDbContext dbContext)'
+        )
+        program.write_text(text + "\n// LoadNamesAsync(ExperimentalNativeAotDbContext dbContext)\n", encoding="utf-8")
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(
+            item for item in payload["findings"]
+            if item["rule"] == "AOT007" and item["value"] == "DbContext method parameter query root"
+        )
+        self.assertIn("local startup DbContext", finding["message"])
+
     def test_ef_nativeaot_fixture_rejects_compiled_model_unsupported_soft_delete_filter(self) -> None:
         program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
         program.write_text(

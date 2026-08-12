@@ -18,6 +18,13 @@ public sealed class SystemTextJsonOutboxSerializer : IOutboxSerializer
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = new JsonSerializerOptions(options.JsonSerializerOptions);
+
+        // GetTypeInfo(Type) requires an explicit resolver. Preserve the historical JIT behavior
+        // without rooting reflection in Native AOT applications where reflection serialization is disabled.
+        if (_options.TypeInfoResolver is null && JsonSerializer.IsReflectionEnabledByDefault)
+        {
+            _options.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
+        }
     }
 
     /// <inheritdoc />

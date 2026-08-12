@@ -65,6 +65,8 @@ def validate_system_text_json_serializer_source(text: str) -> None:
         "_options.GetTypeInfo(",
         "JsonSerializer.Serialize(domainEvent, typeInfo)",
         "JsonSerializer.Deserialize(payload, typeInfo)",
+        "if (_options.TypeInfoResolver is null && JsonSerializer.IsReflectionEnabledByDefault)",
+        "_options.TypeInfoResolver = new DefaultJsonTypeInfoResolver()",
     )
     missing = [fragment for fragment in required if fragment not in text]
     if missing:

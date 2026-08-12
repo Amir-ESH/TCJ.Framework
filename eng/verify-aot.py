@@ -536,6 +536,7 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
         "UseSqlServer(",
         "ApplyTcjSqlServerConventions()",
         "ToListAsync()",
+        'args.Contains("--execute-query", StringComparer.Ordinal)',
     )
     for fragment in required_fragments:
         if fragment not in source:
@@ -544,6 +545,13 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
                 fragment,
                 f"The experimental EF NativeAOT fixture must include '{fragment}' so provider setup, TCJ SQL Server conventions, and a statically analyzable EF query are exercised.",
             )
+
+    if "LoadNamesAsync(ExperimentalNativeAotDbContext" in source:
+        add(
+            "Program.cs",
+            "DbContext method parameter query root",
+            "EF Core 10 query precompilation does not recognize a DbContext method parameter as a static query root. Keep the representative query rooted in the local startup DbContext.",
+        )
 
     restricted_fragments = (
         "RegisterEntityTypeConfiguration(",

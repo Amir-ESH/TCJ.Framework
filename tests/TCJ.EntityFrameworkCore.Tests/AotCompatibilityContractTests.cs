@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using TCJ.EntityFrameworkCore.Abstractions;
 using TCJ.EntityFrameworkCore.Extensions;
 using TCJ.EntityFrameworkCore.Searching;
 
@@ -21,6 +22,26 @@ public sealed class AotCompatibilityContractTests
         AssertRestricted(registerConfigurations, requiresDynamicCode: true);
         AssertRestricted(registerEntities, requiresDynamicCode: true);
         AssertRestricted(getModuleAssemblies, requiresDynamicCode: false);
+    }
+
+    [Fact]
+    public void Read_context_set_contract_preserves_entity_members_required_by_ef_core()
+    {
+        MethodInfo set = typeof(IReadDbContext).GetMethod(nameof(IReadDbContext.Set))!;
+        Type entityParameter = set.GetGenericArguments().Single();
+        DynamicallyAccessedMembersAttribute? annotation =
+            entityParameter.GetCustomAttribute<DynamicallyAccessedMembersAttribute>();
+
+        Assert.NotNull(annotation);
+        DynamicallyAccessedMemberTypes expected =
+            DynamicallyAccessedMemberTypes.PublicConstructors
+            | DynamicallyAccessedMemberTypes.NonPublicConstructors
+            | DynamicallyAccessedMemberTypes.PublicProperties
+            | DynamicallyAccessedMemberTypes.PublicFields
+            | DynamicallyAccessedMemberTypes.NonPublicProperties
+            | DynamicallyAccessedMemberTypes.NonPublicFields
+            | DynamicallyAccessedMemberTypes.Interfaces;
+        Assert.Equal(expected, annotation.MemberTypes);
     }
 
     [Fact]

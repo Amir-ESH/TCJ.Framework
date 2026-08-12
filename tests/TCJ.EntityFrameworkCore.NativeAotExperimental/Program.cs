@@ -7,24 +7,25 @@ namespace TcjEfNativeAot;
 
 public static class Program
 {
-    public static void Main()
+    public static async Task Main(string[] args)
     {
         using var dbContext = new ExperimentalNativeAotDbContext();
         _ = dbContext.Model;
 
-        // Keep a representative statically analyzable LINQ query in the fixture so
-        // EF's publish-time query precompiler has an application query to discover.
-        _ = (Func<ExperimentalNativeAotDbContext, Task<List<string>>>)LoadNamesAsync;
+        // EF's query precompiler recognizes this query because its root DbContext is a local
+        // variable. Execution is opt-in so the published smoke binary does not require a live
+        // SQL Server merely to prove compiled-model / precompiled-query Native AOT startup.
+        if (args.Contains("--execute-query", StringComparer.Ordinal))
+        {
+            _ = await dbContext.Records
+                .Where(static record => record.Name.StartsWith("A"))
+                .OrderBy(static record => record.Name)
+                .Select(static record => record.Name)
+                .ToListAsync();
+        }
 
         Console.WriteLine("TCJ EF Core NativeAOT experimental fixture initialized");
     }
-
-    private static Task<List<string>> LoadNamesAsync(ExperimentalNativeAotDbContext dbContext)
-        => dbContext.Records
-            .Where(static record => record.Name.StartsWith("A"))
-            .OrderBy(static record => record.Name)
-            .Select(static record => record.Name)
-            .ToListAsync();
 }
 
 public sealed class ExperimentalNativeAotDbContext : DbContext, IReadDbContext, IWriteDbContext

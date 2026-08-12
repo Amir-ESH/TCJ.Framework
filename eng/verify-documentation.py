@@ -551,7 +551,10 @@ def _member_item(package: str, rel: str, line_no: int, namespace: str, scope: Ty
     visibility = visibility_match.group(1) if visibility_match else "public"
     if visibility == "private protected":
         return None
-    without_attrs = re.sub(r"^\[[^\]]+\]\s*", "", clean)
+    # Attributes can appear both before a member and on generic parameters. Strip them
+    # before locating the member parameter list so an attribute constructor call, such as
+    # DynamicallyAccessedMembers(...), cannot be mistaken for the member declaration.
+    without_attrs = re.sub(r"\[[^\]]+\]\s*", "", clean)
     # Nested type declarations are handled independently.
     if TYPE_RE.match(without_attrs):
         return None
@@ -574,18 +577,18 @@ def _member_item(package: str, rel: str, line_no: int, namespace: str, scope: Ty
         kind = "Operator"
         tparams = ()
         requires_returns = True
-    elif "(" in clean:
-        before = clean[:clean.find("(")].strip()
+    elif "(" in without_attrs:
+        before = without_attrs[:without_attrs.find("(")].strip()
         name_match = re.search(r"(@?[A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^>]+>)?$", before)
         if not name_match:
             return None
         name = name_match.group(1).lstrip("@")
-        params = _parameter_names(clean)
+        params = _parameter_names(without_attrs)
         tparams = _generic_names(before, name)
         is_ctor = name == scope.name
         kind = "Constructor" if is_ctor else "Method"
         doc_name = "#ctor" if is_ctor else name
-        doc_id = f"M:{containing}.{doc_name}({_normalized_param_types(clean)})"
+        doc_id = f"M:{containing}.{doc_name}({_normalized_param_types(without_attrs)})"
         prefix = before[:name_match.start()].strip().split()
         return_type = prefix[-1] if prefix else "void"
         requires_returns = not is_ctor and return_type not in {"void", "Task", "ValueTask"}

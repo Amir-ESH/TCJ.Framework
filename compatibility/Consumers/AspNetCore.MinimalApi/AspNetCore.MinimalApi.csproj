@@ -2,7 +2,6 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsAotCompatible>true</IsAotCompatible>
-    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
   <ItemGroup>

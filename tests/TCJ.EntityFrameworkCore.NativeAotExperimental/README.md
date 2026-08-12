@@ -13,4 +13,6 @@ It exists to verify the narrow static NativeAOT path documented by TCJ:
 
 The fixture intentionally does not use convention-based model scanning, `IEntitySearcher`, the transactional outbox runtime-discovery path, or TCJ soft-delete global query filters. The current EF compiled-model path does not support global query filters, so `ApplySoftDeleteQueryFilters()` is outside this NativeAOT experiment. Normal JIT consumers do not need the NativeAOT properties or EF publish tooling used here.
 
+The representative query is intentionally rooted directly in the local startup `DbContext` and guarded by the `--execute-query` argument. EF Core 10's experimental query locator can precompile that static query during publish, while the default smoke execution remains database-independent. Do not move the query behind a helper method whose `DbContext` is a method parameter; that shape is currently classified as dynamic by EF's precompiler.
+
 Passing this fixture does not promote `TCJ.EntityFrameworkCore` or `TCJ.EntityFrameworkCore.SqlServer` beyond the `Experimental` tier. A future support-tier upgrade requires packaged-consumer NativeAOT publish-and-execute evidence.
