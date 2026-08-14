@@ -106,19 +106,29 @@ public sealed class SqlServerStressTests(SqlServerStressFixture fixture)
         await StressRunner.RunAsync(nameof(SameDbContextConcurrentOperationsFailPredictably), "sqlserver", async context =>
         {
             using IServiceScope scope = database.CreateScope();
-            StressDbContext db = scope.ServiceProvider.GetRequiredService<StressDbContext>();
-            Task<int> first = db.Database.ExecuteSqlRawAsync("WAITFOR DELAY '00:00:00.050'; SELECT 1", context.CancellationToken);
-            await Task.Yield();
+            DbContextOptions<StressDbContext> baseOptions = scope.ServiceProvider.GetRequiredService<DbContextOptions<StressDbContext>>();
+            var gate = new DeterministicCommandGateInterceptor();
+            DbContextOptions<StressDbContext> options = new DbContextOptionsBuilder<StressDbContext>(baseOptions)
+                .AddInterceptors(gate)
+                .Options;
+            await using var db = new StressDbContext(options);
+
+            Task<int> first = db.Database.ExecuteSqlRawAsync(
+                "/* TCJ_CONCURRENCY_GATE */ SELECT 1",
+                context.CancellationToken);
             Exception? secondFailure = null;
             try
             {
-                await db.Database.ExecuteSqlRawAsync("SELECT 1", context.CancellationToken);
+                await gate.WaitUntilBlockedAsync(context.CancellationToken);
+                secondFailure = await Record.ExceptionAsync(() =>
+                    db.Database.ExecuteSqlRawAsync("SELECT 1", context.CancellationToken));
             }
-            catch (Exception exception)
+            finally
             {
-                secondFailure = exception;
+                gate.Release();
+                await first;
             }
-            await first;
+
             Assert.IsType<InvalidOperationException>(secondFailure);
         });
     }
