@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="SSH.NET" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
