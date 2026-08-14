@@ -1,6 +1,6 @@
 # Public API compatibility
 
-TCJ Framework validates every locally packed development package against the latest immutable package version published to NuGet.org. The current baseline is `0.1.0-preview.1`.
+TCJ Framework validates every locally packed development package against the latest immutable package version published to NuGet.org. The current baseline is `0.1.0-preview.2`.
 
 ## How the gate works
 

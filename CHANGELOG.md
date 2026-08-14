@@ -6,6 +6,18 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+### Changed
+
+- Advanced the immutable published-package baseline to `0.1.0-preview.2` and opened the `0.1.0-preview.3` development cycle without reusing the published version or tag.
+- NuGet packages now source package-specific Markdown READMEs from `docs/nuget/` while the repository root README remains optimized for GitHub.
+- Published-package feature smoke coverage remains enabled for both the current development release target and the immutable published baseline.
+
+### Fixed
+
+- Fixed published-package smoke restores so they use an explicit NuGet.org-only configuration instead of inheriting `smoke/NuGet.Config` and failing when the local `artifacts/packages` candidate feed is absent.
+- Fixed the scheduled dependency audit to restore the published-package consumer from the same NuGet.org-only source configuration.
+- Added release validation that verifies all five package README sources, rejects raw HTML and relative Markdown links for new package versions, and confirms packed README content matches the repository source.
+
 ## [0.1.0-preview.2] - 2026-08-15
 
 ### Added

@@ -100,6 +100,46 @@ def verify_nuget_config() -> None:
         fail("NuGet.Config must map all package IDs with pattern '*'.")
 
 
+def verify_published_nuget_config(path: Path) -> None:
+    config = parse_xml(path)
+    label = path.relative_to(ROOT).as_posix()
+
+    package_sources = config.find("packageSources")
+    if package_sources is None or package_sources.find("clear") is None:
+        fail(f"{label} packageSources must begin with <clear />.")
+    package_entries = package_sources.findall("add")
+    if len(package_entries) != 1:
+        fail(f"{label} must define exactly one package source.")
+    package_source = package_entries[0]
+    if package_source.attrib.get("key") != "nuget.org":
+        fail(f"{label} may only use the 'nuget.org' package source.")
+    if package_source.attrib.get("value") != "https://api.nuget.org/v3/index.json":
+        fail(f"{label} uses an unexpected NuGet.org package source URL.")
+
+    audit_sources = config.find("auditSources")
+    if audit_sources is None or audit_sources.find("clear") is None:
+        fail(f"{label} auditSources must begin with <clear />.")
+    audit_entries = audit_sources.findall("add")
+    if len(audit_entries) != 1:
+        fail(f"{label} must define exactly one audit source.")
+    audit_source = audit_entries[0]
+    if audit_source.attrib.get("key") != "nuget.org":
+        fail(f"{label} may only use the 'nuget.org' audit source.")
+    if audit_source.attrib.get("value") != "https://api.nuget.org/v3/index.json":
+        fail(f"{label} uses an unexpected NuGet.org audit source URL.")
+
+    mappings = config.findall("packageSourceMapping/packageSource")
+    if len(mappings) != 1 or mappings[0].attrib.get("key") != "nuget.org":
+        fail(f"{label} must map packages only to the nuget.org source.")
+    patterns = {item.attrib.get("pattern") for item in mappings[0].findall("package")}
+    if patterns != {"*"}:
+        fail(f"{label} must map every package ID to nuget.org with pattern '*'.")
+
+    values = {entry.attrib.get("value", "") for entry in package_entries}
+    if any("artifacts" in value.casefold() or "tcj-local" in value.casefold() for value in values):
+        fail(f"{label} must not reference a local candidate package feed.")
+
+
 def require_workflow_fragments(path: Path, fragments: tuple[str, ...]) -> None:
     if not path.is_file():
         fail(f"Required workflow is missing: {path.relative_to(ROOT)}")
@@ -141,6 +181,8 @@ def verify_workflows() -> None:
             "dotnet restore TCJ.slnx --force-evaluate",
             "eng/published-release.json",
             "TCJ.PublishedPackages.SmokeTest.csproj",
+            "smoke/NuGet.Published.Config",
+            "--configfile",
             "-p:TCJPackageVersion=${{ steps.published-version.outputs.value }}",
         ),
     )
@@ -168,6 +210,9 @@ def verify_workflows() -> None:
             "compatibility/scripts/run-compatibility.py",
             "eng/verify-consumer-compatibility.py verify-published",
             "--source-mode published",
+            "smoke/NuGet.Published.Config",
+            "--configfile",
+            "--no-restore",
         ),
     )
 
@@ -199,6 +244,7 @@ def verify_no_local_policy_bypass() -> None:
 def main() -> int:
     verify_msbuild_policy()
     verify_nuget_config()
+    verify_published_nuget_config(ROOT / "smoke" / "NuGet.Published.Config")
     verify_workflows()
     verify_no_local_policy_bypass()
     print("Dependency security policy verification succeeded.")

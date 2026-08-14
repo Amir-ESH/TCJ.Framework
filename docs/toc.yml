@@ -47,6 +47,8 @@
   href: resilience.md
 - name: Health Checks and Startup Diagnostics
   href: health-checks.md
+- name: Migration 0.1.0-preview.2 to 0.1.0-preview.3
+  href: migrations/0.1.0-preview.2-to-0.1.0-preview.3.md
 - name: Migration 0.1.0-preview.1 to 0.1.0-preview.2
   href: migrations/0.1.0-preview.1-to-0.1.0-preview.2.md
 - name: Security

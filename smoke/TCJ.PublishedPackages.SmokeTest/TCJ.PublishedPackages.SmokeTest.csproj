@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
-    <TCJPackageVersion Condition="'$(TCJPackageVersion)' == ''">0.1.0-preview.1</TCJPackageVersion>
+    <TCJPackageVersion Condition="'$(TCJPackageVersion)' == ''">0.1.0-preview.2</TCJPackageVersion>
     <EnableResilienceSmoke Condition="'$(EnableResilienceSmoke)' == ''">false</EnableResilienceSmoke>
     <EnableHealthCheckSmoke Condition="'$(EnableHealthCheckSmoke)' == ''">false</EnableHealthCheckSmoke>
     <EnableOutboxSmoke Condition="'$(EnableOutboxSmoke)' == ''">false</EnableOutboxSmoke>

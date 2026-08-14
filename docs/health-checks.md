@@ -86,7 +86,7 @@ Public liveness/readiness responses include only:
 {
   "status": "Healthy",
   "duration": "00:00:00.0120000",
-  "version": "0.1.0-preview.2"
+  "version": "0.1.0-preview.3"
 }
 ```
 

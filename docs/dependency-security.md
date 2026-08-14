@@ -6,7 +6,7 @@ TCJ Framework validates dependency security at restore time and reviews dependen
 
 [`NuGet.Config`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/NuGet.Config) clears inherited package and audit sources, enables only the NuGet.org V3 feed, and maps every package ID to that source. This prevents machine-level NuGet configuration from silently introducing an additional restore source.
 
-The published-package smoke project also uses this repository configuration. It must not define its own `RestoreSources` property.
+The repository source graph uses this root configuration. Published-package validation is intentionally isolated: `smoke/NuGet.Published.Config` clears inherited package and audit sources and pins both to NuGet.org, while `smoke/NuGet.Config` retains the separate local candidate feed required by packaged Native AOT validation. The published-package smoke project must not define its own `RestoreSources` property.
 
 ## NuGet Audit policy
 
@@ -40,7 +40,7 @@ This check complements NuGet Audit:
 The workflow audits:
 
 1. the complete `TCJ.slnx` dependency graph;
-2. the external consumer that installs the latest published TCJ packages.
+2. the external consumer that installs the latest published TCJ packages through `smoke/NuGet.Published.Config`.
 
 ## Handling an advisory
 
