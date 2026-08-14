@@ -79,8 +79,34 @@ nunit-*.xml
 [Rr]eleasePS/
 dlldata.c
 
+# Resilience fault-injection evidence
+artifacts/resilience/
+!eng/resilience-policy.json
+!eng/resilience-contract.json
+!eng/verify-resilience.py
+
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
+artifacts/performance/
+!eng/performance-policy.json
+!eng/verify-performance-results.py
+
+# Software bill of materials
+artifacts/sbom/
+*.cdx.json
+!eng/sbom-policy.json
+
+# Reproducible package verification
+artifacts/reproducibility/
+!eng/reproducibility-policy.json
+!eng/verify-reproducible-build.py
+
+# Package upgrade compatibility
+artifacts/upgrade-compatibility/
+upgrade-tests/**/bin/
+upgrade-tests/**/obj/
+!eng/upgrade-compatibility-policy.json
+!eng/breaking-changes.json
 
 # .NET Core
 project.lock.json
@@ -173,8 +199,20 @@ _TeamCity*
 
 # Coverlet is a free, cross platform Code Coverage Tool
 coverage*.json
+!eng/coverage-policy.json
 coverage*.xml
 coverage*.info
+
+# Mutation testing
+StrykerOutput/
+**/StrykerOutput/
+.tools/
+!stryker-config.json
+!eng/mutation-policy.json
+!eng/mutation-baseline.json
+!eng/run-mutation-testing.py
+!eng/verify-mutation-results.py
+!.config/dotnet-tools.json
 
 # Visual Studio code coverage results
 *.coverage
@@ -228,6 +266,15 @@ PublishScripts/
 *.snupkg
 # The packages folder can be ignored because of Package Restore
 **/[Pp]ackages/*
+
+# Keep source-controlled documentation package landing pages. The generic
+# NuGet packages rule above would otherwise ignore docs/packages/*.md.
+!docs/packages/
+!docs/packages/**
+
+# Versioned documentation release notes live under docs/release-notes/ so they do not
+# collide with the generic Visual Studio Releases/ build-output rule above.
+
 # except build/, which is used as an MSBuild target.
 !**/[Pp]ackages/build/
 # Uncomment if necessary however generally it will be regenerated when needed
@@ -433,3 +480,79 @@ FodyWeavers.xsd
 # Python tooling caches
 __pycache__/
 *.py[cod]
+
+# Generated API reference documentation
+artifacts/documentation/
+_site/
+docfx/api/*.yml
+!docfx/docfx.json
+!eng/documentation-policy.json
+!eng/documentation-baseline.json
+!eng/verify-documentation.py
+
+# SQL Server integration test output
+TestResults/SqlServerIntegration/
+artifacts/sqlserver-integration/
+TestResults/AspNetCoreIntegration/
+artifacts/aspnetcore-integration/
+artifacts/aspnetcore-integration-cross-platform/
+
+# Package consumer compatibility
+artifacts/compatibility/
+compatibility/**/bin/
+compatibility/**/obj/
+!eng/compatibility-policy.json
+!eng/verify-consumer-compatibility.py
+!compatibility/NuGet.Config
+!compatibility/NuGet.Published.Config
+!compatibility/**/*.csproj
+!compatibility/**/*.slnx
+!compatibility/**/*.cs
+!compatibility/**/*.py
+!compatibility/**/*.props
+
+# Property-based testing and fuzzing generated output
+artifacts/fuzzing/
+fuzz/**/bin/
+fuzz/**/obj/
+fuzz/generated-corpus/
+TestResults/PropertyTests/
+
+# Concurrency stress generated output
+TestResults/Concurrency/
+artifacts/concurrency/
+tests/TCJ.Concurrency.Tests/bin/
+tests/TCJ.Concurrency.Tests/obj/
+
+# Observability test and verifier output
+TestResults/Observability/
+artifacts/observability/
+tests/TCJ.Observability.Tests/bin/
+tests/TCJ.Observability.Tests/obj/
+!eng/observability-policy.json
+!eng/observability-contract.json
+!eng/verify-observability.py
+!tests/TCJ.Observability.Tests/**/*.cs
+!tests/TCJ.Observability.Tests/**/*.csproj
+
+# Health-check validation output
+TestResults/HealthChecks/
+artifacts/health-checks/
+tests/TCJ.HealthChecks.Tests/bin/
+tests/TCJ.HealthChecks.Tests/obj/
+!eng/health-check-policy.json
+!eng/health-check-contract.json
+!eng/verify-health-checks.py
+!tests/TCJ.HealthChecks.Tests/**/*.cs
+!tests/TCJ.HealthChecks.Tests/**/*.csproj
+
+# Transactional outbox generated output
+TestResults/Outbox/
+artifacts/outbox/
+tests/TCJ.Outbox.Tests/bin/
+tests/TCJ.Outbox.Tests/obj/
+!eng/outbox-policy.json
+!eng/outbox-contract.json
+!eng/verify-outbox.py
+!tests/TCJ.Outbox.Tests/**/*.cs
+!tests/TCJ.Outbox.Tests/**/*.csproj

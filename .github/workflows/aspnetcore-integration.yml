@@ -1,0 +1,217 @@
+name: ASP.NET Core integration
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/TCJ.Core/**"
+      - "compatibility/Consumers/AspNetCore.MinimalApi/**"
+      - "compatibility/Consumers/FullStack.MinimalApi/**"
+      - "compatibility/Directory.Build.props"
+      - "compatibility/Directory.Packages.props"
+      - "compatibility/NuGet.Config"
+      - "compatibility/NuGet.Published.Config"
+      - "upgrade-tests/Scenarios/AspNetCoreConsumer/**"
+      - "upgrade-tests/Scenarios/FullStackConsumer/**"
+      - "upgrade-tests/Directory.Build.props"
+      - "upgrade-tests/Directory.Packages.props"
+      - "upgrade-tests/NuGet.Baseline.Config"
+      - "upgrade-tests/NuGet.Target.Config"
+      - "eng/upgrade-compatibility-policy.json"
+      - "eng/breaking-changes.json"
+      - "src/TCJ.DependencyInjection/**"
+      - "src/TCJ.AspNetCore/**"
+      - "tests/TCJ.AspNetCore.IntegrationTests/**"
+      - "tests/TCJ.AspNetCore.NativeAotSmoke/**"
+      - "eng/aspnetcore-integration-policy.json"
+      - "eng/verify-aspnetcore-integration.py"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "global.json"
+      - ".github/workflows/aspnetcore-integration.yml"
+
+  workflow_dispatch:
+
+  workflow_call:
+
+  schedule:
+    - cron: "41 4 * * 1"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+  TCJ_ASPNETCORE_RESULTS_DIR: ${{ github.workspace }}/TestResults/AspNetCoreIntegration
+
+concurrency:
+  group: aspnetcore-integration-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  integration:
+    name: Test on ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            slug: linux
+            os: ubuntu-latest
+            python: python3
+          - name: Windows
+            slug: windows
+            os: windows-latest
+            python: python
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display .NET information
+        run: |
+          dotnet --info
+          ${{ matrix.python }} -c "from pathlib import Path; import os,platform; p=Path('TestResults/AspNetCoreIntegration/diagnostics'); p.mkdir(parents=True,exist_ok=True); (p/'environment-summary.txt').write_text(f'runner_os={os.environ.get(\"RUNNER_OS\",platform.system())}\ndotnet_sdk=' + os.popen('dotnet --version').read().strip() + f'\nsource_commit={os.environ.get(\"GITHUB_SHA\",\"unknown\")}\nenvironments=Development,Production\n', encoding='utf-8')"
+
+      - name: Validate automation scripts
+        run: |
+          ${{ matrix.python }} -m compileall -q eng
+          ${{ matrix.python }} -m unittest eng.tests.test_verify_aspnetcore_integration
+
+      - name: Validate ASP.NET Core integration policy
+        run: ${{ matrix.python }} eng/verify-aspnetcore-integration.py validate-config
+
+      - name: Validate health-check configuration
+        run: python3 eng/verify-health-checks.py validate-config
+
+      - name: Restore and audit dependencies
+        run: dotnet restore tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj --force-evaluate
+
+      - name: Build integration-test project
+        run: dotnet build tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj --configuration Release --no-restore
+
+      - name: Run ASP.NET Core integration tests
+        id: integration-tests
+        continue-on-error: true
+        run: dotnet test tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj --configuration Release --no-build --filter "Category=AspNetCore" --logger "trx;LogFileName=aspnetcore-integration-${{ matrix.slug }}.trx" --results-directory TestResults/AspNetCoreIntegration
+
+      - name: Verify test results and diagnostics
+        id: verify-results
+        if: always()
+        continue-on-error: true
+        run: ${{ matrix.python }} eng/verify-aspnetcore-integration.py verify --results TestResults/AspNetCoreIntegration --output artifacts/aspnetcore-integration --platform "${{ matrix.name }}"
+
+      - name: Publish ASP.NET Core integration summary
+        if: always()
+        run: ${{ matrix.python }} -c "from pathlib import Path; import os; p=Path('artifacts/aspnetcore-integration/ASPNETCORE_INTEGRATION_SUMMARY.md'); open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf-8').write(p.read_text(encoding='utf-8') if p.exists() else '# ASP.NET Core integration\n\nSummary unavailable.\n')"
+
+      - name: Upload ASP.NET Core integration results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aspnetcore-integration-${{ matrix.slug }}-${{ github.run_id }}
+          path: |
+            TestResults/AspNetCoreIntegration/**/*.trx
+            TestResults/AspNetCoreIntegration/diagnostics/**
+            artifacts/aspnetcore-integration/ASPNETCORE_INTEGRATION_SUMMARY.md
+            artifacts/aspnetcore-integration/aspnetcore-integration-summary.json
+            artifacts/aspnetcore-integration/logs/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce platform integration result
+        if: always()
+        run: ${{ matrix.python }} -c "import sys; sys.exit(0 if '${{ steps.integration-tests.outcome }}' == 'success' and '${{ steps.verify-results.outcome }}' == 'success' else 1)"
+
+  native-aot-smoke:
+    name: Native AOT Minimal API smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install Native AOT prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
+      - name: Restore Native AOT smoke host
+        run: dotnet restore tests/TCJ.AspNetCore.NativeAotSmoke/TCJ.AspNetCore.NativeAotSmoke.csproj --runtime linux-x64 --force-evaluate
+
+      - name: Publish Native AOT smoke host
+        run: >-
+          dotnet publish tests/TCJ.AspNetCore.NativeAotSmoke/TCJ.AspNetCore.NativeAotSmoke.csproj
+          --configuration Release
+          --runtime linux-x64
+          --self-contained true
+          --no-restore
+          --output artifacts/aspnetcore-native-aot
+          -p:TreatWarningsAsErrors=true
+          -p:WarningsNotAsErrors=IDE0005%3BIDE0011%3BCA1001%3BCA1512%3BCA1859
+
+      - name: Execute Native AOT smoke host
+        run: ./artifacts/aspnetcore-native-aot/TCJ.AspNetCore.NativeAotSmoke
+
+  cross-platform:
+    name: Verify Linux and Windows results
+    needs: integration
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Download platform results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: aspnetcore-integration-*-${{ github.run_id }}
+          path: artifacts/aspnetcore-platform-results
+
+      - name: Verify cross-platform result set
+        run: python3 eng/verify-aspnetcore-integration.py verify-platforms --input artifacts/aspnetcore-platform-results --output artifacts/aspnetcore-integration-cross-platform
+
+      - name: Publish cross-platform summary
+        run: cat artifacts/aspnetcore-integration-cross-platform/ASPNETCORE_INTEGRATION_PLATFORM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload cross-platform summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: aspnetcore-integration-cross-platform-${{ github.run_id }}
+          path: artifacts/aspnetcore-integration-cross-platform/**
+          if-no-files-found: error
+          retention-days: 14

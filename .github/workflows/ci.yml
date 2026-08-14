@@ -1,12 +1,9 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - main
-      - develop
+  workflow_call:
 
-  pull_request:
+  push:
     branches:
       - main
       - develop
@@ -21,6 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  CI: true
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
 
@@ -28,7 +26,7 @@ jobs:
   build-test-pack:
     name: Build, test and pack
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
 
     steps:
       - name: Checkout repository
@@ -39,6 +37,9 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore repository tools
+        run: dotnet tool restore
+
       - name: Display .NET information
         run: dotnet --info
 
@@ -48,7 +49,73 @@ jobs:
       - name: Verify development metadata
         run: python3 eng/verify-release.py
 
-      - name: Restore dependencies
+      - name: Verify dependency security policy
+        run: python3 eng/verify-dependency-security.py
+
+      - name: Verify release integrity automation
+        run: python3 eng/release-integrity.py validate-config
+
+      - name: Verify code coverage policy
+        run: python3 eng/verify-coverage.py validate-config
+
+      - name: Verify mutation-testing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            --start-directory eng/tests \
+            --pattern "test_*.py"
+          python3 eng/verify-mutation-results.py validate-config
+
+      - name: Verify performance-benchmark configuration
+        run: python3 eng/verify-performance-results.py validate-config
+
+      - name: Verify architecture policy
+        run: python3 eng/verify-architecture-policy.py validate-config
+
+      - name: Verify SBOM configuration
+        run: python3 eng/verify-sbom.py validate-config
+
+      - name: Validate reproducibility policy
+        run: python3 eng/verify-reproducible-build.py validate-config
+
+      - name: Validate documentation policy
+        run: python3 eng/verify-documentation.py validate-config
+
+      - name: Validate SQL Server integration configuration
+        run: python3 eng/verify-sqlserver-integration.py validate-config
+
+      - name: Validate ASP.NET Core integration configuration
+        run: python3 eng/verify-aspnetcore-integration.py validate-config
+
+      - name: Validate package consumer compatibility configuration
+        run: python3 eng/verify-consumer-compatibility.py validate-config
+
+      - name: Validate package upgrade compatibility configuration
+        run: python3 eng/verify-upgrade-compatibility.py validate-config
+
+      - name: Validate property and fuzz testing configuration
+        run: python3 eng/verify-fuzzing.py validate-config
+
+      - name: Validate concurrency stress configuration
+        run: python3 eng/verify-concurrency.py validate-config
+
+      - name: Validate observability configuration
+        run: python3 eng/verify-observability.py validate-config
+
+      - name: Validate resilience configuration
+        run: python3 eng/verify-resilience.py validate-config
+
+      - name: Validate health-check configuration
+        run: python3 eng/verify-health-checks.py validate-config
+
+      - name: Validate transactional-outbox configuration
+        run: python3 eng/verify-outbox.py validate-config
+
+      - name: Verify Native AOT policy and release wiring
+        run: python3 eng/verify-aot.py verify
+
+      - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
       - name: Build solution
@@ -57,15 +124,241 @@ jobs:
           --configuration Release
           --no-restore
 
+
+      - name: Run fast provider-independent outbox tests
+        run: >
+          dotnet test tests/TCJ.Outbox.Tests/TCJ.Outbox.Tests.csproj
+          --configuration Release --no-build
+          --filter "Category=OutboxFast"
+          --logger "trx;LogFileName=outbox-fast.trx"
+          --results-directory TestResults/Outbox/Fast
+
+      - name: Run fast health-check tests
+        run: >
+          dotnet test tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj
+          --configuration Release --no-build
+          --filter "Category!=SqlServer"
+          --logger "trx;LogFileName=health-checks-fast.trx"
+          --results-directory TestResults/HealthChecks
+
+      - name: Verify fast health-check evidence
+        run: >
+          python3 eng/verify-health-checks.py verify
+          --results TestResults/HealthChecks
+          --output artifacts/health-checks
+
+      - name: Publish health-check summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/health-checks/HEALTH_CHECK_SUMMARY.md ]]; then
+            cat artifacts/health-checks/HEALTH_CHECK_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload health-check results and sanitized diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: health-checks-ci-${{ github.run_id }}
+          path: |
+            TestResults/HealthChecks/**
+            artifacts/health-checks/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Run fast resilience tests
+        env:
+          TCJ_RESILIENCE_TRACE_DIR: ${{ github.workspace }}/artifacts/resilience/traces
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf TestResults/Resilience artifacts/resilience
+          mkdir -p TestResults/Resilience artifacts/resilience/traces
+          dotnet test tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --filter "Category!=SqlServer" \
+            --logger "trx;LogFileName=resilience-core.trx" \
+            --results-directory TestResults/Resilience
+
+      - name: Verify fast resilience evidence
+        run: >
+          python3 eng/verify-resilience.py verify
+          --results TestResults/Resilience
+          --traces artifacts/resilience/traces
+          --output artifacts/resilience/report
+
+      - name: Publish resilience summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/resilience/report/RESILIENCE_SUMMARY.md ]]; then
+            cat artifacts/resilience/report/RESILIENCE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload resilience evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: resilience-fast-${{ github.run_id }}
+          path: |
+            TestResults/Resilience/**
+            artifacts/resilience/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Run observability contract tests
+        run: >
+          dotnet test tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=observability.trx"
+          --results-directory TestResults/Observability
+
+      - name: Verify observability contracts and evidence
+        run: >
+          python3 eng/verify-observability.py verify
+          --results TestResults/Observability
+          --output artifacts/observability
+
+      - name: Publish observability summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/observability/OBSERVABILITY_SUMMARY.md ]]; then
+            cat artifacts/observability/OBSERVABILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload observability evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: observability-${{ github.run_id }}
+          path: |
+            TestResults/Observability/**
+            artifacts/observability/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Generate DocFX API metadata
+        run: >
+          dotnet docfx metadata docfx/docfx.json
+          --noRestore
+          --warningsAsErrors
+          --property "RepositoryCommit=${{ github.sha }}"
+
+      - name: Build documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          dotnet docfx build docfx/docfx.json \
+            --warningsAsErrors \
+            --metadata "sourceCommit=${{ github.sha }}" \
+            --metadata "releaseTag=ci-${{ github.sha }}" \
+            --metadata "documentationBuildDate=$build_date"
+
+      - name: Verify documentation quality gate
+        run: >
+          python3 eng/verify-documentation.py verify
+          --configuration Release
+          --build-root src
+          --api-root artifacts/documentation/api
+          --output artifacts/documentation
+          --commit-sha "${{ github.sha }}"
+          --release-tag "ci-${{ github.sha }}"
+
+      - name: Publish documentation summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/documentation/DOCUMENTATION_SUMMARY.md ]]; then
+            cat artifacts/documentation/DOCUMENTATION_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Run property tests
+        id: property-tests
+        continue-on-error: true
+        run: >
+          dotnet test tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj
+          --configuration Release
+          --no-build
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
+          --logger "trx;LogFileName=property-tests.trx"
+          --results-directory TestResults/PropertyTests
+
+      - name: Verify property testing quality gate
+        id: verify-properties
+        if: always()
+        continue-on-error: true
+        run: >
+          python3 eng/verify-fuzzing.py verify-properties
+          --results TestResults/PropertyTests
+          --output artifacts/fuzzing/property-report
+          --commit-sha "${{ github.sha }}"
+
+      - name: Publish property testing summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md ]]; then
+            cat artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload property testing results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: property-tests-${{ github.run_id }}
+          path: |
+            TestResults/PropertyTests/**
+            artifacts/fuzzing/property-report/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce property testing result
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.property-tests.outcome }}" = "success"
+          test "${{ steps.verify-properties.outcome }}" = "success"
+
       - name: Run tests
         run: >
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
+          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=test-results.trx"
           --results-directory TestResults
 
-      - name: Pack NuGet packages
+      - name: Generate architecture-test summary
+        run: >
+          python3 eng/verify-architecture-policy.py write-summary
+          --output artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md
+
+      - name: Publish architecture-test summary
+        shell: bash
+        run: cat artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce code coverage quality gate
+        run: >
+          python3 eng/verify-coverage.py verify
+          --summary artifacts/coverage/COVERAGE_SUMMARY.md
+          --json artifacts/coverage/coverage-summary.json
+
+      - name: Publish code coverage summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/coverage/COVERAGE_SUMMARY.md ]]; then
+            cat artifacts/coverage/COVERAGE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Pack and validate NuGet packages
         run: >
           dotnet pack TCJ.slnx
           --configuration Release
@@ -100,12 +393,135 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Install packaged Native AOT prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
+      - name: Run packed Native AOT smoke
+        id: native-aot-smoke
+        run: >
+          python3 eng/run-native-aot-smoke.py
+          --version "${{ steps.package-version.outputs.value }}"
+          --rid linux-x64
+          --packages artifacts/packages
+          --output artifacts/aot/native-aot-smoke
+
+      - name: Verify packed Native AOT evidence
+        if: always()
+        run: >
+          python3 eng/verify-aot.py verify-result
+          --version "${{ steps.package-version.outputs.value }}"
+          --result artifacts/aot/native-aot-smoke/native-aot-result.json
+          --packages artifacts/packages
+          --output artifacts/aot/aot-runtime-verification.json
+
+      - name: Upload Native AOT logs and results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-aot-ci-${{ github.run_id }}
+          path: |
+            artifacts/aot/native-aot-smoke/logs/**
+            artifacts/aot/native-aot-smoke/native-aot-result.json
+            artifacts/aot/aot-runtime-verification.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Generate CycloneDX SBOM
+        run: >
+          python3 eng/generate-sbom.py
+          --version "${{ steps.package-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --output artifacts/sbom
+          --commit-sha "${{ github.sha }}"
+          --release-tag "ci-${{ github.sha }}"
+
+      - name: Verify CycloneDX SBOM
+        run: >
+          python3 eng/verify-sbom.py verify
+          --version "${{ steps.package-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.package-version.outputs.value }}.cdx.json"
+          --summary artifacts/sbom/SBOM_SUMMARY.md
+          --json artifacts/sbom/sbom-summary.json
+
+      - name: Publish SBOM summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/sbom/SBOM_SUMMARY.md ]]; then
+            cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## SBOM" >> "$GITHUB_STEP_SUMMARY"
+            echo "SBOM generation or verification did not complete. Inspect the first failed SBOM step above." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Generate package checksums
+        run: >
+          python3 eng/release-integrity.py write
+          --version "${{ steps.package-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.package-version.outputs.value }}.cdx.json"
+          --checksums artifacts/release/SHA256SUMS
+
+      - name: Verify package checksums
+        run: >
+          python3 eng/release-integrity.py verify
+          --version "${{ steps.package-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.package-version.outputs.value }}.cdx.json"
+          --checksums artifacts/release/SHA256SUMS
+
+      - name: Upload SBOM artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ github.run_id }}
+          path: |
+            artifacts/sbom/*.cdx.json
+            artifacts/sbom/SBOM_SUMMARY.md
+            artifacts/sbom/sbom-summary.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload documentation artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: documentation-ci-${{ github.run_id }}
+          path: |
+            artifacts/documentation/site/**
+            artifacts/documentation/api/**
+            artifacts/documentation/DOCUMENTATION_SUMMARY.md
+            artifacts/documentation/documentation-summary.json
+            artifacts/documentation/missing-documentation.json
+            artifacts/documentation/broken-links.json
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ github.run_id }}
-          path: TestResults/**/*.trx
+          path: |
+            TestResults/**/*.trx
+            artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload code coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ github.run_id }}
+          path: |
+            TestResults/**/coverage.cobertura.xml
+            artifacts/coverage/COVERAGE_SUMMARY.md
+            artifacts/coverage/coverage-summary.json
           if-no-files-found: warn
           retention-days: 7
 
@@ -113,6 +529,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: nuget-packages-${{ github.run_id }}
-          path: artifacts/packages/*
+          path: |
+            artifacts/packages/*
+            artifacts/sbom/*.cdx.json
+            artifacts/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 7

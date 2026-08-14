@@ -1,0 +1,56 @@
+name: Dependency audit
+
+on:
+  schedule:
+    - cron: "31 4 * * 1"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  nuget-audit:
+    name: Audit NuGet dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Validate dependency security policy
+        run: python3 eng/verify-dependency-security.py
+
+      - name: Resolve published package version
+        id: published-version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "Auditing the published-package consumer with TCJ $version"
+
+      - name: Restore and audit solution dependencies
+        run: dotnet restore TCJ.slnx --force-evaluate
+
+      - name: Restore and audit published-package consumer
+        run: >
+          dotnet restore
+          smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
+          --force-evaluate
+          -p:TCJPackageVersion=${{ steps.published-version.outputs.value }}

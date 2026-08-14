@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 2,
+  "strykerVersion": "4.16.0",
+  "testRunner": "mtp",
+  "coverageAnalysis": "off",
+  "baselinePath": "eng/mutation-baseline.json",
+  "minimumMutationScore": 50.0,
+  "allowedBaselineScoreRegression": 0.0,
+  "minimumTestedMutants": 20,
+  "minimumKilledMutants": 2,
+  "minimumKilledMutantsPerProject": 1,
+  "maximumCompileErrorPercentage": 10.0,
+  "maximumRuntimeErrorMutants": 0,
+  "projects": [
+    {
+      "name": "TCJ.Core",
+      "sourceProject": "src/TCJ.Core/TCJ.Core.csproj",
+      "testProject": "tests/TCJ.Core.Tests/TCJ.Core.Tests.csproj",
+      "minimumTestedMutants": 10,
+      "mutationTargets": [
+        "Entities/Entity.cs",
+        "Identifiers/GuidGenerator.cs",
+        "Results/CommonErrors.cs",
+        "Results/Result.cs",
+        "Results/ResultError.cs",
+        "Results/ResultOfT.cs"
+      ],
+      "reportPath": "artifacts/mutation/reports/TCJ.Core/reports/mutation-report.json",
+      "htmlReportPath": "artifacts/mutation/reports/TCJ.Core/reports/mutation-report.html",
+      "runMetadataPath": "artifacts/mutation/reports/TCJ.Core/run-metadata.json",
+      "consoleLogPath": "artifacts/mutation/reports/TCJ.Core/stryker-console.log"
+    },
+    {
+      "name": "TCJ.DependencyInjection",
+      "sourceProject": "src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj",
+      "testProject": "tests/TCJ.DependencyInjection.Tests/TCJ.DependencyInjection.Tests.csproj",
+      "minimumTestedMutants": 5,
+      "mutationTargets": [
+        "DomainEvents/DomainEventDispatcher.cs",
+        "Extensions/ServiceCollectionExtensions.cs"
+      ],
+      "reportPath": "artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.json",
+      "htmlReportPath": "artifacts/mutation/reports/TCJ.DependencyInjection/reports/mutation-report.html",
+      "runMetadataPath": "artifacts/mutation/reports/TCJ.DependencyInjection/run-metadata.json",
+      "consoleLogPath": "artifacts/mutation/reports/TCJ.DependencyInjection/stryker-console.log"
+    }
+  ],
+  "excludedFilePatterns": [
+    "**/bin/**",
+    "**/obj/**",
+    "**/*.g.cs",
+    "**/*.g.i.cs",
+    "**/*.generated.cs",
+    "**/*.Generated.cs",
+    "**/*.Designer.cs",
+    "**/Migrations/**",
+    "**/AssemblyInfo.cs",
+    "**/GlobalUsings.g.cs",
+    "samples/**",
+    "smoke/**",
+    "tests/**"
+  ],
+  "ignoredMutationTypes": [],
+  "ignoredMutationJustifications": {},
+  "forbiddenRunnerLogMarkers": [
+    "test coverage capture failed",
+    "initial test run failed",
+    "no tests were found"
+  ],
+  "reportPaths": {
+    "reportsDirectory": "artifacts/mutation/reports",
+    "summaryJson": "artifacts/mutation/mutation-summary.json",
+    "summaryMarkdown": "artifacts/mutation/MUTATION_SUMMARY.md",
+    "baselineCandidate": "artifacts/mutation/mutation-baseline-candidate.json"
+  },
+  "sourceLevelExclusions": [
+    {
+      "file": "src/TCJ.DependencyInjection/DomainEvents/ReflectionDomainEventDispatch.cs",
+      "declarationContains": "private static readonly ConcurrentDictionary<Type, ObjectFactory> InvokerFactories",
+      "comment": "// Stryker disable once all: MTP 4.16 reuses the test host; mutating this process-wide cache can contaminate later mutant sessions.",
+      "reason": "Stryker.NET 4.16 MTP reuses a process across mutant sessions; mutating a process-wide cache can produce cross-mutant false verdicts."
+    },
+    {
+      "file": "src/TCJ.DependencyInjection/Extensions/ServiceCollectionExtensions.cs",
+      "declarationContains": "private static readonly DependencyLifetimeDefinition[] LifetimeDefinitions",
+      "comment": "// Stryker disable once all: MTP 4.16 reuses the test host; mutating this process-wide registration table can contaminate later mutant sessions.",
+      "reason": "Stryker.NET 4.16 MTP reuses a process across mutant sessions; mutating a process-wide static registration table can produce cross-mutant false verdicts."
+    }
+  ]
+}

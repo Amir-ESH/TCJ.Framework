@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "versionMetadataKey": "PackageVersion",
+  "activitySources": [
+    {
+      "name": "TCJ.Core",
+      "package": "TCJ.Core"
+    },
+    {
+      "name": "TCJ.DependencyInjection",
+      "package": "TCJ.DependencyInjection"
+    },
+    {
+      "name": "TCJ.EntityFrameworkCore",
+      "package": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "TCJ.EntityFrameworkCore.SqlServer",
+      "package": "TCJ.EntityFrameworkCore.SqlServer"
+    },
+    {
+      "name": "TCJ.AspNetCore",
+      "package": "TCJ.AspNetCore"
+    }
+  ],
+  "meters": [
+    {
+      "name": "TCJ.Core",
+      "package": "TCJ.Core"
+    },
+    {
+      "name": "TCJ.DependencyInjection",
+      "package": "TCJ.DependencyInjection"
+    },
+    {
+      "name": "TCJ.EntityFrameworkCore",
+      "package": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "TCJ.EntityFrameworkCore.SqlServer",
+      "package": "TCJ.EntityFrameworkCore.SqlServer"
+    },
+    {
+      "name": "TCJ.AspNetCore",
+      "package": "TCJ.AspNetCore"
+    }
+  ],
+  "activities": [
+    {
+      "name": "tcj.domain_event.dispatch",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.domain_event.handle",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.di.scan",
+      "source": "TCJ.DependencyInjection"
+    },
+    {
+      "name": "tcj.di.register",
+      "source": "TCJ.DependencyInjection"
+    },
+    {
+      "name": "tcj.repository.query",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.repository.get",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.repository.add",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.repository.update",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.repository.delete",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.unit_of_work.commit",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.db.transaction.begin",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.db.transaction.commit",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.db.transaction.rollback",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.db.sqlserver.configure",
+      "source": "TCJ.EntityFrameworkCore.SqlServer"
+    },
+    {
+      "name": "tcj.aspnetcore.exception.handle",
+      "source": "TCJ.AspNetCore"
+    },
+    {
+      "name": "tcj.resilience.execute",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.resilience.retry",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.resilience.timeout",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.resilience.circuit_breaker",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.health_check.execute",
+      "source": "TCJ.Core"
+    },
+    {
+      "name": "tcj.outbox.persist",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.claim",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.process",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.retry",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.dead_letter",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.replay",
+      "source": "TCJ.EntityFrameworkCore"
+    },
+    {
+      "name": "tcj.outbox.cleanup",
+      "source": "TCJ.EntityFrameworkCore"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "tcj.domain_events.dispatched",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{event}"
+    },
+    {
+      "name": "tcj.domain_event_handlers.completed",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{event}"
+    },
+    {
+      "name": "tcj.domain_event_handlers.failed",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{event}"
+    },
+    {
+      "name": "tcj.domain_event.dispatch.duration",
+      "meter": "TCJ.Core",
+      "type": "histogram",
+      "unit": "s"
+    },
+    {
+      "name": "tcj.domain_event.handler.duration",
+      "meter": "TCJ.Core",
+      "type": "histogram",
+      "unit": "s"
+    },
+    {
+      "name": "tcj.repository.operations",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{operation}"
+    },
+    {
+      "name": "tcj.repository.operation.duration",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "s"
+    },
+    {
+      "name": "tcj.unit_of_work.commits",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{operation}"
+    },
+    {
+      "name": "tcj.unit_of_work.rollbacks",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{operation}"
+    },
+    {
+      "name": "tcj.unit_of_work.commit.duration",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "s"
+    },
+    {
+      "name": "tcj.aspnetcore.exceptions.handled",
+      "meter": "TCJ.AspNetCore",
+      "type": "counter",
+      "unit": "{exception}"
+    },
+    {
+      "name": "tcj.aspnetcore.exception_handler.duration",
+      "meter": "TCJ.AspNetCore",
+      "type": "histogram",
+      "unit": "s"
+    },
+    {
+      "name": "tcj.resilience.attempts",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{attempt}"
+    },
+    {
+      "name": "tcj.resilience.retries",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{retry}"
+    },
+    {
+      "name": "tcj.resilience.timeouts",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{timeout}"
+    },
+    {
+      "name": "tcj.resilience.circuit_open",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{transition}"
+    },
+    {
+      "name": "tcj.resilience.failures",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{failure}"
+    },
+    {
+      "name": "tcj.health_checks.executed",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{check}"
+    },
+    {
+      "name": "tcj.health_checks.duration",
+      "meter": "TCJ.Core",
+      "type": "histogram",
+      "unit": "ms"
+    },
+    {
+      "name": "tcj.health_checks.failures",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{failure}"
+    },
+    {
+      "name": "tcj.health_checks.status",
+      "meter": "TCJ.Core",
+      "type": "counter",
+      "unit": "{check}"
+    },
+    {
+      "name": "tcj.outbox.messages.persisted",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.messages.processed",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.messages.failed",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.messages.retried",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.messages.dead_lettered",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "counter",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.processing.duration",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "ms"
+    },
+    {
+      "name": "tcj.outbox.pending.count",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "{message}"
+    },
+    {
+      "name": "tcj.outbox.oldest_pending.age",
+      "meter": "TCJ.EntityFrameworkCore",
+      "type": "histogram",
+      "unit": "s"
+    }
+  ],
+  "tags": [
+    "tcj.package.name",
+    "tcj.package.version",
+    "tcj.framework.version",
+    "tcj.operation.name",
+    "tcj.operation.outcome",
+    "tcj.domain_event.type",
+    "tcj.handler.type",
+    "tcj.handler.count",
+    "tcj.repository.type",
+    "tcj.entity.type",
+    "tcj.db.provider",
+    "tcj.transaction.outcome",
+    "tcj.exception.type",
+    "tcj.exception.category",
+    "tcj.http.status_code",
+    "tcj.canceled",
+    "tcj.affected_rows",
+    "tcj.di.assembly_count",
+    "tcj.di.discovered_type_count",
+    "tcj.di.registered_service_count",
+    "tcj.resilience.strategy",
+    "tcj.resilience.outcome",
+    "tcj.resilience.attempt",
+    "tcj.resilience.failure_type",
+    "tcj.resilience.circuit_state",
+    "tcj.health_check.name",
+    "tcj.health_check.category",
+    "tcj.health_check.status",
+    "tcj.outbox.event_type",
+    "tcj.outbox.attempt",
+    "tcj.outbox.outcome",
+    "tcj.outbox.provider"
+  ],
+  "optInSensitiveTags": [
+    "tcj.exception.message"
+  ]
+}

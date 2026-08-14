@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "requiredPackages": [
+    "TCJ.Core",
+    "TCJ.DependencyInjection",
+    "TCJ.EntityFrameworkCore",
+    "TCJ.EntityFrameworkCore.SqlServer",
+    "TCJ.AspNetCore"
+  ],
+  "requiredOperatingSystems": [
+    "ubuntu-latest",
+    "windows-latest",
+    "macos-latest"
+  ],
+  "requiredConfigurations": [
+    "Release"
+  ],
+  "requiredArchitectures": [
+    "x64",
+    "arm64"
+  ],
+  "requiredArchitectureByOperatingSystem": {
+    "ubuntu-latest": "x64",
+    "windows-latest": "x64",
+    "macos-latest": "arm64"
+  },
+  "supportedTargetFrameworks": [
+    "net10.0"
+  ],
+  "minimumConsumerCount": 8,
+  "requirePackageOnlyReferences": true,
+  "requireLocalPackageSource": true,
+  "requireSourcePackageValidation": true,
+  "requireSymbolPackageValidation": true,
+  "requireSourceLinkValidation": true,
+  "failOnWarnings": true,
+  "consumers": [
+    {
+      "name": "Core.Console",
+      "project": "compatibility/Consumers/Core.Console/Core.Console.csproj",
+      "packages": [
+        "TCJ.Core"
+      ],
+      "expectedOutput": "TCJ.Core consumer passed"
+    },
+    {
+      "name": "DependencyInjection.Console",
+      "project": "compatibility/Consumers/DependencyInjection.Console/DependencyInjection.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection"
+      ],
+      "expectedOutput": "TCJ.DependencyInjection consumer passed"
+    },
+    {
+      "name": "DependencyInjection.AotSafe.Console",
+      "project": "compatibility/Consumers/DependencyInjection.AotSafe.Console/DependencyInjection.AotSafe.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection"
+      ],
+      "expectedOutput": "TCJ.DependencyInjection AOT-safe bootstrap consumer passed"
+    },
+    {
+      "name": "EntityFrameworkCore.Console",
+      "project": "compatibility/Consumers/EntityFrameworkCore.Console/EntityFrameworkCore.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.EntityFrameworkCore"
+      ],
+      "expectedOutput": "TCJ.EntityFrameworkCore consumer passed"
+    },
+    {
+      "name": "EntityFrameworkCore.SqlServer.Console",
+      "project": "compatibility/Consumers/EntityFrameworkCore.SqlServer.Console/EntityFrameworkCore.SqlServer.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.EntityFrameworkCore",
+        "TCJ.EntityFrameworkCore.SqlServer"
+      ],
+      "expectedOutput": "TCJ.EntityFrameworkCore.SqlServer consumer passed"
+    },
+    {
+      "name": "AspNetCore.MinimalApi",
+      "project": "compatibility/Consumers/AspNetCore.MinimalApi/AspNetCore.MinimalApi.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.AspNetCore"
+      ],
+      "expectedOutput": "TCJ.AspNetCore consumer passed"
+    },
+    {
+      "name": "FullStack.MinimalApi",
+      "project": "compatibility/Consumers/FullStack.MinimalApi/FullStack.MinimalApi.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.EntityFrameworkCore",
+        "TCJ.EntityFrameworkCore.SqlServer",
+        "TCJ.AspNetCore"
+      ],
+      "expectedOutput": "TCJ full-stack consumer passed"
+    },
+    {
+      "name": "Outbox.Console",
+      "project": "compatibility/Consumers/Outbox.Console/Outbox.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.EntityFrameworkCore"
+      ],
+      "expectedOutput": "TCJ transactional outbox consumer passed"
+    }
+  ],
+  "publishedConsumers": [
+    "Core.Console",
+    "AspNetCore.MinimalApi",
+    "FullStack.MinimalApi"
+  ],
+  "expectedTcjDependencies": {
+    "TCJ.Core": [],
+    "TCJ.DependencyInjection": [
+      "TCJ.Core"
+    ],
+    "TCJ.EntityFrameworkCore": [
+      "TCJ.Core"
+    ],
+    "TCJ.EntityFrameworkCore.SqlServer": [
+      "TCJ.Core",
+      "TCJ.EntityFrameworkCore"
+    ],
+    "TCJ.AspNetCore": [
+      "TCJ.Core"
+    ]
+  }
+}

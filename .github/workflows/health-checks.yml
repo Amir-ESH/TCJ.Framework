@@ -1,0 +1,135 @@
+name: Health checks
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 3"
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "src/TCJ.EntityFrameworkCore/**"
+      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "src/TCJ.AspNetCore/**"
+      - "tests/TCJ.HealthChecks.Tests/**"
+      - "eng/health-check-*.json"
+      - "eng/verify-health-checks.py"
+      - ".github/workflows/health-checks.yml"
+      - "Directory.Packages.props"
+      - "TCJ.slnx"
+permissions:
+  contents: read
+
+concurrency:
+  group: health-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  endpoints:
+    name: Validate ASP.NET Core endpoints
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Validate automation scripts
+        run: |
+          python3 -m py_compile eng/*.py
+          python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
+      - name: Validate health-check policy
+        run: python3 eng/verify-health-checks.py validate-config
+      - name: Restore and audit dependencies
+        run: dotnet restore tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj --force-evaluate
+      - name: Build health-check tests
+        run: dotnet build tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj -c Release --no-restore
+      - name: Run in-process liveness and ASP.NET Core endpoint tests
+        run: >
+          dotnet test tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj
+          -c Release --no-build
+          --filter "Category!=SqlServer"
+          --logger "trx;LogFileName=health-checks-fast.trx"
+          --results-directory TestResults/HealthChecks/fast
+      - name: Run cancellation, timeout, concurrency, caching, and sensitive-data validation
+        run: >
+          python3 eng/verify-health-checks.py verify
+          --results TestResults/HealthChecks/fast
+          --output artifacts/health-checks
+      - name: Verify telemetry
+        run: python3 eng/verify-observability.py validate-config
+      - name: Generate health-check summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/health-checks/HEALTH_CHECK_SUMMARY.md ]]; then
+            cat artifacts/health-checks/HEALTH_CHECK_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload test results and sanitized logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: health-checks-fast-${{ github.run_id }}
+          path: |
+            TestResults/HealthChecks/**
+            artifacts/health-checks/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  sqlserver:
+    name: Validate SQL Server readiness
+    needs: endpoints
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Validate health-check policy
+        run: python3 eng/verify-health-checks.py validate-config
+      - name: Restore and audit dependencies
+        run: dotnet restore tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj --force-evaluate
+      - name: Build health-check tests
+        run: dotnet build tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj -c Release --no-restore
+      - name: Start SQL Server Testcontainer and run readiness and migration tests
+        run: >
+          dotnet test tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj
+          -c Release --no-build
+          --logger "trx;LogFileName=health-checks-full.trx"
+          --results-directory TestResults/HealthChecks/full
+      - name: Run SQL connectivity, migration, cancellation, timeout, cache, concurrency, and sensitive-data scan
+        run: >
+          python3 eng/verify-health-checks.py verify
+          --results TestResults/HealthChecks/full
+          --output artifacts/health-checks
+      - name: Verify telemetry
+        run: python3 eng/verify-observability.py validate-config
+      - name: Generate health-check summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/health-checks/HEALTH_CHECK_SUMMARY.md ]]; then
+            cat artifacts/health-checks/HEALTH_CHECK_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload test results and sanitized logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: health-checks-full-${{ github.run_id }}
+          path: |
+            TestResults/HealthChecks/**
+            artifacts/health-checks/**
+          if-no-files-found: warn
+          retention-days: 30

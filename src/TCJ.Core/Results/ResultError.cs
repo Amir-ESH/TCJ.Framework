@@ -89,5 +89,5 @@ public sealed class ResultError : IEquatable<ResultError>
         => EqualityComparer<ResultError>.Default.Equals(left, right);
 
     public static bool operator !=(ResultError? left, ResultError? right)
-        => !(left == right);
+        => !EqualityComparer<ResultError>.Default.Equals(left, right);
 }

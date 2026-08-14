@@ -1,0 +1,334 @@
+{
+  "schemaVersion": 1,
+  "supportedTargets": [
+    "develop",
+    "main"
+  ],
+  "alwaysRequired": [
+    "ci",
+    "dependency_review"
+  ],
+  "selfProtectionPaths": [
+    ".github/workflows/required-pr-gate.yml",
+    "eng/required-pr-gates.json",
+    "eng/resolve-pr-gates.py",
+    "eng/tests/test_resolve_pr_gates.py"
+  ],
+  "mainEscalation": {
+    "paths": [
+      "Directory.Build.props",
+      "Directory.Packages.props",
+      "global.json",
+      "NuGet.Config",
+      "TCJ.slnx",
+      "eng/Packaging.props",
+      "eng/PackageValidation.props",
+      "eng/release-manifest.json",
+      "eng/published-release.json",
+      "eng/breaking-changes.json",
+      ".github/workflows/release-preflight.yml",
+      ".github/workflows/release.yml"
+    ],
+    "gates": [
+      "reproducible_builds",
+      "documentation",
+      "sqlserver_integration",
+      "aspnetcore_integration",
+      "consumer_compatibility",
+      "upgrade_compatibility",
+      "concurrency_stress",
+      "resilience",
+      "health_checks",
+      "transactional_outbox",
+      "performance"
+    ]
+  },
+  "gates": {
+    "mutation": {
+      "workflow": ".github/workflows/mutation-testing.yml",
+      "paths": [
+        "eng/mutation-policy.json",
+        "eng/mutation-baseline.json",
+        "eng/run-mutation-testing.py",
+        "eng/verify-mutation-results.py",
+        "eng/tests/test_run_mutation_testing.py",
+        "eng/tests/test_verify_mutation_results.py",
+        "stryker-config.json",
+        "tests/TestProject.props",
+        "src/TCJ.Core/**",
+        "src/TCJ.DependencyInjection/**",
+        "tests/TCJ.Core.Tests/**",
+        "tests/TCJ.DependencyInjection.Tests/**",
+        ".config/dotnet-tools.json",
+        ".github/workflows/mutation-testing.yml"
+      ]
+    },
+    "reproducible_builds": {
+      "workflow": ".github/workflows/reproducible-builds.yml",
+      "paths": [
+        "src/**",
+        "eng/**",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release-preflight.yml",
+        ".github/workflows/release.yml",
+        ".github/workflows/reproducible-builds.yml",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        "NuGet.Config",
+        "TCJ.slnx"
+      ]
+    },
+    "documentation": {
+      "workflow": ".github/workflows/documentation.yml",
+      "paths": [
+        "src/**",
+        "docs/**",
+        "docfx/**",
+        "eng/documentation-*.json",
+        "eng/verify-documentation.py",
+        "eng/tests/test_verify_documentation.py",
+        ".config/dotnet-tools.json",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        ".github/workflows/documentation.yml",
+        ".github/workflows/documentation-pages.yml"
+      ]
+    },
+    "sqlserver_integration": {
+      "workflow": ".github/workflows/sqlserver-integration.yml",
+      "paths": [
+        "src/TCJ.Core/**",
+        "compatibility/Consumers/EntityFrameworkCore.Console/**",
+        "compatibility/Consumers/EntityFrameworkCore.SqlServer.Console/**",
+        "compatibility/Consumers/FullStack.MinimalApi/**",
+        "compatibility/Directory.Build.props",
+        "compatibility/Directory.Packages.props",
+        "compatibility/NuGet.Config",
+        "compatibility/NuGet.Published.Config",
+        "upgrade-tests/Scenarios/EntityFrameworkCoreConsumer/**",
+        "upgrade-tests/Scenarios/EntityFrameworkCore.SqlServerConsumer/**",
+        "upgrade-tests/Scenarios/FullStackConsumer/**",
+        "upgrade-tests/Directory.Build.props",
+        "upgrade-tests/Directory.Packages.props",
+        "upgrade-tests/NuGet.Baseline.Config",
+        "upgrade-tests/NuGet.Target.Config",
+        "eng/upgrade-compatibility-policy.json",
+        "eng/breaking-changes.json",
+        "src/TCJ.DependencyInjection/**",
+        "src/TCJ.EntityFrameworkCore/**",
+        "src/TCJ.EntityFrameworkCore.SqlServer/**",
+        "tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/**",
+        "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/**",
+        "eng/aot-policy.json",
+        "eng/verify-aot.py",
+        "eng/tests/test_verify_aot.py",
+        "tests/TCJ.Resilience.Tests/**",
+        "eng/resilience-policy.json",
+        "eng/resilience-contract.json",
+        "eng/verify-resilience.py",
+        "eng/sqlserver-integration-policy.json",
+        "eng/verify-sqlserver-integration.py",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "NuGet.Config",
+        "global.json",
+        ".github/workflows/sqlserver-integration.yml"
+      ]
+    },
+    "aspnetcore_integration": {
+      "workflow": ".github/workflows/aspnetcore-integration.yml",
+      "paths": [
+        "src/TCJ.Core/**",
+        "compatibility/Consumers/AspNetCore.MinimalApi/**",
+        "compatibility/Consumers/FullStack.MinimalApi/**",
+        "compatibility/Directory.Build.props",
+        "compatibility/Directory.Packages.props",
+        "compatibility/NuGet.Config",
+        "compatibility/NuGet.Published.Config",
+        "upgrade-tests/Scenarios/AspNetCoreConsumer/**",
+        "upgrade-tests/Scenarios/FullStackConsumer/**",
+        "upgrade-tests/Directory.Build.props",
+        "upgrade-tests/Directory.Packages.props",
+        "upgrade-tests/NuGet.Baseline.Config",
+        "upgrade-tests/NuGet.Target.Config",
+        "eng/upgrade-compatibility-policy.json",
+        "eng/breaking-changes.json",
+        "src/TCJ.DependencyInjection/**",
+        "src/TCJ.AspNetCore/**",
+        "tests/TCJ.AspNetCore.IntegrationTests/**",
+        "tests/TCJ.AspNetCore.NativeAotSmoke/**",
+        "eng/aspnetcore-integration-policy.json",
+        "eng/verify-aspnetcore-integration.py",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        ".github/workflows/aspnetcore-integration.yml",
+        "smoke/TCJ.NativeAot.SmokeTest/**",
+        "smoke/NuGet.Config",
+        "eng/aot-policy.json",
+        "eng/verify-aot.py",
+        "eng/run-native-aot-smoke.py",
+        "eng/tests/test_verify_aot.py"
+      ]
+    },
+    "consumer_compatibility": {
+      "workflow": ".github/workflows/consumer-compatibility.yml",
+      "paths": [
+        "src/**",
+        "eng/Packaging.props",
+        "eng/PackageValidation.props",
+        "eng/compatibility-policy.json",
+        "eng/verify-consumer-compatibility.py",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "NuGet.Config",
+        "global.json",
+        "compatibility/**",
+        "upgrade-tests/**",
+        "eng/upgrade-compatibility-policy.json",
+        "eng/breaking-changes.json",
+        ".github/workflows/consumer-compatibility.yml"
+      ]
+    },
+    "upgrade_compatibility": {
+      "workflow": ".github/workflows/upgrade-compatibility.yml",
+      "paths": [
+        "src/**",
+        "eng/Packaging.props",
+        "eng/PackageValidation.props",
+        "eng/published-release.json",
+        "eng/release-manifest.json",
+        "eng/upgrade-compatibility-policy.json",
+        "eng/breaking-changes.json",
+        "eng/verify-upgrade-compatibility.py",
+        "eng/tests/test_run_upgrade_tests.py",
+        "eng/tests/test_verify_upgrade_compatibility.py",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "NuGet.Config",
+        "global.json",
+        "upgrade-tests/**",
+        "docs/migrations/**",
+        ".github/workflows/upgrade-compatibility.yml",
+        ".github/workflows/release-preflight.yml",
+        ".github/workflows/release.yml",
+        ".github/workflows/published-package-smoke.yml"
+      ]
+    },
+    "property_fuzz": {
+      "workflow": ".github/workflows/fuzzing.yml",
+      "paths": [
+        "src/TCJ.Core/**",
+        "src/TCJ.DependencyInjection/**",
+        "tests/TCJ.PropertyTests/**",
+        "fuzz/**",
+        "eng/fuzzing-policy.json",
+        "eng/verify-fuzzing.py",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        ".github/workflows/fuzzing.yml"
+      ]
+    },
+    "concurrency_stress": {
+      "workflow": ".github/workflows/concurrency-stress.yml",
+      "paths": [
+        "src/TCJ.Core/**",
+        "src/TCJ.DependencyInjection/**",
+        "src/TCJ.EntityFrameworkCore/**",
+        "src/TCJ.EntityFrameworkCore.SqlServer/**",
+        "src/TCJ.AspNetCore/**",
+        "tests/TCJ.Concurrency.Tests/**",
+        "tests/TCJ.Resilience.Tests/**",
+        "eng/resilience-policy.json",
+        "eng/resilience-contract.json",
+        "eng/verify-resilience.py",
+        "eng/concurrency-policy.json",
+        "eng/verify-concurrency.py",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        ".github/workflows/concurrency-stress.yml"
+      ]
+    },
+    "resilience": {
+      "workflow": ".github/workflows/resilience.yml",
+      "paths": [
+        "src/TCJ.Core/**",
+        "src/TCJ.DependencyInjection/**",
+        "src/TCJ.EntityFrameworkCore.SqlServer/**",
+        "tests/TCJ.Resilience.Tests/**",
+        "eng/resilience-policy.json",
+        "eng/resilience-contract.json",
+        "eng/verify-resilience.py",
+        "eng/observability-*.json",
+        "benchmarks/TCJ.Benchmarks/**",
+        "docs/resilience.md",
+        ".github/workflows/resilience.yml",
+        ".github/workflows/release-preflight.yml",
+        ".github/workflows/release.yml",
+        "Directory.Packages.props",
+        "TCJ.slnx"
+      ]
+    },
+    "health_checks": {
+      "workflow": ".github/workflows/health-checks.yml",
+      "paths": [
+        "src/TCJ.Core/**",
+        "src/TCJ.DependencyInjection/**",
+        "src/TCJ.EntityFrameworkCore/**",
+        "src/TCJ.EntityFrameworkCore.SqlServer/**",
+        "src/TCJ.AspNetCore/**",
+        "tests/TCJ.HealthChecks.Tests/**",
+        "eng/health-check-*.json",
+        "eng/verify-health-checks.py",
+        ".github/workflows/health-checks.yml",
+        "Directory.Packages.props",
+        "TCJ.slnx"
+      ]
+    },
+    "transactional_outbox": {
+      "workflow": ".github/workflows/outbox.yml",
+      "paths": [
+        "src/TCJ.Core/**",
+        "src/TCJ.EntityFrameworkCore/**",
+        "src/TCJ.EntityFrameworkCore.SqlServer/**",
+        "src/TCJ.AspNetCore/**",
+        "tests/TCJ.Outbox.Tests/**",
+        "eng/outbox-*.json",
+        "eng/verify-outbox.py",
+        "docs/outbox.md",
+        ".github/workflows/outbox.yml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release-preflight.yml",
+        ".github/workflows/release.yml",
+        "Directory.Packages.props",
+        "TCJ.slnx"
+      ]
+    },
+    "performance": {
+      "workflow": ".github/workflows/performance-benchmarks.yml",
+      "paths": [
+        "benchmarks/**",
+        "src/TCJ.Core/**",
+        "src/TCJ.DependencyInjection/**",
+        "src/TCJ.EntityFrameworkCore/**",
+        "src/TCJ.EntityFrameworkCore.SqlServer/**",
+        "src/TCJ.AspNetCore/**",
+        "eng/observability-policy.json",
+        "eng/observability-contract.json",
+        "eng/verify-resilience.py",
+        "eng/resilience-contract.json",
+        "eng/resilience-policy.json",
+        "eng/performance-policy.json",
+        "eng/verify-performance-results.py",
+        "eng/tests/test_verify_performance_results.py",
+        ".github/workflows/performance-benchmarks.yml",
+        "Directory.Packages.props",
+        "TCJ.slnx"
+      ]
+    }
+  }
+}

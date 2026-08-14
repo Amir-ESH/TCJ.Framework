@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "scenario": "AspNetCoreConsumer",
+  "checks": {
+    "startupSucceeded": true,
+    "successEndpoint": true,
+    "errorMapped": true,
+    "productionSafeError": true,
+    "currentUserResolved": true
+  }
+}

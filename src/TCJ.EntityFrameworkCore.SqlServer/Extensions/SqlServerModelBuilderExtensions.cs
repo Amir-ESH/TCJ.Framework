@@ -51,11 +51,10 @@ public static class SqlServerModelBuilderExtensions
                 continue;
             }
 
-            modelBuilder.Entity(property.DeclaringType.ClrType)
-                        .Property<byte[]>(property.Name)
-                        .IsRequired()
-                        .IsRowVersion()
-                        .HasColumnType("rowversion");
+            property.IsNullable = false;
+            property.IsConcurrencyToken = true;
+            property.ValueGenerated = ValueGenerated.OnAddOrUpdate;
+            property.SetColumnType("rowversion");
         }
 
         return modelBuilder;

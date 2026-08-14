@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "testProject": "tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj",
+  "requiredChecks": [
+    "tcj.core",
+    "tcj.startup",
+    "tcj.dependency_injection",
+    "tcj.domain_events",
+    "tcj.entity_framework_core",
+    "tcj.sqlserver",
+    "tcj.sqlserver.migrations"
+  ],
+  "requiredTags": [
+    "tcj",
+    "live",
+    "ready",
+    "dependency",
+    "startup",
+    "database",
+    "sqlserver",
+    "configuration"
+  ],
+  "requiredEndpoints": ["/health/live", "/health/ready"],
+  "maximumDatabaseTimeoutSeconds": 10,
+  "maximumCacheDurationSeconds": 60,
+  "defaultDatabaseTimeoutSeconds": 5,
+  "defaultCacheDurationSeconds": 10,
+  "requireCancellation": true,
+  "requireSensitiveDataProtection": true,
+  "requireLivenessWithoutExternalDependencies": true,
+  "requireReadinessDatabaseCheck": true,
+  "requireMigrationCheckTests": true,
+  "requireTelemetryAssertions": true,
+  "requireConcurrencyTests": true,
+  "requireCachingTests": true,
+  "minimumIntegrationTestCount": 15,
+  "minimumExecutedTestCount": 15,
+  "sqlServerContainerImage": "mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04",
+  "sensitiveMarkers": [
+    "TCJ_TEST_SECRET",
+    "TCJ_TEST_PASSWORD",
+    "TCJ_TEST_SERVER",
+    "TCJ_TEST_DB_NAME",
+    "TCJ_TEST_EXCEPTION"
+  ]
+}

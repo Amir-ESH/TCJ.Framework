@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "testProject": "tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj",
+  "minimumTestCount": 20,
+  "requiredCategories": [
+    "Integration",
+    "AspNetCore",
+    "Startup",
+    "DependencyInjection",
+    "ExceptionHandling",
+    "CurrentUser",
+    "RequestScope",
+    "ProblemDetails",
+    "Middleware",
+    "Cancellation"
+  ],
+  "requireLinux": true,
+  "requireWindows": true,
+  "requireAuthenticatedRequestTests": true,
+  "requireAnonymousRequestTests": true,
+  "requireProductionEnvironmentTests": true,
+  "requireDevelopmentEnvironmentTests": true,
+  "collectHostDiagnosticsOnFailure": true,
+  "scanUploadedDiagnosticsForSecrets": true
+}

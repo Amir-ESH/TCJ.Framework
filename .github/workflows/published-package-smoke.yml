@@ -7,6 +7,12 @@ on:
         description: Package version to verify; leave empty to use eng/published-release.json
         required: false
         type: string
+  workflow_call:
+    inputs:
+      version:
+        description: Published target version to verify
+        required: true
+        type: string
   schedule:
     - cron: "17 5 * * 1"
 
@@ -14,12 +20,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: published-package-smoke-${{ github.event.inputs.version || 'latest' }}
+  group: published-package-smoke-${{ inputs.version || 'latest' }}
   cancel-in-progress: true
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   verify-publication:
@@ -34,11 +44,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Validate dependency security policy
+        run: python3 eng/verify-dependency-security.py
+
       - name: Resolve package version
         id: package-version
         shell: bash
         env:
-          REQUESTED_VERSION: ${{ github.event.inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
 
@@ -66,50 +79,215 @@ jobs:
           retention-days: 7
 
   consume-packages:
-    name: Consume packages (${{ matrix.os }})
+    name: Consume compatibility packages (${{ matrix.os }})
     needs: verify-publication
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
+        include:
+          - os: ubuntu-latest
+            python: python3
+            slug: linux
+          - os: windows-latest
+            python: python
+            slug: windows
+          - os: macos-latest
+            python: python3
+            slug: macos
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
-      - name: Clear NuGet caches
-        run: dotnet nuget locals all --clear
+      - name: Validate compatibility configuration
+        run: ${{ matrix.python }} eng/verify-consumer-compatibility.py validate-config
 
-      - name: Restore published packages
-        run: >
-          dotnet restore
-          smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
-          --no-cache
-          --force
-          -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
+      - name: Validate upgrade compatibility configuration
+        run: ${{ matrix.python }} eng/verify-upgrade-compatibility.py validate-config
 
-      - name: Build consumer
-        run: >
-          dotnet build
-          smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
-          --configuration Release
-          --no-restore
-          -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
+      - name: Resolve published package source commit
+        id: source-commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v${{ needs.verify-publication.outputs.version }}"
+          commit="$(git rev-list -n 1 "$tag")"
+          [[ -n "$commit" ]] || { echo "Unable to resolve source commit for $tag." >&2; exit 1; }
+          echo "value=$commit" >> "$GITHUB_OUTPUT"
 
-      - name: Run consumer
+      - name: Determine whether Step 42 published resilience smoke is required
+        id: resilience-smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          required=false
+          if [[ "${{ needs.verify-publication.outputs.version }}" == "$current" ]]; then
+            required=true
+          fi
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+
+      - name: Determine whether Step 43 published health-check smoke is required
+        id: health-smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          required=false
+          if [[ "${{ needs.verify-publication.outputs.version }}" == "$current" ]]; then
+            required=true
+          fi
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+
+      - name: Determine whether Step 44 published outbox smoke is required
+        id: outbox-smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          required=false
+          if [[ "${{ needs.verify-publication.outputs.version }}" == "$current" && "${{ matrix.slug }}" == "linux" ]]; then
+            required=true
+          fi
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+
+      - name: Start disposable SQL Server for published transactional outbox smoke
+        if: steps.outbox-smoke.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          password="Aa1!$(openssl rand -hex 16)"
+          echo "::add-mask::$password"
+          echo "TCJ_OUTBOX_SMOKE_CONNECTION=Server=127.0.0.1,14333;Database=TCJ_PublishedPackageSmoke;User Id=sa;Password=$password;TrustServerCertificate=True" >> "$GITHUB_ENV"
+          docker run -d --name tcj-published-outbox-sql \
+            -e ACCEPT_EULA=Y \
+            -e MSSQL_SA_PASSWORD="$password" \
+            -p 14333:1433 \
+            mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04
+          for attempt in $(seq 1 60); do
+            if docker logs tcj-published-outbox-sql 2>&1 | grep -q 'SQL Server is now ready for client connections'; then
+              echo 'Disposable SQL Server is ready for TCJ_OutboxMessages smoke.'
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs tcj-published-outbox-sql 2>&1 | tail -100
+          exit 1
+
+      - name: Run selected published-package resilience, health-check and outbox scenarios
+        env:
+          TCJ_RESILIENCE_SMOKE: ${{ steps.resilience-smoke.outputs.required }}
+          TCJ_HEALTH_CHECK_SMOKE: ${{ steps.health-smoke.outputs.required }}
+          TCJ_OUTBOX_SMOKE: ${{ steps.outbox-smoke.outputs.required }}
         run: >
           dotnet run
           --project smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
           --configuration Release
-          --no-build
           -p:TCJPackageVersion=${{ needs.verify-publication.outputs.version }}
+          -p:EnableResilienceSmoke=${{ steps.resilience-smoke.outputs.required }}
+          -p:EnableHealthCheckSmoke=${{ steps.health-smoke.outputs.required }}
+          -p:EnableOutboxSmoke=${{ steps.outbox-smoke.outputs.required }}
+
+      - name: Stop disposable transactional outbox SQL Server
+        if: always() && steps.outbox-smoke.outputs.required == 'true'
+        run: docker rm -f tcj-published-outbox-sql
+
+      - name: Clear published-consumer restore state
+        run: rm -rf artifacts/compatibility/nuget artifacts/compatibility/results artifacts/compatibility/published-report compatibility/Consumers/*/bin compatibility/Consumers/*/obj
+
+      - name: Restore, build, and run selected published-package consumers
+        run: >
+          ${{ matrix.python }} compatibility/scripts/run-compatibility.py
+          --version "${{ needs.verify-publication.outputs.version }}"
+          --platform "${{ matrix.os }}"
+          --configuration Release
+          --source-mode published
+          --results artifacts/compatibility/results
+          --consumer Core.Console
+          --consumer AspNetCore.MinimalApi
+          --consumer FullStack.MinimalApi
+
+      - name: Verify published-package consumer results
+        run: >
+          ${{ matrix.python }} eng/verify-consumer-compatibility.py verify-published
+          --version "${{ needs.verify-publication.outputs.version }}"
+          --platform "${{ matrix.os }}"
+          --results artifacts/compatibility/results
+          --output artifacts/compatibility/published-report
+          --commit-sha "${{ steps.source-commit.outputs.value }}"
+
+      - name: Resolve published upgrade path
+        if: matrix.os == 'ubuntu-latest'
+        id: upgrade-path
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          target="${{ needs.verify-publication.outputs.version }}"
+          echo "baseline=$baseline" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          if [[ "$baseline" == "$target" ]]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Published version equals the baseline metadata; no newer upgrade target is available."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run selected published-package upgrade scenarios
+        if: matrix.os == 'ubuntu-latest' && steps.upgrade-path.outputs.run == 'true'
+        run: >
+          python3 upgrade-tests/scripts/run-upgrade-tests.py
+          --baseline-version "${{ steps.upgrade-path.outputs.baseline }}"
+          --target-version "${{ steps.upgrade-path.outputs.target }}"
+          --target-source-mode published
+          --output artifacts/upgrade-compatibility
+          --scenario CoreConsumer
+          --scenario AspNetCoreConsumer
+          --scenario FullStackConsumer
+          --commit-sha "${{ steps.source-commit.outputs.value }}"
+
+      - name: Verify selected published-package upgrade scenarios
+        if: matrix.os == 'ubuntu-latest' && steps.upgrade-path.outputs.run == 'true'
+        run: >
+          python3 eng/verify-upgrade-compatibility.py verify-published
+          --baseline-version "${{ steps.upgrade-path.outputs.baseline }}"
+          --target-version "${{ steps.upgrade-path.outputs.target }}"
+          --results artifacts/upgrade-compatibility/results
+          --output artifacts/upgrade-compatibility/report
+
+      - name: Publish compatibility summary
+        if: always()
+        run: |
+          if [[ -f artifacts/compatibility/published-report/COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/compatibility/published-report/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Publish upgrade compatibility summary
+        if: always() && matrix.os == 'ubuntu-latest'
+        run: |
+          if [[ -f artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload published-package consumer reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: published-consumer-compatibility-${{ matrix.slug }}-${{ needs.verify-publication.outputs.version }}-${{ github.run_id }}
+          path: |
+            artifacts/compatibility/results/**
+            artifacts/compatibility/published-report/**
+            artifacts/upgrade-compatibility/results/**
+            artifacts/upgrade-compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 7

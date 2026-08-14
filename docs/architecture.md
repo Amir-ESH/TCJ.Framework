@@ -30,9 +30,9 @@ Read repositories return no-tracking queries by default. Tracking must be reques
 
 Dependency registration scans only assemblies supplied to `AddTcjDependencyInjection`. The framework does not scan every loaded assembly implicitly.
 
-### Explicit domain-event dispatch
+### Explicit domain-event dispatch and optional transactional outbox
 
-Entities can collect pending domain events and `IDomainEventDispatcher` invokes registered handlers sequentially. Persistence does not automatically publish or clear domain events in the current preview.
+Entities can collect pending domain events and `IDomainEventDispatcher` invokes registered handlers sequentially. The default persistence path remains explicit. When `AddTcjOutbox` / `AddTcjSqlServerOutbox` is enabled, EF interceptors persist pending events in the same transaction as business state and clear them only after successful persistence/commit; dispatch still occurs separately after commit through `IOutboxProcessor`. The guarantee is at-least-once, not exactly-once.
 
 ### Host-owned configuration
 
@@ -61,12 +61,43 @@ HTTP endpoint
 
 ## What the framework does not currently provide
 
-- Automatic domain-event dispatch from `SaveChangesAsync`
-- An outbox implementation
+- Exactly-once domain-event delivery
+- Automatic public replay/admin endpoints for the transactional outbox
 - Authentication or authorization setup
 - Database migrations for consumer applications
 - Provider packages other than SQL Server
 - A distributed transaction abstraction
-- Automatic public API compatibility validation
 
-These boundaries are intentional for the preview and should be considered when designing applications on top of TCJ.
+Repository restore is restricted to the configured NuGet.org source and audits direct and transitive dependencies. Packable TCJ projects use SDK package validation to detect accidental binary-breaking API changes against the latest published baseline. The remaining boundaries are intentional for the preview and should be considered when designing applications on top of TCJ.
+
+## Executable architecture policy
+
+The approved package graph, namespace roots, forbidden infrastructure prefixes, and public option allowlist are versioned in [`eng/architecture-policy.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/architecture-policy.json). The `TCJ.Architecture.Tests` project checks both production project references and compiled assembly metadata, detects cycles, validates namespace ownership, and rejects infrastructure leakage through public APIs.
+
+Run the policy validator and focused test category with:
+
+```bash
+python3 eng/verify-architecture-policy.py validate-config
+dotnet test tests/TCJ.Architecture.Tests/TCJ.Architecture.Tests.csproj \
+  -c Release \
+  -- --filter-trait "Category=Architecture"
+```
+
+See [Architecture tests and module dependency rules](architecture-tests.md) for the complete dependency graph and change process.
+
+## Observability boundary
+
+TCJ production modules publish logical framework telemetry through BCL `ActivitySource` and `Meter` primitives only. Exporters, collectors, and vendor SDKs stay at the application edge. Repository and Unit of Work activities complement rather than duplicate EF Core/database command telemetry, and ASP.NET Core exception activities remain children of the ambient request activity. Stable names and bounded tags are tracked in `eng/observability-contract.json`; see [Diagnostics and OpenTelemetry observability](observability.md).
+
+### Resilience boundaries
+
+Resilience primitives live in existing packages rather than a vendor-specific resilience package. `TCJ.Core` owns provider-neutral retry/timeout/circuit contracts, `TCJ.DependencyInjection` owns explicit domain-event handler retry registration, and `TCJ.EntityFrameworkCore.SqlServer` owns the transaction-level bridge to EF Core execution strategies. Operation, handler, transaction, command-timeout, request-timeout, and circuit boundaries are deliberately separate; see [Resilience policies and fault injection](resilience.md).
+
+## Health-check boundaries
+
+Step 43 keeps health support inside existing packages: contract/options/startup diagnostics live in `TCJ.Core`; standard health registrations live alongside dependency injection and EF integrations; SQL Server connectivity/migration checks remain provider-specific; ASP.NET Core owns endpoint mapping and JSON formatting. `TCJ.Core` does not acquire an ASP.NET Core dependency and no circular package edge is introduced.
+
+
+## Transactional-outbox boundary
+
+Step 44 keeps provider-neutral outbox contracts in `TCJ.Core`, EF persistence/serialization/processing in `TCJ.EntityFrameworkCore`, SQL Server claim SQL in `TCJ.EntityFrameworkCore.SqlServer`, and the optional hosted polling loop in `TCJ.AspNetCore`. `TCJ.AspNetCore` never references EF Core. Consumer-controlled migrations own the schema. See [Transactional outbox](outbox.md).

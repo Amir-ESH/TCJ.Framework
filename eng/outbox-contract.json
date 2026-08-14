@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "packageStrategy": "existing-packages",
+  "deliveryGuarantee": "at-least-once",
+  "exactlyOnceGuaranteed": false,
+  "tableName": "TCJ_OutboxMessages",
+  "requiredColumns": [
+    "Id",
+    "OccurredAtUtc",
+    "EventType",
+    "Payload",
+    "AttemptCount",
+    "NextAttemptAtUtc",
+    "ProcessedAtUtc",
+    "LastErrorType",
+    "CreatedAtUtc"
+  ],
+  "operationalColumns": [
+    "LockedAtUtc",
+    "LockExpiresAtUtc",
+    "LockId",
+    "DeadLetteredAtUtc",
+    "LastError",
+    "UpdatedAtUtc",
+    "ReplayCount",
+    "LastReplayedAtUtc"
+  ],
+  "requiredIndexes": [
+    "PK_TCJ_OutboxMessages",
+    "IX_TCJ_OutboxMessages_ProcessedAtUtc_NextAttemptAtUtc",
+    "IX_TCJ_OutboxMessages_LockExpiresAtUtc",
+    "IX_TCJ_OutboxMessages_OccurredAtUtc",
+    "IX_TCJ_OutboxMessages_EventType"
+  ],
+  "publicOptions": {
+    "BatchSize": 100,
+    "PollingIntervalSeconds": 1,
+    "LockDurationSeconds": 30,
+    "MaxRetryAttempts": 10,
+    "BaseRetryDelaySeconds": 1,
+    "MaxRetryDelaySeconds": 300,
+    "UseJitter": true,
+    "RetentionPeriodDays": 7,
+    "CleanupBatchSize": 500,
+    "CleanupIntervalSeconds": 3600,
+    "MaximumStoredErrorLength": 1024,
+    "BacklogUnhealthyAgeSeconds": 300,
+    "DeadLetterUnhealthyThreshold": 1
+  },
+  "eventTypeNaming": {
+    "explicitFormat": "stable logical versioned name such as order.completed.v1",
+    "defaultConvention": "clr.<normalized-full-type-name>.v1",
+    "assemblyQualifiedNameAllowed": false,
+    "breakingPayloadRequiresNewVersion": true
+  },
+  "serialization": {
+    "default": "System.Text.Json",
+    "unsafePolymorphicMetadataEnabled": false,
+    "customSerializerSupported": true
+  },
+  "claiming": {
+    "provider": "Microsoft.EntityFrameworkCore.SqlServer",
+    "strategy": "atomic CTE update with UPDLOCK, READPAST and READCOMMITTEDLOCK",
+    "boundedLease": true,
+    "longTransactionAroundHandler": false
+  },
+  "telemetry": {
+    "activities": [
+      "tcj.outbox.persist",
+      "tcj.outbox.claim",
+      "tcj.outbox.process",
+      "tcj.outbox.retry",
+      "tcj.outbox.dead_letter",
+      "tcj.outbox.replay",
+      "tcj.outbox.cleanup"
+    ],
+    "metrics": [
+      "tcj.outbox.messages.persisted",
+      "tcj.outbox.messages.processed",
+      "tcj.outbox.messages.failed",
+      "tcj.outbox.messages.retried",
+      "tcj.outbox.messages.dead_lettered",
+      "tcj.outbox.processing.duration",
+      "tcj.outbox.pending.count",
+      "tcj.outbox.oldest_pending.age"
+    ],
+    "tags": [
+      "tcj.outbox.outcome",
+      "tcj.outbox.event_type",
+      "tcj.outbox.attempt",
+      "tcj.outbox.provider",
+      "tcj.canceled"
+    ],
+    "payloadAllowed": false,
+    "aggregateIdentifierAllowed": false
+  },
+  "healthChecks": [
+    "tcj.outbox.processor",
+    "tcj.outbox.backlog",
+    "tcj.outbox.dead_letters"
+  ],
+  "migrationStrategy": "consumer-controlled",
+  "automaticMigrations": false,
+  "replayRequiresExplicitMessageId": true,
+  "publicReplayEndpointProvided": false
+}

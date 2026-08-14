@@ -1,0 +1,229 @@
+name: Property and fuzz testing
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.DependencyInjection/**"
+      - "tests/TCJ.PropertyTests/**"
+      - "fuzz/**"
+      - "eng/fuzzing-policy.json"
+      - "eng/verify-fuzzing.py"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "global.json"
+      - ".github/workflows/fuzzing.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * 1"
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+concurrency:
+  group: fuzzing-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  property-tests:
+    name: Run property tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with: { fetch-depth: 0 }
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with: { global-json-file: global.json }
+      - name: Display runtime information
+        run: dotnet --info
+      - name: Validate automation scripts
+        run: |
+          python3 -m compileall -q eng fuzz/scripts
+          python3 -m unittest eng.tests.test_verify_fuzzing
+      - name: Validate fuzzing policy
+        run: python3 eng/verify-fuzzing.py validate-config
+      - name: Restore and audit dependencies
+        run: dotnet restore tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj --force-evaluate
+      - name: Build property tests
+        run: dotnet build tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj -c Release --no-restore
+      - name: Run property tests
+        id: property-tests
+        continue-on-error: true
+        run: >
+          dotnet test tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj -c Release --no-build
+          --logger "trx;LogFileName=property-tests.trx"
+          --results-directory TestResults/PropertyTests
+      - name: Verify property count, iterations, seeds, and replay contract
+        id: verify-properties
+        if: always()
+        continue-on-error: true
+        run: >
+          python3 eng/verify-fuzzing.py verify-properties
+          --results TestResults/PropertyTests
+          --output artifacts/fuzzing/property-report
+          --commit-sha "${{ github.sha }}"
+      - name: Publish property summary
+        if: always()
+        run: test ! -f artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md || cat artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload property results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: property-tests-${{ github.run_id }}
+          path: |
+            TestResults/PropertyTests/**
+            artifacts/fuzzing/property-report/**
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Enforce property result
+        if: always()
+        run: |
+          test "${{ steps.property-tests.outcome }}" = success
+          test "${{ steps.verify-properties.outcome }}" = success
+
+  short-fuzz:
+    name: Run short fuzz targets
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with: { fetch-depth: 0 }
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with: { global-json-file: global.json }
+      - name: Display runtime information
+        run: dotnet --info
+      - name: Validate automation scripts and fuzzing policy
+        run: |
+          python3 -m compileall -q eng fuzz/scripts
+          python3 eng/verify-fuzzing.py validate-config
+      - name: Restore and audit dependencies
+        run: dotnet restore fuzz/TCJ.FuzzTests/TCJ.FuzzTests.csproj --force-evaluate
+      - name: Build fuzz harness
+        run: dotnet build fuzz/TCJ.FuzzTests/TCJ.FuzzTests.csproj -c Release --no-restore
+      - name: Select affected fuzz targets
+        id: fuzz-scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            targets="$(python3 fuzz/scripts/select-fuzz-targets.py --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}")"
+          else
+            targets="$(python3 fuzz/scripts/select-fuzz-targets.py --all)"
+          fi
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+          echo "Selected fuzz targets: $targets"
+      - name: Run short fuzz targets with resource limits
+        id: fuzz
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra targets <<< "${{ steps.fuzz-scope.outputs.targets }}"
+          args=()
+          for target in "${targets[@]}"; do args+=(--target "$target"); done
+          python3 fuzz/scripts/run-fuzz.py --duration 30 --output artifacts/fuzzing/fuzz-results --seed 39039 "${args[@]}"
+      - name: Verify crash, hang, exception, timeout, and corpus results
+        id: verify-fuzz
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra targets <<< "${{ steps.fuzz-scope.outputs.targets }}"
+          args=()
+          for target in "${targets[@]}"; do args+=(--target "$target"); done
+          python3 eng/verify-fuzzing.py verify-fuzz \
+            --results artifacts/fuzzing/fuzz-results \
+            --output artifacts/fuzzing/fuzz-report \
+            --commit-sha "${{ github.sha }}" \
+            --minimum-duration-seconds 30 "${args[@]}"
+      - name: Publish fuzz summary
+        if: always()
+        run: test ! -f artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md || cat artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload sanitized failure corpora, minimized reproducers, and fuzz logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: short-fuzz-${{ github.run_id }}
+          path: |
+            artifacts/fuzzing/fuzz-results/**
+            artifacts/fuzzing/fuzz-report/**
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Enforce short fuzz result
+        if: always()
+        run: |
+          test "${{ steps.fuzz.outcome }}" = success
+          test "${{ steps.verify-fuzz.outcome }}" = success
+
+  scheduled-fuzz:
+    name: Run scheduled fuzz targets
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with: { fetch-depth: 0 }
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with: { global-json-file: global.json }
+      - name: Display runtime information
+        run: dotnet --info
+      - name: Validate automation scripts and fuzzing policy
+        run: |
+          python3 -m compileall -q eng fuzz/scripts
+          python3 eng/verify-fuzzing.py validate-config
+      - name: Restore and audit dependencies
+        run: dotnet restore fuzz/TCJ.FuzzTests/TCJ.FuzzTests.csproj --force-evaluate
+      - name: Build fuzz harness
+        run: dotnet build fuzz/TCJ.FuzzTests/TCJ.FuzzTests.csproj -c Release --no-restore
+      - name: Run scheduled fuzz targets with resource limits
+        id: fuzz
+        continue-on-error: true
+        run: >
+          python3 fuzz/scripts/run-fuzz.py
+          --duration 600
+          --output artifacts/fuzzing/fuzz-results
+          --seed 390390
+      - name: Verify scheduled fuzz results
+        id: verify-fuzz
+        if: always()
+        continue-on-error: true
+        run: >
+          python3 eng/verify-fuzzing.py verify-fuzz
+          --results artifacts/fuzzing/fuzz-results
+          --output artifacts/fuzzing/fuzz-report
+          --commit-sha "${{ github.sha }}"
+          --minimum-duration-seconds 600
+      - name: Publish fuzz summary
+        if: always()
+        run: test ! -f artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md || cat artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload scheduled fuzz logs and minimized failure corpora
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scheduled-fuzz-${{ github.run_id }}
+          path: |
+            artifacts/fuzzing/fuzz-results/**
+            artifacts/fuzzing/fuzz-report/**
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Enforce scheduled fuzz result
+        if: always()
+        run: |
+          test "${{ steps.fuzz.outcome }}" = success
+          test "${{ steps.verify-fuzz.outcome }}" = success

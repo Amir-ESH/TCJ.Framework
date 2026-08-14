@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using TCJ.Core.Diagnostics;
 using TCJ.Core.Entities;
 using TCJ.EntityFrameworkCore.Abstractions;
+using TCJ.EntityFrameworkCore.Diagnostics;
 
 namespace TCJ.EntityFrameworkCore.Repositories;
 
@@ -37,39 +39,87 @@ public class EfWriteRepository<TEntity, TKey> : IWriteRepository<TEntity, TKey>
     {
         ArgumentNullException.ThrowIfNull(entity);
 
-        await DbSet.AddAsync(entity, cancellationToken)
-                   .ConfigureAwait(false);
+        RepositoryTelemetryState telemetry = StartTelemetry(
+            TcjDiagnosticNames.Activities.RepositoryAdd,
+            "add");
+
+        try
+        {
+            await DbSet.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+            telemetry.CompleteSuccess();
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            telemetry.CompleteCanceled(exception);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public virtual async Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
+        RepositoryTelemetryState telemetry = StartTelemetry(
+            TcjDiagnosticNames.Activities.RepositoryAdd,
+            "add_range");
 
-        if (entityList.Count == 0)
+        try
         {
-            return;
-        }
+            IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
+            if (entityList.Count != 0)
+            {
+                await DbSet.AddRangeAsync(entityList, cancellationToken).ConfigureAwait(false);
+            }
 
-        await DbSet.AddRangeAsync(entityList, cancellationToken)
-                   .ConfigureAwait(false);
+            telemetry.CompleteSuccess();
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            telemetry.CompleteCanceled(exception);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public virtual void Update(TEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        DbSet.Update(entity);
+        Observe(
+            () => DbSet.Update(entity),
+            TcjDiagnosticNames.Activities.RepositoryUpdate,
+            "update");
     }
 
     /// <inheritdoc />
     public virtual void UpdateRange(IEnumerable<TEntity> entities)
     {
-        IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
+        RepositoryTelemetryState telemetry = StartTelemetry(
+            TcjDiagnosticNames.Activities.RepositoryUpdate,
+            "update_range");
 
-        if (entityList.Count != 0)
+        try
         {
-            DbSet.UpdateRange(entityList);
+            IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
+            if (entityList.Count != 0)
+            {
+                DbSet.UpdateRange(entityList);
+            }
+
+            telemetry.CompleteSuccess();
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
         }
     }
 
@@ -77,19 +127,58 @@ public class EfWriteRepository<TEntity, TKey> : IWriteRepository<TEntity, TKey>
     public virtual void Remove(TEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        DbSet.Remove(entity);
+        Observe(
+            () => DbSet.Remove(entity),
+            TcjDiagnosticNames.Activities.RepositoryDelete,
+            "delete");
     }
 
     /// <inheritdoc />
     public virtual void RemoveRange(IEnumerable<TEntity> entities)
     {
-        IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
+        RepositoryTelemetryState telemetry = StartTelemetry(
+            TcjDiagnosticNames.Activities.RepositoryDelete,
+            "delete_range");
 
-        if (entityList.Count != 0)
+        try
         {
-            DbSet.RemoveRange(entityList);
+            IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
+            if (entityList.Count != 0)
+            {
+                DbSet.RemoveRange(entityList);
+            }
+
+            telemetry.CompleteSuccess();
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
         }
     }
+
+    private void Observe(Action operation, string activityName, string operationName)
+    {
+        RepositoryTelemetryState telemetry = StartTelemetry(activityName, operationName);
+        try
+        {
+            operation();
+            telemetry.CompleteSuccess();
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteFailure(exception);
+            throw;
+        }
+    }
+
+    private RepositoryTelemetryState StartTelemetry(string activityName, string operationName) =>
+        EntityFrameworkCoreTelemetryDiagnostics.StartRepositoryOperation(
+            activityName,
+            operationName,
+            GetType(),
+            typeof(TEntity),
+            Db);
 
     private static IReadOnlyList<TEntity> MaterializeAndValidate(
         IEnumerable<TEntity> entities)

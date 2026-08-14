@@ -1,0 +1,174 @@
+name: Reproducible builds
+
+on:
+  workflow_call:
+
+  workflow_dispatch:
+  schedule:
+    - cron: "23 4 * * 3"
+permissions:
+  contents: read
+
+concurrency:
+  group: reproducible-builds-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  compare-package-builds:
+    name: Compare package builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Display SDK and runtime information
+        run: dotnet --info
+
+      - name: Validate automation scripts
+        run: |
+          python3 -m py_compile eng/*.py
+          python3 -m unittest discover \
+            --start-directory eng/tests \
+            --pattern "test_*.py"
+
+      - name: Validate reproducibility policy
+        run: python3 eng/verify-reproducible-build.py validate-config
+
+      - name: Read package version
+        id: package-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          value = ET.parse("eng/Packaging.props").getroot().findtext("./PropertyGroup/Version")
+          if not value or not value.strip():
+              raise SystemExit("eng/Packaging.props does not define Version.")
+          print(value.strip())
+          PY
+          )"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore and audit dependencies
+        run: dotnet restore TCJ.slnx --force-evaluate
+
+      - name: Clean previous generated outputs
+        run: rm -rf artifacts/reproducibility
+
+      - name: Run isolated Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-a"
+          dotnet restore TCJ.slnx \
+            --force-evaluate \
+            --artifacts-path "$root" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build TCJ.slnx \
+            --configuration Release \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:Version="${{ steps.package-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Pack Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-a"
+          mkdir -p "$root/packages"
+          dotnet pack TCJ.slnx \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:PackageOutputPath="$root/packages" \
+            -p:Version="${{ steps.package-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Run isolated Build B
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-b"
+          dotnet restore TCJ.slnx \
+            --force-evaluate \
+            --artifacts-path "$root" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build TCJ.slnx \
+            --configuration Release \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:Version="${{ steps.package-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Pack Build B
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-b"
+          mkdir -p "$root/packages"
+          dotnet pack TCJ.slnx \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:PackageOutputPath="$root/packages" \
+            -p:Version="${{ steps.package-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Compare package sets, contents, assemblies, and symbols
+        run: >
+          python3 eng/verify-reproducible-build.py compare
+          --version "${{ steps.package-version.outputs.value }}"
+          --build-a artifacts/reproducibility/build-a/packages
+          --build-b artifacts/reproducibility/build-b/packages
+          --output artifacts/reproducibility/report
+
+      - name: Publish reproducibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md ]]; then
+            cat artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload reproducibility reports and package builds
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reproducible-builds-${{ github.run_id }}
+          path: |
+            artifacts/reproducibility/build-a/packages/*
+            artifacts/reproducibility/build-b/packages/*
+            artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md
+            artifacts/reproducibility/report/reproducibility-summary.json
+            artifacts/reproducibility/report/differences/*
+          if-no-files-found: warn
+          retention-days: 14

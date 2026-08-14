@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using TCJ.Core.Diagnostics;
 using TCJ.Core.Entities;
 using TCJ.EntityFrameworkCore.Abstractions;
+using TCJ.EntityFrameworkCore.Diagnostics;
 
 namespace TCJ.EntityFrameworkCore.Repositories;
 
@@ -33,54 +35,97 @@ public class EfSoftDeleteRepository<TEntity, TKey> : ISoftDeleteRepository<TEnti
     public virtual void SoftDelete(TEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-
-        entity.IsDeleted = true;
-        DbSet.Update(entity);
+        Observe(
+            () =>
+            {
+                entity.IsDeleted = true;
+                DbSet.Update(entity);
+            },
+            TcjDiagnosticNames.Activities.RepositoryDelete,
+            "soft_delete");
     }
 
     /// <inheritdoc />
     public virtual void SoftDeleteRange(IEnumerable<TEntity> entities)
     {
-        IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
+        Observe(
+            () =>
+            {
+                IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
 
-        foreach (TEntity entity in entityList)
-        {
-            entity.IsDeleted = true;
-        }
+                foreach (TEntity entity in entityList)
+                {
+                    entity.IsDeleted = true;
+                }
 
-        if (entityList.Count != 0)
-        {
-            DbSet.UpdateRange(entityList);
-        }
+                if (entityList.Count != 0)
+                {
+                    DbSet.UpdateRange(entityList);
+                }
+            },
+            TcjDiagnosticNames.Activities.RepositoryDelete,
+            "soft_delete_range");
     }
 
     /// <inheritdoc />
     public virtual void Restore(TEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-
-        entity.IsDeleted = false;
-        entity.DeletedOn = null;
-        entity.DeletedBy = null;
-
-        DbSet.Update(entity);
+        Observe(
+            () =>
+            {
+                entity.IsDeleted = false;
+                entity.DeletedOn = null;
+                entity.DeletedBy = null;
+                DbSet.Update(entity);
+            },
+            TcjDiagnosticNames.Activities.RepositoryUpdate,
+            "restore");
     }
 
     /// <inheritdoc />
     public virtual void RestoreRange(IEnumerable<TEntity> entities)
     {
-        IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
+        Observe(
+            () =>
+            {
+                IReadOnlyList<TEntity> entityList = MaterializeAndValidate(entities);
 
-        foreach (TEntity entity in entityList)
+                foreach (TEntity entity in entityList)
+                {
+                    entity.IsDeleted = false;
+                    entity.DeletedOn = null;
+                    entity.DeletedBy = null;
+                }
+
+                if (entityList.Count != 0)
+                {
+                    DbSet.UpdateRange(entityList);
+                }
+            },
+            TcjDiagnosticNames.Activities.RepositoryUpdate,
+            "restore_range");
+    }
+
+    private void Observe(Action operation, string activityName, string operationName)
+    {
+        RepositoryTelemetryState telemetry =
+            EntityFrameworkCoreTelemetryDiagnostics.StartRepositoryOperation(
+                activityName,
+                operationName,
+                GetType(),
+                typeof(TEntity),
+                _db);
+
+        try
         {
-            entity.IsDeleted = false;
-            entity.DeletedOn = null;
-            entity.DeletedBy = null;
+            operation();
+            telemetry.CompleteSuccess();
         }
-
-        if (entityList.Count != 0)
+        catch (Exception exception)
         {
-            DbSet.UpdateRange(entityList);
+            telemetry.CompleteFailure(exception);
+            throw;
         }
     }
 

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "baselineMetadata": "eng/published-release.json",
+  "targetMetadata": "eng/release-manifest.json",
+  "breakingChangesManifest": "eng/breaking-changes.json",
+  "migrationGuide": "docs/migrations/0.1.0-preview.1-to-0.1.0-preview.2.md",
+  "configuration": "Release",
+  "targetFramework": "net10.0",
+  "minimumScenarioCount": 6,
+  "requiredPackages": [
+    "TCJ.Core",
+    "TCJ.DependencyInjection",
+    "TCJ.EntityFrameworkCore",
+    "TCJ.EntityFrameworkCore.SqlServer",
+    "TCJ.AspNetCore"
+  ],
+  "requireBaselineRestore": true,
+  "requireBaselineBuild": true,
+  "requireBaselineRun": true,
+  "requireTargetRestore": true,
+  "requireTargetBuild": true,
+  "requireTargetRun": true,
+  "requirePackageOnlyReferences": true,
+  "requireSourceTreeHash": true,
+  "requireDependencyDiff": true,
+  "requireBehaviorComparison": true,
+  "requireMigrationGuideForBreakingChanges": true,
+  "requireApprovedBreakingChanges": true,
+  "requireExplicitMigrationPatches": true,
+  "failOnUndocumentedBehaviorChange": true,
+  "failOnDependencyDowngrade": true,
+  "failOnWarnings": true,
+  "requireOutboxOptInCompatibility": true,
+  "requireOutboxSchemaMigrationGuidance": true,
+  "requireOutboxEventNameMigrationGuidance": true,
+  "publishedScenarios": [
+    "CoreConsumer",
+    "AspNetCoreConsumer",
+    "FullStackConsumer"
+  ],
+  "scenarios": [
+    {
+      "name": "CoreConsumer",
+      "project": "upgrade-tests/Scenarios/CoreConsumer/CoreConsumer.csproj",
+      "packages": [
+        "TCJ.Core"
+      ],
+      "expectedBehavior": "upgrade-tests/Expected/CoreConsumer.json",
+      "expectedOutput": "TCJ.Core upgrade scenario passed"
+    },
+    {
+      "name": "DependencyInjectionConsumer",
+      "project": "upgrade-tests/Scenarios/DependencyInjectionConsumer/DependencyInjectionConsumer.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection"
+      ],
+      "expectedBehavior": "upgrade-tests/Expected/DependencyInjectionConsumer.json",
+      "expectedOutput": "TCJ.DependencyInjection upgrade scenario passed"
+    },
+    {
+      "name": "EntityFrameworkCoreConsumer",
+      "project": "upgrade-tests/Scenarios/EntityFrameworkCoreConsumer/EntityFrameworkCoreConsumer.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.EntityFrameworkCore"
+      ],
+      "expectedBehavior": "upgrade-tests/Expected/EntityFrameworkCoreConsumer.json",
+      "expectedOutput": "TCJ.EntityFrameworkCore upgrade scenario passed"
+    },
+    {
+      "name": "EntityFrameworkCore.SqlServerConsumer",
+      "project": "upgrade-tests/Scenarios/EntityFrameworkCore.SqlServerConsumer/EntityFrameworkCore.SqlServerConsumer.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.EntityFrameworkCore",
+        "TCJ.EntityFrameworkCore.SqlServer"
+      ],
+      "expectedBehavior": "upgrade-tests/Expected/EntityFrameworkCore.SqlServerConsumer.json",
+      "expectedOutput": "TCJ.EntityFrameworkCore.SqlServer upgrade scenario passed"
+    },
+    {
+      "name": "AspNetCoreConsumer",
+      "project": "upgrade-tests/Scenarios/AspNetCoreConsumer/AspNetCoreConsumer.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.AspNetCore"
+      ],
+      "expectedBehavior": "upgrade-tests/Expected/AspNetCoreConsumer.json",
+      "expectedOutput": "TCJ.AspNetCore upgrade scenario passed"
+    },
+    {
+      "name": "FullStackConsumer",
+      "project": "upgrade-tests/Scenarios/FullStackConsumer/FullStackConsumer.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.DependencyInjection",
+        "TCJ.EntityFrameworkCore",
+        "TCJ.EntityFrameworkCore.SqlServer",
+        "TCJ.AspNetCore"
+      ],
+      "expectedBehavior": "upgrade-tests/Expected/FullStackConsumer.json",
+      "expectedOutput": "TCJ full-stack upgrade scenario passed"
+    }
+  ]
+}

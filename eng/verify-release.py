@@ -40,6 +40,7 @@ def read_manifest(root: Path) -> dict[str, object]:
         "tag",
         "releaseDate",
         "repository",
+        "licenseExpression",
         "packages",
     }
     missing = sorted(required.difference(data))
@@ -69,6 +70,10 @@ def read_manifest(root: Path) -> dict[str, object]:
     ):
         fail("A ready manifest must use YYYY-MM-DD for releaseDate.")
 
+    license_expression = str(data["licenseExpression"]).strip()
+    if not license_expression:
+        fail("Manifest licenseExpression must be a non-empty SPDX expression.")
+
     packages = data["packages"]
     if not isinstance(packages, list) or not packages:
         fail("Manifest packages must be a non-empty array.")
@@ -86,6 +91,104 @@ def read_msbuild_version(root: Path) -> str:
     if not version:
         fail("eng/Packaging.props does not define Version.")
     return version.strip()
+
+
+def read_msbuild_license_expression(root: Path) -> str:
+    packaging = ET.parse(root / "eng" / "Packaging.props").getroot()
+    license_expression = packaging.findtext("./PropertyGroup/PackageLicenseExpression")
+    if not license_expression or not license_expression.strip():
+        fail("eng/Packaging.props does not define PackageLicenseExpression.")
+    return license_expression.strip()
+
+
+def read_published_manifest(root: Path) -> dict[str, object]:
+    path = root / "eng" / "published-release.json"
+    data = json.loads(read_text(path))
+
+    required = {
+        "schemaVersion",
+        "version",
+        "tag",
+        "releaseDate",
+        "repository",
+        "licenseExpression",
+        "packages",
+    }
+    missing = sorted(required.difference(data))
+    if missing:
+        fail(f"Published release manifest is missing fields: {', '.join(missing)}")
+    if data["schemaVersion"] != 1:
+        fail("Unsupported published release manifest schemaVersion; expected 1.")
+
+    version = str(data["version"])
+    if not SEMVER_PATTERN.fullmatch(version):
+        fail(f"Published version is not valid semantic versioning: {version}")
+    if data["tag"] != f"v{version}":
+        fail("Published release tag must be the version prefixed with 'v'.")
+
+    license_expression = str(data["licenseExpression"]).strip()
+    if not license_expression:
+        fail("Published release licenseExpression must be a non-empty SPDX expression.")
+
+    packages = data["packages"]
+    if not isinstance(packages, list) or not packages:
+        fail("Published release packages must be a non-empty array.")
+    if not all(isinstance(item, str) and item.strip() for item in packages):
+        fail("Published release package IDs must be non-empty strings.")
+
+    return data
+
+
+def read_package_validation_config(root: Path) -> str:
+    path = root / "eng" / "PackageValidation.props"
+    document = ET.parse(path).getroot()
+
+    published_version = document.findtext(
+        "./PropertyGroup/TCJPublishedPackageVersion"
+    )
+    enabled = document.findtext("./PropertyGroup/EnablePackageValidation")
+    baseline = document.findtext(
+        "./PropertyGroup/PackageValidationBaselineVersion"
+    )
+
+    if not published_version or not published_version.strip():
+        fail("eng/PackageValidation.props must define TCJPublishedPackageVersion.")
+    if (enabled or "").strip().lower() != "true":
+        fail("eng/PackageValidation.props must enable package validation.")
+    if (baseline or "").strip() != "$(TCJPublishedPackageVersion)":
+        fail(
+            "PackageValidationBaselineVersion must reference "
+            "$(TCJPublishedPackageVersion)."
+        )
+
+    packaging = ET.parse(root / "eng" / "Packaging.props").getroot()
+    imports = [
+        item.attrib.get("Project", "")
+        for item in packaging.findall("./Import")
+    ]
+    if not any(value.endswith("PackageValidation.props") for value in imports):
+        fail("eng/Packaging.props must import eng/PackageValidation.props.")
+
+    return published_version.strip()
+
+
+def semver_key(version: str) -> tuple[object, ...]:
+    match = SEMVER_PATTERN.fullmatch(version)
+    if match is None:
+        fail(f"Invalid semantic version: {version}")
+
+    major, minor, patch = (int(match.group(index)) for index in range(1, 4))
+    prerelease = match.group(4)
+    if prerelease is None:
+        return (major, minor, patch, 1, ())
+
+    identifiers: list[tuple[int, object]] = []
+    for identifier in prerelease.split("."):
+        if identifier.isdigit():
+            identifiers.append((0, int(identifier)))
+        else:
+            identifiers.append((1, identifier))
+    return (major, minor, patch, 0, tuple(identifiers))
 
 
 def read_project_package_ids(root: Path) -> list[str]:
@@ -185,6 +288,7 @@ def validate_primary_package(
     package_id: str,
     version: str,
     repository: str,
+    expected_license_expression: str,
 ) -> None:
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
@@ -202,7 +306,7 @@ def validate_primary_package(
             "projectUrl": expected_project_url,
             "repositoryUrl": expected_repository_url,
             "repositoryType": "git",
-            "license": "MIT",
+            "license": expected_license_expression,
             "licenseType": "expression",
             "readme": "README.md",
         }
@@ -268,6 +372,7 @@ def validate_packages(root: Path, package_directory: Path, manifest: dict[str, o
             package_id,
             version,
             repository,
+            str(manifest["licenseExpression"]),
         )
         validate_symbol_package(
             package_directory / f"{package_id}.{version}.snupkg"
@@ -308,6 +413,33 @@ def main() -> int:
             f"release manifest version {version!r}."
         )
 
+    packaging_license = read_msbuild_license_expression(root)
+    manifest_license = str(manifest["licenseExpression"])
+    if packaging_license != manifest_license:
+        fail(
+            f"eng/Packaging.props license {packaging_license!r} does not match "
+            f"release manifest license {manifest_license!r}."
+        )
+
+    published_manifest = read_published_manifest(root)
+    published_version = str(published_manifest["version"])
+    validation_baseline = read_package_validation_config(root)
+
+    if validation_baseline != published_version:
+        fail(
+            "Package validation baseline does not match the immutable published "
+            f"release: {validation_baseline!r} != {published_version!r}."
+        )
+    if published_manifest["repository"] != manifest["repository"]:
+        fail("Published and development manifests must use the same repository.")
+    if set(published_manifest["packages"]) != set(manifest["packages"]):
+        fail("Published and development manifests must contain the same package IDs.")
+    if semver_key(version) <= semver_key(published_version):
+        fail(
+            f"Development version {version!r} must be newer than published "
+            f"baseline {published_version!r}."
+        )
+
     project_package_ids = read_project_package_ids(root)
     if set(project_package_ids) != set(package_ids) or len(project_package_ids) != len(package_ids):
         fail(
@@ -329,6 +461,7 @@ def main() -> int:
         print(f"Release metadata verified: {manifest['tag']} ({manifest['releaseDate']})")
     else:
         print(f"Development metadata verified: {version} (not release-ready)")
+    print(f"Package validation baseline: {published_version}")
     for package_id in package_ids:
         print(f"  {package_id}")
     if args.package_directory is not None:

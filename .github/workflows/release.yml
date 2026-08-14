@@ -13,14 +13,62 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  CI: true
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
 
 jobs:
+  sqlserver-integration:
+    name: SQL Server integration gate
+    uses: ./.github/workflows/sqlserver-integration.yml
+
+  aspnetcore-integration:
+    name: ASP.NET Core integration gate
+    uses: ./.github/workflows/aspnetcore-integration.yml
+
+  consumer-compatibility:
+    name: Package consumer compatibility gate
+    uses: ./.github/workflows/consumer-compatibility.yml
+    with:
+      version_source: release-manifest
+
+  concurrency-stress:
+    name: Concurrency stress gate
+    uses: ./.github/workflows/concurrency-stress.yml
+    with:
+      mode: release
+
+  performance-benchmarks:
+    name: Performance and observability overhead gate
+    uses: ./.github/workflows/performance-benchmarks.yml
+    with:
+      mode: full
+
+  resilience:
+    name: Resilience fault-injection gate
+    uses: ./.github/workflows/resilience.yml
+    with:
+      mode: full
+
+  health-checks:
+    name: Health-check contract gate
+    uses: ./.github/workflows/health-checks.yml
+
+  outbox:
+    name: Transactional outbox contract gate
+    uses: ./.github/workflows/outbox.yml
+
   build-and-pack:
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    timeout-minutes: 75
 
     outputs:
       version: ${{ steps.release-version.outputs.value }}
@@ -37,8 +85,59 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore repository tools
+        run: dotnet tool restore
+
       - name: Verify release metadata
         run: python3 eng/verify-release.py --require-ready
+
+      - name: Verify dependency security policy
+        run: python3 eng/verify-dependency-security.py
+
+      - name: Verify release integrity automation
+        run: python3 eng/release-integrity.py validate-config
+
+      - name: Verify code coverage policy
+        run: python3 eng/verify-coverage.py validate-config
+
+      - name: Verify architecture policy
+        run: python3 eng/verify-architecture-policy.py validate-config
+
+      - name: Verify SBOM configuration
+        run: python3 eng/verify-sbom.py validate-config
+
+      - name: Validate reproducibility policy
+        run: python3 eng/verify-reproducible-build.py validate-config
+
+      - name: Validate documentation policy
+        run: python3 eng/verify-documentation.py validate-config
+
+      - name: Validate package consumer compatibility configuration
+        run: python3 eng/verify-consumer-compatibility.py validate-config
+
+      - name: Validate package upgrade compatibility configuration
+        run: python3 eng/verify-upgrade-compatibility.py validate-config
+
+      - name: Validate property and fuzz testing configuration
+        run: python3 eng/verify-fuzzing.py validate-config
+
+      - name: Validate concurrency stress configuration
+        run: python3 eng/verify-concurrency.py validate-config
+
+      - name: Validate observability configuration
+        run: python3 eng/verify-observability.py validate-config
+
+      - name: Validate resilience configuration
+        run: python3 eng/verify-resilience.py validate-config
+
+      - name: Validate health-check configuration
+        run: python3 eng/verify-health-checks.py validate-config
+
+      - name: Validate transactional-outbox configuration
+        run: python3 eng/verify-outbox.py validate-config
+
+      - name: Verify Native AOT policy and release wiring
+        run: python3 eng/verify-aot.py verify
 
       - name: Validate release tag
         id: release-version
@@ -74,7 +173,52 @@ jobs:
           echo "value=$version" >> "$GITHUB_OUTPUT"
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
-      - name: Restore dependencies
+      - name: Download exact tagged-source concurrency evidence
+        uses: actions/download-artifact@v8
+        with:
+          pattern: concurrency-*-${{ github.run_id }}
+          path: artifacts/concurrency-release
+
+      - name: Preserve concurrency stress evidence with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          test -d artifacts/concurrency-release
+          find artifacts/concurrency-release -type f -name 'CONCURRENCY_SUMMARY.md' -print -quit | grep -q .
+          zip -qr "artifacts/release/TCJ.Framework.Concurrency.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/concurrency-release
+
+      - name: Download exact tagged-source health-check evidence
+        uses: actions/download-artifact@v8
+        with:
+          pattern: health-checks-*-${{ github.run_id }}
+          path: artifacts/health-check-release
+
+      - name: Preserve health-check evidence with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          test -d artifacts/health-check-release
+          find artifacts/health-check-release -type f -name 'HEALTH_CHECK_SUMMARY.md' -print -quit | grep -q .
+          zip -qr "artifacts/release/TCJ.Framework.HealthChecks.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/health-check-release
+
+      - name: Download exact tagged-source outbox evidence
+        uses: actions/download-artifact@v8
+        with:
+          pattern: outbox-*-${{ github.run_id }}
+          path: artifacts/outbox-release
+
+      - name: Preserve transactional-outbox evidence with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          test -d artifacts/outbox-release
+          find artifacts/outbox-release -type f -name 'OUTBOX_SUMMARY.md' -print -quit | grep -q .
+          zip -qr "artifacts/release/TCJ.Framework.Outbox.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/outbox-release
+
+      - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
       - name: Build solution
@@ -83,20 +227,323 @@ jobs:
           --configuration Release
           --no-restore
 
+      - name: Run observability contract tests
+        run: >
+          dotnet test tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=observability.trx"
+          --results-directory TestResults/Observability
+
+      - name: Verify observability contracts and evidence
+        run: >
+          python3 eng/verify-observability.py verify
+          --results TestResults/Observability
+          --output artifacts/observability
+
+      - name: Publish observability summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/observability/OBSERVABILITY_SUMMARY.md ]]; then
+            cat artifacts/observability/OBSERVABILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload observability evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: observability-${{ github.run_id }}
+          path: |
+            TestResults/Observability/**
+            artifacts/observability/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Preserve observability summary with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cp artifacts/observability/OBSERVABILITY_SUMMARY.md artifacts/release/OBSERVABILITY_SUMMARY.md
+          cp artifacts/observability/observability-summary.json artifacts/release/observability-summary.json
+
+      - name: Generate tagged API metadata
+        run: >
+          dotnet docfx metadata docfx/docfx.json
+          --noRestore
+          --warningsAsErrors
+          --property "Version=${{ steps.release-version.outputs.value }};RepositoryCommit=${{ github.sha }}"
+
+      - name: Build tagged documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          dotnet docfx build docfx/docfx.json \
+            --warningsAsErrors \
+            --metadata "packageVersion=${{ steps.release-version.outputs.value }}" \
+            --metadata "sourceCommit=${{ github.sha }}" \
+            --metadata "releaseTag=${{ github.ref_name }}" \
+            --metadata "documentationBuildDate=$build_date"
+
+      - name: Verify tagged documentation
+        run: >
+          python3 eng/verify-documentation.py verify
+          --configuration Release
+          --build-root src
+          --api-root artifacts/documentation/api
+          --output artifacts/documentation
+          --version "${{ steps.release-version.outputs.value }}"
+          --commit-sha "${{ github.sha }}"
+          --release-tag "${{ github.ref_name }}"
+
+      - name: Archive tagged documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cd artifacts/documentation
+          zip -qr "$GITHUB_WORKSPACE/artifacts/release/TCJ.Framework.Documentation.${{ steps.release-version.outputs.value }}.zip" site
+
+      - name: Publish documentation summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/documentation/DOCUMENTATION_SUMMARY.md ]]; then
+            cat artifacts/documentation/DOCUMENTATION_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload release-documentation artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-documentation-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/documentation/site/**
+            artifacts/documentation/api/**
+            artifacts/documentation/DOCUMENTATION_SUMMARY.md
+            artifacts/documentation/documentation-summary.json
+            artifacts/documentation/missing-documentation.json
+            artifacts/documentation/broken-links.json
+            artifacts/release/TCJ.Framework.Documentation.*.zip
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Run tests
         run: >
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
+          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=release-test-results.trx"
           --results-directory TestResults
 
-      - name: Pack release packages
+      - name: Generate architecture-test summary
         run: >
-          dotnet pack TCJ.slnx
+          python3 eng/verify-architecture-policy.py write-summary
+          --output artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md
+
+      - name: Publish architecture-test summary
+        shell: bash
+        run: cat artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce code coverage quality gate
+        run: >
+          python3 eng/verify-coverage.py verify
+          --summary artifacts/coverage/COVERAGE_SUMMARY.md
+          --json artifacts/coverage/coverage-summary.json
+
+      - name: Publish code coverage summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/coverage/COVERAGE_SUMMARY.md ]]; then
+            cat artifacts/coverage/COVERAGE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Run tagged property tests
+        run: >
+          dotnet test tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj
           --configuration Release
           --no-build
-          -p:Version=${{ steps.release-version.outputs.value }}
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
+          --logger "trx;LogFileName=release-property-tests.trx"
+          --results-directory TestResults/PropertyTests
+
+      - name: Verify tagged property tests
+        run: >
+          python3 eng/verify-fuzzing.py verify-properties
+          --results TestResults/PropertyTests
+          --output artifacts/fuzzing/property-report
+          --commit-sha "${{ github.sha }}"
+
+      - name: Run exact tagged-source fuzz targets
+        run: >
+          python3 fuzz/scripts/run-fuzz.py
+          --duration 30
+          --output artifacts/fuzzing/fuzz-results
+          --seed 39039
+
+      - name: Verify exact tagged-source fuzz targets
+        run: >
+          python3 eng/verify-fuzzing.py verify-fuzz
+          --results artifacts/fuzzing/fuzz-results
+          --output artifacts/fuzzing/fuzz-report
+          --commit-sha "${{ github.sha }}"
+          --minimum-duration-seconds 30
+
+      - name: Publish property and fuzz summaries
+        if: always()
+        shell: bash
+        run: |
+          test ! -f artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md || cat artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          test ! -f artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md || cat artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve property and fuzz summaries with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cp artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md artifacts/release/PROPERTY_TEST_SUMMARY.md
+          cp artifacts/fuzzing/property-report/property-test-summary.json artifacts/release/property-test-summary.json
+          cp artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md artifacts/release/FUZZ_SUMMARY.md
+          cp artifacts/fuzzing/fuzz-report/fuzz-summary.json artifacts/release/fuzz-summary.json
+
+      - name: Upload tagged property and fuzz reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-property-fuzz-${{ steps.release-version.outputs.value }}
+          path: |
+            TestResults/PropertyTests/**
+            artifacts/fuzzing/property-report/**
+            artifacts/fuzzing/fuzz-results/**
+            artifacts/fuzzing/fuzz-report/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Clean previous reproducibility outputs
+        run: rm -rf artifacts/reproducibility artifacts/packages
+
+      - name: Run isolated Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-a"
+          dotnet restore TCJ.slnx \
+            --force-evaluate \
+            --artifacts-path "$root" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build TCJ.slnx \
+            --configuration Release \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Pack Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-a"
+          mkdir -p "$root/packages"
+          dotnet pack TCJ.slnx \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:PackageOutputPath="$root/packages" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Run isolated Build B
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-b"
+          dotnet restore TCJ.slnx \
+            --force-evaluate \
+            --artifacts-path "$root" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build TCJ.slnx \
+            --configuration Release \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Pack Build B
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-b"
+          mkdir -p "$root/packages"
+          dotnet pack TCJ.slnx \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:PackageOutputPath="$root/packages" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Compare reproducible release package builds
+        run: >
+          python3 eng/verify-reproducible-build.py compare
+          --version "${{ steps.release-version.outputs.value }}"
+          --build-a artifacts/reproducibility/build-a/packages
+          --build-b artifacts/reproducibility/build-b/packages
+          --output artifacts/reproducibility/report
+
+      - name: Publish reproducibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md ]]; then
+            cat artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload reproducibility reports and package builds
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-reproducibility-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/reproducibility/build-a/packages/*
+            artifacts/reproducibility/build-b/packages/*
+            artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md
+            artifacts/reproducibility/report/reproducibility-summary.json
+            artifacts/reproducibility/report/differences/*
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Promote verified Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/packages
+          mkdir -p artifacts/packages
+          cp artifacts/reproducibility/build-a/packages/* artifacts/packages/
+          for package in artifacts/packages/*; do
+            source="artifacts/reproducibility/build-a/packages/$(basename "$package")"
+            cmp --silent "$source" "$package" || { echo "Promoted package differs from verified Build A: $package" >&2; exit 1; }
+          done
 
       - name: Verify release package set
         run: >
@@ -108,11 +555,258 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Install packaged Native AOT prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
+      - name: Run packed Native AOT tagged-package smoke
+        run: >
+          python3 eng/run-native-aot-smoke.py
+          --version "${{ steps.release-version.outputs.value }}"
+          --rid linux-x64
+          --packages artifacts/packages
+          --output artifacts/aot/native-aot-smoke
+
+      - name: Verify packed Native AOT tagged-package evidence
+        if: always()
+        run: >
+          python3 eng/verify-aot.py verify-result
+          --version "${{ steps.release-version.outputs.value }}"
+          --result artifacts/aot/native-aot-smoke/native-aot-result.json
+          --packages artifacts/packages
+          --output artifacts/aot/aot-runtime-verification.json
+
+      - name: Retain Native AOT release evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.release-version.outputs.value }}"
+          mkdir -p artifacts/release
+          if [[ -f artifacts/aot/native-aot-smoke/native-aot-result.json ]]; then
+            cp artifacts/aot/native-aot-smoke/native-aot-result.json artifacts/release/native-aot-result.json
+          fi
+          if [[ -f artifacts/aot/aot-runtime-verification.json ]]; then
+            cp artifacts/aot/aot-runtime-verification.json artifacts/release/aot-runtime-verification.json
+          fi
+          if [[ -f artifacts/aot/native-aot-smoke/native-aot-result.json && -f artifacts/aot/aot-runtime-verification.json ]]; then
+            (cd artifacts/aot && zip -qr "$GITHUB_WORKSPACE/artifacts/release/TCJ.Framework.NativeAot.Evidence.$version.zip" native-aot-smoke aot-runtime-verification.json)
+          fi
+
+      - name: Upload tagged Native AOT logs and results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-native-aot-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/aot/native-aot-smoke/logs/**
+            artifacts/aot/native-aot-smoke/native-aot-result.json
+            artifacts/aot/aot-runtime-verification.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Prepare exact tagged-package compatibility feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/compatibility
+          mkdir -p artifacts/compatibility/packages
+          cp artifacts/packages/* artifacts/compatibility/packages/
+          for package in artifacts/compatibility/packages/*; do
+            source="artifacts/packages/$(basename "$package")"
+            cmp --silent "$source" "$package" || { echo "Compatibility feed package differs from promoted tagged package: $package" >&2; exit 1; }
+          done
+
+      - name: Run exact tagged-package consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 compatibility/scripts/run-compatibility.py \
+            --version "${{ steps.release-version.outputs.value }}" \
+            --platform ubuntu-latest \
+            --configuration Release \
+            --source-mode local \
+            --packages artifacts/compatibility/packages \
+            --results artifacts/compatibility/results
+
+      - name: Verify exact tagged-package compatibility
+        run: >
+          python3 eng/verify-consumer-compatibility.py verify
+          --version "${{ steps.release-version.outputs.value }}"
+          --packages artifacts/compatibility/packages
+          --results artifacts/compatibility/results
+          --output artifacts/compatibility/report
+          --platform ubuntu-latest
+          --commit-sha "${{ github.sha }}"
+
+      - name: Publish exact tagged-package compatibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Prepare exact tagged-package upgrade feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/upgrade-compatibility
+          mkdir -p artifacts/upgrade-compatibility/target/packages
+          cp artifacts/packages/* artifacts/upgrade-compatibility/target/packages/
+          for package in artifacts/upgrade-compatibility/target/packages/*; do
+            source="artifacts/packages/$(basename "$package")"
+            cmp --silent "$source" "$package" || { echo "Upgrade feed package differs from promoted tagged package: $package" >&2; exit 1; }
+          done
+
+      - name: Run exact tagged-package upgrade compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          python3 upgrade-tests/scripts/run-upgrade-tests.py \
+            --baseline-version "$baseline" \
+            --target-version "${{ steps.release-version.outputs.value }}" \
+            --target-packages artifacts/upgrade-compatibility/target/packages \
+            --output artifacts/upgrade-compatibility \
+            --commit-sha "$GITHUB_SHA"
+
+      - name: Verify exact tagged-package upgrade compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          python3 eng/verify-upgrade-compatibility.py verify \
+            --baseline-version "$baseline" \
+            --target-version "${{ steps.release-version.outputs.value }}" \
+            --target-packages artifacts/upgrade-compatibility/target/packages \
+            --results artifacts/upgrade-compatibility/results \
+            --output artifacts/upgrade-compatibility/report
+
+      - name: Publish exact tagged-package upgrade summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Preserve upgrade summary with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cp artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
+          cp artifacts/upgrade-compatibility/report/upgrade-compatibility-summary.json artifacts/release/upgrade-compatibility-summary.json
+
+      - name: Preserve compatibility summary with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          cp artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md artifacts/release/COMPATIBILITY_SUMMARY.md
+          cp artifacts/compatibility/report/compatibility-summary.json artifacts/release/compatibility-summary.json
+
+      - name: Generate release SBOM
+        run: >
+          python3 eng/generate-sbom.py
+          --version "${{ steps.release-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --output artifacts/sbom
+          --commit-sha "${{ github.sha }}"
+          --release-tag "${{ github.ref_name }}"
+
+      - name: Verify release SBOM
+        run: >
+          python3 eng/verify-sbom.py verify
+          --version "${{ steps.release-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.release-version.outputs.value }}.cdx.json"
+          --summary artifacts/sbom/SBOM_SUMMARY.md
+          --json artifacts/sbom/sbom-summary.json
+
+      - name: Publish SBOM summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/sbom/SBOM_SUMMARY.md ]]; then
+            cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## SBOM" >> "$GITHUB_STEP_SUMMARY"
+            echo "SBOM generation or verification did not complete. Inspect the first failed SBOM step above." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Extract release notes
         run: >
           python3 eng/extract-release-notes.py
           --version "${{ steps.release-version.outputs.value }}"
           --output artifacts/release/RELEASE_NOTES.md
+
+      - name: Generate release checksums
+        run: >
+          python3 eng/release-integrity.py write
+          --version "${{ steps.release-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.release-version.outputs.value }}.cdx.json"
+          --checksums artifacts/release/SHA256SUMS
+
+      - name: Verify release checksums
+        run: >
+          python3 eng/release-integrity.py verify
+          --version "${{ steps.release-version.outputs.value }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ steps.release-version.outputs.value }}.cdx.json"
+          --checksums artifacts/release/SHA256SUMS
+
+      - name: Attest release packages, SBOM, and checksums
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+            artifacts/sbom/*.cdx.json
+            artifacts/release/SHA256SUMS
+            artifacts/release/TCJ.Framework.Documentation.*.zip
+            artifacts/release/COMPATIBILITY_SUMMARY.md
+            artifacts/release/compatibility-summary.json
+            artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
+            artifacts/release/upgrade-compatibility-summary.json
+            artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
+            artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
+            artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
+            artifacts/release/native-aot-result.json
+            artifacts/release/aot-runtime-verification.json
+            artifacts/release/PROPERTY_TEST_SUMMARY.md
+            artifacts/release/property-test-summary.json
+            artifacts/release/FUZZ_SUMMARY.md
+            artifacts/release/fuzz-summary.json
+            artifacts/release/OBSERVABILITY_SUMMARY.md
+            artifacts/release/observability-summary.json
+
+      - name: Upload release package consumer compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-consumer-compatibility-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/compatibility/results/**
+            artifacts/compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload release package upgrade compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-upgrade-compatibility-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/upgrade-compatibility/results/**
+            artifacts/upgrade-compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Upload release packages
         uses: actions/upload-artifact@v7
@@ -126,7 +820,36 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-metadata-${{ steps.release-version.outputs.value }}
-          path: artifacts/release/RELEASE_NOTES.md
+          path: |
+            artifacts/release/RELEASE_NOTES.md
+            artifacts/release/SHA256SUMS
+            artifacts/release/TCJ.Framework.Documentation.*.zip
+            artifacts/release/COMPATIBILITY_SUMMARY.md
+            artifacts/release/compatibility-summary.json
+            artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
+            artifacts/release/upgrade-compatibility-summary.json
+            artifacts/release/PROPERTY_TEST_SUMMARY.md
+            artifacts/release/property-test-summary.json
+            artifacts/release/FUZZ_SUMMARY.md
+            artifacts/release/fuzz-summary.json
+            artifacts/release/OBSERVABILITY_SUMMARY.md
+            artifacts/release/observability-summary.json
+            artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
+            artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
+            artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
+            artifacts/release/native-aot-result.json
+            artifacts/release/aot-runtime-verification.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload release SBOM
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-sbom-${{ steps.release-version.outputs.value }}
+          path: |
+            artifacts/sbom/*.cdx.json
+            artifacts/sbom/SBOM_SUMMARY.md
+            artifacts/sbom/sbom-summary.json
           if-no-files-found: error
           retention-days: 30
 
@@ -135,7 +858,21 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-test-results-${{ github.run_id }}
-          path: TestResults/**/*.trx
+          path: |
+            TestResults/**/*.trx
+            artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload code coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-coverage-${{ github.run_id }}
+          path: |
+            TestResults/**/coverage.cobertura.xml
+            artifacts/coverage/COVERAGE_SUMMARY.md
+            artifacts/coverage/coverage-summary.json
           if-no-files-found: warn
           retention-days: 30
 
@@ -159,6 +896,9 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore dependencies for SBOM re-verification
+        run: dotnet restore TCJ.slnx
+
       - name: Download release packages
         uses: actions/download-artifact@v8
         with:
@@ -171,10 +911,44 @@ jobs:
           name: release-metadata-${{ needs.build-and-pack.outputs.version }}
           path: artifacts/release
 
+      - name: Download release SBOM
+        uses: actions/download-artifact@v8
+        with:
+          name: release-sbom-${{ needs.build-and-pack.outputs.version }}
+          path: artifacts/sbom
+
       - name: Verify downloaded release candidate
         run: >
           python3 eng/verify-release.py
           --package-directory artifacts/packages
+
+      - name: Verify downloaded Native AOT policy
+        run: python3 eng/verify-aot.py verify
+
+      - name: Verify downloaded Native AOT release evidence
+        run: >
+          python3 eng/verify-aot.py verify-result
+          --version "${{ needs.build-and-pack.outputs.version }}"
+          --result artifacts/release/native-aot-result.json
+          --packages artifacts/packages
+          --output artifacts/release/aot-publish-verification.json
+
+      - name: Verify downloaded release SBOM
+        run: >
+          python3 eng/verify-sbom.py verify
+          --version "${{ needs.build-and-pack.outputs.version }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ needs.build-and-pack.outputs.version }}.cdx.json"
+          --summary artifacts/sbom/SBOM_SUMMARY.md
+          --json artifacts/sbom/sbom-summary.json
+
+      - name: Verify downloaded release checksums
+        run: >
+          python3 eng/release-integrity.py verify
+          --version "${{ needs.build-and-pack.outputs.version }}"
+          --package-directory artifacts/packages
+          --sbom "artifacts/sbom/TCJ.Framework.${{ needs.build-and-pack.outputs.version }}.cdx.json"
+          --checksums artifacts/release/SHA256SUMS
 
       - name: Validate NuGet publishing configuration
         shell: bash
@@ -230,7 +1004,24 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
 
-          assets=(artifacts/packages/*.nupkg artifacts/packages/*.snupkg)
+          assets=(
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+            artifacts/sbom/*.cdx.json
+            artifacts/release/SHA256SUMS
+            artifacts/release/TCJ.Framework.Documentation.*.zip
+            artifacts/release/COMPATIBILITY_SUMMARY.md
+            artifacts/release/compatibility-summary.json
+            artifacts/release/UPGRADE_COMPATIBILITY_SUMMARY.md
+            artifacts/release/upgrade-compatibility-summary.json
+            artifacts/release/OBSERVABILITY_SUMMARY.md
+            artifacts/release/observability-summary.json
+            artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
+            artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
+            artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
+            artifacts/release/native-aot-result.json
+            artifacts/release/aot-runtime-verification.json
+          )
           release_args=(
             "$GITHUB_REF_NAME"
             "${assets[@]}"
@@ -260,3 +1051,11 @@ jobs:
           else
             gh release create "${release_args[@]}"
           fi
+
+  post-publication-validation:
+    name: Revalidate published package upgrade
+    needs: [build-and-pack, publish]
+    uses: ./.github/workflows/published-package-smoke.yml
+    with:
+      version: ${{ needs.build-and-pack.outputs.version }}
+    secrets: inherit

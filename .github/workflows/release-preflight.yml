@@ -21,14 +21,56 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  CI: true
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: true
 
 jobs:
+  sqlserver-integration:
+    name: SQL Server integration gate
+    uses: ./.github/workflows/sqlserver-integration.yml
+
+  aspnetcore-integration:
+    name: ASP.NET Core integration gate
+    uses: ./.github/workflows/aspnetcore-integration.yml
+
+  consumer-compatibility:
+    name: Package consumer compatibility gate
+    uses: ./.github/workflows/consumer-compatibility.yml
+    with:
+      version_source: release-manifest
+
+  concurrency-stress:
+    name: Concurrency stress gate
+    uses: ./.github/workflows/concurrency-stress.yml
+    with:
+      mode: release
+
+  performance-benchmarks:
+    name: Performance and observability overhead gate
+    uses: ./.github/workflows/performance-benchmarks.yml
+    with:
+      mode: full
+
+  resilience:
+    name: Resilience fault-injection gate
+    uses: ./.github/workflows/resilience.yml
+    with:
+      mode: full
+
+  health-checks:
+    name: Health-check contract gate
+    uses: ./.github/workflows/health-checks.yml
+
+  outbox:
+    name: Transactional outbox contract gate
+    uses: ./.github/workflows/outbox.yml
+
   preflight:
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox]
     name: Validate release candidate
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 75
 
     steps:
       - name: Require the main branch
@@ -51,15 +93,74 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore repository tools
+        run: dotnet tool restore
+
       - name: Verify release metadata
         run: python3 eng/verify-release.py --require-ready
+
+      - name: Verify dependency security policy
+        run: python3 eng/verify-dependency-security.py
+
+      - name: Verify release integrity automation
+        run: python3 eng/release-integrity.py validate-config
+
+      - name: Verify code coverage policy
+        run: python3 eng/verify-coverage.py validate-config
+
+      - name: Verify architecture policy
+        run: python3 eng/verify-architecture-policy.py validate-config
+
+      - name: Verify SBOM configuration
+        run: python3 eng/verify-sbom.py validate-config
+
+      - name: Validate reproducibility policy
+        run: python3 eng/verify-reproducible-build.py validate-config
+
+      - name: Validate documentation policy
+        run: python3 eng/verify-documentation.py validate-config
+
+      - name: Validate package consumer compatibility configuration
+        run: python3 eng/verify-consumer-compatibility.py validate-config
+
+      - name: Validate package upgrade compatibility configuration
+        run: python3 eng/verify-upgrade-compatibility.py validate-config
+
+      - name: Validate property and fuzz testing configuration
+        run: python3 eng/verify-fuzzing.py validate-config
+
+      - name: Validate concurrency stress configuration
+        run: python3 eng/verify-concurrency.py validate-config
+
+      - name: Validate observability configuration
+        run: python3 eng/verify-observability.py validate-config
+
+      - name: Validate resilience configuration
+        run: python3 eng/verify-resilience.py validate-config
+
+      - name: Validate health-check configuration
+        run: python3 eng/verify-health-checks.py validate-config
+
+      - name: Validate transactional-outbox configuration
+        run: python3 eng/verify-outbox.py validate-config
+
+      - name: Verify Native AOT policy and release wiring
+        run: python3 eng/verify-aot.py verify
 
       - name: Check NuGet package IDs
         run: >
           python3 eng/check-nuget-package-ids.py
           --policy "${{ inputs.package_id_policy }}"
 
-      - name: Restore dependencies
+      - name: Read release version
+        id: release-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
 
       - name: Build solution
@@ -68,19 +169,300 @@ jobs:
           --configuration Release
           --no-restore
 
+      - name: Run observability contract tests
+        run: >
+          dotnet test tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=observability.trx"
+          --results-directory TestResults/Observability
+
+      - name: Verify observability contracts and evidence
+        run: >
+          python3 eng/verify-observability.py verify
+          --results TestResults/Observability
+          --output artifacts/observability
+
+      - name: Publish observability summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/observability/OBSERVABILITY_SUMMARY.md ]]; then
+            cat artifacts/observability/OBSERVABILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload observability evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: observability-${{ github.run_id }}
+          path: |
+            TestResults/Observability/**
+            artifacts/observability/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Generate release-candidate API metadata
+        run: >
+          dotnet docfx metadata docfx/docfx.json
+          --noRestore
+          --warningsAsErrors
+          --property "Version=${{ steps.release-version.outputs.value }};RepositoryCommit=${{ github.sha }}"
+
+      - name: Build release-candidate documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          dotnet docfx build docfx/docfx.json \
+            --warningsAsErrors \
+            --metadata "packageVersion=${{ steps.release-version.outputs.value }}" \
+            --metadata "sourceCommit=${{ github.sha }}" \
+            --metadata "releaseTag=preflight-${{ github.sha }}" \
+            --metadata "documentationBuildDate=$build_date"
+
+      - name: Verify release-candidate documentation
+        run: >
+          python3 eng/verify-documentation.py verify
+          --configuration Release
+          --build-root src
+          --api-root artifacts/documentation/api
+          --output artifacts/documentation
+          --version "${{ steps.release-version.outputs.value }}"
+          --commit-sha "${{ github.sha }}"
+          --release-tag "preflight-${{ github.sha }}"
+
+      - name: Archive release-candidate documentation site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd artifacts/documentation
+          zip -qr "TCJ.Framework.Documentation.${{ steps.release-version.outputs.value }}.zip" site
+
+      - name: Publish documentation summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/documentation/DOCUMENTATION_SUMMARY.md ]]; then
+            cat artifacts/documentation/DOCUMENTATION_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload documentation-site artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: documentation-site-${{ github.run_id }}
+          path: |
+            artifacts/documentation/site/**
+            artifacts/documentation/api/**
+            artifacts/documentation/DOCUMENTATION_SUMMARY.md
+            artifacts/documentation/documentation-summary.json
+            artifacts/documentation/missing-documentation.json
+            artifacts/documentation/broken-links.json
+            artifacts/documentation/TCJ.Framework.Documentation.*.zip
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Run tests
         run: >
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
+          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=preflight-test-results.trx"
           --results-directory TestResults
 
-      - name: Pack release candidate
+      - name: Generate architecture-test summary
         run: >
-          dotnet pack TCJ.slnx
+          python3 eng/verify-architecture-policy.py write-summary
+          --output artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md
+
+      - name: Publish architecture-test summary
+        shell: bash
+        run: cat artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce code coverage quality gate
+        run: >
+          python3 eng/verify-coverage.py verify
+          --summary artifacts/coverage/COVERAGE_SUMMARY.md
+          --json artifacts/coverage/coverage-summary.json
+
+      - name: Publish code coverage summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/coverage/COVERAGE_SUMMARY.md ]]; then
+            cat artifacts/coverage/COVERAGE_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Run release-candidate property tests
+        run: >
+          dotnet test tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj
           --configuration Release
           --no-build
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverlet.runsettings
+          --logger "trx;LogFileName=preflight-property-tests.trx"
+          --results-directory TestResults/PropertyTests
+
+      - name: Verify release-candidate property tests
+        run: >
+          python3 eng/verify-fuzzing.py verify-properties
+          --results TestResults/PropertyTests
+          --output artifacts/fuzzing/property-report
+          --commit-sha "${{ github.sha }}"
+
+      - name: Run release-candidate fuzz targets
+        run: >
+          python3 fuzz/scripts/run-fuzz.py
+          --duration 30
+          --output artifacts/fuzzing/fuzz-results
+          --seed 39039
+
+      - name: Verify release-candidate fuzz targets
+        run: >
+          python3 eng/verify-fuzzing.py verify-fuzz
+          --results artifacts/fuzzing/fuzz-results
+          --output artifacts/fuzzing/fuzz-report
+          --commit-sha "${{ github.sha }}"
+          --minimum-duration-seconds 30
+
+      - name: Publish property and fuzz summaries
+        if: always()
+        shell: bash
+        run: |
+          test ! -f artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md || cat artifacts/fuzzing/property-report/PROPERTY_TEST_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          test ! -f artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md || cat artifacts/fuzzing/fuzz-report/FUZZ_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release-preflight property and fuzz reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-property-fuzz-${{ github.run_id }}
+          path: |
+            TestResults/PropertyTests/**
+            artifacts/fuzzing/property-report/**
+            artifacts/fuzzing/fuzz-results/**
+            artifacts/fuzzing/fuzz-report/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Clean previous reproducibility outputs
+        run: rm -rf artifacts/reproducibility artifacts/packages
+
+      - name: Run isolated Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-a"
+          dotnet restore TCJ.slnx \
+            --force-evaluate \
+            --artifacts-path "$root" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build TCJ.slnx \
+            --configuration Release \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Pack Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-a"
+          mkdir -p "$root/packages"
+          dotnet pack TCJ.slnx \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:PackageOutputPath="$root/packages" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Run isolated Build B
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-b"
+          dotnet restore TCJ.slnx \
+            --force-evaluate \
+            --artifacts-path "$root" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build TCJ.slnx \
+            --configuration Release \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Pack Build B
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/artifacts/reproducibility/build-b"
+          mkdir -p "$root/packages"
+          dotnet pack TCJ.slnx \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --artifacts-path "$root" \
+            -p:PackageOutputPath="$root/packages" \
+            -p:Version="${{ steps.release-version.outputs.value }}" \
+            -p:ContinuousIntegrationBuild=true \
+            -p:ReproducibleBuildRoot="$root" \
+            -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Compare reproducible release candidate builds
+        run: >
+          python3 eng/verify-reproducible-build.py compare
+          --version "${{ steps.release-version.outputs.value }}"
+          --build-a artifacts/reproducibility/build-a/packages
+          --build-b artifacts/reproducibility/build-b/packages
+          --output artifacts/reproducibility/report
+
+      - name: Publish reproducibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md ]]; then
+            cat artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload reproducibility reports and package builds
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-reproducibility-${{ github.run_id }}
+          path: |
+            artifacts/reproducibility/build-a/packages/*
+            artifacts/reproducibility/build-b/packages/*
+            artifacts/reproducibility/report/REPRODUCIBILITY_SUMMARY.md
+            artifacts/reproducibility/report/reproducibility-summary.json
+            artifacts/reproducibility/report/differences/*
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Promote verified Build A
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/packages
+          mkdir -p artifacts/packages
+          cp artifacts/reproducibility/build-a/packages/* artifacts/packages/
 
       - name: Verify package set
         shell: bash
@@ -95,6 +477,176 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Install packaged Native AOT prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+
+      - name: Run packed Native AOT release-candidate smoke
+        run: >
+          python3 eng/run-native-aot-smoke.py
+          --version "${{ steps.release-version.outputs.value }}"
+          --rid linux-x64
+          --packages artifacts/packages
+          --output artifacts/aot/native-aot-smoke
+
+      - name: Verify packed Native AOT release-candidate evidence
+        if: always()
+        run: >
+          python3 eng/verify-aot.py verify-result
+          --version "${{ steps.release-version.outputs.value }}"
+          --result artifacts/aot/native-aot-smoke/native-aot-result.json
+          --packages artifacts/packages
+          --output artifacts/aot/aot-runtime-verification.json
+
+      - name: Upload release-preflight Native AOT evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-native-aot-${{ github.run_id }}
+          path: |
+            artifacts/aot/native-aot-smoke/logs/**
+            artifacts/aot/native-aot-smoke/native-aot-result.json
+            artifacts/aot/aot-runtime-verification.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Prepare exact release-candidate compatibility feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/compatibility
+          mkdir -p artifacts/compatibility/packages
+          cp artifacts/packages/* artifacts/compatibility/packages/
+          for package in artifacts/compatibility/packages/*; do
+            source="artifacts/packages/$(basename "$package")"
+            cmp --silent "$source" "$package" || { echo "Compatibility feed package differs from promoted release candidate: $package" >&2; exit 1; }
+          done
+
+      - name: Run exact release-candidate consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.release-version.outputs.value }}"
+          python3 compatibility/scripts/run-compatibility.py \
+            --version "$version" \
+            --platform ubuntu-latest \
+            --configuration Release \
+            --source-mode local \
+            --packages artifacts/compatibility/packages \
+            --results artifacts/compatibility/results
+
+      - name: Verify exact release-candidate package compatibility
+        run: >
+          python3 eng/verify-consumer-compatibility.py verify
+          --version "${{ steps.release-version.outputs.value }}"
+          --packages artifacts/compatibility/packages
+          --results artifacts/compatibility/results
+          --output artifacts/compatibility/report
+          --platform ubuntu-latest
+          --commit-sha "${{ github.sha }}"
+
+      - name: Publish exact release-candidate compatibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Prepare exact release-candidate upgrade feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/upgrade-compatibility
+          mkdir -p artifacts/upgrade-compatibility/target/packages
+          cp artifacts/packages/* artifacts/upgrade-compatibility/target/packages/
+          for package in artifacts/upgrade-compatibility/target/packages/*; do
+            source="artifacts/packages/$(basename "$package")"
+            cmp --silent "$source" "$package" || { echo "Upgrade feed package differs from promoted release candidate: $package" >&2; exit 1; }
+          done
+
+      - name: Run release-candidate upgrade compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          python3 upgrade-tests/scripts/run-upgrade-tests.py \
+            --baseline-version "$baseline" \
+            --target-version "${{ steps.release-version.outputs.value }}" \
+            --target-packages artifacts/upgrade-compatibility/target/packages \
+            --output artifacts/upgrade-compatibility \
+            --commit-sha "$GITHUB_SHA"
+
+      - name: Verify release-candidate upgrade compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          python3 eng/verify-upgrade-compatibility.py verify \
+            --baseline-version "$baseline" \
+            --target-version "${{ steps.release-version.outputs.value }}" \
+            --target-packages artifacts/upgrade-compatibility/target/packages \
+            --results artifacts/upgrade-compatibility/results \
+            --output artifacts/upgrade-compatibility/report
+
+      - name: Publish release-candidate upgrade compatibility summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md ]]; then
+            cat artifacts/upgrade-compatibility/report/UPGRADE_COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload release-candidate upgrade compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-upgrade-compatibility-${{ github.run_id }}
+          path: |
+            artifacts/upgrade-compatibility/results/**
+            artifacts/upgrade-compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Generate release SBOM
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          tag="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["tag"])')"
+          python3 eng/generate-sbom.py \
+            --version "$version" \
+            --package-directory artifacts/packages \
+            --output artifacts/sbom \
+            --commit-sha "$GITHUB_SHA" \
+            --release-tag "$tag"
+
+      - name: Verify release SBOM
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          python3 eng/verify-sbom.py verify \
+            --version "$version" \
+            --package-directory artifacts/packages \
+            --sbom "artifacts/sbom/TCJ.Framework.$version.cdx.json" \
+            --summary artifacts/sbom/SBOM_SUMMARY.md \
+            --json artifacts/sbom/sbom-summary.json
+
+      - name: Publish SBOM summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/sbom/SBOM_SUMMARY.md ]]; then
+            cat artifacts/sbom/SBOM_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## SBOM" >> "$GITHUB_STEP_SUMMARY"
+            echo "SBOM generation or verification did not complete. Inspect the first failed SBOM step above." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Create release notes preview
         shell: bash
         run: |
@@ -105,12 +657,73 @@ jobs:
             --version "$version" \
             --output artifacts/release/RELEASE_NOTES.md
 
+      - name: Generate release candidate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          python3 eng/release-integrity.py write \
+            --version "$version" \
+            --package-directory artifacts/packages \
+            --sbom "artifacts/sbom/TCJ.Framework.$version.cdx.json" \
+            --checksums artifacts/release/SHA256SUMS
+
+      - name: Verify release candidate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          python3 eng/release-integrity.py verify \
+            --version "$version" \
+            --package-directory artifacts/packages \
+            --sbom "artifacts/sbom/TCJ.Framework.$version.cdx.json" \
+            --checksums artifacts/release/SHA256SUMS
+
+      - name: Upload preflight package consumer compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-consumer-compatibility-${{ github.run_id }}
+          path: |
+            artifacts/compatibility/results/**
+            artifacts/compatibility/report/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload preflight SBOM reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-sbom-${{ github.run_id }}
+          path: |
+            artifacts/sbom/*.cdx.json
+            artifacts/sbom/SBOM_SUMMARY.md
+            artifacts/sbom/sbom-summary.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload preflight test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: release-preflight-test-results-${{ github.run_id }}
-          path: TestResults/**/*.trx
+          path: |
+            TestResults/**/*.trx
+            artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload code coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-coverage-${{ github.run_id }}
+          path: |
+            TestResults/**/coverage.cobertura.xml
+            artifacts/coverage/COVERAGE_SUMMARY.md
+            artifacts/coverage/coverage-summary.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -120,7 +733,15 @@ jobs:
           name: release-candidate-${{ github.run_id }}
           path: |
             artifacts/packages/*
+            artifacts/sbom/*.cdx.json
+            artifacts/sbom/SBOM_SUMMARY.md
+            artifacts/sbom/sbom-summary.json
             artifacts/release/RELEASE_NOTES.md
+            artifacts/release/SHA256SUMS
+            artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md
+            artifacts/compatibility/report/compatibility-summary.json
+            artifacts/aot/native-aot-smoke/native-aot-result.json
+            artifacts/aot/aot-runtime-verification.json
             eng/release-manifest.json
           if-no-files-found: error
           retention-days: 30

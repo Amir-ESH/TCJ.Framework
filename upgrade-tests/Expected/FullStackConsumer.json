@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "scenario": "FullStackConsumer",
+  "checks": {
+    "startupSucceeded": true,
+    "endpointSucceeded": true,
+    "sqlServerProvider": true,
+    "unitOfWorkResolved": true,
+    "currentUserResolved": true,
+    "guidGeneratorResolved": true
+  }
+}

@@ -88,6 +88,8 @@ builder.Services.AddTcjSqlServer<AppDbContext>(
     });
 ```
 
+For trimming-aware or Native AOT application code, do not use convention scanning. Call `builder.Services.AddTcjDependencyInjection()` with no assemblies, declare every dispatched event type with `builder.Services.AddTcjDomainEvent<TEvent>()`, and register application services and domain-event handlers explicitly through normal `IServiceCollection` methods. See [Native AOT and trimming](guides/native-aot-and-trimming.md) for the exact supported boundary.
+
 `AddTcjSqlServer` also registers the services from `TCJ.EntityFrameworkCore`, including repositories, the unit of work, auditing, seeding, and entity search.
 
 ## 4. Configure the request pipeline
@@ -173,7 +175,11 @@ app.MapGet("/api/products/{id:guid}",
 ```bash
 dotnet restore TCJ.slnx
 dotnet build TCJ.slnx -c Release --no-restore
-dotnet test TCJ.slnx -c Release --no-build
+dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
 ```
 
-Continue with the [package reference](README.md#package-reference) and the [Product API sample](../samples/TCJ.Empty/README.md).
+Continue with the [package reference](README.md#package-reference) and the [Product API sample](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/samples/TCJ.Empty/README.md).
+
+## Package and API reference
+
+Use the [package landing pages](packages/index.md) to choose modules and locate their main entry points. The [API reference](api/index.md) is generated from the exact production projects and XML documentation comments. Consumer examples that are part of the quality gate are collected in [Validated consumer examples](examples.md).

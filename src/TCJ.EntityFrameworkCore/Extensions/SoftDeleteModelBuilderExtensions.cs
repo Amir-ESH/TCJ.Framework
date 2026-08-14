@@ -11,11 +11,13 @@ namespace TCJ.EntityFrameworkCore.Extensions;
 public static class SoftDeleteModelBuilderExtensions
 {
     private const string AppliedAnnotationName = "TCJ:SoftDeleteQueryFiltersApplied";
+    private const string SoftDeleteFilterName = "TCJ:SoftDelete";
 
     /// <summary>
     /// Adds a global <c>IsDeleted == false</c> query filter to each root entity type
-    /// that implements <see cref="ISoftDelete"/>. Existing query filters are preserved
-    /// and combined with the soft-delete predicate.
+    /// that implements <see cref="ISoftDelete"/>. Existing query filters are preserved.
+    /// An existing anonymous filter is combined with the soft-delete predicate; otherwise,
+    /// soft-delete is registered as a named filter so it can coexist with named filters.
     /// </summary>
     public static ModelBuilder ApplySoftDeleteQueryFilters(this ModelBuilder modelBuilder)
     {
@@ -58,14 +60,17 @@ public static class SoftDeleteModelBuilderExtensions
                 continue;
             }
 
-            ApplyFilter(modelBuilder, entityType.ClrType, entityType.GetQueryFilter());
+            IQueryFilter? existingAnonymousFilter = entityType.GetDeclaredQueryFilters()
+                                                              .FirstOrDefault(queryFilter => queryFilter.IsAnonymous);
+
+            ApplyFilter(modelBuilder, entityType.ClrType, existingAnonymousFilter);
         }
 
         modelBuilder.Model.SetAnnotation(AppliedAnnotationName, true);
         return modelBuilder;
     }
 
-    private static void ApplyFilter(ModelBuilder modelBuilder, Type entityType, LambdaExpression? existingFilter)
+    private static void ApplyFilter(ModelBuilder modelBuilder, Type entityType, IQueryFilter? existingAnonymousFilter)
     {
         ParameterExpression parameter = Expression.Parameter(entityType, "entity");
 
@@ -77,18 +82,25 @@ public static class SoftDeleteModelBuilderExtensions
 
         Expression filterBody = Expression.Not(isDeletedProperty);
 
-        if (existingFilter is not null)
+        if (existingAnonymousFilter is not null)
         {
+            LambdaExpression existingFilter = existingAnonymousFilter.Expression
+                                               ?? throw new InvalidOperationException(
+                                                   $"The existing anonymous query filter for '{entityType.FullName}' does not contain an expression.");
+
             Expression existingBody = new ParameterReplacingExpressionVisitor(source: existingFilter.Parameters[0], target: parameter)
                                           .Visit(existingFilter.Body)
                                    ?? throw new InvalidOperationException($"The existing query filter for '{entityType.FullName}' could not be composed.");
 
             filterBody = Expression.AndAlso(existingBody, filterBody);
+
+            LambdaExpression combinedFilter = Expression.Lambda(filterBody, parameter);
+            modelBuilder.Entity(entityType).HasQueryFilter(combinedFilter);
+            return;
         }
 
-        LambdaExpression filter = Expression.Lambda(filterBody, parameter);
-
-        modelBuilder.Entity(entityType).HasQueryFilter(filter);
+        LambdaExpression softDeleteFilter = Expression.Lambda(filterBody, parameter);
+        modelBuilder.Entity(entityType).HasQueryFilter(SoftDeleteFilterName, softDeleteFilter);
     }
 
     private sealed class ParameterReplacingExpressionVisitor(ParameterExpression source, ParameterExpression target)

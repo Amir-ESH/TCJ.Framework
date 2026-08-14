@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using TCJ.Core.DomainEvents;
 using TCJ.Core.Identifiers;
+using TCJ.DependencyInjection.Diagnostics;
 using TCJ.DependencyInjection.DomainEvents;
 using TCJ.DependencyInjection.Lifetimes;
 using TCJ.DependencyInjection.Registration;
@@ -15,6 +17,15 @@ namespace TCJ.DependencyInjection.Extensions;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    private const string ConventionScanningRequiresUnreferencedCodeMessage =
+        "Convention-based dependency scanning uses runtime reflection over consumer assemblies and is not trimming-safe. " +
+        "Use AddTcjDependencyInjection(), AddTcjDomainEvent<TEvent>(), and explicit application registrations.";
+
+    private const string ConventionScanningRequiresDynamicCodeMessage =
+        "Convention-based dependency scanning enables runtime generic domain-event dispatch and is not Native AOT-safe. " +
+        "Use AddTcjDependencyInjection(), AddTcjDomainEvent<TEvent>(), and explicit application registrations.";
+
+    // Stryker disable once all: MTP 4.16 reuses the test host; mutating this process-wide registration table can contaminate later mutant sessions.
     private static readonly DependencyLifetimeDefinition[] LifetimeDefinitions =
     [
         new(typeof(ITransientDependency), ServiceLifetime.Transient, RegisterAsSelf: false),
@@ -27,10 +38,65 @@ public static class ServiceCollectionExtensions
     ];
 
     /// <summary>
+    /// Registers the reflection-free TCJ framework defaults without scanning application assemblies.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    /// <returns>The same service collection so additional registrations can be chained.</returns>
+    /// <remarks>
+    /// This is the trimming-safe bootstrap path. Register application services explicitly with
+    /// <see cref="IServiceCollection"/> after calling this method. For domain events, also declare
+    /// each closed event type with <see cref="AddTcjDomainEvent{TEvent}(IServiceCollection)"/>.
+    /// </remarks>
+    public static IServiceCollection AddTcjDependencyInjection(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        lock (services)
+        {
+            DependencyInjectionTelemetryDiagnostics.ObserveRegistration(
+                services,
+                () => RegisterFrameworkServices(services));
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Declares an AOT-safe domain-event dispatch route for a closed event type.
+    /// </summary>
+    /// <typeparam name="TEvent">The domain-event type whose handlers will be resolved explicitly.</typeparam>
+    /// <param name="services">The service collection to configure.</param>
+    /// <returns>The same service collection so additional registrations can be chained.</returns>
+    /// <remarks>
+    /// This method does not discover or register handlers. Register
+    /// <c>IDomainEventHandler&lt;TEvent&gt;</c> implementations explicitly with normal
+    /// <see cref="IServiceCollection"/> methods. Repeated calls are idempotent.
+    /// </remarks>
+    public static IServiceCollection AddTcjDomainEvent<TEvent>(this IServiceCollection services)
+        where TEvent : IDomainEvent
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        lock (services)
+        {
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IDomainEventDispatchRoute, DomainEventDispatchRoute<TEvent>>());
+        }
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers TCJ framework defaults and scans the supplied assemblies for lifetime markers.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
     /// <param name="assemblies">The explicit assemblies to scan.</param>
+    /// <remarks>
+    /// This overload uses runtime reflection to discover application types. In trimmed or Native AOT
+    /// applications, use the parameterless overload and register application services explicitly.
+    /// </remarks>
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
         this IServiceCollection services,
         params Assembly[] assemblies)
@@ -48,6 +114,12 @@ public static class ServiceCollectionExtensions
     /// Registers TCJ framework defaults and convention-based dependencies using
     /// caller-provided options.
     /// </summary>
+    /// <remarks>
+    /// This overload can select runtime assembly scanning and is therefore trimming-restricted.
+    /// Use the parameterless overload for the reflection-free framework bootstrap.
+    /// </remarks>
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
         this IServiceCollection services,
         Action<TcjDependencyInjectionOptions> configure)
@@ -65,6 +137,12 @@ public static class ServiceCollectionExtensions
     /// Registers TCJ framework defaults and convention-based dependencies using
     /// an existing options instance.
     /// </summary>
+    /// <remarks>
+    /// This overload can select runtime assembly scanning and is therefore trimming-restricted.
+    /// Use the parameterless overload for the reflection-free framework bootstrap.
+    /// </remarks>
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
         this IServiceCollection services,
         TcjDependencyInjectionOptions options)
@@ -72,25 +150,53 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
 
-        if (options.RegisterFrameworkServices)
+        // IServiceCollection is mutable and does not provide a concurrent-write contract.
+        // Serialize TCJ-owned registration mutations so concurrent calls to this extension
+        // cannot corrupt the collection or bypass TryAdd duplicate protection. External
+        // mutation of the same collection must follow the same application-level boundary.
+        lock (services)
         {
-            RegisterFrameworkServices(services);
+            DependencyInjectionTelemetryDiagnostics.ObserveRegistration(
+                services,
+                () =>
+                {
+                    if (options.RegisterFrameworkServices)
+                    {
+                        RegisterFrameworkServices(services);
+                    }
+
+                    RegisterReflectionDomainEventDispatchRoute(services);
+
+                    Type[] implementationTypes = DependencyInjectionTelemetryDiagnostics.ObserveScan(
+                        options.Assemblies.Count,
+                        () => options.Assemblies
+                            .SelectMany(GetPublicConcreteTypes)
+                            .Distinct()
+                            .OrderBy(type => type.FullName, StringComparer.Ordinal)
+                            .ToArray());
+
+                    if (options.RegisterDomainEventHandlers)
+                    {
+                        RegisterDomainEventHandlers(services, implementationTypes);
+                    }
+
+                    RegisterMarkedDependencies(services, implementationTypes);
+                });
         }
-
-        var implementationTypes = options.Assemblies
-            .SelectMany(GetPublicConcreteTypes)
-            .Distinct()
-            .OrderBy(type => type.FullName, StringComparer.Ordinal)
-            .ToArray();
-
-        if (options.RegisterDomainEventHandlers)
-        {
-            RegisterDomainEventHandlers(services, implementationTypes);
-        }
-
-        RegisterMarkedDependencies(services, implementationTypes);
 
         return services;
+    }
+
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
+    [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
+    private static void RegisterReflectionDomainEventDispatchRoute(IServiceCollection services)
+    {
+        Func<IServiceProvider, IDomainEvent, CancellationToken, Task> dispatch =
+            ReflectionDomainEventDispatch.DispatchAsync;
+
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IDomainEventDispatchRoute>(
+                new ReflectionDomainEventDispatchRoute(dispatch)));
     }
 
     private static void RegisterFrameworkServices(IServiceCollection services)
@@ -100,6 +206,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
     }
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static void RegisterDomainEventHandlers(
         IServiceCollection services,
         IEnumerable<Type> implementationTypes)
@@ -117,6 +224,7 @@ public static class ServiceCollectionExtensions
         }
     }
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static void RegisterMarkedDependencies(
         IServiceCollection services,
         IEnumerable<Type> implementationTypes)
@@ -182,6 +290,7 @@ public static class ServiceCollectionExtensions
         }
     }
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static IEnumerable<Type> GetServiceInterfaces(Type implementationType) =>
         implementationType
             .GetInterfaces()
@@ -192,6 +301,7 @@ public static class ServiceCollectionExtensions
             .Select(interfaceType => NormalizeServiceType(interfaceType, implementationType))
             .Distinct();
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static IEnumerable<Type> GetDomainEventHandlerInterfaces(Type implementationType) =>
         implementationType
             .GetInterfaces()
@@ -217,6 +327,7 @@ public static class ServiceCollectionExtensions
         return serviceType;
     }
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static IEnumerable<Type> GetPublicConcreteTypes(Assembly assembly)
     {
         try

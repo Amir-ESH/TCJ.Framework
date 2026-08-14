@@ -1,0 +1,61 @@
+- name: Home
+  href: index.md
+- name: Getting Started
+  href: getting-started.md
+- name: Packages
+  href: packages/index.md
+  items:
+  - name: TCJ.Core
+    href: packages/tcj-core.md
+  - name: TCJ.DependencyInjection
+    href: packages/tcj-dependencyinjection.md
+  - name: TCJ.EntityFrameworkCore
+    href: packages/tcj-entityframeworkcore.md
+  - name: TCJ.EntityFrameworkCore.SqlServer
+    href: packages/tcj-entityframeworkcore-sqlserver.md
+  - name: TCJ.AspNetCore
+    href: packages/tcj-aspnetcore.md
+- name: Guides
+  items:
+  - name: Result and HTTP
+    href: guides/results-and-http.md
+  - name: Specifications and repositories
+    href: guides/specifications-and-repositories.md
+  - name: Domain events
+    href: guides/domain-events.md
+  - name: Auditing and soft delete
+    href: guides/auditing-soft-delete-rowversion.md
+  - name: Data seeding
+    href: guides/data-seeding.md
+  - name: Native AOT and trimming
+    href: guides/native-aot-and-trimming.md
+  - name: Validated examples
+    href: examples.md
+- name: Architecture
+  href: architecture.md
+- name: ASP.NET Core Integration Testing
+  href: aspnetcore-integration-testing.md
+- name: Package Consumer Compatibility
+  href: package-consumer-compatibility.md
+- name: Package Upgrade Testing
+  href: package-upgrade-testing.md
+- name: Property and Fuzz Testing
+  href: property-and-fuzz-testing.md
+- name: Concurrency Stress Testing
+  href: concurrency-stress-testing.md
+- name: Resilience Policies and Fault Injection
+  href: resilience.md
+- name: Health Checks and Startup Diagnostics
+  href: health-checks.md
+- name: Migration 0.1.0-preview.1 to 0.1.0-preview.2
+  href: migrations/0.1.0-preview.1-to-0.1.0-preview.2.md
+- name: Security
+  href: security.md
+- name: Release Process
+  href: releasing.md
+- name: API Reference
+  href: api/index.md
+- name: Documentation Authoring
+  href: documentation-authoring.md
+- name: Contributing
+  href: contributing.md

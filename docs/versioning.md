@@ -16,7 +16,7 @@ Current development version:
 0.1.0-preview.2
 ```
 
-The mutable next-release state is stored in `eng/release-manifest.json`. The latest immutable public release is recorded separately in `eng/published-release.json`.
+The mutable next-release state is stored in `eng/release-manifest.json`. The latest immutable public release is recorded separately in `eng/published-release.json` and mirrored for MSBuild package validation in `eng/PackageValidation.props`. Both release manifests also record the SPDX `licenseExpression` that belongs to that release generation, so a license transition does not rewrite the metadata of an already-published package.
 
 ## Release-manifest lifecycle
 
@@ -36,10 +36,10 @@ When a release candidate is finalized:
 1. move the completed notes from `[Unreleased]` to a dated version section in `CHANGELOG.md`;
 2. set `status` to `ready`;
 3. set `releaseDate` to the publication date;
-4. verify that `version`, `tag`, and `eng/Packaging.props` match;
+4. verify that `version`, `tag`, `licenseExpression`, and `eng/Packaging.props` match;
 5. run `Release preflight` from `main`.
 
-After publication, copy the released values to `eng/published-release.json`, increment the development version, return the release manifest to `development`, and set `releaseDate` back to `null`.
+After publication, copy the released version, tag, date, package set, and `licenseExpression` to `eng/published-release.json`, increment the development version, return the release manifest to `development`, and set `releaseDate` back to `null`.
 
 ## Preview versions
 
@@ -55,7 +55,7 @@ The corresponding Git tag includes a leading `v`, for example `v0.1.0-preview.2`
 
 ## Compatibility expectations
 
-Before `1.0.0`, minor and preview releases may contain breaking public API changes. Breaking changes must be documented in `CHANGELOG.md`, with migration guidance when practical.
+Before `1.0.0`, minor and preview releases may contain deliberately approved breaking public API changes. Normal CI still rejects accidental binary breaks by validating packed assemblies against the latest published package baseline. Breaking changes must be documented in `CHANGELOG.md`, include migration guidance when practical, and use only narrowly reviewed compatibility suppressions.
 
 After `1.0.0`, follow standard semantic-versioning expectations:
 
@@ -63,4 +63,4 @@ After `1.0.0`, follow standard semantic-versioning expectations:
 - minor: compatible features
 - major: breaking changes
 
-See [Release automation](releasing.md) and [Published-package validation](published-package-validation.md).
+See [Release automation](releasing.md), [Published-package validation](published-package-validation.md), and [Public API compatibility](api-compatibility.md).
