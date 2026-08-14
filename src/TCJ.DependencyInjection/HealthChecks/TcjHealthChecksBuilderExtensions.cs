@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using TCJ.Core.HealthChecks;
@@ -96,7 +97,12 @@ public static class TcjHealthChecksBuilderExtensions
         }
     }
 
-    private static void AddOnce<TCheck, TMarker>(IHealthChecksBuilder builder, string name, IEnumerable<string> tags)
+    private static void AddOnce<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TCheck,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMarker>(
+        IHealthChecksBuilder builder,
+        string name,
+        IEnumerable<string> tags)
         where TCheck : class, IHealthCheck
         where TMarker : class
     {

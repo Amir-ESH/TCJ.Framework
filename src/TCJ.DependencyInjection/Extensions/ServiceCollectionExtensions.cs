@@ -206,6 +206,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
     }
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static void RegisterDomainEventHandlers(
         IServiceCollection services,
         IEnumerable<Type> implementationTypes)
@@ -223,6 +224,7 @@ public static class ServiceCollectionExtensions
         }
     }
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static void RegisterMarkedDependencies(
         IServiceCollection services,
         IEnumerable<Type> implementationTypes)
@@ -288,6 +290,7 @@ public static class ServiceCollectionExtensions
         }
     }
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static IEnumerable<Type> GetServiceInterfaces(Type implementationType) =>
         implementationType
             .GetInterfaces()
@@ -298,6 +301,7 @@ public static class ServiceCollectionExtensions
             .Select(interfaceType => NormalizeServiceType(interfaceType, implementationType))
             .Distinct();
 
+    [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     private static IEnumerable<Type> GetDomainEventHandlerInterfaces(Type implementationType) =>
         implementationType
             .GetInterfaces()
