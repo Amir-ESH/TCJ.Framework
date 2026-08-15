@@ -6,7 +6,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
-## [0.1.0-preview.2] - 2026-08-14
+## [0.1.0-preview.2] - 2026-08-15
 
 ### Added
 
