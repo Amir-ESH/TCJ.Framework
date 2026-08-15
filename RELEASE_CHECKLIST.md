@@ -1,6 +1,6 @@
 # TCJ Framework release checklist
 
-This checklist prepares the next preview, currently `0.1.0-preview.2`. Do not create a tag while `eng/release-manifest.json` has `status: development`.
+This checklist prepares the next preview, currently `0.1.0-preview.3`. Do not create a tag while `eng/release-manifest.json` has `status: development`.
 
 ## Development freeze
 

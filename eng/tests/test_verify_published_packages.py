@@ -72,6 +72,37 @@ class PublishedPackageLicenseResolutionTests(unittest.TestCase):
             )
             self.assertEqual(actual, "MIT")
 
+    def test_current_release_readmes_are_loaded_from_docs_nuget(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "eng").mkdir()
+            (root / "docs" / "nuget").mkdir(parents=True)
+            release_manifest = root / "eng" / "release-manifest.json"
+            release_manifest.write_text(
+                json.dumps(
+                    {
+                        "version": "0.1.0-preview.3",
+                        "packages": ["TCJ.Core"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            expected = b"# TCJ.Core\n"
+            (root / "docs" / "nuget" / "TCJ.Core.md").write_bytes(expected)
+
+            readmes = MODULE.expected_readmes_for_current_release(
+                "0.1.0-preview.3",
+                release_manifest,
+            )
+
+            self.assertEqual(readmes, {"TCJ.Core": expected})
+            self.assertIsNone(
+                MODULE.expected_readmes_for_current_release(
+                    "0.1.0-preview.2",
+                    release_manifest,
+                )
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,6 +17,15 @@ SEMVER_PATTERN = re.compile(
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
 RELEASE_STATUSES = {"development", "ready"}
+PACKAGE_README_DIRECTORY = Path("docs") / "nuget"
+# preview.2 is already immutable on NuGet.org with the historical GitHub README.
+# Enforce the corrected package-specific README contract from the next version onward.
+PACKAGE_README_POLICY_MIN_VERSION = "0.1.0-preview.3"
+FORBIDDEN_PACKAGE_README_HTML = re.compile(
+    r"<\s*/?\s*(?:a|br|div|img|p|picture|span|table|tbody|td|th|thead|tr)\b",
+    re.IGNORECASE,
+)
+MARKDOWN_LINK_PATTERN = re.compile(r"!?\[[^\]]*\]\((?P<target>[^)]+)\)")
 
 
 def fail(message: str) -> None:
@@ -198,8 +207,98 @@ def read_project_package_ids(root: Path) -> list[str]:
         package_id = tree.findtext("./PropertyGroup/PackageId")
         if not package_id:
             fail(f"Project does not define PackageId: {project.relative_to(root)}")
-        package_ids.append(package_id.strip())
+        resolved_package_id = package_id.strip()
+        if project.stem != resolved_package_id:
+            fail(
+                f"Project name {project.stem!r} must match PackageId "
+                f"{resolved_package_id!r} because package README selection uses "
+                "$(MSBuildProjectName)."
+            )
+        package_ids.append(resolved_package_id)
     return package_ids
+
+
+def package_readme_source(root: Path, package_id: str) -> Path:
+    return root / PACKAGE_README_DIRECTORY / f"{package_id}.md"
+
+
+def validate_package_readme_text(text: str, package_id: str, source: str) -> None:
+    if not text.strip():
+        fail(f"Package README is empty: {source}")
+    if package_id.casefold() not in text.casefold():
+        fail(f"Package README {source} must identify {package_id}.")
+    if FORBIDDEN_PACKAGE_README_HTML.search(text):
+        fail(
+            f"Package README {source} contains raw HTML. NuGet package READMEs "
+            "must use repository-approved Markdown only."
+        )
+
+    for match in MARKDOWN_LINK_PATTERN.finditer(text):
+        target = match.group("target").strip().strip("<>")
+        if not target:
+            fail(f"Package README {source} contains an empty Markdown link target.")
+        target_url = target.split(None, 1)[0]
+        if target_url.startswith(("https://", "mailto:", "#")):
+            continue
+        fail(
+            f"Package README {source} contains a relative or unsupported link "
+            f"target: {target_url!r}. Use an absolute HTTPS URL or an in-document anchor."
+        )
+
+
+def validate_package_readme_configuration(root: Path) -> None:
+    packaging_path = root / "eng" / "Packaging.props"
+    packaging = ET.parse(packaging_path).getroot()
+    readme_name = packaging.findtext("./PropertyGroup/PackageReadmeFile")
+    if (readme_name or "").strip() != "README.md":
+        fail("eng/Packaging.props PackageReadmeFile must remain README.md.")
+
+    expected_source = (
+        "$(MSBuildThisFileDirectory)../docs/nuget/$(MSBuildProjectName).md"
+    )
+    readme_items = [
+        item
+        for item in packaging.findall("./ItemGroup/None")
+        if item.attrib.get("Include", "").replace("\\", "/") == expected_source
+    ]
+    if len(readme_items) != 1:
+        fail(
+            "eng/Packaging.props must pack exactly one package README source from "
+            "docs/nuget/$(MSBuildProjectName).md."
+        )
+
+    item = readme_items[0]
+    if item.attrib.get("Pack", "").strip().lower() != "true":
+        fail('The package README item must set Pack="true".')
+
+    package_path = item.attrib.get("PackagePath", "").replace("\\", "/").strip()
+    if package_path != readme_name.strip():
+        fail(
+            "The package README item PackagePath must exactly match "
+            f"PackageReadmeFile ({readme_name.strip()})."
+        )
+
+    if item.attrib.get("Link", "").strip():
+        fail(
+            "The package README item must not use Link to rename the packed file; "
+            "PackagePath must define the package-internal README path."
+        )
+
+
+def validate_package_readme_sources(root: Path, package_ids: list[str]) -> None:
+    validate_package_readme_configuration(root)
+    for package_id in package_ids:
+        path = package_readme_source(root, package_id)
+        text = read_text(path)
+        validate_package_readme_text(
+            text,
+            package_id,
+            path.relative_to(root).as_posix(),
+        )
+
+
+def readme_policy_required(version: str) -> bool:
+    return semver_key(version) >= semver_key(PACKAGE_README_POLICY_MIN_VERSION)
 
 
 def validate_ready_changelog(root: Path, version: str, release_date: str) -> None:
@@ -289,6 +388,9 @@ def validate_primary_package(
     version: str,
     repository: str,
     expected_license_expression: str,
+    *,
+    expected_readme: bytes | None = None,
+    enforce_readme_policy: bool = False,
 ) -> None:
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
@@ -326,6 +428,19 @@ def validate_primary_package(
         missing = sorted(required_files.difference(names))
         if missing:
             fail(f"{path.name} is missing package files: {', '.join(missing)}")
+
+        readme_bytes = archive.read("README.md")
+        if expected_readme is not None and readme_bytes != expected_readme:
+            fail(
+                f"{path.name} README.md does not match the repository source "
+                f"{PACKAGE_README_DIRECTORY.as_posix()}/{package_id}.md."
+            )
+        if enforce_readme_policy or expected_readme is not None:
+            try:
+                readme_text = readme_bytes.decode("utf-8")
+            except UnicodeDecodeError as error:
+                fail(f"{path.name} README.md must be valid UTF-8: {error}")
+            validate_package_readme_text(readme_text, package_id, f"{path.name}:README.md")
 
         dlls = [name for name in names if re.fullmatch(r"lib/net10\.0/[^/]+\.dll", name)]
         if not dlls:
@@ -367,12 +482,15 @@ def validate_packages(root: Path, package_directory: Path, manifest: dict[str, o
         )
 
     for package_id in package_ids:
+        readme_path = package_readme_source(root, package_id)
         validate_primary_package(
             package_directory / f"{package_id}.{version}.nupkg",
             package_id,
             version,
             repository,
             str(manifest["licenseExpression"]),
+            expected_readme=readme_path.read_bytes(),
+            enforce_readme_policy=True,
         )
         validate_symbol_package(
             package_directory / f"{package_id}.{version}.snupkg"
@@ -446,6 +564,8 @@ def main() -> int:
             "Project PackageId set does not match release manifest. "
             f"Expected {sorted(package_ids)}, found {sorted(project_package_ids)}."
         )
+
+    validate_package_readme_sources(root, package_ids)
 
     if status == "ready":
         validate_ready_changelog(root, version, str(manifest["releaseDate"]))

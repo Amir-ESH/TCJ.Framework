@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Version>0.1.0-preview.2</Version>
+    <Version>0.1.0-preview.3</Version>
 
     <Authors>TCJ Contributors</Authors>
     <Company>TCJ</Company>
@@ -33,10 +33,9 @@
 
   <ItemGroup>
     <None
-      Include="$(MSBuildThisFileDirectory)..\README.md"
+      Include="$(MSBuildThisFileDirectory)..\docs\nuget\$(MSBuildProjectName).md"
       Pack="true"
-      PackagePath="/"
-      Link="README.md" />
+      PackagePath="README.md" />
 
     <None
       Include="$(MSBuildThisFileDirectory)..\LICENSE.txt"
