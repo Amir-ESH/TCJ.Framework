@@ -47,7 +47,6 @@ internal static class Program
         builder.Services.AddTcjAspNetCore();
 #if TCJ_OUTBOX_SMOKE
         builder.Services.AddSingleton<SmokeDeliveryProbe>();
-        builder.Services.AddTransient<IDomainEventHandler<SmokeChanged>, SmokeChangedHandler>();
 #endif
 #if TCJ_HEALTH_CHECK_SMOKE
         builder.Services.AddTcjHealthChecks()
@@ -85,6 +84,17 @@ internal static class Program
             app.Services.CreateAsyncScope();
 
         IServiceProvider services = scope.ServiceProvider;
+
+#if TCJ_OUTBOX_SMOKE
+        int smokeHandlerCount = services
+            .GetServices<IDomainEventHandler<SmokeChanged>>()
+            .Count();
+        if (smokeHandlerCount != 1)
+        {
+            throw new InvalidOperationException(
+                $"Published outbox smoke expected exactly one SmokeChanged handler registration, but found {smokeHandlerCount}.");
+        }
+#endif
 
         IGuidGenerator guidGenerator =
             services.GetRequiredService<IGuidGenerator>();
