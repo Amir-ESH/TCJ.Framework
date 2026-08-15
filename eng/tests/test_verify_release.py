@@ -146,5 +146,68 @@ class ReleasePackageLicenseTests(unittest.TestCase):
         self.assertTrue(MODULE.readme_policy_required("0.1.0-preview.4"))
 
 
+class ReleasePackageReadmeConfigurationTests(unittest.TestCase):
+    SOURCE = "$(MSBuildThisFileDirectory)..\\docs\\nuget\\$(MSBuildProjectName).md"
+
+    def write_packaging(
+        self,
+        root: Path,
+        *,
+        package_readme_file: str = "README.md",
+        package_path: str = "README.md",
+        link: str | None = None,
+    ) -> None:
+        eng = root / "eng"
+        eng.mkdir(parents=True)
+        link_attribute = "" if link is None else f' Link="{link}"'
+        (eng / "Packaging.props").write_text(
+            f'''<Project>
+  <PropertyGroup>
+    <PackageReadmeFile>{package_readme_file}</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="{self.SOURCE}" Pack="true" PackagePath="{package_path}"{link_attribute} />
+  </ItemGroup>
+</Project>
+''',
+            encoding="utf-8",
+        )
+
+    def test_package_readme_configuration_uses_declared_package_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_packaging(root)
+
+            MODULE.validate_package_readme_configuration(root)
+
+    def test_package_root_directory_does_not_rename_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_packaging(root, package_path="/", link="README.md")
+
+            with self.assertRaisesRegex(ValueError, "PackagePath must exactly match"):
+                MODULE.validate_package_readme_configuration(root)
+
+    def test_package_readme_path_must_match_package_readme_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_packaging(
+                root,
+                package_readme_file="README.md",
+                package_path="docs/README.md",
+            )
+
+            with self.assertRaisesRegex(ValueError, "PackagePath must exactly match"):
+                MODULE.validate_package_readme_configuration(root)
+
+    def test_link_cannot_be_used_to_rename_package_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_packaging(root, link="README.md")
+
+            with self.assertRaisesRegex(ValueError, "must not use Link"):
+                MODULE.validate_package_readme_configuration(root)
+
+
 if __name__ == "__main__":
     unittest.main()

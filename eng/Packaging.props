@@ -35,8 +35,7 @@
     <None
       Include="$(MSBuildThisFileDirectory)..\docs\nuget\$(MSBuildProjectName).md"
       Pack="true"
-      PackagePath="/"
-      Link="README.md" />
+      PackagePath="README.md" />
 
     <None
       Include="$(MSBuildThisFileDirectory)..\LICENSE.txt"

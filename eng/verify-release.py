@@ -253,26 +253,36 @@ def validate_package_readme_configuration(root: Path) -> None:
     if (readme_name or "").strip() != "README.md":
         fail("eng/Packaging.props PackageReadmeFile must remain README.md.")
 
+    expected_source = (
+        "$(MSBuildThisFileDirectory)../docs/nuget/$(MSBuildProjectName).md"
+    )
     readme_items = [
         item
         for item in packaging.findall("./ItemGroup/None")
-        if item.attrib.get("Link", "").strip() == "README.md"
+        if item.attrib.get("Include", "").replace("\\", "/") == expected_source
     ]
     if len(readme_items) != 1:
-        fail("eng/Packaging.props must pack exactly one linked README.md file.")
-
-    item = readme_items[0]
-    include = item.attrib.get("Include", "").replace("\\", "/")
-    expected = "$(MSBuildThisFileDirectory)../docs/nuget/$(MSBuildProjectName).md"
-    if include != expected:
         fail(
-            "eng/Packaging.props must source package READMEs from "
+            "eng/Packaging.props must pack exactly one package README source from "
             "docs/nuget/$(MSBuildProjectName).md."
         )
+
+    item = readme_items[0]
     if item.attrib.get("Pack", "").strip().lower() != "true":
         fail('The package README item must set Pack="true".')
-    if item.attrib.get("PackagePath", "").strip() != "/":
-        fail("The package README item must be packed at the package root.")
+
+    package_path = item.attrib.get("PackagePath", "").replace("\\", "/").strip()
+    if package_path != readme_name.strip():
+        fail(
+            "The package README item PackagePath must exactly match "
+            f"PackageReadmeFile ({readme_name.strip()})."
+        )
+
+    if item.attrib.get("Link", "").strip():
+        fail(
+            "The package README item must not use Link to rename the packed file; "
+            "PackagePath must define the package-internal README path."
+        )
 
 
 def validate_package_readme_sources(root: Path, package_ids: list[str]) -> None:
