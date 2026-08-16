@@ -21,6 +21,7 @@ PACKAGE_README_DIRECTORY = Path("docs") / "nuget"
 # preview.2 is already immutable on NuGet.org with the historical GitHub README.
 # Enforce the corrected package-specific README contract from the next version onward.
 PACKAGE_README_POLICY_MIN_VERSION = "0.1.0-preview.3"
+PACKAGE_README_PINNED_DOCS_MIN_VERSION = "0.1.0-preview.4"
 FORBIDDEN_PACKAGE_README_HTML = re.compile(
     r"<\s*/?\s*(?:a|br|div|img|p|picture|span|table|tbody|td|th|thead|tr)\b",
     re.IGNORECASE,
@@ -222,7 +223,7 @@ def package_readme_source(root: Path, package_id: str) -> Path:
     return root / PACKAGE_README_DIRECTORY / f"{package_id}.md"
 
 
-def validate_package_readme_text(text: str, package_id: str, source: str) -> None:
+def validate_package_readme_text(text: str, package_id: str, source: str, version: str | None = None) -> None:
     if not text.strip():
         fail(f"Package README is empty: {source}")
     if package_id.casefold() not in text.casefold():
@@ -239,6 +240,18 @@ def validate_package_readme_text(text: str, package_id: str, source: str) -> Non
             fail(f"Package README {source} contains an empty Markdown link target.")
         target_url = target.split(None, 1)[0]
         if target_url.startswith(("https://", "mailto:", "#")):
+            if (
+                version is not None
+                and semver_key(version) >= semver_key(PACKAGE_README_PINNED_DOCS_MIN_VERSION)
+                and target_url.startswith("https://github.com/Amir-ESH/TCJ.Framework/blob/")
+                and not target_url.startswith(
+                    f"https://github.com/Amir-ESH/TCJ.Framework/blob/v{version}/"
+                )
+            ):
+                fail(
+                    f"Package README {source} must pin repository documentation links "
+                    f"to immutable tag v{version}; found {target_url!r}."
+                )
             continue
         fail(
             f"Package README {source} contains a relative or unsupported link "
@@ -285,7 +298,7 @@ def validate_package_readme_configuration(root: Path) -> None:
         )
 
 
-def validate_package_readme_sources(root: Path, package_ids: list[str]) -> None:
+def validate_package_readme_sources(root: Path, package_ids: list[str], version: str) -> None:
     validate_package_readme_configuration(root)
     for package_id in package_ids:
         path = package_readme_source(root, package_id)
@@ -294,6 +307,7 @@ def validate_package_readme_sources(root: Path, package_ids: list[str]) -> None:
             text,
             package_id,
             path.relative_to(root).as_posix(),
+            version,
         )
 
 
@@ -440,7 +454,7 @@ def validate_primary_package(
                 readme_text = readme_bytes.decode("utf-8")
             except UnicodeDecodeError as error:
                 fail(f"{path.name} README.md must be valid UTF-8: {error}")
-            validate_package_readme_text(readme_text, package_id, f"{path.name}:README.md")
+            validate_package_readme_text(readme_text, package_id, f"{path.name}:README.md", version)
 
         dlls = [name for name in names if re.fullmatch(r"lib/net10\.0/[^/]+\.dll", name)]
         if not dlls:
@@ -565,7 +579,7 @@ def main() -> int:
             f"Expected {sorted(package_ids)}, found {sorted(project_package_ids)}."
         )
 
-    validate_package_readme_sources(root, package_ids)
+    validate_package_readme_sources(root, package_ids, version)
 
     if status == "ready":
         validate_ready_changelog(root, version, str(manifest["releaseDate"]))

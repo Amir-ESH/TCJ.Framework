@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Version>0.1.0-preview.3</Version>
+    <Version>0.1.0-preview.4</Version>
 
     <Authors>TCJ Contributors</Authors>
     <Company>TCJ</Company>

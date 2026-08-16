@@ -6,6 +6,19 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+### Changed
+
+- Advanced the immutable published-package and PackageValidation baseline to `0.1.0-preview.3` and opened the `0.1.0-preview.4` development line.
+- Consolidated each package onto one canonical documentation page, expanded the DocFX navigation, removed internal implementation-phase labels from public docs, and made source references branch-neutral.
+- Completed XML documentation for all measured public APIs and raised the documentation gate to 100% coverage with no baseline exceptions.
+
+### Fixed
+
+- Corrected the domain-event guide to distinguish direct dispatch from TCJ's optional transactional-outbox path and corrected the upgrade-testing rationale now that both baseline and target releases support outbox APIs.
+- Hardened published-package maintenance so scheduled audits use the active `develop` metadata and NuGet publication verification tolerates up to 15 minutes of propagation.
+- Pin future NuGet package README documentation links to the immutable package release tag instead of the moving `main` branch.
+- Finalized historical `0.1.0-preview.3` migration/release wording and replaced stale version literals in reusable operational examples with version placeholders.
+
 ## [0.1.0-preview.3] - 2026-08-16
 
 ### Changed

@@ -2,7 +2,7 @@
 
 This policy explains how the names, logos, package identifiers, and other brand assets associated with **TCJ Framework** may be used.
 
-The TCJ Framework source code is licensed separately under the [GNU Lesser General Public License v3.0 only](LICENSE.txt). That software license grants copyright permissions to use, study, modify, and redistribute the covered code under its terms. It does **not** grant a general license to use TCJ names, logos, or other source-identifying marks in a way that suggests an official TCJ release, sponsorship, affiliation, or endorsement.
+The TCJ Framework source code is licensed separately under the [GNU Lesser General Public License v3.0 only](LICENSE). That software license grants copyright permissions to use, study, modify, and redistribute the covered code under its terms. It does **not** grant a general license to use TCJ names, logos, or other source-identifying marks in a way that suggests an official TCJ release, sponsorship, affiliation, or endorsement.
 
 This policy is intended to protect users from confusion about which software, packages, documentation, and services come from the TCJ project. It does not reduce the permissions granted by the LGPL.
 

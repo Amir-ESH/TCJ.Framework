@@ -22,7 +22,7 @@
     "TCJ.EntityFrameworkCore.SqlServer": "docs/packages/tcj-entityframeworkcore-sqlserver.md",
     "TCJ.AspNetCore": "docs/packages/tcj-aspnetcore.md"
   },
-  "minimumPublicApiDocumentationPercent": 57.17,
+  "minimumPublicApiDocumentationPercent": 100.0,
   "requireTypeSummaries": true,
   "requireMemberSummaries": true,
   "requireParameterDocumentation": true,
@@ -32,7 +32,7 @@
   "failOnBrokenInternalLinks": true,
   "failOnUnresolvedCrefs": true,
   "failOnMalformedXmlDocumentation": true,
-  "baselineMaximumEntries": 606,
+  "baselineMaximumEntries": 0,
   "baselineTargetMilestone": "0.1.0-rc.1",
   "selectedExamples": [
     {
@@ -76,7 +76,7 @@
       "path": "docs/examples.md"
     }
   ],
-  "baselineRecordedDate": "2026-08-06",
-  "measuredPublicApiCount": 453,
-  "measuredFullyDocumentedApiCount": 259
+  "baselineRecordedDate": "2026-08-16",
+  "measuredPublicApiCount": 780,
+  "measuredFullyDocumentedApiCount": 780
 }

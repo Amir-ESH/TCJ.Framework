@@ -10,6 +10,10 @@ public static class SpecificationEvaluator
     /// <summary>
     /// Applies the complete specification, including eager loading, ordering and paging.
     /// </summary>
+    /// <typeparam name="TEntity">The entity type.</typeparam>
+    /// <param name="query">The query to transform.</param>
+    /// <param name="specification">The specification to apply.</param>
+    /// <returns>The configured query.</returns>
     public static IQueryable<TEntity> GetQuery<TEntity>(
         IQueryable<TEntity> query,
         ISpecification<TEntity> specification)
@@ -52,6 +56,10 @@ public static class SpecificationEvaluator
     /// Applies only filters that affect the logical result set. Includes, ordering,
     /// tracking and paging are intentionally excluded for count and existence queries.
     /// </summary>
+    /// <typeparam name="TEntity">The entity type.</typeparam>
+    /// <param name="query">The query to transform.</param>
+    /// <param name="specification">The specification to apply.</param>
+    /// <returns>The configured query.</returns>
     public static IQueryable<TEntity> GetCountQuery<TEntity>(
         IQueryable<TEntity> query,
         ISpecification<TEntity> specification)

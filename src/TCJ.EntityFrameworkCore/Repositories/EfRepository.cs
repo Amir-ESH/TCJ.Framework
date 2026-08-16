@@ -21,6 +21,8 @@ public class EfRepository<TEntity, TKey> : IRepository<TEntity, TKey>
     /// <summary>
     /// Initializes the facade with separate read and write repositories.
     /// </summary>
+    /// <param name="readRepository">The read repository value.</param>
+    /// <param name="writeRepository">The write repository value.</param>
     public EfRepository(
         IReadRepository<TEntity, TKey> readRepository,
         IWriteRepository<TEntity, TKey> writeRepository)
@@ -148,6 +150,8 @@ public class EfRepository<TEntity> :
     /// <summary>
     /// Initializes the facade with separate read and write repositories.
     /// </summary>
+    /// <param name="readRepository">The read repository value.</param>
+    /// <param name="writeRepository">The write repository value.</param>
     public EfRepository(
         IReadRepository<TEntity, long> readRepository,
         IWriteRepository<TEntity, long> writeRepository)

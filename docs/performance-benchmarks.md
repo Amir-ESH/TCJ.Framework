@@ -19,7 +19,7 @@ The initial suite covers:
 - assembly scanning and transient, scoped, and singleton registration;
 - repeated convention registration with duplicate protection enabled.
 
-Future candidates include specification composition, repository query construction, EF Core model conventions, domain-event dispatching, ASP.NET Core middleware, and SQL Server integration benchmarks. External-infrastructure benchmarks are intentionally outside the Step 30 gate.
+Future candidates include specification composition, repository query construction, EF Core model conventions, domain-event dispatching, ASP.NET Core middleware, and SQL Server integration benchmarks. External-infrastructure benchmarks are intentionally outside the the performance regression gate gate.
 
 ## Run locally
 
@@ -121,7 +121,7 @@ When a baseline allocates zero bytes, small measured allocations are tolerated o
 
 GitHub-hosted runners can differ in CPU model, neighboring workload, power behavior, virtualization, and operating-system image. Comparing today's raw nanoseconds with a previous run from an unrelated host can produce false regressions.
 
-The Step 30 policy therefore blocks on ratios calculated inside a single BenchmarkDotNet run. The baseline and comparison method execute under the same runtime, operating system, process conditions, and machine load. Absolute values remain in artifacts for historical analysis, but they are not the only blocking condition.
+The the performance regression gate policy therefore blocks on ratios calculated inside a single BenchmarkDotNet run. The baseline and comparison method execute under the same runtime, operating system, process conditions, and machine load. Absolute values remain in artifacts for historical analysis, but they are not the only blocking condition.
 
 ## Repository policy
 
@@ -176,7 +176,7 @@ A regression may be accepted when it buys a reviewed correctness, security, comp
 
 ## Transactional-outbox benchmarks
 
-Step 44 adds an `Outbox` benchmark category for the provider-independent persistence path. `OutboxBenchmarks` records:
+the transactional-outbox feature set adds an `Outbox` benchmark category for the provider-independent persistence path. `OutboxBenchmarks` records:
 
 - `SaveChangesWithoutOutbox` as the informational class baseline;
 - `SaveChangesWithOneEvent`;

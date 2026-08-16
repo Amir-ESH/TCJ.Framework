@@ -19,6 +19,8 @@ public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
     /// <summary>
     /// Initializes the interceptor.
     /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="timeProvider">The time provider value.</param>
     public AuditingSaveChangesInterceptor(IServiceProvider serviceProvider, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);

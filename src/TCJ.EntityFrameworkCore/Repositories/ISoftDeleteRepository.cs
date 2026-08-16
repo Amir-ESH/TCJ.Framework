@@ -14,21 +14,25 @@ public interface ISoftDeleteRepository<TEntity, TKey>
     /// <summary>
     /// Marks an entity as logically deleted.
     /// </summary>
+    /// <param name="entity">The entity to process.</param>
     void SoftDelete(TEntity entity);
 
     /// <summary>
     /// Marks multiple entities as logically deleted.
     /// </summary>
+    /// <param name="entities">The entities to process.</param>
     void SoftDeleteRange(IEnumerable<TEntity> entities);
 
     /// <summary>
     /// Restores a logically deleted entity.
     /// </summary>
+    /// <param name="entity">The entity to process.</param>
     void Restore(TEntity entity);
 
     /// <summary>
     /// Restores multiple logically deleted entities.
     /// </summary>
+    /// <param name="entities">The entities to process.</param>
     void RestoreRange(IEnumerable<TEntity> entities);
 }
 

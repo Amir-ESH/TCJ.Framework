@@ -1,59 +1,34 @@
 # Domain events
 
+Domain events let aggregates record facts that occurred inside the domain without directly invoking infrastructure or application services. TCJ keeps event recording separate from delivery so applications can choose either immediate in-process dispatch or the optional transactional-outbox path.
+
 ## Define an event
 
 ```csharp
-public sealed record ProductCreated(
-    Guid ProductId,
-    DateTimeOffset OccurredOn) : IDomainEvent;
-```
-
-## Raise an event from an entity
-
-```csharp
-public sealed class Product : Entity<Guid>
+public sealed record OrderPlaced(Guid OrderId) : IDomainEvent
 {
-    public Product(Guid id, string name)
-        : base(id)
-    {
-        Name = name;
-        AddDomainEvent(new ProductCreated(id, DateTimeOffset.UtcNow));
-    }
-
-    public string Name { get; }
+    public DateTimeOffset OccurredOn { get; init; } = DateTimeOffset.UtcNow;
 }
 ```
 
-`AddDomainEvent` and `RemoveDomainEvent` are protected. Pending events are exposed through `DomainEvents` as a read-only collection.
+## Raise events from an entity
 
-## Handle an event
+Entities derived from `Entity<TKey>` can record pending events through the protected domain-event API. Recording an event does not dispatch it and does not perform I/O.
 
 ```csharp
-public sealed class ProductCreatedHandler
-    : IDomainEventHandler<ProductCreated>
+public sealed class Order : Entity<Guid>
 {
-    public Task HandleAsync(
-        ProductCreated domainEvent,
-        CancellationToken cancellationToken)
+    public void Place()
     {
-        return Task.CompletedTask;
+        // Apply domain state changes first.
+        AddDomainEvent(new OrderPlaced(Id));
     }
 }
 ```
 
-In regular JIT/non-trimmed applications, handlers can be discovered when their public assembly is supplied to the convention-scanning `AddTcjDependencyInjection` overload.
+## Direct in-process dispatch
 
-For Native AOT or trimming, use the explicit path instead:
-
-```csharp
-services.AddTcjDependencyInjection();
-services.AddTcjDomainEvent<ProductCreated>();
-services.AddTransient<IDomainEventHandler<ProductCreated>, ProductCreatedHandler>();
-```
-
-`AddTcjDomainEvent<TEvent>()` declares a closed dispatch route only; handler lifetime remains controlled by the normal Microsoft DI registration. Convention scanning stays available but is explicitly restricted for trimming and Native AOT.
-
-## Dispatch explicitly
+Use direct dispatch when the application deliberately owns the persistence/dispatch boundary and durable delivery is not required.
 
 ```csharp
 await dispatcher.DispatchAsync(
@@ -63,14 +38,41 @@ await dispatcher.DispatchAsync(
 aggregate.ClearDomainEvents();
 ```
 
-The current preview does not dispatch events automatically from EF Core. Decide at the application boundary whether events are dispatched before or after persistence and how failures are handled.
+Direct dispatch has these semantics:
 
-## Execution semantics
+- events are dispatched in collection order;
+- handlers for each event run sequentially;
+- cancellation is propagated;
+- handler exceptions are not swallowed;
+- clearing pending events remains the caller's responsibility after the application has decided the event lifecycle is complete.
 
-- Events are dispatched in collection order.
-- Handlers for each event run sequentially.
-- Cancellation is propagated.
-- Handler exceptions are not swallowed.
-- Clearing pending events remains the caller's responsibility.
+Direct dispatch is intentionally not coupled to EF Core `SaveChanges`. An application can dispatch before or after persistence, but it must decide what a handler failure means for its own consistency boundary.
 
-For durable cross-process delivery, add an outbox implementation in the consuming application; TCJ does not currently provide one.
+## Transactional outbox
+
+For durable delivery, TCJ provides an **optional transactional outbox**. When enabled for an EF Core context, pending domain events are serialized into `TCJ_OutboxMessages` during `SaveChanges` and committed in the same database transaction as the business changes. A separate processor dispatches only committed messages later.
+
+The outbox changes event ownership semantics:
+
+- the persistence interceptor captures the pending events as outbox messages;
+- a successful persistence/transaction boundary clears the captured pending events;
+- consumers do not manually dispatch the same pending event collection after it has been persisted to the outbox;
+- delivery is **at least once**, so handlers with non-idempotent side effects need an idempotency strategy.
+
+Register persisted event contracts explicitly with stable logical names:
+
+```csharp
+services.AddTcjOutboxEvent<OrderPlaced>("order.placed.v1");
+```
+
+Then enable the provider-specific outbox integration. SQL Server applications use `AddTcjSqlServerOutbox<TDbContext>` and own the migration that creates `TCJ_OutboxMessages`.
+
+See [Transactional outbox](../outbox.md) for schema ownership, processing, retries, dead-letter behavior, replay, cleanup, health checks, and telemetry.
+
+## Choosing a delivery model
+
+Use **direct dispatch** when all handlers intentionally run inside the application's current execution path and the application can tolerate or explicitly coordinate persistence/handler failures.
+
+Use the **transactional outbox** when a domain event must survive process failure after the business transaction commits or when dispatch should happen asynchronously outside the request/command transaction.
+
+Do not use both paths for the same pending event instance; doing so can cause duplicate application-level effects outside the outbox's normal at-least-once contract.

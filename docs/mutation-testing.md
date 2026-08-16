@@ -11,7 +11,7 @@ Both checks are required. A high coverage percentage does not prove that asserti
 
 ## Why the earlier runs were invalid
 
-The first Step 29 run used the VSTest path with xUnit v3. Stryker could not reliably control the active mutant, so every tested mutant was reported as survived and the aggregate score was `0.00%`.
+The first the initial mutation-testing integration run used the VSTest path with xUnit v3. Stryker could not reliably control the active mutant, so every tested mutant was reported as survived and the aggregate score was `0.00%`.
 
 PR #53 then introduced a different failure: normal CI required `eng/mutation-baseline.json` to be recorded **before** Stryker was allowed to run. Because the first real baseline can only be produced after Stryker completes, that workflow created a bootstrap deadlock. Restore, build, tests, and Stryker were skipped.
 

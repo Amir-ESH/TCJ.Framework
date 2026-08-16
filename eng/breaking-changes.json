@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "fromVersion": "0.1.0-preview.2",
-  "toVersion": "0.1.0-preview.3",
-  "migrationGuide": "docs/migrations/0.1.0-preview.2-to-0.1.0-preview.3.md",
+  "fromVersion": "0.1.0-preview.3",
+  "toVersion": "0.1.0-preview.4",
+  "migrationGuide": "docs/migrations/0.1.0-preview.3-to-0.1.0-preview.4.md",
   "changes": []
 }

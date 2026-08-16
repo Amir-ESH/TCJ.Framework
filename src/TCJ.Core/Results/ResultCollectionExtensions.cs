@@ -9,6 +9,9 @@ public static class ResultCollectionExtensions
     /// Combines generic results into one result containing all successful values.
     /// Every failure error is preserved.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="results">The results value.</param>
+    /// <returns>The result of the operation.</returns>
     public static Result<IReadOnlyList<T>> Combine<T>(this IEnumerable<Result<T>> results)
     {
         ArgumentNullException.ThrowIfNull(results);
@@ -38,6 +41,11 @@ public static class ResultCollectionExtensions
     /// <summary>
     /// Maps every source item to a result and combines the outcomes.
     /// </summary>
+    /// <typeparam name="TSource">The source type.</typeparam>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="source">The source collection or sequence.</param>
+    /// <param name="selector">The selector value.</param>
+    /// <returns>The result of the operation.</returns>
     public static Result<IReadOnlyList<TResult>> Traverse<TSource, TResult>(this IEnumerable<TSource> source,
                                                                             Func<TSource, Result<TResult>> selector)
     {
@@ -50,6 +58,12 @@ public static class ResultCollectionExtensions
     /// <summary>
     /// Asynchronously maps every source item to a result and combines the outcomes.
     /// </summary>
+    /// <typeparam name="TSource">The source type.</typeparam>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="source">The source collection or sequence.</param>
+    /// <param name="selector">The selector value.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>The result of the operation.</returns>
     public static async Task<Result<IReadOnlyList<TResult>>> TraverseAsync<TSource, TResult>(
         this IEnumerable<TSource> source,
         Func<TSource, CancellationToken, Task<Result<TResult>>> selector,
@@ -76,6 +90,9 @@ public static class ResultCollectionExtensions
     /// <summary>
     /// Returns the values from successful results.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="results">The results value.</param>
+    /// <returns>The result of the operation.</returns>
     public static IEnumerable<T> WhereSuccess<T>(this IEnumerable<Result<T>> results)
     {
         ArgumentNullException.ThrowIfNull(results);
@@ -87,6 +104,9 @@ public static class ResultCollectionExtensions
     /// <summary>
     /// Returns every error from failed results.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="results">The results value.</param>
+    /// <returns>The result of the operation.</returns>
     public static IEnumerable<ResultError> WhereFailure<T>(this IEnumerable<Result<T>> results)
     {
         ArgumentNullException.ThrowIfNull(results);
@@ -98,6 +118,9 @@ public static class ResultCollectionExtensions
     /// <summary>
     /// Partitions results into successful values and failure errors.
     /// </summary>
+    /// <typeparam name="T">The value type contained by successful results.</typeparam>
+    /// <param name="results">The results to partition.</param>
+    /// <returns>A tuple containing the successful values and the errors from failed results.</returns>
     public static (IReadOnlyList<T> Successes, IReadOnlyList<ResultError> Failures) Partition<T>(this IEnumerable<Result<T>> results)
     {
         ArgumentNullException.ThrowIfNull(results);

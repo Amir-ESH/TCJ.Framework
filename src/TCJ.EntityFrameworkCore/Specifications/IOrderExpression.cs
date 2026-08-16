@@ -17,11 +17,15 @@ public interface IOrderExpression<TEntity>
     /// <summary>
     /// Applies this expression as the primary ordering for a query.
     /// </summary>
+    /// <param name="query">The query to transform.</param>
+    /// <returns>The result of the operation.</returns>
     IOrderedQueryable<TEntity> Apply(IQueryable<TEntity> query);
 
     /// <summary>
     /// Applies this expression as a secondary ordering for an already ordered query.
     /// </summary>
+    /// <param name="query">The query to transform.</param>
+    /// <returns>The result of the operation.</returns>
     IOrderedQueryable<TEntity> ApplyThen(IOrderedQueryable<TEntity> query);
 }
 

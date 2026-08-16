@@ -1,4 +1,7 @@
 namespace TCJ.Core.Extensions;
+/// <summary>
+/// Provides decimal rounding and truncation helpers.
+/// </summary>
 
 public static class DecimalExtensions
 {
@@ -36,6 +39,12 @@ public static class DecimalExtensions
         1_000_000_000_000_000_000_000_000_000m,
         10_000_000_000_000_000_000_000_000_000m
     ];
+    /// <summary>
+    /// Rounds the value up to the specified number of decimal places.
+    /// </summary>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="decimalPlaces">The number of decimal places to retain.</param>
+    /// <returns>The resulting value.</returns>
 
     public static decimal RoundUp(
         this decimal value,
@@ -44,6 +53,12 @@ public static class DecimalExtensions
         var scale = GetScale(decimalPlaces);
         return Math.Ceiling(value * scale) / scale;
     }
+    /// <summary>
+    /// Rounds the value down to the specified number of decimal places.
+    /// </summary>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="decimalPlaces">The number of decimal places to retain.</param>
+    /// <returns>The resulting value.</returns>
 
     public static decimal RoundDown(
         this decimal value,
@@ -52,6 +67,12 @@ public static class DecimalExtensions
         var scale = GetScale(decimalPlaces);
         return Math.Floor(value * scale) / scale;
     }
+    /// <summary>
+    /// Truncates the value to the requested maximum precision or length.
+    /// </summary>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="decimalPlaces">The number of decimal places to retain.</param>
+    /// <returns>The resulting value.</returns>
 
     public static decimal Truncate(
         this decimal value,

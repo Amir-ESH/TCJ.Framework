@@ -12,6 +12,9 @@ public sealed class ResultError : IEquatable<ResultError>
     /// <summary>
     /// Initializes a new result error.
     /// </summary>
+    /// <param name="code">The error code.</param>
+    /// <param name="message">The error message.</param>
+    /// <param name="type">The type to validate.</param>
     public ResultError(string code,
                        string message,
                        ResultErrorType type = ResultErrorType.Failure)
@@ -57,6 +60,9 @@ public sealed class ResultError : IEquatable<ResultError>
     /// <summary>
     /// Returns a new error containing the supplied metadata value.
     /// </summary>
+    /// <param name="key">The key value.</param>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <returns>The resulting value.</returns>
     public ResultError WithMetadata(string key, object? value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
@@ -84,9 +90,21 @@ public sealed class ResultError : IEquatable<ResultError>
 
     /// <inheritdoc />
     public override string ToString() => $"[{Code}] {Message}";
+    /// <summary>
+    /// Determines whether two result errors are equal.
+    /// </summary>
+    /// <param name="left">The left value.</param>
+    /// <param name="right">The right value.</param>
+    /// <returns>true when the condition is satisfied; otherwise, false.</returns>
 
     public static bool operator ==(ResultError? left, ResultError? right)
         => EqualityComparer<ResultError>.Default.Equals(left, right);
+    /// <summary>
+    /// Determines whether two result errors are not equal.
+    /// </summary>
+    /// <param name="left">The left value.</param>
+    /// <param name="right">The right value.</param>
+    /// <returns>true when the condition is satisfied; otherwise, false.</returns>
 
     public static bool operator !=(ResultError? left, ResultError? right)
         => !EqualityComparer<ResultError>.Default.Equals(left, right);

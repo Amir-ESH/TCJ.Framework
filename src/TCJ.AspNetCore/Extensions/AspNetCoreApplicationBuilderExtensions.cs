@@ -13,6 +13,8 @@ public static class AspNetCoreApplicationBuilderExtensions
     /// Enables the registered exception handlers and Problem Details responses for empty error status codes.
     /// Call this early in the request pipeline.
     /// </summary>
+    /// <param name="app">The application builder to configure.</param>
+    /// <returns>The same application builder for chaining.</returns>
     public static IApplicationBuilder UseTcjAspNetCore(this IApplicationBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);

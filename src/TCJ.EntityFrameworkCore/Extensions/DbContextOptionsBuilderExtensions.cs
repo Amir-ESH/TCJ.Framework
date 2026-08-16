@@ -13,6 +13,9 @@ public static class DbContextOptionsBuilderExtensions
     /// <summary>
     /// Adds TCJ persistence interceptors, including transactional-outbox interceptors when outbox services are registered.
     /// </summary>
+    /// <param name="optionsBuilder">The options builder value.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <returns>The same service collection for chaining.</returns>
     public static DbContextOptionsBuilder AddTcjPersistenceInterceptors(this DbContextOptionsBuilder optionsBuilder,
                                                                         IServiceProvider serviceProvider)
     {

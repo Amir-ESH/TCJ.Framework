@@ -32,6 +32,8 @@ public sealed class TcjDependencyInjectionOptions
     /// <summary>
     /// Adds an assembly to the explicit reflection scan set.
     /// </summary>
+    /// <param name="assembly">The assembly value.</param>
+    /// <returns>The result of the operation.</returns>
     public TcjDependencyInjectionOptions AddAssembly(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
@@ -50,6 +52,8 @@ public sealed class TcjDependencyInjectionOptions
     /// <summary>
     /// Adds multiple assemblies to the explicit reflection scan set.
     /// </summary>
+    /// <param name="assemblies">The assemblies value.</param>
+    /// <returns>The result of the operation.</returns>
     public TcjDependencyInjectionOptions AddAssemblies(
         IEnumerable<Assembly> assemblies)
     {
@@ -66,6 +70,8 @@ public sealed class TcjDependencyInjectionOptions
     /// <summary>
     /// Adds the assembly containing <typeparamref name="TMarker"/> to the explicit reflection scan set.
     /// </summary>
+    /// <typeparam name="TMarker">The marker type.</typeparam>
+    /// <returns>The result of the operation.</returns>
     public TcjDependencyInjectionOptions AddAssemblyContaining<TMarker>() =>
         AddAssembly(typeof(TMarker).Assembly);
 }

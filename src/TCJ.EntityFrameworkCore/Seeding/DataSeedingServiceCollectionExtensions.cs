@@ -12,6 +12,9 @@ public static class DataSeedingServiceCollectionExtensions
     /// Registers a scoped seed contributor without adding duplicate registrations for
     /// the same implementation type.
     /// </summary>
+    /// <typeparam name="TContributor">The data-seed contributor type.</typeparam>
+    /// <param name="services">The service collection to configure.</param>
+    /// <returns>The same service collection for chaining.</returns>
     public static IServiceCollection AddTcjDataSeedContributor<TContributor>(this IServiceCollection services)
         where TContributor : class, IDataSeedContributor
     {
