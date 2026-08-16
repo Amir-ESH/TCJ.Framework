@@ -1,6 +1,6 @@
 # TCJ Framework documentation
 
-This directory documents the public behavior of the current `0.1.0-preview.3` development source tree. Because the framework is still in preview, treat these pages and the code as a versioned pair.
+This directory documents the public behavior of the current `0.1.0-preview.3` release-candidate source tree. Because the framework is still in preview, treat these pages and the code as a versioned pair.
 
 ## Start here
 
@@ -27,9 +27,10 @@ This directory documents the public behavior of the current `0.1.0-preview.3` de
 21. [Diagnostics and OpenTelemetry observability](observability.md)
 22. [0.1.0-preview.2 to 0.1.0-preview.3 migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md)
 23. [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
-24. [Second preview release notes](release-notes/0.1.0-preview.2.md)
-25. [First preview release notes](release-notes/0.1.0-preview.1.md)
-26. [Transactional outbox](outbox.md)
+24. [Third preview release notes](release-notes/0.1.0-preview.3.md)
+25. [Second preview release notes](release-notes/0.1.0-preview.2.md)
+26. [First preview release notes](release-notes/0.1.0-preview.1.md)
+27. [Transactional outbox](outbox.md)
 
 ## Package reference
 
@@ -50,7 +51,7 @@ This directory documents the public behavior of the current `0.1.0-preview.3` de
 
 ## Important preview constraints
 
-- `0.1.0-preview.2` is the latest public preview; the repository currently develops `0.1.0-preview.3`. Pin exact public versions and review the changelog before upgrading.
+- `0.1.0-preview.2` is the latest public preview; the repository is preparing `0.1.0-preview.3` for release. Pin exact public versions and review the changelog before upgrading.
 - Public APIs may change before `1.0.0`.
 - Domain-event dispatch remains explicit by default; when the transactional outbox is enabled, `SaveChanges` persists events transactionally and a separate manual/hosted processor dispatches them only after commit.
 - Soft deletion is explicit through `ISoftDeleteRepository`; calling `Remove` performs physical deletion.
