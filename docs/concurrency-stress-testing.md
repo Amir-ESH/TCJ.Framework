@@ -1,6 +1,6 @@
 # Concurrency stress testing
 
-Step 40 treats concurrency as an explicit compatibility contract. The suite tests only concurrency guarantees TCJ actually supports; it does not convert mutable framework or EF Core abstractions into thread-safe APIs merely to satisfy a stress test.
+the concurrency stress gate treats concurrency as an explicit compatibility contract. The suite tests only concurrency guarantees TCJ actually supports; it does not convert mutable framework or EF Core abstractions into thread-safe APIs merely to satisfy a stress test.
 
 ## Contract vocabulary
 
@@ -113,4 +113,4 @@ The dedicated **Concurrency stress** workflow runs core, ASP.NET Core, and relev
 
 ## Concurrent health readiness
 
-Step 43 adds deterministic ASP.NET Core stress scenarios for readiness probes. Expensive checks use a per-check single-flight cache: concurrent requests may wait for the same bounded execution, cancellation must not corrupt later probes, and independent named checks never share cached state. The stress suite asserts that the underlying readiness execution never runs concurrently with itself and that a canceled request does not make later readiness requests fail or deadlock.
+the health-check feature set adds deterministic ASP.NET Core stress scenarios for readiness probes. Expensive checks use a per-check single-flight cache: concurrent requests may wait for the same bounded execution, cancellation must not corrupt later probes, and independent named checks never share cached state. The stress suite asserts that the underlying readiness execution never runs concurrently with itself and that a canceled request does not make later readiness requests fail or deadlock.

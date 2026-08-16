@@ -20,6 +20,10 @@ public static class EntityFrameworkCoreServiceCollectionExtensions
     /// Registers and configures a DbContext that provides both read and write capabilities,
     /// then registers TCJ repositories, auditing and the unit of work.
     /// </summary>
+    /// <typeparam name="TDbContext">The EF Core database context type.</typeparam>
+    /// <param name="services">The service collection to configure.</param>
+    /// <param name="configureDbContext">The configure db context value.</param>
+    /// <returns>The same service collection for chaining.</returns>
     public static IServiceCollection AddTcjEntityFrameworkCore<TDbContext>(this IServiceCollection services,
                                                                            Action<DbContextOptionsBuilder> configureDbContext)
         where TDbContext : DbContext, IReadDbContext, IWriteDbContext
@@ -42,6 +46,10 @@ public static class EntityFrameworkCoreServiceCollectionExtensions
     /// Registers and configures a DbContext using services from the application container,
     /// then registers TCJ repositories, auditing and the unit of work.
     /// </summary>
+    /// <typeparam name="TDbContext">The EF Core database context type.</typeparam>
+    /// <param name="services">The service collection to configure.</param>
+    /// <param name="configureDbContext">The configure db context value.</param>
+    /// <returns>The same service collection for chaining.</returns>
     public static IServiceCollection AddTcjEntityFrameworkCore<TDbContext>(this IServiceCollection services,
                                                                            Action<IServiceProvider, DbContextOptionsBuilder> configureDbContext)
         where TDbContext : DbContext, IReadDbContext, IWriteDbContext
@@ -65,6 +73,9 @@ public static class EntityFrameworkCoreServiceCollectionExtensions
     /// the service collection. The existing DbContext registration must explicitly call
     /// <see cref="DbContextOptionsBuilderExtensions.AddTcjPersistenceInterceptors"/>.
     /// </summary>
+    /// <typeparam name="TDbContext">The EF Core database context type.</typeparam>
+    /// <param name="services">The service collection to configure.</param>
+    /// <returns>The same service collection for chaining.</returns>
     public static IServiceCollection AddTcjEntityFrameworkCore<TDbContext>(this IServiceCollection services)
         where TDbContext : DbContext, IReadDbContext, IWriteDbContext
     {

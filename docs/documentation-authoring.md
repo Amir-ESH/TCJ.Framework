@@ -83,7 +83,7 @@ Document important nullability semantics: whether null means “not found”, �
 
 Use `<see cref="TypeName"/>` for inline references and `<seealso cref="TypeName"/>` for related APIs. Prefer compiler-resolved `cref` expressions instead of plain text. An unresolved reference is emitted with a `!:` prefix in the XML file and is blocking.
 
-For Markdown links in conceptual documentation, keep relative file links inside the `docs/` content root. Files that live elsewhere in the repository—such as policies, workflows, samples, or release checklists—must use an absolute GitHub source URL. DocFX validates local file links against the configured content set, so a repository-relative path that escapes `docs/` is not a valid site link.
+For Markdown links in conceptual documentation, keep relative file links inside the `docs/` content root. When referring to files outside `docs/`—such as policies, workflows, samples, or release checklists—prefer a repository path in backticks rather than a mutable `blob/develop` link. If a public document must link to source outside the DocFX content root, use an immutable release-tag or commit URL. This keeps historical documentation from silently redirecting readers to a newer development branch.
 
 ## Examples
 
@@ -99,31 +99,21 @@ Each ID must be unique. The verifier extracts the selected fences and builds the
 
 ## Current baseline
 
-The initial gate measured the `develop` source on August 6, 2026:
+The public API documentation debt has been retired. The current gate measures:
 
-- 453 public or protected API items were discovered;
-- 259 were complete under the initial policy;
-- measured complete coverage was 57.17%;
-- 606 missing-element findings were recorded for pre-existing APIs.
+- 780 public or protected API items;
+- 780 fully documented API items;
+- 100% measured documentation coverage;
+- zero baseline exceptions.
 
-The threshold is the measured baseline, not a guessed target. New missing elements are rejected even when the overall percentage remains above the threshold.
+The documentation baseline file therefore contains an empty `entries` array and the policy requires 100% coverage. New public API documentation gaps are blocking; do not lower the threshold or create a baseline exception merely to make CI pass.
 
-Baseline rules:
-
-1. Do not add a new public API to the baseline merely to make CI pass.
-2. A baseline addition requires a reason and planned milestone.
-3. The entry limit cannot increase without an explicit policy change.
-4. Removed APIs and completed documentation must remove their stale entries.
-5. Improvements should raise the minimum percentage and reduce the entry count.
-
-Generate a proposed baseline only while intentionally re-measuring an approved policy change:
+If an approved future policy change genuinely requires re-measurement, generate a proposed report without replacing the committed zero-debt baseline until the change is reviewed:
 
 ```bash
 python3 eng/verify-documentation.py baseline \
   --output artifacts/documentation/proposed-baseline.json
 ```
-
-Review the diff; do not copy it blindly.
 
 ## Local build and preview
 

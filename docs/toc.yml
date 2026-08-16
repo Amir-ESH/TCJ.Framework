@@ -15,49 +15,89 @@
     href: packages/tcj-entityframeworkcore-sqlserver.md
   - name: TCJ.AspNetCore
     href: packages/tcj-aspnetcore.md
-- name: Guides
+- name: Product Guides
   items:
   - name: Result and HTTP
     href: guides/results-and-http.md
-  - name: Specifications and repositories
-    href: guides/specifications-and-repositories.md
-  - name: Domain events
+  - name: Domain Events
     href: guides/domain-events.md
-  - name: Auditing and soft delete
+  - name: Specifications and Repositories
+    href: guides/specifications-and-repositories.md
+  - name: Auditing, Soft Delete, and Rowversion
     href: guides/auditing-soft-delete-rowversion.md
-  - name: Data seeding
+  - name: Data Seeding
     href: guides/data-seeding.md
-  - name: Native AOT and trimming
+  - name: Native AOT and Trimming
     href: guides/native-aot-and-trimming.md
-  - name: Validated examples
-    href: examples.md
+  - name: Resilience
+    href: resilience.md
+  - name: Health Checks
+    href: health-checks.md
+  - name: Transactional Outbox
+    href: outbox.md
+  - name: Observability
+    href: observability.md
 - name: Architecture
   href: architecture.md
-- name: ASP.NET Core Integration Testing
-  href: aspnetcore-integration-testing.md
-- name: Package Consumer Compatibility
-  href: package-consumer-compatibility.md
-- name: Package Upgrade Testing
-  href: package-upgrade-testing.md
-- name: Property and Fuzz Testing
-  href: property-and-fuzz-testing.md
-- name: Concurrency Stress Testing
-  href: concurrency-stress-testing.md
-- name: Resilience Policies and Fault Injection
-  href: resilience.md
-- name: Health Checks and Startup Diagnostics
-  href: health-checks.md
-- name: Migration 0.1.0-preview.2 to 0.1.0-preview.3
-  href: migrations/0.1.0-preview.2-to-0.1.0-preview.3.md
-- name: Migration 0.1.0-preview.1 to 0.1.0-preview.2
-  href: migrations/0.1.0-preview.1-to-0.1.0-preview.2.md
+- name: Compatibility and Quality
+  items:
+  - name: Public API Compatibility
+    href: api-compatibility.md
+  - name: Package Consumer Compatibility
+    href: package-consumer-compatibility.md
+  - name: Package Upgrade Testing
+    href: package-upgrade-testing.md
+  - name: SQL Server Integration Testing
+    href: sqlserver-integration-testing.md
+  - name: ASP.NET Core Integration Testing
+    href: aspnetcore-integration-testing.md
+  - name: Architecture Tests
+    href: architecture-tests.md
+  - name: Code Coverage
+    href: code-coverage.md
+  - name: Mutation Testing
+    href: mutation-testing.md
+  - name: Property and Fuzz Testing
+    href: property-and-fuzz-testing.md
+  - name: Concurrency Stress Testing
+    href: concurrency-stress-testing.md
+  - name: Performance Benchmarks
+    href: performance-benchmarks.md
+- name: Release and Supply Chain
+  items:
+  - name: Release Process
+    href: releasing.md
+  - name: Published Package Validation
+    href: published-package-validation.md
+  - name: Dependency Security
+    href: dependency-security.md
+  - name: Release Integrity
+    href: release-integrity.md
+  - name: SBOM
+    href: software-bill-of-materials.md
+  - name: Reproducible Builds
+    href: reproducible-builds.md
+  - name: Documentation Authoring
+    href: documentation-authoring.md
+- name: Migrations
+  items:
+  - name: 0.1.0-preview.3 to 0.1.0-preview.4
+    href: migrations/0.1.0-preview.3-to-0.1.0-preview.4.md
+  - name: 0.1.0-preview.2 to 0.1.0-preview.3
+    href: migrations/0.1.0-preview.2-to-0.1.0-preview.3.md
+  - name: 0.1.0-preview.1 to 0.1.0-preview.2
+    href: migrations/0.1.0-preview.1-to-0.1.0-preview.2.md
+- name: Release Notes
+  items:
+  - name: 0.1.0-preview.3
+    href: release-notes/0.1.0-preview.3.md
+  - name: 0.1.0-preview.2
+    href: release-notes/0.1.0-preview.2.md
+  - name: 0.1.0-preview.1
+    href: release-notes/0.1.0-preview.1.md
 - name: Security
   href: security.md
-- name: Release Process
-  href: releasing.md
-- name: API Reference
-  href: api/index.md
-- name: Documentation Authoring
-  href: documentation-authoring.md
 - name: Contributing
   href: contributing.md
+- name: API Reference
+  href: api/index.md

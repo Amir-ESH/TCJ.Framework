@@ -1,10 +1,10 @@
 # Package consumer compatibility
 
-Repository tests prove that source projects work together. They do **not** prove that an external application can restore the published package graph. Project references can hide missing NuGet dependencies, bad package metadata, incorrect runtime assets, target-framework mistakes, or source/symbol packaging defects. Step 37 therefore validates TCJ through clean package-only applications.
+Repository tests prove that source projects work together. They do **not** prove that an external application can restore the published package graph. Project references can hide missing NuGet dependencies, bad package metadata, incorrect runtime assets, target-framework mistakes, or source/symbol packaging defects. the package-consumer compatibility gate therefore validates TCJ through clean package-only applications.
 
 ## What is supported
 
-The compatibility policy is tracked in [`eng/compatibility-policy.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/compatibility-policy.json). The required matrix currently is:
+The compatibility policy is tracked in `eng/compatibility-policy.json` (repository path: `eng/compatibility-policy.json`). The required matrix currently is:
 
 - target framework: `net10.0`;
 - architecture: x64 on `ubuntu-latest` and `windows-latest`, arm64 on `macos-latest`;
@@ -26,11 +26,11 @@ Seven maintained consumers cover the supported package combinations plus an expl
 6. all five packages together;
 7. `TCJ.Core` + `TCJ.DependencyInjection` + `TCJ.EntityFrameworkCore` with transactional outbox enabled through the public provider SPI.
 
-The consumer projects live under [`compatibility/Consumers/`](https://github.com/Amir-ESH/TCJ.Framework/tree/develop/compatibility/Consumers) and are intentionally not part of the main production solution. They must never reference a project below `src/`.
+The consumer projects live under `compatibility/Consumers/` (repository path: `compatibility/Consumers`) and are intentionally not part of the main production solution. They must never reference a project below `src/`.
 
 ## Local package source and restore isolation
 
-The dedicated [`compatibility/NuGet.Config`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/compatibility/NuGet.Config) uses NuGet package-source mapping. `TCJ.*` is mapped only to `artifacts/compatibility/packages`; NuGet.org uses the fallback `*` mapping for public direct and transitive dependencies. Because `TCJ.*` is the more-specific package-source pattern and exists only on `tcj-local`, TCJ packages remain pinned to the local candidate feed; a missing candidate cannot silently fall back to a previously published build.
+The dedicated `compatibility/NuGet.Config` (repository path: `compatibility/NuGet.Config`) uses NuGet package-source mapping. `TCJ.*` is mapped only to `artifacts/compatibility/packages`; NuGet.org uses the fallback `*` mapping for public direct and transitive dependencies. Because `TCJ.*` is the more-specific package-source pattern and exists only on `tcj-local`, TCJ packages remain pinned to the local candidate feed; a missing candidate cannot silently fall back to a previously published build.
 
 The runner also isolates:
 
@@ -55,7 +55,7 @@ The runner also isolates:
 
 `FullStack.MinimalApi` restores all five packages together, configures DI, ASP.NET Core, EF Core, and SQL Server, and performs an HTTP request that resolves representative TCJ services. This is the ambiguity/conflict check for the complete package graph.
 
-`Outbox.Console` is the Step 44 clean-room consumer. It enables `AddTcjOutbox`, registers a stable versioned event name, maps `TCJ_OutboxMessages`, persists a domain event through the package interceptors, and invokes `IOutboxProcessor.ProcessBatchAsync`. The fixture supplies a tiny InMemory `IOutboxStorage` implementation so the package-only scenario executes identically on all three compatibility operating systems without pretending that EF InMemory validates SQL Server locking. SQL Server claiming, leases, crash recovery, and transaction semantics remain covered by the Testcontainers outbox suite and the published SQL Server smoke test.
+`Outbox.Console` is the the transactional-outbox feature set clean-room consumer. It enables `AddTcjOutbox`, registers a stable versioned event name, maps `TCJ_OutboxMessages`, persists a domain event through the package interceptors, and invokes `IOutboxProcessor.ProcessBatchAsync`. The fixture supplies a tiny InMemory `IOutboxStorage` implementation so the package-only scenario executes identically on all three compatibility operating systems without pretending that EF InMemory validates SQL Server locking. SQL Server claiming, leases, crash recovery, and transaction semantics remain covered by the Testcontainers outbox suite and the published SQL Server smoke test.
 
 ## Package, symbol, and Source Link validation
 
@@ -131,7 +131,7 @@ The dedicated **Package consumer compatibility** workflow runs on relevant pull 
 
 Normal CI runs `validate-config`. Release preflight and the tagged release both depend on the three-platform compatibility gate. After reproducible Build A is promoted, they additionally copy the **exact** candidate package set into the compatibility local feed and execute/verify the consumers against those bytes before readiness/publication can continue.
 
-After NuGet publication, **Published package smoke tests** reuse `Core.Console`, `AspNetCore.MinimalApi`, and `FullStack.MinimalApi` through [`compatibility/NuGet.Published.Config`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/compatibility/NuGet.Published.Config). The existing published-package verifier first checks NuGet.org registration and primary package metadata against `eng/published-release.json`; the reused consumers then prove the public packages restore and execute.
+After NuGet publication, **Published package smoke tests** reuse `Core.Console`, `AspNetCore.MinimalApi`, and `FullStack.MinimalApi` through `compatibility/NuGet.Published.Config` (repository path: `compatibility/NuGet.Published.Config`). The existing published-package verifier first checks NuGet.org registration and primary package metadata against `eng/published-release.json`; the reused consumers then prove the public packages restore and execute.
 
 ## Adding a consumer scenario
 

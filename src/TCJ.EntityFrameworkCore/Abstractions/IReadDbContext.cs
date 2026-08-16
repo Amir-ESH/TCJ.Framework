@@ -17,6 +17,8 @@ public interface IReadDbContext
     /// <summary>
     /// Returns the queryable set for the specified entity type.
     /// </summary>
+    /// <typeparam name="TEntity">The entity type.</typeparam>
+    /// <returns>The result of the operation.</returns>
     DbSet<TEntity> Set<
         [DynamicallyAccessedMembers(
             DynamicallyAccessedMemberTypes.PublicConstructors

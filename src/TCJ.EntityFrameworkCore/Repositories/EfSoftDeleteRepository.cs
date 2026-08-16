@@ -20,6 +20,7 @@ public class EfSoftDeleteRepository<TEntity, TKey> : ISoftDeleteRepository<TEnti
     /// <summary>
     /// Initializes the repository.
     /// </summary>
+    /// <param name="db">The write database abstraction.</param>
     public EfSoftDeleteRepository(IWriteDbContext db)
     {
         ArgumentNullException.ThrowIfNull(db);
@@ -157,6 +158,7 @@ public class EfSoftDeleteRepository<TEntity> : EfSoftDeleteRepository<TEntity, l
     /// <summary>
     /// Initializes the repository.
     /// </summary>
+    /// <param name="db">The write database abstraction.</param>
     public EfSoftDeleteRepository(IWriteDbContext db) : base(db)
     { }
 }

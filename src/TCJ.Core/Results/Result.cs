@@ -10,6 +10,8 @@ public class Result
     /// <summary>
     /// Initializes a result while enforcing its success/failure invariants.
     /// </summary>
+    /// <param name="isSuccess">The is success value.</param>
+    /// <param name="errors">The errors value.</param>
     protected Result(bool isSuccess, IEnumerable<ResultError> errors)
     {
         ArgumentNullException.ThrowIfNull(errors);
@@ -59,12 +61,15 @@ public class Result
     /// <summary>
     /// Creates a successful result.
     /// </summary>
+    /// <returns>The result of the operation.</returns>
     public static Result Success()
         => new(isSuccess: true, errors: []);
 
     /// <summary>
     /// Creates a failed result containing one error.
     /// </summary>
+    /// <param name="error">The error value.</param>
+    /// <returns>The result of the operation.</returns>
     public static Result Failure(ResultError error)
     {
         ArgumentNullException.ThrowIfNull(error);
@@ -74,18 +79,26 @@ public class Result
     /// <summary>
     /// Creates a failed result containing one or more errors.
     /// </summary>
+    /// <param name="errors">The errors value.</param>
+    /// <returns>The result of the operation.</returns>
     public static Result Failure(IEnumerable<ResultError> errors)
         => new(isSuccess: false, errors: errors);
 
     /// <summary>
     /// Creates a successful result containing a value.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <returns>The result of the operation.</returns>
     public static Result<T> Success<T>(T value)
         => new(value);
 
     /// <summary>
     /// Creates a failed generic result containing one error.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="error">The error value.</param>
+    /// <returns>The result of the operation.</returns>
     public static Result<T> Failure<T>(ResultError error)
     {
         ArgumentNullException.ThrowIfNull(error);
@@ -95,18 +108,25 @@ public class Result
     /// <summary>
     /// Creates a failed generic result containing one or more errors.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="errors">The errors value.</param>
+    /// <returns>The result of the operation.</returns>
     public static Result<T> Failure<T>(IEnumerable<ResultError> errors)
         => new(errors);
 
     /// <summary>
     /// Combines results, returning all failure reasons when any input failed.
     /// </summary>
+    /// <param name="results">The results value.</param>
+    /// <returns>The result of the operation.</returns>
     public static Result Combine(params Result[] results)
         => Combine((IEnumerable<Result>)results);
 
     /// <summary>
     /// Combines results, returning all failure reasons when any input failed.
     /// </summary>
+    /// <param name="results">The results value.</param>
+    /// <returns>The result of the operation.</returns>
     public static Result Combine(IEnumerable<Result> results)
     {
         ArgumentNullException.ThrowIfNull(results);
@@ -128,6 +148,10 @@ public class Result
     /// <summary>
     /// Maps the result to one of two values.
     /// </summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="onSuccess">The delegate invoked for a successful result.</param>
+    /// <param name="onFailure">The on failure value.</param>
+    /// <returns>The resulting value.</returns>
     public TResult Match<TResult>(Func<TResult> onSuccess, Func<IReadOnlyList<ResultError>, TResult> onFailure)
     {
         ArgumentNullException.ThrowIfNull(onSuccess);
@@ -139,6 +163,8 @@ public class Result
     /// <summary>
     /// Executes one of two actions based on the result state.
     /// </summary>
+    /// <param name="onSuccess">The delegate invoked for a successful result.</param>
+    /// <param name="onFailure">The on failure value.</param>
     public void Switch(Action onSuccess, Action<IReadOnlyList<ResultError>> onFailure)
     {
         ArgumentNullException.ThrowIfNull(onSuccess);
@@ -156,6 +182,8 @@ public class Result
     /// <summary>
     /// Executes a side effect only when the result succeeded.
     /// </summary>
+    /// <param name="action">The action value.</param>
+    /// <returns>The resulting value.</returns>
     public Result Tap(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -171,6 +199,8 @@ public class Result
     /// <summary>
     /// Executes a side effect only when the result failed.
     /// </summary>
+    /// <param name="action">The action value.</param>
+    /// <returns>The resulting value.</returns>
     public Result TapFailure(Action<IReadOnlyList<ResultError>> action)
     {
         ArgumentNullException.ThrowIfNull(action);

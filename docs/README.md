@@ -1,72 +1,82 @@
 # TCJ Framework documentation
 
-This directory documents the public behavior of the current `0.1.0-preview.3` release-candidate source tree. Because the framework is still in preview, treat these pages and the code as a versioned pair.
+These documents describe the public TCJ Framework contract and the repository's engineering guarantees. The latest published preview is `0.1.0-preview.3`; active development targets `0.1.0-preview.4`. Consumer installation examples stay pinned to the latest verified NuGet.org release unless a page is explicitly about development or migration work.
 
 ## Start here
 
-1. [Getting started](getting-started.md)
-2. [Architecture and package boundaries](architecture.md)
-3. [Product API sample](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/samples/TCJ.Empty/README.md)
-4. [Development workflow](development.md)
-5. [Versioning and releases](versioning.md)
-6. [Release automation](releasing.md)
-7. [Published-package validation](published-package-validation.md)
-8. [Public API compatibility](api-compatibility.md)
-9. [Dependency and supply-chain security](dependency-security.md)
-10. [Release integrity and build provenance](release-integrity.md)
-11. [Software bill of materials](software-bill-of-materials.md)
-12. [Reproducible NuGet package builds](reproducible-builds.md)
-13. [Code coverage quality gate](code-coverage.md)
-14. [Mutation testing quality gate](mutation-testing.md)
-15. [Performance benchmarking and regression gate](performance-benchmarks.md)
-16. [Architecture tests and module dependency rules](architecture-tests.md)
-17. [SQL Server integration testing](sqlserver-integration-testing.md)
-18. [ASP.NET Core end-to-end integration testing](aspnetcore-integration-testing.md)
-19. [Package consumer compatibility](package-consumer-compatibility.md)
-20. [Package upgrade testing](package-upgrade-testing.md)
-21. [Diagnostics and OpenTelemetry observability](observability.md)
-22. [0.1.0-preview.2 to 0.1.0-preview.3 migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md)
-23. [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
-24. [Third preview release notes](release-notes/0.1.0-preview.3.md)
-25. [Second preview release notes](release-notes/0.1.0-preview.2.md)
-26. [First preview release notes](release-notes/0.1.0-preview.1.md)
-27. [Transactional outbox](outbox.md)
+- [Getting started](getting-started.md)
+- [Package reference](packages/index.md)
+- [Architecture and package boundaries](architecture.md)
+- [Validated examples](examples.md)
+- [Development workflow](development.md)
+- [Versioning and releases](versioning.md)
 
-## Package reference
-
-- [`TCJ.Core`](packages/core.md)
-- [`TCJ.DependencyInjection`](packages/dependency-injection.md)
-- [`TCJ.EntityFrameworkCore`](packages/entity-framework-core.md)
-- [`TCJ.EntityFrameworkCore.SqlServer`](packages/entity-framework-core-sqlserver.md)
-- [`TCJ.AspNetCore`](packages/aspnet-core.md)
-
-## Guides
+## Product guides
 
 - [Result values and HTTP responses](guides/results-and-http.md)
 - [Domain events](guides/domain-events.md)
 - [Specifications and repositories](guides/specifications-and-repositories.md)
 - [Auditing, soft delete, and rowversion](guides/auditing-soft-delete-rowversion.md)
 - [Data seeding](guides/data-seeding.md)
-- [Native AOT and trimming compatibility](guides/native-aot-and-trimming.md)
+- [Native AOT and trimming](guides/native-aot-and-trimming.md)
+- [Resilience](resilience.md)
+- [Health checks and startup diagnostics](health-checks.md)
+- [Transactional outbox](outbox.md)
+- [Observability](observability.md)
+
+## Compatibility and quality
+
+- [Public API compatibility](api-compatibility.md)
+- [Package consumer compatibility](package-consumer-compatibility.md)
+- [Package upgrade testing](package-upgrade-testing.md)
+- [SQL Server integration testing](sqlserver-integration-testing.md)
+- [ASP.NET Core integration testing](aspnetcore-integration-testing.md)
+- [Architecture tests](architecture-tests.md)
+- [Code coverage](code-coverage.md)
+- [Mutation testing](mutation-testing.md)
+- [Property and fuzz testing](property-and-fuzz-testing.md)
+- [Concurrency stress testing](concurrency-stress-testing.md)
+- [Performance benchmarks](performance-benchmarks.md)
+
+## Release and supply chain
+
+- [Release automation](releasing.md)
+- [Published-package validation](published-package-validation.md)
+- [Dependency and supply-chain security](dependency-security.md)
+- [Release integrity and build provenance](release-integrity.md)
+- [Software bill of materials](software-bill-of-materials.md)
+- [Reproducible builds](reproducible-builds.md)
+- [Documentation authoring](documentation-authoring.md)
+
+## Package reference
+
+- [`TCJ.Core`](packages/tcj-core.md)
+- [`TCJ.DependencyInjection`](packages/tcj-dependencyinjection.md)
+- [`TCJ.EntityFrameworkCore`](packages/tcj-entityframeworkcore.md)
+- [`TCJ.EntityFrameworkCore.SqlServer`](packages/tcj-entityframeworkcore-sqlserver.md)
+- [`TCJ.AspNetCore`](packages/tcj-aspnetcore.md)
+
+## Migrations and release notes
+
+- [0.1.0-preview.3 to 0.1.0-preview.4 migration guide](migrations/0.1.0-preview.3-to-0.1.0-preview.4.md)
+- [0.1.0-preview.2 to 0.1.0-preview.3 migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md)
+- [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
+- [0.1.0-preview.3 release notes](release-notes/0.1.0-preview.3.md)
+- [0.1.0-preview.2 release notes](release-notes/0.1.0-preview.2.md)
+- [0.1.0-preview.1 release notes](release-notes/0.1.0-preview.1.md)
 
 ## Important preview constraints
 
-- `0.1.0-preview.2` is the latest public preview; the repository is preparing `0.1.0-preview.3` for release. Pin exact public versions and review the changelog before upgrading.
-- Public APIs may change before `1.0.0`.
-- Domain-event dispatch remains explicit by default; when the transactional outbox is enabled, `SaveChanges` persists events transactionally and a separate manual/hosted processor dispatches them only after commit.
-- Soft deletion is explicit through `ISoftDeleteRepository`; calling `Remove` performs physical deletion.
-- The sample uses `EnsureCreatedAsync` for local demonstration and is not a migration strategy for production.
+- `0.1.0-preview.3` is the latest public preview; `0.1.0-preview.4` is under active development.
+- Public APIs may change before `1.0.0`; pin exact preview versions in production-like environments.
+- Domain-event dispatch is explicit by default. When the transactional outbox is enabled, `SaveChanges` persists pending events transactionally and a separate processor dispatches committed messages later.
+- Soft deletion is explicit through `ISoftDeleteRepository`; `Remove` performs physical deletion.
+- The sample uses `EnsureCreatedAsync` for local demonstration and is not a production migration strategy.
 
 ## Generated API reference
 
 - [Documentation site home](index.md)
-- [Package landing pages](packages/index.md)
 - [API reference entry point](api/index.md)
 - [Validated consumer examples](examples.md)
-- [Documentation authoring and baseline maintenance](documentation-authoring.md)
 
 The generated `artifacts/documentation/api/` and `artifacts/documentation/site/` directories are workflow outputs and must not be committed.
-
-- [Property and fuzz testing](property-and-fuzz-testing.md) explains deterministic FsCheck properties, shrinking/replay, fuzz target corpora, resource limits, failure minimization, and release gating.
-
-- [Health checks and startup diagnostics](health-checks.md) — liveness/readiness semantics, SQL Server probes, migration state, caching, cancellation, security, and Kubernetes guidance.

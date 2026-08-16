@@ -8,6 +8,7 @@ public interface IHasKey
     /// <summary>
     /// Gets the entity key as an object.
     /// </summary>
+    /// <returns>The resulting value.</returns>
     object? GetKey();
 }
 

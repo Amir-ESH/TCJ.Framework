@@ -72,7 +72,7 @@ Repository restore is restricted to the configured NuGet.org source and audits d
 
 ## Executable architecture policy
 
-The approved package graph, namespace roots, forbidden infrastructure prefixes, and public option allowlist are versioned in [`eng/architecture-policy.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/architecture-policy.json). The `TCJ.Architecture.Tests` project checks both production project references and compiled assembly metadata, detects cycles, validates namespace ownership, and rejects infrastructure leakage through public APIs.
+The approved package graph, namespace roots, forbidden infrastructure prefixes, and public option allowlist are versioned in `eng/architecture-policy.json` (repository path: `eng/architecture-policy.json`). The `TCJ.Architecture.Tests` project checks both production project references and compiled assembly metadata, detects cycles, validates namespace ownership, and rejects infrastructure leakage through public APIs.
 
 Run the policy validator and focused test category with:
 
@@ -95,9 +95,9 @@ Resilience primitives live in existing packages rather than a vendor-specific re
 
 ## Health-check boundaries
 
-Step 43 keeps health support inside existing packages: contract/options/startup diagnostics live in `TCJ.Core`; standard health registrations live alongside dependency injection and EF integrations; SQL Server connectivity/migration checks remain provider-specific; ASP.NET Core owns endpoint mapping and JSON formatting. `TCJ.Core` does not acquire an ASP.NET Core dependency and no circular package edge is introduced.
+the health-check feature set keeps health support inside existing packages: contract/options/startup diagnostics live in `TCJ.Core`; standard health registrations live alongside dependency injection and EF integrations; SQL Server connectivity/migration checks remain provider-specific; ASP.NET Core owns endpoint mapping and JSON formatting. `TCJ.Core` does not acquire an ASP.NET Core dependency and no circular package edge is introduced.
 
 
 ## Transactional-outbox boundary
 
-Step 44 keeps provider-neutral outbox contracts in `TCJ.Core`, EF persistence/serialization/processing in `TCJ.EntityFrameworkCore`, SQL Server claim SQL in `TCJ.EntityFrameworkCore.SqlServer`, and the optional hosted polling loop in `TCJ.AspNetCore`. `TCJ.AspNetCore` never references EF Core. Consumer-controlled migrations own the schema. See [Transactional outbox](outbox.md).
+the transactional-outbox feature set keeps provider-neutral outbox contracts in `TCJ.Core`, EF persistence/serialization/processing in `TCJ.EntityFrameworkCore`, SQL Server claim SQL in `TCJ.EntityFrameworkCore.SqlServer`, and the optional hosted polling loop in `TCJ.AspNetCore`. `TCJ.AspNetCore` never references EF Core. Consumer-controlled migrations own the schema. See [Transactional outbox](outbox.md).

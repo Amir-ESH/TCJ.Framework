@@ -13,6 +13,8 @@ public sealed class DataSeeder : IDataSeeder
     /// <summary>
     /// Initializes the data seeder.
     /// </summary>
+    /// <param name="contributors">The seed contributors to execute.</param>
+    /// <param name="unitOfWork">The unit of work used to persist seeding changes.</param>
     public DataSeeder(IEnumerable<IDataSeedContributor> contributors, IUnitOfWork unitOfWork)
     {
         ArgumentNullException.ThrowIfNull(contributors);

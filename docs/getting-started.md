@@ -15,11 +15,11 @@ Use only the modules required by the application:
 Install the exact preview versions required by the application:
 
 ```bash
-dotnet add package TCJ.Core --version 0.1.0-preview.2
-dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.2
-dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.2
-dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.2
-dotnet add package TCJ.AspNetCore --version 0.1.0-preview.2
+dotnet add package TCJ.Core --version 0.1.0-preview.3
+dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.3
+dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.3
+dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.3
+dotnet add package TCJ.AspNetCore --version 0.1.0-preview.3
 ```
 
 The sample continues to use project references so it always exercises the current repository source.
@@ -178,7 +178,7 @@ dotnet build TCJ.slnx -c Release --no-restore
 dotnet test TCJ.slnx -c Release --no-build --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
 ```
 
-Continue with the [package reference](README.md#package-reference) and the [Product API sample](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/samples/TCJ.Empty/README.md).
+Continue with the [package reference](README.md#package-reference) and the Product API sample (repository path: `samples/TCJ.Empty/README.md`).
 
 ## Package and API reference
 
