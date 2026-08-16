@@ -8,6 +8,8 @@ public sealed record EntityPropertyInput
     /// <summary>
     /// Initializes a new property lookup.
     /// </summary>
+    /// <param name="entityName">The entity name.</param>
+    /// <param name="propertyName">The property name.</param>
     public EntityPropertyInput(string entityName, string propertyName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(entityName);

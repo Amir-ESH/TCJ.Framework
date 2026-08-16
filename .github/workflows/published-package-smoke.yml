@@ -35,7 +35,7 @@ jobs:
   verify-publication:
     name: Verify NuGet publication
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     outputs:
       version: ${{ steps.package-version.outputs.value }}
@@ -43,6 +43,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          # Scheduled/manual maintenance runs use the active development branch,
+          # whose published-release metadata is advanced after every release.
+          # Reusable release calls pass an explicit version and stay on the caller SHA.
+          ref: ${{ inputs.version && github.sha || 'develop' }}
 
       - name: Validate dependency security policy
         run: python3 eng/verify-dependency-security.py
@@ -67,7 +72,7 @@ jobs:
         run: >
           python3 eng/verify-published-packages.py
           --version "${{ steps.package-version.outputs.value }}"
-          --wait-seconds 180
+          --wait-seconds 900
           --interval-seconds 30
 
       - name: Upload downloaded packages
@@ -102,6 +107,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          ref: ${{ inputs.version && github.sha || 'develop' }}
           fetch-depth: 0
 
       - name: Setup .NET SDK

@@ -55,14 +55,14 @@ The cancellation endpoint awaits the request's `RequestAborted` token. Tests can
 
 ## Native AOT Minimal API smoke
 
-Important 6 adds `tests/TCJ.AspNetCore.NativeAotSmoke/` as a project-reference Native AOT execution fixture.
+the ASP.NET Core Native AOT smoke fixture adds `tests/TCJ.AspNetCore.NativeAotSmoke/` as a project-reference Native AOT execution fixture.
 It uses `WebApplication.CreateSlimBuilder()`, sets `PublishAot=true`, disables reflection-based System.Text.Json
 defaults, registers source-generated application JSON metadata, and exercises TCJ through real loopback HTTP requests.
 The smoke covers success, validation/bad-request, not-found, conflict, and an unhandled exception while asserting that
 the production exception response does not expose the internal exception message.
 
 The dedicated ASP.NET Core workflow publishes the fixture for `linux-x64` and executes the produced native binary.
-This is package implementation evidence, not the repository's packed-NuGet release guarantee: Important 8 separately
+This is package implementation evidence, not the repository's packed-NuGet release guarantee: the packed Native AOT release smoke separately
 owns package-only Native AOT consumption, blocking AOT policy verification, and release-gate evidence.
 
 ## Local execution

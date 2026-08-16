@@ -26,6 +26,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          # The default branch is the immutable release line; maintenance audits
+          # intentionally use the active development branch so published-release
+          # metadata tracks the latest NuGet.org release.
+          ref: develop
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6

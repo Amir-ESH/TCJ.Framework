@@ -265,7 +265,7 @@ Update `eng/observability-contract.json`, tests, documentation, and the changelo
 
 ## Resilience instrumentation
 
-Step 42 extends the existing `TCJ.Core` source and meter; it does not add a second telemetry backend or exporter dependency.
+the resilience feature set extends the existing `TCJ.Core` source and meter; it does not add a second telemetry backend or exporter dependency.
 
 Activities:
 
@@ -290,6 +290,6 @@ Health probes emit `tcj.health_check.execute` plus `tcj.health_checks.executed`,
 
 ## Transactional outbox observability
 
-Step 44 adds `tcj.outbox.persist`, `tcj.outbox.claim`, `tcj.outbox.process`, `tcj.outbox.retry`, `tcj.outbox.dead_letter`, `tcj.outbox.replay`, and `tcj.outbox.cleanup` activities.
+the transactional-outbox feature set adds `tcj.outbox.persist`, `tcj.outbox.claim`, `tcj.outbox.process`, `tcj.outbox.retry`, `tcj.outbox.dead_letter`, `tcj.outbox.replay`, and `tcj.outbox.cleanup` activities.
 
 Outbox metrics are `tcj.outbox.messages.persisted`, `tcj.outbox.messages.processed`, `tcj.outbox.messages.failed`, `tcj.outbox.messages.retried`, `tcj.outbox.messages.dead_lettered`, `tcj.outbox.processing.duration`, `tcj.outbox.pending.count`, and `tcj.outbox.oldest_pending.age`. Tags are limited to stable event type, attempt, provider, outcome, and cancellation. Payloads and aggregate identifiers are forbidden from default telemetry; exception messages are also excluded because they can echo sensitive payload data. The stable names are versioned in both `eng/observability-contract.json` and `eng/outbox-contract.json`.

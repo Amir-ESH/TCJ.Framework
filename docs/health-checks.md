@@ -86,7 +86,7 @@ Public liveness/readiness responses include only:
 {
   "status": "Healthy",
   "duration": "00:00:00.0120000",
-  "version": "0.1.0-preview.3"
+  "version": "<package-version>"
 }
 ```
 
@@ -112,7 +112,7 @@ Caller cancellation is propagated rather than converted into an internal health 
 
 ## Observability
 
-Health execution extends the existing Step 41 telemetry contract with:
+Health execution extends the existing the observability contract telemetry contract with:
 
 - activity: `tcj.health_check.execute`;
 - metrics: `tcj.health_checks.executed`, `tcj.health_checks.duration`, `tcj.health_checks.failures`, `tcj.health_checks.status`;

@@ -2,7 +2,7 @@
 
 TCJ Framework publishes five packages with intentionally one-way dependencies. Compiler checks prove that code builds; architecture tests prove that it still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
 
-The executable policy is stored in [`eng/architecture-policy.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/architecture-policy.json). The test implementation lives in [`tests/TCJ.Architecture.Tests`](https://github.com/Amir-ESH/TCJ.Framework/tree/develop/tests/TCJ.Architecture.Tests).
+The executable policy is stored in `eng/architecture-policy.json` (repository path: `eng/architecture-policy.json`). The test implementation lives in `tests/TCJ.Architecture.Tests` (repository path: `tests/TCJ.Architecture.Tests`).
 
 ## Package responsibilities
 
@@ -80,7 +80,7 @@ This complements package compatibility validation: API compatibility detects acc
 The initial suite enforces only patterns already established by the repository:
 
 - containers with extension methods are static and end with `Extensions`; established fluent guard containers such as `TCJ.Core.Guards.Check` are explicit policy exceptions in `approvedExtensionContainers`;
-- public option types are explicitly listed in `approvedPublicOptionTypes`; `TCJ.Core.Diagnostics.TcjTelemetryOptions` is approved because Step 41 adds the cross-package, backend-neutral observability configuration contract;
+- public option types are explicitly listed in `approvedPublicOptionTypes`; `TCJ.Core.Diagnostics.TcjTelemetryOptions` is approved because the observability contract adds the cross-package, backend-neutral observability configuration contract;
 - repository interfaces use the `I` prefix;
 - SQL Server-specific types remain in `TCJ.EntityFrameworkCore.SqlServer`;
 - ASP.NET Core middleware and exception-handler types remain in `TCJ.AspNetCore`;

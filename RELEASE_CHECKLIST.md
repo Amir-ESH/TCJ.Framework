@@ -84,6 +84,9 @@ This checklist prepares the next preview, currently `0.1.0-preview.4`. Do not cr
 - [ ] Increment `eng/Packaging.props` and `eng/release-manifest.json` to the next preview.
 - [ ] Set manifest `status` to `development` and `releaseDate` to `null`.
 - [ ] Start a fresh `[Unreleased]` section.
+- [ ] Merge the post-release reset into `develop`.
+- [ ] Synchronize the safe post-release metadata/documentation/maintenance state to the public `main` branch through a protected PR without creating or moving a release tag.
+- [ ] Confirm the `main` README names the newly published preview and scheduled maintenance resolves the same published baseline.
 - [ ] Run **Published package smoke tests** for the new public version.
 - [ ] Verify Source Link from at least one package in a consumer debugger.
 

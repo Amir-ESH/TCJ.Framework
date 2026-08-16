@@ -17,6 +17,12 @@ public static class SqlServerServiceCollectionExtensions
     /// <summary>
     /// Registers a TCJ DbContext configured for SQL Server by using a fixed connection string.
     /// </summary>
+    /// <typeparam name="TDbContext">The EF Core database context type.</typeparam>
+    /// <param name="services">The service collection to configure.</param>
+    /// <param name="connectionString">The SQL Server connection string.</param>
+    /// <param name="configureTcjSqlServer">An optional delegate used to configure TCJ SQL Server options.</param>
+    /// <param name="configureProvider">An optional delegate used to configure the EF Core SQL Server provider.</param>
+    /// <returns>The same service collection for chaining.</returns>
     public static IServiceCollection AddTcjSqlServer<TDbContext>(this IServiceCollection services,
                                                                  string connectionString,
                                                                  Action<TcjSqlServerOptions>? configureTcjSqlServer = null,
@@ -33,6 +39,12 @@ public static class SqlServerServiceCollectionExtensions
     /// Registers a TCJ DbContext configured for SQL Server by resolving its connection string
     /// from the application service provider.
     /// </summary>
+    /// <typeparam name="TDbContext">The EF Core database context type.</typeparam>
+    /// <param name="services">The service collection to configure.</param>
+    /// <param name="connectionStringFactory">The factory that resolves the SQL Server connection string.</param>
+    /// <param name="configureTcjSqlServer">An optional delegate used to configure TCJ SQL Server options.</param>
+    /// <param name="configureProvider">An optional delegate used to configure the EF Core SQL Server provider.</param>
+    /// <returns>The same service collection for chaining.</returns>
     public static IServiceCollection AddTcjSqlServer<TDbContext>(this IServiceCollection services,
                                                                  Func<IServiceProvider, string> connectionStringFactory,
                                                                  Action<TcjSqlServerOptions>? configureTcjSqlServer = null,

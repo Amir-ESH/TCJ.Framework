@@ -16,6 +16,10 @@ namespace TCJ.DependencyInjection.DomainEvents;
 public sealed class DomainEventDispatcher : IDomainEventDispatcher
 {
     private readonly IServiceProvider _serviceProvider;
+    /// <summary>
+    /// Initializes a domain-event dispatcher with the required service provider.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
 
     public DomainEventDispatcher(IServiceProvider serviceProvider)
     {

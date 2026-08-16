@@ -63,6 +63,7 @@ public abstract class Specification<TEntity> : ISpecification<TEntity>
     /// <summary>
     /// Adds a navigation expression to the eager-loading graph.
     /// </summary>
+    /// <param name="includeExpression">The include expression to add.</param>
     protected void AddInclude(Expression<Func<TEntity, object?>> includeExpression)
     {
         ArgumentNullException.ThrowIfNull(includeExpression);
@@ -72,6 +73,8 @@ public abstract class Specification<TEntity> : ISpecification<TEntity>
     /// <summary>
     /// Applies the primary ascending ordering expression.
     /// </summary>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    /// <param name="keySelector">The key selector used for ordering.</param>
     protected void ApplyOrderBy<TKey>(Expression<Func<TEntity, TKey>> keySelector)
     {
         EnsurePrimaryOrderHasNotBeenConfigured();
@@ -81,6 +84,8 @@ public abstract class Specification<TEntity> : ISpecification<TEntity>
     /// <summary>
     /// Applies the primary descending ordering expression.
     /// </summary>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    /// <param name="keySelector">The key selector used for ordering.</param>
     protected void ApplyOrderByDescending<TKey>(Expression<Func<TEntity, TKey>> keySelector)
     {
         EnsurePrimaryOrderHasNotBeenConfigured();
@@ -90,6 +95,8 @@ public abstract class Specification<TEntity> : ISpecification<TEntity>
     /// <summary>
     /// Applies a secondary ascending ordering expression.
     /// </summary>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    /// <param name="keySelector">The key selector used for ordering.</param>
     protected void ApplyThenBy<TKey>(Expression<Func<TEntity, TKey>> keySelector)
     {
         EnsurePrimaryOrderHasBeenConfigured();
@@ -99,6 +106,8 @@ public abstract class Specification<TEntity> : ISpecification<TEntity>
     /// <summary>
     /// Applies a secondary descending ordering expression.
     /// </summary>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    /// <param name="keySelector">The key selector used for ordering.</param>
     protected void ApplyThenByDescending<TKey>(Expression<Func<TEntity, TKey>> keySelector)
     {
         EnsurePrimaryOrderHasBeenConfigured();
@@ -108,6 +117,8 @@ public abstract class Specification<TEntity> : ISpecification<TEntity>
     /// <summary>
     /// Applies zero-based offset pagination to the specification.
     /// </summary>
+    /// <param name="skip">The number of records to skip.</param>
+    /// <param name="take">The maximum number of records to take.</param>
     protected void ApplyPaging(int skip, int take)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(skip);

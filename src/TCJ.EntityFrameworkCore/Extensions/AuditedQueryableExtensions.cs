@@ -10,6 +10,11 @@ public static class AuditedQueryableExtensions
     /// <summary>
     /// Filters audited entities by their creation instant. Both boundaries are inclusive.
     /// </summary>
+    /// <typeparam name="TEntity">The entity type.</typeparam>
+    /// <param name="query">The query to transform.</param>
+    /// <param name="from">The from value.</param>
+    /// <param name="to">The to value.</param>
+    /// <returns>The result of the operation.</returns>
     public static IQueryable<TEntity> WhereCreatedOnInRange<TEntity>(this IQueryable<TEntity> query, DateTimeOffset? from, DateTimeOffset? to)
         where TEntity : class, IAuditedEntity
     {

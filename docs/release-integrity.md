@@ -64,10 +64,11 @@ Download all eleven hashed assets and `SHA256SUMS` from the same GitHub Release 
 sha256sum --check SHA256SUMS
 ```
 
-Verify provenance for a package:
+Set the exact release version, then verify provenance for a package:
 
 ```bash
-gh attestation verify TCJ.Core.0.1.0-preview.2.nupkg \
+VERSION=0.1.0-preview.3
+gh attestation verify "TCJ.Core.${VERSION}.nupkg" \
   --repo Amir-ESH/TCJ.Framework \
   --signer-workflow Amir-ESH/TCJ.Framework/.github/workflows/release.yml
 ```
@@ -75,7 +76,7 @@ gh attestation verify TCJ.Core.0.1.0-preview.2.nupkg \
 Verify the matching SBOM:
 
 ```bash
-gh attestation verify TCJ.Framework.0.1.0-preview.2.cdx.json \
+gh attestation verify "TCJ.Framework.${VERSION}.cdx.json" \
   --repo Amir-ESH/TCJ.Framework \
   --signer-workflow Amir-ESH/TCJ.Framework/.github/workflows/release.yml
 ```

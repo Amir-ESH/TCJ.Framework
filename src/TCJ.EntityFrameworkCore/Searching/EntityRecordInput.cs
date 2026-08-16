@@ -59,6 +59,10 @@ public sealed record EntityRecordInput
     /// <summary>
     /// Creates an input for an entity with a single-column primary key.
     /// </summary>
+    /// <param name="entityName">The entity name.</param>
+    /// <param name="keyPropertyName">The key property name.</param>
+    /// <param name="keyValue">The key value.</param>
+    /// <returns>The result of the operation.</returns>
     public static EntityRecordInput ForSingleKey(
         string entityName,
         string keyPropertyName,

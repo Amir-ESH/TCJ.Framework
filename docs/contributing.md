@@ -2,7 +2,7 @@
 
 Contributions should begin from `develop`, keep package boundaries explicit, add focused tests, and update conceptual and API documentation when behavior changes.
 
-Read the repository [contribution guide](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/CONTRIBUTING.md) before opening a pull request. Documentation-specific conventions, validated examples, baseline rules, and local preview commands are covered in [Documentation authoring](documentation-authoring.md).
+Read the repository contribution guide (repository path: `CONTRIBUTING.md`) before opening a pull request. Documentation-specific conventions, validated examples, baseline rules, and local preview commands are covered in [Documentation authoring](documentation-authoring.md).
 
 For Native AOT/trimming policy, production project-setting, packed smoke, or AOT workflow changes, run the repository verifier:
 

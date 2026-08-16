@@ -12,6 +12,8 @@ public static class SqlServerModelBuilderExtensions
     /// <summary>
     /// Applies all TCJ SQL Server model conventions.
     /// </summary>
+    /// <param name="modelBuilder">The EF Core model builder to configure.</param>
+    /// <returns>The result of the operation.</returns>
     public static ModelBuilder ApplyTcjSqlServerConventions(this ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -23,6 +25,8 @@ public static class SqlServerModelBuilderExtensions
     /// Configures properties exposed by <see cref="IRowVersion"/> as required,
     /// database-generated SQL Server <c>rowversion</c> concurrency tokens.
     /// </summary>
+    /// <param name="modelBuilder">The EF Core model builder to configure.</param>
+    /// <returns>The result of the operation.</returns>
     public static ModelBuilder ConfigureRowVersionProperties(this ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
