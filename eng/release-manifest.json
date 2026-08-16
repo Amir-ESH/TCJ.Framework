@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
-  "status": "development",
+  "status": "ready",
   "version": "0.1.0-preview.3",
   "tag": "v0.1.0-preview.3",
-  "releaseDate": null,
+  "releaseDate": "2026-08-16",
   "repository": "Amir-ESH/TCJ.Framework",
   "licenseExpression": "LGPL-3.0-only",
   "packages": [
