@@ -176,7 +176,7 @@ The tag workflow retains `native-aot-result.json`, `aot-runtime-verification.jso
 
 Release preflight and the tagged release both depend on `.github/workflows/consumer-compatibility.yml`. That reusable gate packs the release-manifest version and requires all six package-only consumers to restore, build, and run on Linux, Windows, and macOS with exact version/source verification. After reproducible Build A is promoted, the release job additionally copies those exact verified package bytes into the local compatibility feed and runs all six consumers again on Ubuntu before SBOM/checksum/publication stages can continue. Primary and symbol package metadata, XML documentation, portable PDBs, and Source Link are validated against the release commit, and compatibility summaries are retained with release artifacts. See [Package consumer compatibility](package-consumer-compatibility.md).
 
-## Publish the first preview
+## Publish the current preview
 
 Complete [`RELEASE_CHECKLIST.md`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/RELEASE_CHECKLIST.md), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.
 
@@ -186,10 +186,10 @@ Create the annotated tag:
 git switch main
 git pull --ff-only
 
-git tag -a v0.1.0-preview.2 \
-  -m "TCJ Framework 0.1.0-preview.2"
+git tag -a v0.1.0-preview.3 \
+  -m "TCJ Framework 0.1.0-preview.3"
 
-git push origin v0.1.0-preview.2
+git push origin v0.1.0-preview.3
 ```
 
 A version containing a pre-release suffix, such as `-preview.1`, creates a GitHub pre-release automatically.
@@ -259,7 +259,7 @@ Confirm that the documentation summary reports all five packages, the configured
 
 ## Upgrade compatibility gate
 
-Release preflight and the official tag workflow run all six upgrade scenarios from the version in `eng/published-release.json` to the version in `eng/release-manifest.json` using the exact promoted candidate packages. Undocumented behavior changes, dependency downgrades, source-tree changes, or incomplete guided migrations block release. After NuGet publication, the published-package workflow reruns Core, ASP.NET Core, and FullStack upgrade paths with the target restored from NuGet.org. See [package upgrade testing](package-upgrade-testing.md) and the [current migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md).
+Release preflight and the official tag workflow run all six upgrade scenarios from the version in `eng/published-release.json` to the version in `eng/release-manifest.json` using the exact promoted candidate packages. Undocumented behavior changes, dependency downgrades, source-tree changes, or incomplete guided migrations block release. After NuGet publication, the published-package workflow reruns Core, ASP.NET Core, and FullStack upgrade paths with the target restored from NuGet.org. See [package upgrade testing](package-upgrade-testing.md) and the [current migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md).
 
 ## Property and fuzz release gate
 

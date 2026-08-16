@@ -21,6 +21,8 @@ if _VALIDATOR_SPEC is None or _VALIDATOR_SPEC.loader is None:
 _VALIDATOR = importlib.util.module_from_spec(_VALIDATOR_SPEC)
 _VALIDATOR_SPEC.loader.exec_module(_VALIDATOR)
 SEMVER_PATTERN = _VALIDATOR.SEMVER_PATTERN
+package_readme_source = _VALIDATOR.package_readme_source
+readme_policy_required = _VALIDATOR.readme_policy_required
 validate_primary_package = _VALIDATOR.validate_primary_package
 
 DEFAULT_FLAT_CONTAINER = "https://api.nuget.org/v3-flatcontainer"
@@ -166,6 +168,9 @@ def verify_once(
     output_directory: Path,
     flat_container_base_url: str,
     registration_base_url: str,
+    *,
+    expected_readmes: dict[str, bytes] | None = None,
+    enforce_readme_policy: bool = False,
 ) -> list[str]:
     failures: list[str] = []
     repository = str(manifest["repository"])
@@ -200,6 +205,8 @@ def verify_once(
                 version,
                 repository,
                 expected_license_expression,
+                expected_readme=(expected_readmes or {}).get(package_id),
+                enforce_readme_policy=enforce_readme_policy,
             )
         except (ValueError, OSError, zipfile.BadZipFile) as error:
             failures.append(f"{package_id} {version} content validation failed: {error}")
@@ -234,6 +241,29 @@ def resolve_expected_license_expression(
         "Pass --license-expression explicitly when verifying a historical version "
         "that is not represented by the current release manifests."
     )
+
+
+def expected_readmes_for_current_release(
+    version: str,
+    release_manifest_path: Path,
+) -> dict[str, bytes] | None:
+    release_manifest = json.loads(release_manifest_path.read_text(encoding="utf-8"))
+    if version.casefold() != str(release_manifest.get("version", "")).casefold():
+        return None
+
+    repository_root = release_manifest_path.resolve().parents[1]
+    package_ids = release_manifest.get("packages", [])
+    if not isinstance(package_ids, list) or not package_ids:
+        fail("eng/release-manifest.json must define packages for README verification.")
+
+    readmes: dict[str, bytes] = {}
+    for package_id_value in package_ids:
+        package_id = str(package_id_value)
+        path = package_readme_source(repository_root, package_id)
+        if not path.is_file():
+            fail(f"Package README source is missing: {path.relative_to(repository_root)}")
+        readmes[package_id] = path.read_bytes()
+    return readmes
 
 
 def main() -> int:
@@ -272,12 +302,18 @@ def main() -> int:
     if not SEMVER_PATTERN.fullmatch(version):
         fail(f"Requested version is not valid semantic versioning: {version}")
 
+    release_manifest_path = args.release_manifest.resolve()
     expected_license_expression = resolve_expected_license_expression(
         version,
         manifest,
-        args.release_manifest.resolve(),
+        release_manifest_path,
         args.license_expression,
     )
+    expected_readmes = expected_readmes_for_current_release(
+        version,
+        release_manifest_path,
+    )
+    enforce_readme_policy = readme_policy_required(version)
 
     deadline = time.monotonic() + args.wait_seconds
     while True:
@@ -288,6 +324,8 @@ def main() -> int:
             args.output_directory.resolve(),
             args.flat_container_base_url,
             args.registration_base_url,
+            expected_readmes=expected_readmes,
+            enforce_readme_policy=enforce_readme_policy,
         )
         if not failures:
             print(f"Published package verification succeeded for {version}.")

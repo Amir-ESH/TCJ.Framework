@@ -24,6 +24,7 @@ class ReleasePackageLicenseTests(unittest.TestCase):
         path: Path,
         *,
         license_expression: str = "LGPL-3.0-only",
+        readme: str | bytes | None = None,
     ) -> None:
         nuspec = f'''<?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
@@ -39,9 +40,12 @@ class ReleasePackageLicenseTests(unittest.TestCase):
   </metadata>
 </package>
 '''
+        if readme is None:
+            readme = f"# {self.PACKAGE_ID}\n\n[Repository](https://github.com/{self.REPOSITORY})\n"
+
         with zipfile.ZipFile(path, "w") as archive:
             archive.writestr(f"{self.PACKAGE_ID}.nuspec", nuspec)
-            archive.writestr("README.md", "readme")
+            archive.writestr("README.md", readme)
             archive.writestr("LICENSE.txt", "license")
             archive.writestr(f"lib/net10.0/{self.PACKAGE_ID}.dll", b"fixture")
 
@@ -84,6 +88,125 @@ class ReleasePackageLicenseTests(unittest.TestCase):
                     self.REPOSITORY,
                     "LGPL-3.0-only",
                 )
+
+    def test_raw_html_readme_is_rejected_when_policy_is_enforced(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / f"{self.PACKAGE_ID}.{self.VERSION}.nupkg"
+            self.write_package(
+                package,
+                readme=f'<p align="center">{self.PACKAGE_ID}</p>',
+            )
+
+            with self.assertRaisesRegex(ValueError, "raw HTML"):
+                MODULE.validate_primary_package(
+                    package,
+                    self.PACKAGE_ID,
+                    self.VERSION,
+                    self.REPOSITORY,
+                    "LGPL-3.0-only",
+                    enforce_readme_policy=True,
+                )
+
+    def test_relative_readme_link_is_rejected_when_policy_is_enforced(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / f"{self.PACKAGE_ID}.{self.VERSION}.nupkg"
+            self.write_package(
+                package,
+                readme=f"# {self.PACKAGE_ID}\n\n[Guide](../docs/guide.md)\n",
+            )
+
+            with self.assertRaisesRegex(ValueError, "relative or unsupported link"):
+                MODULE.validate_primary_package(
+                    package,
+                    self.PACKAGE_ID,
+                    self.VERSION,
+                    self.REPOSITORY,
+                    "LGPL-3.0-only",
+                    enforce_readme_policy=True,
+                )
+
+    def test_packed_readme_must_match_repository_source(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / f"{self.PACKAGE_ID}.{self.VERSION}.nupkg"
+            self.write_package(package)
+
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                MODULE.validate_primary_package(
+                    package,
+                    self.PACKAGE_ID,
+                    self.VERSION,
+                    self.REPOSITORY,
+                    "LGPL-3.0-only",
+                    expected_readme=b"different readme",
+                )
+
+    def test_readme_policy_starts_with_preview_3(self) -> None:
+        self.assertFalse(MODULE.readme_policy_required("0.1.0-preview.2"))
+        self.assertTrue(MODULE.readme_policy_required("0.1.0-preview.3"))
+        self.assertTrue(MODULE.readme_policy_required("0.1.0-preview.4"))
+
+
+class ReleasePackageReadmeConfigurationTests(unittest.TestCase):
+    SOURCE = "$(MSBuildThisFileDirectory)..\\docs\\nuget\\$(MSBuildProjectName).md"
+
+    def write_packaging(
+        self,
+        root: Path,
+        *,
+        package_readme_file: str = "README.md",
+        package_path: str = "README.md",
+        link: str | None = None,
+    ) -> None:
+        eng = root / "eng"
+        eng.mkdir(parents=True)
+        link_attribute = "" if link is None else f' Link="{link}"'
+        (eng / "Packaging.props").write_text(
+            f'''<Project>
+  <PropertyGroup>
+    <PackageReadmeFile>{package_readme_file}</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="{self.SOURCE}" Pack="true" PackagePath="{package_path}"{link_attribute} />
+  </ItemGroup>
+</Project>
+''',
+            encoding="utf-8",
+        )
+
+    def test_package_readme_configuration_uses_declared_package_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_packaging(root)
+
+            MODULE.validate_package_readme_configuration(root)
+
+    def test_package_root_directory_does_not_rename_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_packaging(root, package_path="/", link="README.md")
+
+            with self.assertRaisesRegex(ValueError, "PackagePath must exactly match"):
+                MODULE.validate_package_readme_configuration(root)
+
+    def test_package_readme_path_must_match_package_readme_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_packaging(
+                root,
+                package_readme_file="README.md",
+                package_path="docs/README.md",
+            )
+
+            with self.assertRaisesRegex(ValueError, "PackagePath must exactly match"):
+                MODULE.validate_package_readme_configuration(root)
+
+    def test_link_cannot_be_used_to_rename_package_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_packaging(root, link="README.md")
+
+            with self.assertRaisesRegex(ValueError, "must not use Link"):
+                MODULE.validate_package_readme_configuration(root)
 
 
 if __name__ == "__main__":

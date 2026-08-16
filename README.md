@@ -15,8 +15,8 @@
   Domain building blocks, explicit dependency injection, EF Core infrastructure, SQL Server integration, ASP.NET Core primitives, Native AOT evidence, and release-grade engineering gates.
 </p>
 
-> **Latest published preview:** `0.1.0-preview.1`  
-> **Current development version:** `0.1.0-preview.2`
+> **Latest published preview:** `0.1.0-preview.2`  
+> **Current development version:** `0.1.0-preview.3`
 >
 > TCJ Framework is still pre-`1.0`. Public APIs may change between preview releases; pin exact preview versions in production-like environments.
 
@@ -52,11 +52,11 @@ The stable packaged Native AOT release guarantee covers `TCJ.Core`, the explicit
 Published preview packages:
 
 ```bash
-dotnet add package TCJ.Core --version 0.1.0-preview.1
-dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.1
-dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.1
-dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.1
-dotnet add package TCJ.AspNetCore --version 0.1.0-preview.1
+dotnet add package TCJ.Core --version 0.1.0-preview.2
+dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.2
+dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.2
+dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.2
+dotnet add package TCJ.AspNetCore --version 0.1.0-preview.2
 ```
 
 ## Minimal application setup

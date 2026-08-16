@@ -6,6 +6,29 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+## [0.1.0-preview.3] - 2026-08-16
+
+### Changed
+
+- Advanced the immutable published-package baseline to `0.1.0-preview.2` and opened the `0.1.0-preview.3` release line without reusing the published version or tag.
+- NuGet packages now source package-specific Markdown READMEs from `docs/nuget/` while the repository root README remains optimized for GitHub.
+- Published-package feature smoke coverage remains enabled for both the current release target and the immutable published baseline.
+
+### Fixed
+
+- Fixed published-package smoke restores so they use an explicit NuGet.org-only configuration instead of inheriting `smoke/NuGet.Config` and failing when the local `artifacts/packages` candidate feed is absent.
+- Fixed the scheduled dependency audit to restore the published-package consumer from the same NuGet.org-only source configuration.
+- Fixed NuGet README packing so each `docs/nuget/<PackageId>.md` source is emitted as package-root `README.md`, matching `PackageReadmeFile` and preventing `NU5039`.
+- Added release validation that verifies all five package README sources, rejects raw HTML and relative Markdown links for new package versions, confirms `PackagePath` exactly matches `PackageReadmeFile`, and confirms packed README content matches the repository source.
+- Fixed the Linux published-package transactional-outbox smoke by removing a duplicate explicit `SmokeChangedHandler` registration that duplicated convention scanning, and added a single-handler registration guard for future regressions.
+
+### Upgrade notes
+
+- The validated `0.1.0-preview.2` to `0.1.0-preview.3` upgrade path requires no consumer source-code changes.
+- Keep all referenced TCJ packages on the same version when upgrading.
+- No production package dependency, runtime default, public API, database schema, or application configuration change is introduced by this release.
+- See [`docs/migrations/0.1.0-preview.2-to-0.1.0-preview.3.md`](docs/migrations/0.1.0-preview.2-to-0.1.0-preview.3.md) for the complete migration and rollback guidance.
+
 ## [0.1.0-preview.2] - 2026-08-15
 
 ### Added
@@ -93,6 +116,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - GitHub issue forms and pull-request template.
 - CI validation, package-content verification, release preflight, Trusted Publishing, GitHub Releases, and weekly Dependabot updates.
 
-[Unreleased]: https://github.com/Amir-ESH/TCJ.Framework/compare/v0.1.0-preview.2...develop
+[Unreleased]: https://github.com/Amir-ESH/TCJ.Framework/compare/v0.1.0-preview.3...develop
+[0.1.0-preview.3]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.3
 [0.1.0-preview.2]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.2
 [0.1.0-preview.1]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.1

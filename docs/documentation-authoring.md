@@ -6,6 +6,7 @@ TCJ Framework treats documentation as a versioned build artifact. DocFX `2.78.5`
 
 - `docs/` contains conceptual, contributor, security, release, and package guidance.
 - `docs/packages/` contains one landing page for each public NuGet package.
+- `docs/nuget/` contains the package-specific Markdown source packed as `README.md` inside each `.nupkg`.
 - `docs/api/` contains the conceptual API-reference landing page.
 - `docfx/docfx.json` defines metadata generation and the static site.
 - `artifacts/documentation/api/` contains generated managed-reference YAML.
@@ -14,6 +15,32 @@ TCJ Framework treats documentation as a versioned build artifact. DocFX `2.78.5`
 - `eng/documentation-baseline.json` records only pre-existing documentation debt.
 
 Generated folders are never committed.
+
+## NuGet package READMEs
+
+The GitHub repository README and NuGet package READMEs are separate artifacts with different rendering constraints. The repository root `README.md` may use GitHub-oriented HTML and repository-relative assets; it is never packed into a NuGet package.
+
+Each public package has exactly one source file under `docs/nuget/`, named with the package/project ID:
+
+```text
+docs/nuget/TCJ.Core.md
+docs/nuget/TCJ.DependencyInjection.md
+docs/nuget/TCJ.EntityFrameworkCore.md
+docs/nuget/TCJ.EntityFrameworkCore.SqlServer.md
+docs/nuget/TCJ.AspNetCore.md
+```
+
+`eng/Packaging.props` selects the file through `$(MSBuildProjectName)` and packs it at the package root as `README.md`. Production project names must therefore continue to match their `PackageId`.
+
+Package README rules are intentionally stricter than general conceptual documentation:
+
+1. use Markdown only; do not use raw HTML layout or image tags;
+2. use absolute HTTPS links for repository documentation and external resources; relative repository paths are not allowed;
+3. keep the package name and scope explicit so every NuGet page describes the package actually installed;
+4. avoid embedding a mutable "current version" in the source README when the same content can remain correct across preview increments;
+5. do not replace `smoke/NuGet.Config` or otherwise couple package documentation changes to the local Native AOT candidate feed.
+
+`python3 eng/verify-release.py` validates all five source READMEs during normal development. Package validation additionally confirms that the bytes packed as `README.md` match the corresponding file under `docs/nuget/`. Published versions from `0.1.0-preview.3` onward are also checked by `eng/verify-published-packages.py` against the package README policy.
 
 ## XML documentation IDs
 

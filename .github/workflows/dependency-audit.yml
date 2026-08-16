@@ -52,5 +52,7 @@ jobs:
         run: >
           dotnet restore
           smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
+          --configfile smoke/NuGet.Published.Config
           --force-evaluate
+          --no-cache
           -p:TCJPackageVersion=${{ steps.published-version.outputs.value }}
