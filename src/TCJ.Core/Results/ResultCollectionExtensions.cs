@@ -118,9 +118,9 @@ public static class ResultCollectionExtensions
     /// <summary>
     /// Partitions results into successful values and failure errors.
     /// </summary>
-    /// <param name="Successes">The successes value.</param>
-    /// <param name="Failures">The failures value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <typeparam name="T">The value type contained by successful results.</typeparam>
+    /// <param name="results">The results to partition.</param>
+    /// <returns>A tuple containing the successful values and the errors from failed results.</returns>
     public static (IReadOnlyList<T> Successes, IReadOnlyList<ResultError> Failures) Partition<T>(this IEnumerable<Result<T>> results)
     {
         ArgumentNullException.ThrowIfNull(results);

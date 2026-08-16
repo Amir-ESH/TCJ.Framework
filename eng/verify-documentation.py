@@ -485,8 +485,41 @@ def _split_parameters(text: str) -> list[str]:
     return result
 
 
-def _parameter_names(signature: str) -> tuple[str, ...]:
-    start = signature.find("(")
+def _top_level_parameter_open(signature: str) -> int:
+    """Locate the declaration parameter list for a method or constructor.
+
+    Tuple return types can add an earlier top-level ``(``, while constructor
+    initializers add later ``base(...)`` or ``this(...)`` calls. Nested default
+    value invocations are not top-level. We therefore keep only top-level
+    parentheses preceded by a plausible member identifier and reject language
+    keywords/modifiers and constructor-initializer keywords.
+    """
+    excluded_names = {
+        "public", "protected", "internal", "private", "static", "abstract",
+        "sealed", "virtual", "override", "async", "new", "readonly", "unsafe",
+        "partial", "extern", "base", "this", "return", "typeof", "nameof",
+        "checked", "unchecked",
+    }
+    depth = 0
+    candidates: list[int] = []
+    for index, ch in enumerate(signature):
+        if ch == "(":
+            if depth == 0:
+                prefix = signature[:index].rstrip()
+                match = re.search(
+                    r"(@?[A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^<>]*>)?\s*$",
+                    prefix,
+                )
+                if match and match.group(1).lstrip("@") not in excluded_names:
+                    candidates.append(index)
+            depth += 1
+        elif ch == ")" and depth > 0:
+            depth -= 1
+    return candidates[0] if candidates else -1
+
+
+def _parameter_names(signature: str, start: int | None = None) -> tuple[str, ...]:
+    start = _top_level_parameter_open(signature) if start is None else start
     if start < 0:
         return ()
     depth = 0
@@ -512,8 +545,8 @@ def _parameter_names(signature: str) -> tuple[str, ...]:
     return tuple(names)
 
 
-def _normalized_param_types(signature: str) -> str:
-    start = signature.find("(")
+def _normalized_param_types(signature: str, start: int | None = None) -> str:
+    start = _top_level_parameter_open(signature) if start is None else start
     if start < 0:
         return ""
     depth = 0
@@ -572,8 +605,9 @@ def _member_item(package: str, rel: str, line_no: int, namespace: str, scope: Ty
     elif " operator " in f" {clean} ":
         name_match = re.search(r"operator\s+([^\s(]+)", clean)
         name = "operator" + (name_match.group(1) if name_match else "")
-        params = _parameter_names(clean)
-        doc_id = f"M:{containing}.{name}({_normalized_param_types(clean)})"
+        operator_parameter_open = clean.find("(")
+        params = _parameter_names(clean, operator_parameter_open)
+        doc_id = f"M:{containing}.{name}({_normalized_param_types(clean, operator_parameter_open)})"
         kind = "Operator"
         tparams = ()
         requires_returns = True
@@ -608,17 +642,20 @@ def _member_item(package: str, rel: str, line_no: int, namespace: str, scope: Ty
             tparams = ()
             requires_returns = False
         elif "(" in without_attrs:
-            before = without_attrs[:without_attrs.find("(")].strip()
+            parameter_open = _top_level_parameter_open(without_attrs)
+            if parameter_open < 0:
+                return None
+            before = without_attrs[:parameter_open].strip()
             name_match = re.search(r"(@?[A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^>]+>)?$", before)
             if not name_match:
                 return None
             name = name_match.group(1).lstrip("@")
-            params = _parameter_names(without_attrs)
+            params = _parameter_names(without_attrs, parameter_open)
             tparams = _generic_names(before, name)
             is_ctor = name == scope.name
             kind = "Constructor" if is_ctor else "Method"
             doc_name = "#ctor" if is_ctor else name
-            doc_id = f"M:{containing}.{doc_name}({_normalized_param_types(without_attrs)})"
+            doc_id = f"M:{containing}.{doc_name}({_normalized_param_types(without_attrs, parameter_open)})"
             prefix = before[:name_match.start()].strip().split()
             return_type = prefix[-1] if prefix else "void"
             requires_returns = not is_ctor and return_type not in {"void", "Task", "ValueTask"}
@@ -752,6 +789,25 @@ def parse_csharp_apis(policy: dict) -> list[ApiItem]:
             item = ApiItem(**{**asdict(item), "documentation_id": key})
         unique[key] = item
     return sorted(unique.values(), key=lambda value: value.documentation_id)
+
+
+def validate_documentation_tag_names(items: list[ApiItem]) -> None:
+    """Reject XML documentation tags that do not match the API signature."""
+    mismatches: list[str] = []
+    for item in items:
+        if item.inherited:
+            continue
+        unexpected_params = sorted(set(item.documented_parameters) - set(item.parameter_names))
+        unexpected_type_params = sorted(set(item.documented_type_parameters) - set(item.type_parameter_names))
+        for name in unexpected_params:
+            mismatches.append(f'{item.documentation_id} (<param name="{name}">)')
+        for name in unexpected_type_params:
+            mismatches.append(f'{item.documentation_id} (<typeparam name="{name}">)')
+    if mismatches:
+        fail(
+            "XML documentation parameter names do not match API signatures: "
+            + ", ".join(mismatches[:20])
+        )
 
 
 def load_baseline() -> dict:
@@ -1042,6 +1098,7 @@ def command_validate_config(_: argparse.Namespace) -> int:
     items = parse_csharp_apis(policy)
     if not items:
         fail("No public production APIs were discovered.")
+    validate_documentation_tag_names(items)
     baseline_index, _ = validate_baseline(policy, items)
     _, percentage = assess_source_documentation(policy, items, baseline_index)
     print(
@@ -1066,6 +1123,7 @@ def command_verify(args: argparse.Namespace) -> int:
         output = ROOT / output
     output.mkdir(parents=True, exist_ok=True)
     items = parse_csharp_apis(policy)
+    validate_documentation_tag_names(items)
     baseline_index, baseline_entries = validate_baseline(policy, items)
     findings, percentage = assess_source_documentation(policy, items, baseline_index)
 
@@ -1094,6 +1152,7 @@ def command_baseline(args: argparse.Namespace) -> int:
     policy = load_json(POLICY_PATH)
     validate_policy(policy)
     items = parse_csharp_apis(policy)
+    validate_documentation_tag_names(items)
     entries: list[dict] = []
     recorded = args.recorded_date or dt.date.today().isoformat()
     for item in items:

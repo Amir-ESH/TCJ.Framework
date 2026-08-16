@@ -118,6 +118,47 @@ class DocumentationVerifierTests(unittest.TestCase):
         self.assertFalse(generic.requires_returns)
         self.assertEqual((), generic.type_parameter_names)
 
+    def test_tuple_return_method_is_parsed_with_actual_parameters(self):
+        scope = MODULE.TypeScope(
+            name="ResultCollectionExtensions",
+            full_name="Example.ResultCollectionExtensions",
+            kind="type",
+            visibility="public",
+            start_line=0,
+            body_depth=1,
+            end_line=10,
+            type_parameters=(),
+        )
+        item = MODULE._member_item(
+            "Example",
+            "src/Example/ResultCollectionExtensions.cs",
+            5,
+            "Example",
+            scope,
+            "public static (IReadOnlyList<T> Successes, IReadOnlyList<string> Failures) "
+            "Partition<T>(this IEnumerable<T> results)",
+            (False, True, ("results",), ("T",), True),
+        )
+
+        self.assertIsNotNone(item)
+        assert item is not None
+        self.assertEqual("Method", item.kind)
+        self.assertEqual("Partition", item.name)
+        self.assertEqual(("results",), item.parameter_names)
+        self.assertEqual(("T",), item.type_parameter_names)
+        self.assertEqual(
+            "M:Example.ResultCollectionExtensions.Partition(IEnumerable<T>)",
+            item.documentation_id,
+        )
+
+    def test_unexpected_parameter_documentation_is_blocking(self):
+        item = self.item(documented_parameters=("value", "Successes"))
+        with self.assertRaisesRegex(
+            MODULE.DocumentationError,
+            "XML documentation parameter names do not match API signatures",
+        ):
+            MODULE.validate_documentation_tag_names([item])
+
     def test_unresolved_cref_is_blocking(self):
         with tempfile.TemporaryDirectory() as directory:
             xml_path = Path(directory) / "Example.xml"
