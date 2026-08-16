@@ -75,6 +75,49 @@ class DocumentationVerifierTests(unittest.TestCase):
         item = self.item(inherited=True, has_summary=False, documented_parameters=(), has_returns=False)
         self.assertEqual((), item.missing_elements(self.policy()))
 
+    def test_property_initializer_call_is_not_misclassified_as_method(self):
+        scope = MODULE.TypeScope(
+            name="Options",
+            full_name="Example.Options",
+            kind="type",
+            visibility="public",
+            start_line=0,
+            body_depth=1,
+            end_line=10,
+            type_parameters=(),
+        )
+        docs = (False, True, (), (), False)
+
+        time_span = MODULE._member_item(
+            "Example",
+            "src/Example/Options.cs",
+            5,
+            "Example",
+            scope,
+            "public TimeSpan Delay { get; set; } = TimeSpan.FromSeconds(30);",
+            docs,
+        )
+        generic = MODULE._member_item(
+            "Example",
+            "src/Example/Options.cs",
+            6,
+            "Example",
+            scope,
+            "public ISet<int> Codes { get; } = new HashSet<int>();",
+            docs,
+        )
+
+        self.assertIsNotNone(time_span)
+        self.assertIsNotNone(generic)
+        self.assertEqual("Property", time_span.kind)
+        self.assertEqual("P:Example.Options.Delay", time_span.documentation_id)
+        self.assertFalse(time_span.requires_returns)
+        self.assertEqual((), time_span.type_parameter_names)
+        self.assertEqual("Property", generic.kind)
+        self.assertEqual("P:Example.Options.Codes", generic.documentation_id)
+        self.assertFalse(generic.requires_returns)
+        self.assertEqual((), generic.type_parameter_names)
+
     def test_unresolved_cref_is_blocking(self):
         with tempfile.TemporaryDirectory() as directory:
             xml_path = Path(directory) / "Example.xml"

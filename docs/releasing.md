@@ -19,7 +19,7 @@ A release is rejected unless all of the following are true:
 - one versioned CycloneDX JSON SBOM contains all five TCJ packages, restored direct/transitive dependencies, dependency relationships, licenses, hashes, repository identity, release metadata, and source commit;
 - `SHA256SUMS` covers all ten package files and the SBOM.
 
-After validation, the protected `nuget-production` environment publishes the packages to NuGet.org and creates a GitHub Release with package assets, the SBOM, checksums, and notes extracted from `CHANGELOG.md`. Step 32 requires no additional GitHub secret, environment, Ruleset, or permission change beyond the existing Release workflow attestation permissions.
+After validation, the protected `nuget-production` environment publishes the packages to NuGet.org and creates a GitHub Release with package assets, the SBOM, checksums, and notes extracted from `CHANGELOG.md`. the SBOM release gate requires no additional GitHub secret, environment, Ruleset, or permission change beyond the existing Release workflow attestation permissions.
 
 ## One-time GitHub configuration
 
@@ -178,7 +178,7 @@ Release preflight and the tagged release both depend on `.github/workflows/consu
 
 ## Publish the current preview
 
-Complete [`RELEASE_CHECKLIST.md`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/RELEASE_CHECKLIST.md), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.
+Complete `RELEASE_CHECKLIST.md` (repository path: `RELEASE_CHECKLIST.md`), then merge `develop` into `main` through a protected pull request and confirm CI and preflight are green on the exact release commit.
 
 Create the annotated tag:
 
@@ -233,7 +233,11 @@ If any package was published, increment the version, update `eng/Packaging.props
 3. increment `eng/Packaging.props` and `eng/release-manifest.json`;
 4. set the release manifest to `status: development` and `releaseDate: null`;
 5. add the first new entries under `[Unreleased]`;
-6. run the **Published package smoke tests** workflow for the released version.
+6. merge the post-release reset into `develop`, then synchronize the public/default `main` branch with the safe post-release metadata and documentation state through a protected maintenance pull request; do not create or move a release tag for this synchronization;
+7. confirm the `main` README reports the newly published version and that scheduled maintenance cannot fall back to the previous published baseline;
+8. run the **Published package smoke tests** workflow for the released version.
+
+The release tag, not the moving `main` branch, is the immutable source snapshot for a published version. Keeping the default branch's landing page and maintenance metadata current prevents users and scheduled workflows from observing the previous release after publication. Runtime feature development still targets `develop`; the post-release `main` synchronization is limited to the already-reviewed reset/documentation/maintenance state.
 
 The smoke workflow verifies NuGet registration metadata, public listing state, and downloaded package contents, then reuses the maintained Core, ASP.NET Core, and full-stack compatibility consumers against NuGet.org on Linux, Windows, and macOS. The package source, exact released version, application build, HTTP startup, EF/SQL Server registration, and runtime execution must all pass.
 
@@ -276,7 +280,7 @@ Release preflight and the official tag workflow validate the committed observabi
 
 ### Resilience release gate
 
-Release preflight and official tag publication call the reusable resilience workflow for the exact source commit. It validates the committed policy/contract, executes deterministic core and SQL Server fault-injection scenarios, verifies attempt traces, and publishes `RESILIENCE_SUMMARY.md`. Unresolved retry, timeout, circuit, transaction, duplicate-side-effect, telemetry, or trace failures block publication. The post-publication smoke workflow detects packages exposing Step 42 and runs a selected retry/classification scenario against the NuGet package set.
+Release preflight and official tag publication call the reusable resilience workflow for the exact source commit. It validates the committed policy/contract, executes deterministic core and SQL Server fault-injection scenarios, verifies attempt traces, and publishes `RESILIENCE_SUMMARY.md`. Unresolved retry, timeout, circuit, transaction, duplicate-side-effect, telemetry, or trace failures block publication. The post-publication smoke workflow detects packages exposing the resilience feature set and runs a selected retry/classification scenario against the NuGet package set.
 
 ## Health-check release gate
 

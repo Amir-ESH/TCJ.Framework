@@ -26,6 +26,7 @@ public sealed class EntitySearcher : IEntitySearcher
     /// <summary>
     /// Initializes a new entity searcher for the current DbContext model.
     /// </summary>
+    /// <param name="readDb">The read database abstraction.</param>
     public EntitySearcher(IReadDbContext readDb)
     {
         ArgumentNullException.ThrowIfNull(readDb);

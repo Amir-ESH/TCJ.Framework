@@ -14,31 +14,110 @@ dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.3
 
 ## Reflection-free bootstrap
 
-For trimming-aware or Native AOT application code, use the explicit registration path:
+Use the parameterless overload when application code must remain trimming-aware or Native AOT friendly:
 
 ```csharp
-services.AddTcjDependencyInjection();
-services.AddTcjDomainEvent<OrderPlaced>();
-services.AddScoped<IOrderService, OrderService>();
-services.AddTransient<IDomainEventHandler<OrderPlaced>, OrderPlacedHandler>();
+builder.Services.AddTcjDependencyInjection();
+builder.Services.AddTcjDomainEvent<ProductCreated>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddTransient<IDomainEventHandler<ProductCreated>, ProductCreatedHandler>();
 ```
 
-The parameterless bootstrap registers `TimeProvider`, `IGuidGenerator`, and `IDomainEventDispatcher`. It does not enumerate or scan application assemblies. `AddTcjDomainEvent<TEvent>()` declares the closed event type that the dispatcher may handle; it does not discover or register handlers. Register handlers through normal Microsoft DI methods so transient, scoped, and singleton lifetimes stay under application control. Repeating the same event-route registration is idempotent.
+`AddTcjDependencyInjection()` registers only TCJ framework defaults. It does not enumerate or scan application assemblies. `AddTcjDomainEvent<TEvent>()` declares the closed event type used by the reflection-free dispatcher and does not discover handlers. Application services and handlers are registered explicitly through normal `IServiceCollection` APIs.
 
-`TCJ.DependencyInjection` declares `IsAotCompatible=true`, and the package-only AOT fixture exercises this explicit bootstrap, closed event route, manual handler registration, and dispatch with SDK trim/AOT analysis enabled.
+The framework defaults are:
+
+- `TimeProvider.System`
+- `IGuidGenerator` as a singleton
+- `IDomainEventDispatcher` as scoped
+
+Repeated bootstrap and closed event-route registrations are safe because they use duplicate protection.
 
 ## Convention scanning
 
-Existing non-trimmed applications can continue to opt into lifetime-marker and domain-event-handler discovery by supplying assemblies:
+Existing non-trimmed applications can continue to scan explicitly supplied assemblies:
 
 ```csharp
-services.AddTcjDependencyInjection(typeof(Program).Assembly);
+builder.Services.AddTcjDependencyInjection(typeof(Program).Assembly);
 ```
 
-The assembly/options overloads use runtime reflection and a runtime-generic dispatch fallback. They are annotated with both `RequiresUnreferencedCode` and `RequiresDynamicCode`. Trimming/Native AOT callers should use the parameterless bootstrap, declare dispatched types with `AddTcjDomainEvent<TEvent>()`, and register handlers explicitly instead of relying on convention scanning.
+Or configure the scan set explicitly:
 
-Related packages: [TCJ.Core](tcj-core.md). See [dependency injection](dependency-injection.md), the [Native AOT and trimming guide](../guides/native-aot-and-trimming.md), [validated examples](../examples.md), and the [generated API reference](../api/index.md).
+```csharp
+builder.Services.AddTcjDependencyInjection(options =>
+{
+    options.AddAssemblyContaining<Program>();
+    options.AddAssemblyContaining<ApplicationAssemblyMarker>();
+});
+```
+
+Only public, concrete types in the supplied assemblies are scanned. The assembly/options overloads are annotated with both `RequiresUnreferencedCode` and `RequiresDynamicCode` because arbitrary runtime assembly discovery and the scanner-compatible runtime-generic dispatch fallback are not reliable trimming/Native AOT contracts. Those overloads remain available for regular JIT/non-trimmed applications.
+
+## Lifetime markers
+
+Register an implementation through its service interfaces:
+
+```csharp
+public interface IOrderService;
+
+public sealed class OrderService : IOrderService, IScopedDependency;
+```
+
+Available interface-registration markers:
+
+- `ITransientDependency`
+- `IScopedDependency`
+- `ISingletonDependency`
+
+Register a concrete type as itself:
+
+```csharp
+public sealed class CacheWarmer : ISelfSingletonDependency;
+```
+
+Available self-registration markers:
+
+- `ISelfTransientDependency`
+- `ISelfScopedDependency`
+- `ISelfSingletonDependency`
+
+A type must not implement more than one TCJ lifetime marker. A non-self marker also requires at least one service interface.
+
+## Framework services with scanning options
+
+`RegisterFrameworkServices` remains available on the convention-scanning options for existing consumers. Disable these defaults only when the host supplies replacements:
+
+```csharp
+builder.Services.AddTcjDependencyInjection(options =>
+{
+    options.RegisterFrameworkServices = false;
+    options.AddAssemblyContaining<Program>();
+});
+```
+
+## Domain-event handlers
+
+Public implementations of `IDomainEventHandler<TEvent>` are registered as transient services when convention scanning is used and `RegisterDomainEventHandlers` is enabled.
+
+```csharp
+public sealed class ProductCreatedHandler
+    : IDomainEventHandler<ProductCreated>
+{
+    public Task HandleAsync(
+        ProductCreated domainEvent,
+        CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+}
+```
+
+On the reflection-free path, declare every dispatched event type with `AddTcjDomainEvent<TEvent>()` and register handlers explicitly with `IServiceCollection`, as shown above. Handler lifetimes remain exactly the lifetime chosen by the application. The dispatcher invokes events in collection order and handlers sequentially. An exception stops the current dispatch; the dispatcher does not swallow failures or execute handlers in parallel.
+
+See [Native AOT and trimming](../guides/native-aot-and-trimming.md) for the supported and restricted DI paths.
 
 ## Health integration
 
-See [Health checks and startup diagnostics](../health-checks.md) for the Step 43 APIs and operational contracts supported by this package.
+See [Health checks and startup diagnostics](../health-checks.md) for the the health-check feature set APIs and operational contracts supported by this package.
+
+Related packages: [TCJ.Core](tcj-core.md). See [Domain events](../guides/domain-events.md), [Health checks](../health-checks.md), [Native AOT and trimming](../guides/native-aot-and-trimming.md), [validated examples](../examples.md), and the [generated API reference](../api/index.md).

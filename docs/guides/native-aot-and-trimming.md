@@ -27,7 +27,7 @@ TCJ does not enable `PublishAot` on production library projects as part of this 
 
 The matrix separates **verified library compatibility** from the repository's end-to-end **support tier**.
 The library-compatibility column answers whether a package itself is declared and analyzer-verified as AOT/trim compatible.
-The support tier keeps the stronger Important 1 contract: **Full** requires a packed NuGet consumer to Native-AOT publish and execute successfully.
+The support tier keeps the stronger the original Native AOT support contract contract: **Full** requires a packed NuGet consumer to Native-AOT publish and execute successfully.
 
 | Package | Verified library compatibility | Support tier | Current boundary |
 |---|---|---|---|
@@ -99,7 +99,7 @@ This compatibility claim does **not** extend to MVC controllers or other ASP.NET
 
 ### EF Core experimental NativeAOT path
 
-`TCJ.EntityFrameworkCore` and `TCJ.EntityFrameworkCore.SqlServer` remain **Experimental** for NativeAOT. Important 7 adds evidence for a deliberately narrow static path; it does not turn EF Core NativeAOT into a production-supported TCJ feature.
+`TCJ.EntityFrameworkCore` and `TCJ.EntityFrameworkCore.SqlServer` remain **Experimental** for NativeAOT. the EF Core Native AOT experimental fixture adds evidence for a deliberately narrow static path; it does not turn EF Core NativeAOT into a production-supported TCJ feature.
 
 The repository fixture `tests/TCJ.EntityFrameworkCore.NativeAotExperimental` is a project-reference executable. It sets `PublishAot=true` and a concrete `linux-x64` runtime identifier, references `Microsoft.EntityFrameworkCore.Tasks`, enables the EF Core 10 `EFOptimizeContext` integration, opts into `Microsoft.EntityFrameworkCore.GeneratedInterceptors`, and generates the compiled model plus precompiled queries during publish. The fixture configures the SQL Server provider, applies `ApplyTcjSqlServerConventions()`, contains a representative statically analyzable LINQ query, publishes as Native AOT, and starts without opening a database connection.
 
@@ -132,7 +132,7 @@ The following TCJ APIs are **restricted** on the NativeAOT path:
 - `ModelBuilderExtensions.GetModuleAssemblies()` performs runtime module-assembly discovery and is annotated with `RequiresUnreferencedCode`.
 - `SoftDeleteModelBuilderExtensions.ApplySoftDeleteQueryFilters()` is outside the NativeAOT experiment because it installs EF global query filters, and the compiled-model path required by current EF NativeAOT does not support global query filters. Normal JIT soft-delete behavior is unchanged.
 - `IEntitySearcher.ExistsAsync(...)` and `FindAsync(...)` construct runtime entity-specific predicates/executors and are annotated with `RequiresUnreferencedCode` and `RequiresDynamicCode`. NativeAOT consumers should prefer statically typed repository or `DbContext` queries that EF tooling can precompile.
-- The transactional-outbox convention resolver can scan loaded assemblies for a persisted event name that was not explicitly registered. An AOT experiment must register persisted event contracts with `AddTcjOutboxEvent<TEvent>` and provide source-generated `System.Text.Json` metadata for event payload types. The Important 7 fixture does **not** claim the outbox path.
+- The transactional-outbox convention resolver can scan loaded assemblies for a persisted event name that was not explicitly registered. An AOT experiment must register persisted event contracts with `AddTcjOutboxEvent<TEvent>` and provide source-generated `System.Text.Json` metadata for event payload types. The the EF Core Native AOT experimental fixture fixture does **not** claim the outbox path.
 
 TCJ-owned static-path cleanup avoids runtime `ModelBuilder.Entity(Type)` calls in the SQL Server rowversion convention, and the default outbox serializer now resolves `JsonTypeInfo` before calling the metadata-based `JsonSerializer` overloads. To preserve existing JIT consumers, the serializer installs `DefaultJsonTypeInfoResolver` only when `JsonSerializer.IsReflectionEnabledByDefault` is true; Native AOT/reflection-disabled applications must provide source-generated event metadata instead. The normal JIT soft-delete implementation is deliberately left unchanged because EF compiled models currently exclude global query filters rather than providing an AOT-safe equivalent.
 
@@ -178,7 +178,7 @@ Run the repository-native verifier before opening a pull request that changes AO
 python3 eng/verify-aot.py verify
 ```
 
-The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns, validates the package-level analyzer fixtures, and separately validates the experimental EF NativeAOT fixture. It also validates the Important 8 packed smoke contract, supported `linux-x64` RID, exact current Full package closure, local-only TCJ package source mapping, absence of TCJ project references, and blocking wiring in CI/release workflows. A package declared **Full** fails verification if its policy evidence no longer points at the executable packed-package result.
+The command validates the policy schema and production-package inventory, compares declared project AOT settings with each package support tier, rejects broad or unlisted `IL2xxx`/`IL3xxx` suppression patterns, validates the package-level analyzer fixtures, and separately validates the experimental EF NativeAOT fixture. It also validates the the packed Native AOT release smoke packed smoke contract, supported `linux-x64` RID, exact current Full package closure, local-only TCJ package source mapping, absence of TCJ project references, and blocking wiring in CI/release workflows. A package declared **Full** fails verification if its policy evidence no longer points at the executable packed-package result.
 
 Every policy run writes the deterministic machine-readable result to `artifacts/aot/aot-verification.json`. Runtime evidence is independently verified with `verify-result` and written to `artifacts/aot/aot-runtime-verification.json`. Reports contain no timestamp or machine-specific absolute path and keep findings in stable order. Generated `artifacts/aot/` output must not be committed.
 

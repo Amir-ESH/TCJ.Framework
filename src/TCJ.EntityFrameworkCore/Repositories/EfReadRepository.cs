@@ -19,6 +19,7 @@ public class EfReadRepository<TEntity, TKey> : IReadRepository<TEntity, TKey>
     /// <summary>
     /// Initializes a repository for the supplied read context.
     /// </summary>
+    /// <param name="db">The write database abstraction.</param>
     public EfReadRepository(IReadDbContext db)
     {
         ArgumentNullException.ThrowIfNull(db);
@@ -346,6 +347,7 @@ public class EfReadRepository<TEntity> :
     /// <summary>
     /// Initializes a repository for the supplied read context.
     /// </summary>
+    /// <param name="db">The write database abstraction.</param>
     public EfReadRepository(IReadDbContext db)
         : base(db)
     {

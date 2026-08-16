@@ -13,12 +13,17 @@ public static class ResultHttpExtensions
     /// <summary>
     /// Maps a successful result to HTTP 204 and a failed result to Problem Details.
     /// </summary>
+    /// <param name="result">The result to convert or process.</param>
+    /// <returns>An ASP.NET Core result representing the TCJ result.</returns>
     public static IResult ToHttpResult(this Result result)
         => ToHttpResult(result, static () => HttpResults.NoContent());
 
     /// <summary>
     /// Maps a successful result using the supplied HTTP factory and a failed result to Problem Details.
     /// </summary>
+    /// <param name="result">The result to convert or process.</param>
+    /// <param name="onSuccess">The delegate invoked for a successful result.</param>
+    /// <returns>An ASP.NET Core result representing the TCJ result.</returns>
     public static IResult ToHttpResult(this Result result, Func<IResult> onSuccess)
     {
         ArgumentNullException.ThrowIfNull(result);
@@ -32,12 +37,19 @@ public static class ResultHttpExtensions
     /// <summary>
     /// Maps a successful result to HTTP 200 and a failed result to Problem Details.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="result">The result to convert or process.</param>
+    /// <returns>An ASP.NET Core result representing the TCJ result.</returns>
     public static IResult ToHttpResult<T>(this Result<T> result)
         => ToHttpResult(result, static value => HttpResults.Ok(value));
 
     /// <summary>
     /// Maps a successful result using the supplied HTTP factory and a failed result to Problem Details.
     /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="result">The result to convert or process.</param>
+    /// <param name="onSuccess">The delegate invoked for a successful result.</param>
+    /// <returns>An ASP.NET Core result representing the TCJ result.</returns>
     public static IResult ToHttpResult<T>(this Result<T> result, Func<T, IResult> onSuccess)
     {
         ArgumentNullException.ThrowIfNull(result);

@@ -19,6 +19,9 @@ public static class AspNetCoreServiceCollectionExtensions
     /// <summary>
     /// Registers current-user resolution, Problem Details, and the default exception handler.
     /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    /// <param name="configure">An optional delegate used to configure the options.</param>
+    /// <returns>The same service collection for chaining.</returns>
     public static IServiceCollection AddTcjAspNetCore(this IServiceCollection services, Action<TcjAspNetCoreOptions>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);

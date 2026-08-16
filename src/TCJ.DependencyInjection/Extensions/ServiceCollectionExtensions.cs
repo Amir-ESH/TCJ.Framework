@@ -95,6 +95,7 @@ public static class ServiceCollectionExtensions
     /// This overload uses runtime reflection to discover application types. In trimmed or Native AOT
     /// applications, use the parameterless overload and register application services explicitly.
     /// </remarks>
+    /// <returns>The same service collection for chaining.</returns>
     [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
@@ -118,6 +119,9 @@ public static class ServiceCollectionExtensions
     /// This overload can select runtime assembly scanning and is therefore trimming-restricted.
     /// Use the parameterless overload for the reflection-free framework bootstrap.
     /// </remarks>
+    /// <param name="services">The service collection to configure.</param>
+    /// <param name="configure">An optional delegate used to configure the options.</param>
+    /// <returns>The same service collection for chaining.</returns>
     [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(
@@ -141,6 +145,9 @@ public static class ServiceCollectionExtensions
     /// This overload can select runtime assembly scanning and is therefore trimming-restricted.
     /// Use the parameterless overload for the reflection-free framework bootstrap.
     /// </remarks>
+    /// <param name="services">The service collection to configure.</param>
+    /// <param name="options">The split options to apply.</param>
+    /// <returns>The same service collection for chaining.</returns>
     [RequiresUnreferencedCode(ConventionScanningRequiresUnreferencedCodeMessage)]
     [RequiresDynamicCode(ConventionScanningRequiresDynamicCodeMessage)]
     public static IServiceCollection AddTcjDependencyInjection(

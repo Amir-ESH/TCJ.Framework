@@ -577,51 +577,74 @@ def _member_item(package: str, rel: str, line_no: int, namespace: str, scope: Ty
         kind = "Operator"
         tparams = ()
         requires_returns = True
-    elif "(" in without_attrs:
-        before = without_attrs[:without_attrs.find("(")].strip()
-        name_match = re.search(r"(@?[A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^>]+>)?$", before)
-        if not name_match:
-            return None
-        name = name_match.group(1).lstrip("@")
-        params = _parameter_names(without_attrs)
-        tparams = _generic_names(before, name)
-        is_ctor = name == scope.name
-        kind = "Constructor" if is_ctor else "Method"
-        doc_name = "#ctor" if is_ctor else name
-        doc_id = f"M:{containing}.{doc_name}({_normalized_param_types(without_attrs)})"
-        prefix = before[:name_match.start()].strip().split()
-        return_type = prefix[-1] if prefix else "void"
-        requires_returns = not is_ctor and return_type not in {"void", "Task", "ValueTask"}
-        if return_type.startswith("Task<") or return_type.startswith("ValueTask<"):
-            requires_returns = True
-    elif re.search(r"\bthis\s*\[", clean):
-        name = "Item"
-        params = _parameter_names(clean.replace("[", "(", 1).replace("]", ")", 1))
-        doc_id = f"P:{containing}.Item({_normalized_param_types(clean)})"
-        kind = "Property"
-        tparams = ()
-        requires_returns = False
-    elif "{" in clean or "=>" in clean:
-        head = re.split(r"\{|=>", clean, maxsplit=1)[0].strip()
-        name_match = re.search(r"(@?[A-Za-z_][A-Za-z0-9_]*)$", head)
-        if not name_match:
-            return None
-        name = name_match.group(1).lstrip("@")
-        doc_id = f"P:{containing}.{name}"
-        kind = "Property"
-        params = ()
-        tparams = ()
-        requires_returns = False
     else:
-        name_match = re.search(r"(@?[A-Za-z_][A-Za-z0-9_]*)\s*(?:=|;)", clean)
-        if not name_match:
-            return None
-        name = name_match.group(1).lstrip("@")
-        doc_id = f"F:{containing}.{name}"
-        kind = "Field"
-        params = ()
-        tparams = ()
-        requires_returns = False
+        first_paren = without_attrs.find("(")
+        first_brace = without_attrs.find("{")
+        first_arrow = without_attrs.find("=>")
+        property_separator = min(
+            [index for index in (first_brace, first_arrow) if index >= 0],
+            default=-1,
+        )
+        looks_like_property = property_separator >= 0 and (
+            first_paren < 0 or property_separator < first_paren
+        )
+
+        if re.search(r"\bthis\s*\[", clean):
+            name = "Item"
+            params = _parameter_names(clean.replace("[", "(", 1).replace("]", ")", 1))
+            doc_id = f"P:{containing}.Item({_normalized_param_types(clean)})"
+            kind = "Property"
+            tparams = ()
+            requires_returns = False
+        elif looks_like_property:
+            head = without_attrs[:property_separator].strip()
+            name_match = re.search(r"(@?[A-Za-z_][A-Za-z0-9_]*)$", head)
+            if not name_match:
+                return None
+            name = name_match.group(1).lstrip("@")
+            doc_id = f"P:{containing}.{name}"
+            kind = "Property"
+            params = ()
+            tparams = ()
+            requires_returns = False
+        elif "(" in without_attrs:
+            before = without_attrs[:without_attrs.find("(")].strip()
+            name_match = re.search(r"(@?[A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^>]+>)?$", before)
+            if not name_match:
+                return None
+            name = name_match.group(1).lstrip("@")
+            params = _parameter_names(without_attrs)
+            tparams = _generic_names(before, name)
+            is_ctor = name == scope.name
+            kind = "Constructor" if is_ctor else "Method"
+            doc_name = "#ctor" if is_ctor else name
+            doc_id = f"M:{containing}.{doc_name}({_normalized_param_types(without_attrs)})"
+            prefix = before[:name_match.start()].strip().split()
+            return_type = prefix[-1] if prefix else "void"
+            requires_returns = not is_ctor and return_type not in {"void", "Task", "ValueTask"}
+            if return_type.startswith("Task<") or return_type.startswith("ValueTask<"):
+                requires_returns = True
+        elif "{" in clean or "=>" in clean:
+            head = re.split(r"\{|=>", clean, maxsplit=1)[0].strip()
+            name_match = re.search(r"(@?[A-Za-z_][A-Za-z0-9_]*)$", head)
+            if not name_match:
+                return None
+            name = name_match.group(1).lstrip("@")
+            doc_id = f"P:{containing}.{name}"
+            kind = "Property"
+            params = ()
+            tparams = ()
+            requires_returns = False
+        else:
+            name_match = re.search(r"(@?[A-Za-z_][A-Za-z0-9_]*)\s*(?:=|;)", clean)
+            if not name_match:
+                return None
+            name = name_match.group(1).lstrip("@")
+            doc_id = f"F:{containing}.{name}"
+            kind = "Field"
+            params = ()
+            tparams = ()
+            requires_returns = False
 
     return ApiItem(package, doc_id, kind, rel, line_no, name, visibility, params, tparams,
                    requires_returns, inherited, has_summary, doc_params, doc_tparams, has_returns)

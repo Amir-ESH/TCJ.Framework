@@ -11,10 +11,10 @@ An SBOM answers **what is in the release**. It complements, but does not replace
 
 ## Published format and files
 
-Step 32 uses CycloneDX JSON specification `1.6` as the single validated format. A release version such as `0.1.0-preview.2` produces:
+The SBOM release gate uses CycloneDX JSON specification `1.6` as the single validated format. For a release version represented by `<version>`, it produces:
 
 ```text
-artifacts/sbom/TCJ.Framework.0.1.0-preview.2.cdx.json
+artifacts/sbom/TCJ.Framework.<version>.cdx.json
 artifacts/sbom/SBOM_SUMMARY.md
 artifacts/sbom/sbom-summary.json
 ```
@@ -40,7 +40,7 @@ Multi-targeted NuGet packages may declare different version ranges for the same 
 
 ## Policy
 
-[`eng/sbom-policy.json`](https://github.com/Amir-ESH/TCJ.Framework/blob/develop/eng/sbom-policy.json) defines:
+`eng/sbom-policy.json` (repository path: `eng/sbom-policy.json`) defines:
 
 - the required CycloneDX format and specification version;
 - the exact five release package IDs;

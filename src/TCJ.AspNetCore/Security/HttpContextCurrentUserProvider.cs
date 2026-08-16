@@ -10,6 +10,8 @@ namespace TCJ.AspNetCore.Security;
 /// <summary>
 /// Resolves the current numeric user identifier from the active HTTP request.
 /// </summary>
+/// <param name="httpContextAccessor">The HTTP context accessor.</param>
+/// <param name="options">The split options to apply.</param>
 public sealed class HttpContextCurrentUserProvider(IHttpContextAccessor httpContextAccessor, IOptions<TcjAspNetCoreOptions> options)
     : ICurrentUserProvider
 {

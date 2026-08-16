@@ -12,6 +12,13 @@ namespace TCJ.Core.Guards;
 [DebuggerStepThrough]
 public static class Check
 {
+    /// <summary>
+    /// Ensures that the value is not null.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="parameterName">The optional parameter name used by the thrown exception.</param>
+    /// <returns>The result of the operation.</returns>
     public static T NotNull<T>(
         [NotNull] this T? value,
         [CallerArgumentExpression(nameof(value))] string? parameterName = null)
@@ -23,6 +30,12 @@ public static class Check
 
         return value;
     }
+    /// <summary>
+    /// Ensures that the supplied value is not null or empty.
+    /// </summary>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="parameterName">The optional parameter name used by the thrown exception.</param>
+    /// <returns>The result of the operation.</returns>
 
     public static string NotNullOrEmpty(
         [NotNull] this string? value,
@@ -31,6 +44,12 @@ public static class Check
         ArgumentException.ThrowIfNullOrEmpty(value, parameterName);
         return value;
     }
+    /// <summary>
+    /// Ensures that the string is not null, empty, or whitespace.
+    /// </summary>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="parameterName">The optional parameter name used by the thrown exception.</param>
+    /// <returns>The result of the operation.</returns>
 
     public static string NotNullOrWhiteSpace(
         [NotNull] this string? value,
@@ -39,6 +58,13 @@ public static class Check
         ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
         return value;
     }
+    /// <summary>
+    /// Ensures that the supplied value is not null or empty.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="parameterName">The optional parameter name used by the thrown exception.</param>
+    /// <returns>The result of the operation.</returns>
 
     public static IReadOnlyCollection<T> NotNullOrEmpty<T>(
         [NotNull] this IReadOnlyCollection<T>? value,
@@ -53,6 +79,14 @@ public static class Check
 
         return value;
     }
+    /// <summary>
+    /// Ensures that the string length falls within the inclusive range.
+    /// </summary>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="minimumLength">The inclusive minimum length.</param>
+    /// <param name="maximumLength">The inclusive maximum length.</param>
+    /// <param name="parameterName">The optional parameter name used by the thrown exception.</param>
+    /// <returns>The result of the operation.</returns>
 
     public static string LengthBetween(
         this string value,
@@ -84,6 +118,13 @@ public static class Check
 
         return value;
     }
+    /// <summary>
+    /// Ensures that the value is greater than zero.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="parameterName">The optional parameter name used by the thrown exception.</param>
+    /// <returns>The result of the operation.</returns>
 
     public static T Positive<T>(
         this T value,
@@ -100,6 +141,15 @@ public static class Check
 
         return value;
     }
+    /// <summary>
+    /// Ensures that the value falls within the inclusive range.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="minimumValue">The inclusive minimum value.</param>
+    /// <param name="maximumValue">The inclusive maximum value.</param>
+    /// <param name="parameterName">The optional parameter name used by the thrown exception.</param>
+    /// <returns>The result of the operation.</returns>
 
     public static T InRange<T>(
         this T value,
@@ -125,6 +175,13 @@ public static class Check
 
         return value;
     }
+    /// <summary>
+    /// Ensures that the value is not its default value.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to inspect or transform.</param>
+    /// <param name="parameterName">The optional parameter name used by the thrown exception.</param>
+    /// <returns>The result of the operation.</returns>
 
     public static T NotDefault<T>(
         [NotNull] this T? value,
@@ -139,6 +196,13 @@ public static class Check
 
         return value;
     }
+    /// <summary>
+    /// Ensures that the supplied type is assignable to the requested base type.
+    /// </summary>
+    /// <typeparam name="TBaseType">The required base type.</typeparam>
+    /// <param name="type">The type to validate.</param>
+    /// <param name="parameterName">The optional parameter name used by the thrown exception.</param>
+    /// <returns>The result of the operation.</returns>
 
     public static Type AssignableTo<TBaseType>(
         [NotNull] this Type? type,

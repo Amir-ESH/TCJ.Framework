@@ -19,6 +19,8 @@ public static class SoftDeleteModelBuilderExtensions
     /// An existing anonymous filter is combined with the soft-delete predicate; otherwise,
     /// soft-delete is registered as a named filter so it can coexist with named filters.
     /// </summary>
+    /// <param name="modelBuilder">The EF Core model builder to configure.</param>
+    /// <returns>The result of the operation.</returns>
     public static ModelBuilder ApplySoftDeleteQueryFilters(this ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);

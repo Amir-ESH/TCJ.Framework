@@ -4,7 +4,7 @@ TCJ Framework uses example-based tests, property-based tests, mutation testing, 
 
 ## Scope and tools
 
-Step 39 initially targets `TCJ.Core` and `TCJ.DependencyInjection`, which are deterministic and require no database, Docker service, or network access. Property tests use the centrally pinned `FsCheck.Xunit.v3` package. The fuzz harness references the centrally pinned `SharpFuzz` package and also includes a deterministic managed campaign runner used by CI and release workflows; `--sharpfuzz` exposes the same targets through `Fuzzer.OutOfProcess.Run` for coverage-guided local campaigns.
+the property and fuzz testing gate initially targets `TCJ.Core` and `TCJ.DependencyInjection`, which are deterministic and require no database, Docker service, or network access. Property tests use the centrally pinned `FsCheck.Xunit.v3` package. The fuzz harness references the centrally pinned `SharpFuzz` package and also includes a deterministic managed campaign runner used by CI and release workflows; `--sharpfuzz` exposes the same targets through `Fuzzer.OutOfProcess.Run` for coverage-guided local campaigns.
 
 ## Properties, generators, shrinking, and replay
 

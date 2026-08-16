@@ -125,7 +125,7 @@ Changes that affect package APIs, dependencies, configuration, runtime wiring, o
 
 ## Pull requests
 
-Target regular changes to `develop`. Release pull requests flow from `develop` to `main`.
+Target regular changes to `develop`. Release pull requests flow from `develop` to `main`. After a successful publication, merge the reviewed post-release reset into `develop` and synchronize its safe metadata, documentation, and maintenance-workflow state to `main` through a protected pull request. Release tags, not the moving `main` branch, preserve immutable published source snapshots.
 
 A pull request should explain:
 

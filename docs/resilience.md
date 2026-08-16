@@ -79,7 +79,7 @@ The strategy argument is for stable operation categories, not endpoint names or 
 
 A generic retry policy cannot prove whether an application side effect is idempotent. Before retrying a write, external call, message publication, or scheduled operation, the consumer must provide an idempotency boundary such as a natural unique key, operation identifier, outbox/inbox record, or downstream idempotency token.
 
-Step 42 deliberately does **not** add a distributed idempotency store. That storage and consistency choice belongs to the consuming application.
+the resilience feature set deliberately does **not** add a distributed idempotency store. That storage and consistency choice belongs to the consuming application.
 
 ## Cooperative timeout
 
@@ -112,7 +112,7 @@ Do not share one breaker across unrelated services, tenants, or endpoints. The d
 
 ## SQL Server transaction-level retry
 
-`AddTcjSqlServer` already configures SQL Server's provider-supported execution strategy. Step 42 keeps that database-level retry responsibility with EF Core and adds an explicit transaction-level helper for user-initiated transactions. When provider retries are enabled, TCJ validates `MaxRetryCount` in the range 1–10 and `MaxRetryDelay` above zero and no greater than 30 seconds; the existing defaults remain 6 retries and 30 seconds.
+`AddTcjSqlServer` already configures SQL Server's provider-supported execution strategy. the resilience feature set keeps that database-level retry responsibility with EF Core and adds an explicit transaction-level helper for user-initiated transactions. When provider retries are enabled, TCJ validates `MaxRetryCount` in the range 1–10 and `MaxRetryDelay` above zero and no greater than 30 seconds; the existing defaults remain 6 retries and 30 seconds.
 
 ```csharp
 await scopeFactory.ExecuteTcjSqlServerTransactionAsync<MyDbContext>(
@@ -150,7 +150,7 @@ Enabling handler retry is appropriate only when the retried handler's side effec
 
 ## Telemetry
 
-Step 42 extends the Step 41 `TCJ.Core` `ActivitySource` and `Meter` contract with:
+the resilience feature set extends the the observability contract `TCJ.Core` `ActivitySource` and `Meter` contract with:
 
 Activities:
 

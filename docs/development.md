@@ -88,8 +88,9 @@ See [SQL Server integration testing](sqlserver-integration-testing.md) for prere
 
 ```text
 feature/*, fix/*, docs/*, test/* → develop
-develop                              → main
+develop                              → main for release promotion
 hotfix/*                             → main and develop
+post-release/*                       → develop, then safe synchronization to main
 ```
 
 Create a change branch:

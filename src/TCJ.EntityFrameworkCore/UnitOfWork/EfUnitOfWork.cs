@@ -17,6 +17,7 @@ public sealed class EfUnitOfWork : IUnitOfWork
     /// <summary>
     /// Initializes the unit of work for the supplied write context.
     /// </summary>
+    /// <param name="db">The write database abstraction.</param>
     public EfUnitOfWork(IWriteDbContext db)
     {
         ArgumentNullException.ThrowIfNull(db);

@@ -18,6 +18,7 @@ public class EfWriteRepository<TEntity, TKey> : IWriteRepository<TEntity, TKey>
     /// <summary>
     /// Initializes the repository.
     /// </summary>
+    /// <param name="db">The write database abstraction.</param>
     public EfWriteRepository(IWriteDbContext db)
     {
         ArgumentNullException.ThrowIfNull(db);
@@ -209,6 +210,7 @@ public class EfWriteRepository<TEntity> : EfWriteRepository<TEntity, long>, IWri
     /// <summary>
     /// Initializes the repository.
     /// </summary>
+    /// <param name="db">The write database abstraction.</param>
     public EfWriteRepository(IWriteDbContext db) : base(db)
     { }
 }

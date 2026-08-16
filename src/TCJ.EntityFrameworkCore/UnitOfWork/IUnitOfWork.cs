@@ -20,6 +20,7 @@ public interface IUnitOfWork
     /// The caller owns the returned transaction and must dispose it asynchronously.
     /// </summary>
     /// <param name="cancellationToken">A token used to cancel transaction creation.</param>
+    /// <returns>The result of the operation.</returns>
     Task<IUnitOfWorkTransaction> BeginTransactionAsync(
         CancellationToken cancellationToken = default);
 
@@ -29,6 +30,7 @@ public interface IUnitOfWork
     /// </summary>
     /// <param name="isolationLevel">The requested database isolation level.</param>
     /// <param name="cancellationToken">A token used to cancel transaction creation.</param>
+    /// <returns>The result of the operation.</returns>
     Task<IUnitOfWorkTransaction> BeginTransactionAsync(
         IsolationLevel isolationLevel,
         CancellationToken cancellationToken = default);

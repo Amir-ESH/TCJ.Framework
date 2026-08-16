@@ -12,6 +12,8 @@ namespace TCJ.AspNetCore.Diagnostics;
 /// <summary>
 /// Converts unexpected request exceptions to safe Problem Details responses.
 /// </summary>
+/// <param name="logger">The logger used to record diagnostics.</param>
+/// <param name="options">The split options to apply.</param>
 public sealed class TcjExceptionHandler(ILogger<TcjExceptionHandler> logger, IOptions<TcjAspNetCoreOptions> options) : IExceptionHandler
 {
     private const string UnexpectedErrorCode = "UNEXPECTED_ERROR";
