@@ -55,7 +55,7 @@
       },
       "_gitUrlPattern": "github",
       "repositoryUrl": "https://github.com/Amir-ESH/TCJ.Framework",
-      "packageVersion": "0.1.0-preview.3"
+      "packageVersion": "0.1.0-preview.4"
     },
     "sitemap": {
       "baseUrl": "https://amir-esh.github.io/TCJ.Framework/"

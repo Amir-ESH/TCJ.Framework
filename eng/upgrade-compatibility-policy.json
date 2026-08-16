@@ -3,7 +3,7 @@
   "baselineMetadata": "eng/published-release.json",
   "targetMetadata": "eng/release-manifest.json",
   "breakingChangesManifest": "eng/breaking-changes.json",
-  "migrationGuide": "docs/migrations/0.1.0-preview.2-to-0.1.0-preview.3.md",
+  "migrationGuide": "docs/migrations/0.1.0-preview.3-to-0.1.0-preview.4.md",
   "configuration": "Release",
   "targetFramework": "net10.0",
   "minimumScenarioCount": 6,
