@@ -186,10 +186,10 @@ Create the annotated tag:
 git switch main
 git pull --ff-only
 
-git tag -a v0.1.0-preview.3 \
-  -m "TCJ Framework 0.1.0-preview.3"
+git tag -a v0.1.0-preview.4 \
+  -m "TCJ Framework 0.1.0-preview.4"
 
-git push origin v0.1.0-preview.3
+git push origin v0.1.0-preview.4
 ```
 
 A version containing a pre-release suffix, such as `-preview.1`, creates a GitHub pre-release automatically.
@@ -259,7 +259,7 @@ Confirm that the documentation summary reports all five packages, the configured
 
 ## Upgrade compatibility gate
 
-Release preflight and the official tag workflow run all six upgrade scenarios from the version in `eng/published-release.json` to the version in `eng/release-manifest.json` using the exact promoted candidate packages. Undocumented behavior changes, dependency downgrades, source-tree changes, or incomplete guided migrations block release. After NuGet publication, the published-package workflow reruns Core, ASP.NET Core, and FullStack upgrade paths with the target restored from NuGet.org. See [package upgrade testing](package-upgrade-testing.md) and the [current migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md).
+Release preflight and the official tag workflow run all six upgrade scenarios from the version in `eng/published-release.json` to the version in `eng/release-manifest.json` using the exact promoted candidate packages. Undocumented behavior changes, dependency downgrades, source-tree changes, or incomplete guided migrations block release. After NuGet publication, the published-package workflow reruns Core, ASP.NET Core, and FullStack upgrade paths with the target restored from NuGet.org. See [package upgrade testing](package-upgrade-testing.md) and the [current migration guide](migrations/0.1.0-preview.3-to-0.1.0-preview.4.md).
 
 ## Property and fuzz release gate
 

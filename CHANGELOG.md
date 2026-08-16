@@ -6,6 +6,10 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+### Changed
+
+- Advanced the immutable published-package and PackageValidation baseline to `0.1.0-preview.3` and opened the `0.1.0-preview.4` development line.
+
 ## [0.1.0-preview.3] - 2026-08-16
 
 ### Changed

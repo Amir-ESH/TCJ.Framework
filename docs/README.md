@@ -1,6 +1,6 @@
 # TCJ Framework documentation
 
-This directory documents the public behavior of the current `0.1.0-preview.3` release-candidate source tree. Because the framework is still in preview, treat these pages and the code as a versioned pair.
+This directory documents the public behavior of the current `0.1.0-preview.4` development source tree. Because the framework is still in preview, treat these pages and the code as a versioned pair.
 
 ## Start here
 
@@ -25,12 +25,13 @@ This directory documents the public behavior of the current `0.1.0-preview.3` re
 19. [Package consumer compatibility](package-consumer-compatibility.md)
 20. [Package upgrade testing](package-upgrade-testing.md)
 21. [Diagnostics and OpenTelemetry observability](observability.md)
-22. [0.1.0-preview.2 to 0.1.0-preview.3 migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md)
-23. [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
-24. [Third preview release notes](release-notes/0.1.0-preview.3.md)
-25. [Second preview release notes](release-notes/0.1.0-preview.2.md)
-26. [First preview release notes](release-notes/0.1.0-preview.1.md)
-27. [Transactional outbox](outbox.md)
+22. [0.1.0-preview.3 to 0.1.0-preview.4 migration guide](migrations/0.1.0-preview.3-to-0.1.0-preview.4.md)
+23. [0.1.0-preview.2 to 0.1.0-preview.3 migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md)
+24. [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
+25. [Third preview release notes](release-notes/0.1.0-preview.3.md)
+26. [Second preview release notes](release-notes/0.1.0-preview.2.md)
+27. [First preview release notes](release-notes/0.1.0-preview.1.md)
+28. [Transactional outbox](outbox.md)
 
 ## Package reference
 
@@ -51,7 +52,7 @@ This directory documents the public behavior of the current `0.1.0-preview.3` re
 
 ## Important preview constraints
 
-- `0.1.0-preview.2` is the latest public preview; the repository is preparing `0.1.0-preview.3` for release. Pin exact public versions and review the changelog before upgrading.
+- `0.1.0-preview.3` is the latest public preview; the repository is developing `0.1.0-preview.4`. Pin exact public versions and review the changelog before upgrading.
 - Public APIs may change before `1.0.0`.
 - Domain-event dispatch remains explicit by default; when the transactional outbox is enabled, `SaveChanges` persists events transactionally and a separate manual/hosted processor dispatches them only after commit.
 - Soft deletion is explicit through `ISoftDeleteRepository`; calling `Remove` performs physical deletion.
