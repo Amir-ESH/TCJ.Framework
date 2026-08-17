@@ -63,7 +63,7 @@ jobs:
       mode: ${{ steps.scope.outputs.mode }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -103,7 +103,7 @@ jobs:
       TCJ_STRESS_MODE: ${{ needs.scope.outputs.mode }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -211,7 +211,7 @@ jobs:
       TCJ_STRESS_MODE: ${{ needs.scope.outputs.mode }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -300,7 +300,7 @@ jobs:
       TCJ_STRESS_MODE: ${{ needs.scope.outputs.mode }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
