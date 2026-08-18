@@ -16,5 +16,6 @@
       Include="..\..\eng\packaging\TCJ.Analyzers\TCJ.Analyzers.Package.csproj"
       ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\src\TCJ.Core\TCJ.Core.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.DependencyInjection\TCJ.DependencyInjection.csproj" />
   </ItemGroup>
 </Project>

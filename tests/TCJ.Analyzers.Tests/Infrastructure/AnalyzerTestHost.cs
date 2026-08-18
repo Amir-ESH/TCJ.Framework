@@ -52,7 +52,68 @@ internal static class AnalyzerTestHost
             .ConfigureAwait(false);
     }
 
-    public static async Task<string> ApplyFirstCodeFixAsync(
+    public static Task<string> ApplyFirstCodeFixAsync(
+        string source,
+        DiagnosticAnalyzer analyzer,
+        CodeFixProvider codeFixProvider,
+        string[]? tcjReferenceAssemblyPaths = null,
+        CancellationToken cancellationToken = default)
+        => ApplyCodeFixAsync(
+            source,
+            analyzer,
+            codeFixProvider,
+            actionTitle: null,
+            tcjReferenceAssemblyPaths,
+            cancellationToken);
+
+    public static async Task<string> ApplyCodeFixAsync(
+        string source,
+        DiagnosticAnalyzer analyzer,
+        CodeFixProvider codeFixProvider,
+        string? actionTitle,
+        string[]? tcjReferenceAssemblyPaths = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(analyzer);
+        ArgumentNullException.ThrowIfNull(codeFixProvider);
+
+        using AdhocWorkspace workspace = new();
+        Document document = CreateDocument(
+            workspace,
+            source,
+            tcjReferenceAssemblyPaths ?? []);
+
+        var (_, actions) = await GetCodeFixActionsAsync(
+            document,
+            analyzer,
+            codeFixProvider,
+            cancellationToken).ConfigureAwait(false);
+
+        CodeAction action = actionTitle is null
+            ? actions.FirstOrDefault()
+                ?? throw new InvalidOperationException("The code-fix provider did not register an action.")
+            : actions.Single(candidate => string.Equals(candidate.Title, actionTitle, StringComparison.Ordinal));
+
+        ImmutableArray<CodeActionOperation> operations = await action
+            .GetOperationsAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        ApplyChangesOperation applyChanges = operations
+            .OfType<ApplyChangesOperation>()
+            .Single();
+
+        Document changedDocument = applyChanges.ChangedSolution.GetDocument(document.Id)
+            ?? throw new InvalidOperationException("The code-fix action removed the test document unexpectedly.");
+
+        SourceText changedText = await changedDocument
+            .GetTextAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return changedText.ToString();
+    }
+
+    public static async Task<ImmutableArray<string>> GetCodeFixTitlesAsync(
         string source,
         DiagnosticAnalyzer analyzer,
         CodeFixProvider codeFixProvider,
@@ -69,6 +130,23 @@ internal static class AnalyzerTestHost
             source,
             tcjReferenceAssemblyPaths ?? []);
 
+        var (_, actions) = await GetCodeFixActionsAsync(
+            document,
+            analyzer,
+            codeFixProvider,
+            cancellationToken).ConfigureAwait(false);
+
+        return actions
+            .Select(action => action.Title)
+            .ToImmutableArray();
+    }
+
+    private static async Task<(Diagnostic Diagnostic, List<CodeAction> Actions)> GetCodeFixActionsAsync(
+        Document document,
+        DiagnosticAnalyzer analyzer,
+        CodeFixProvider codeFixProvider,
+        CancellationToken cancellationToken)
+    {
         Compilation compilation = await document.Project
             .GetCompilationAsync(cancellationToken)
             .ConfigureAwait(false)
@@ -96,25 +174,7 @@ internal static class AnalyzerTestHost
 
         await codeFixProvider.RegisterCodeFixesAsync(context).ConfigureAwait(false);
 
-        CodeAction action = actions.FirstOrDefault()
-            ?? throw new InvalidOperationException("The code-fix provider did not register an action.");
-
-        ImmutableArray<CodeActionOperation> operations = await action
-            .GetOperationsAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        ApplyChangesOperation applyChanges = operations
-            .OfType<ApplyChangesOperation>()
-            .Single();
-
-        Document changedDocument = applyChanges.ChangedSolution.GetDocument(document.Id)
-            ?? throw new InvalidOperationException("The code-fix action removed the test document unexpectedly.");
-
-        SourceText changedText = await changedDocument
-            .GetTextAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        return changedText.ToString();
+        return (diagnostic, actions);
     }
 
     private static Document CreateDocument(
