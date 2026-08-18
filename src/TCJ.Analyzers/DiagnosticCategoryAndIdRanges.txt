@@ -1,0 +1,7 @@
+# TCJ analyzer diagnostic categories and allocated ID ranges.
+# Keep category names stable after the first diagnostic ships.
+TCJ.DependencyInjection: TCJ0001-TCJ0999
+TCJ.Persistence: TCJ1000-TCJ1999
+TCJ.Specifications: TCJ2000-TCJ2999
+TCJ.AotTrimming: TCJ3000-TCJ3999
+TCJ.StrongTypes: TCJ4000-TCJ4999

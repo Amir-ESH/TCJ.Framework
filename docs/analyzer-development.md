@@ -49,6 +49,12 @@ dotnet test tests/TCJ.Analyzers.Tests/TCJ.Analyzers.Tests.csproj -c Release
 
 The package tests pack `TCJ.Analyzers`, restore it into an isolated `net10.0` consumer, build that consumer, and verify that neither `TCJ.Analyzers*.dll` nor `Microsoft.CodeAnalysis*.dll` is copied to the application's runtime output.
 
+## Diagnostic governance
+
+Before adding the first or any subsequent TCJ diagnostic, follow the [analyzer diagnostic governance](analyzers/README.md). The governance defines the stable `TCJxxxx` ID/category ranges, default severity policy, code-fix safety rules, release tracking, suppression guidance, and required per-rule documentation.
+
+`DiagnosticCategoryAndIdRanges.txt`, `AnalyzerReleases.Shipped.md`, and `AnalyzerReleases.Unshipped.md` are Roslyn `AdditionalFiles` for the analyzer project. The repository enables the corresponding Roslyn governance diagnostics as errors, and `AnalyzerGovernanceTests` provides regression coverage for duplicate IDs, category ranges, release tracking, and documentation.
+
 ## Adding future diagnostics
 
 Do not add a diagnostic by reflecting over runtime TCJ types. Resolve framework symbols from the user's `Compilation` with metadata names, compare Roslyn symbols, and keep all analyzer behavior deterministic for the same compilation. Diagnostics and code fixes introduced after this infrastructure issue must follow the repository's diagnostic-governance and release-tracking rules before they ship.

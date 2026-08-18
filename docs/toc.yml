@@ -55,6 +55,8 @@
     href: architecture-tests.md
   - name: Analyzer Development
     href: analyzer-development.md
+  - name: Analyzer Diagnostic Governance
+    href: analyzers/README.md
   - name: Code Coverage
     href: code-coverage.md
   - name: Mutation Testing
