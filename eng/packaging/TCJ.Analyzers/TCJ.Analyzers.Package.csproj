@@ -3,6 +3,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
     <PackageId>TCJ.Analyzers</PackageId>
     <Title>TCJ Analyzers</Title>
     <Description>Compile-time diagnostics and code fixes for TCJ Framework applications.</Description>

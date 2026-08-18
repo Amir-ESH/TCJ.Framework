@@ -41,6 +41,32 @@ public sealed class AnalyzerBoundaryTests
     }
 
     [Fact]
+    public void Netstandard_analyzer_projects_pin_CSharp_10_for_shared_compiler_settings()
+    {
+        string[] analyzerProjects =
+        [
+            "src/TCJ.Analyzers/TCJ.Analyzers.csproj",
+            "src/TCJ.Analyzers.CodeFixes/TCJ.Analyzers.CodeFixes.csproj",
+            "eng/packaging/TCJ.Analyzers/TCJ.Analyzers.Package.csproj",
+        ];
+
+        foreach (string relativePath in analyzerProjects)
+        {
+            XDocument project = XDocument.Load(RepositoryLayout.Combine(relativePath));
+
+            string? targetFramework = project.Descendants()
+                .Single(element => element.Name.LocalName == "TargetFramework")
+                .Value;
+            string? languageVersion = project.Descendants()
+                .Single(element => element.Name.LocalName == "LangVersion")
+                .Value;
+
+            Assert.Equal("netstandard2.0", targetFramework);
+            Assert.Equal("10.0", languageVersion);
+        }
+    }
+
+    [Fact]
     public void Analyzer_implementation_projects_do_not_reference_runtime_TCJ_projects()
     {
         string[] analyzerProjects =
