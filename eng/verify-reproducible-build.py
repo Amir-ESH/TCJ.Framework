@@ -364,9 +364,13 @@ def validate_configuration(root: Path = ROOT, *, check_git: bool = True) -> Poli
     if not isinstance(manifest, dict) or tuple(manifest.get("packages", [])) != policy.required_packages:
         fail("Reproducibility policy requiredPackages must exactly match eng/release-manifest.json.")
 
-    project_files = sorted((root / "src").glob("*/*.csproj"))
-    if len(project_files) != len(policy.required_packages):
-        fail("The production project count does not match the reproducibility package policy.")
+    project_files: list[Path] = []
+    for package_id in policy.required_packages:
+        project = root / "src" / package_id / f"{package_id}.csproj"
+        if not project.is_file():
+            fail(f"Production package project is missing: {project.relative_to(root)}")
+        project_files.append(project)
+
     found_package_ids: set[str] = set()
     for project in project_files:
         text = read_text(project)

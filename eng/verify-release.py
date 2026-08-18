@@ -201,9 +201,13 @@ def semver_key(version: str) -> tuple[object, ...]:
     return (major, minor, patch, 0, tuple(identifiers))
 
 
-def read_project_package_ids(root: Path) -> list[str]:
+def read_project_package_ids(root: Path, expected_package_ids: list[str]) -> list[str]:
     package_ids: list[str] = []
-    for project in sorted((root / "src").glob("*/*.csproj")):
+    for expected_package_id in expected_package_ids:
+        project = root / "src" / expected_package_id / f"{expected_package_id}.csproj"
+        if not project.is_file():
+            fail(f"Release package project is missing: {project.relative_to(root)}")
+
         tree = ET.parse(project).getroot()
         package_id = tree.findtext("./PropertyGroup/PackageId")
         if not package_id:
@@ -572,7 +576,7 @@ def main() -> int:
             f"baseline {published_version!r}."
         )
 
-    project_package_ids = read_project_package_ids(root)
+    project_package_ids = read_project_package_ids(root, package_ids)
     if set(project_package_ids) != set(package_ids) or len(project_package_ids) != len(package_ids):
         fail(
             "Project PackageId set does not match release manifest. "

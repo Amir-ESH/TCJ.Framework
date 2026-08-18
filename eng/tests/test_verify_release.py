@@ -146,6 +146,25 @@ class ReleasePackageLicenseTests(unittest.TestCase):
         self.assertTrue(MODULE.readme_policy_required("0.1.0-preview.4"))
 
 
+class ReleaseProjectInventoryTests(unittest.TestCase):
+    def test_build_time_projects_are_not_treated_as_release_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime_project = root / "src/TCJ.Core/TCJ.Core.csproj"
+            analyzer_project = root / "src/TCJ.Analyzers/TCJ.Analyzers.csproj"
+            runtime_project.parent.mkdir(parents=True)
+            analyzer_project.parent.mkdir(parents=True)
+            runtime_project.write_text(
+                "<Project><PropertyGroup><PackageId>TCJ.Core</PackageId></PropertyGroup></Project>",
+                encoding="utf-8",
+            )
+            analyzer_project.write_text("<Project />", encoding="utf-8")
+
+            package_ids = MODULE.read_project_package_ids(root, ["TCJ.Core"])
+
+            self.assertEqual(["TCJ.Core"], package_ids)
+
+
 class ReleasePackageReadmeConfigurationTests(unittest.TestCase):
     SOURCE = "$(MSBuildThisFileDirectory)..\\docs\\nuget\\$(MSBuildProjectName).md"
 
