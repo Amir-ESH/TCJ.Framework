@@ -53,6 +53,8 @@
     href: aspnetcore-integration-testing.md
   - name: Architecture Tests
     href: architecture-tests.md
+  - name: Analyzer Development
+    href: analyzer-development.md
   - name: Code Coverage
     href: code-coverage.md
   - name: Mutation Testing
