@@ -151,8 +151,8 @@ internal static class AnalyzerTestHost
 
         return trustedPlatformAssemblies
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
-            .Select(MetadataReference.CreateFromFile)
-            .ToImmutableArray<MetadataReference>();
+            .Select(static assemblyPath => (MetadataReference)MetadataReference.CreateFromFile(assemblyPath))
+            .ToImmutableArray();
     }
 
     private static ImmutableArray<MetadataReference> CreateTcjReferences(
