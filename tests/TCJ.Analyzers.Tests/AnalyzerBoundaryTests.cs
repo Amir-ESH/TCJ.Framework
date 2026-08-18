@@ -67,6 +67,27 @@ public sealed class AnalyzerBoundaryTests
     }
 
     [Fact]
+    public void Analyzer_packaging_project_does_not_generate_an_empty_symbol_package()
+    {
+        XDocument project = XDocument.Load(
+            RepositoryLayout.Combine("eng/packaging/TCJ.Analyzers/TCJ.Analyzers.Package.csproj"));
+
+        string includeBuildOutput = project.Descendants()
+            .Single(element => element.Name.LocalName == "IncludeBuildOutput")
+            .Value;
+        string includeSymbols = project.Descendants()
+            .Single(element => element.Name.LocalName == "IncludeSymbols")
+            .Value;
+        string includeSource = project.Descendants()
+            .Single(element => element.Name.LocalName == "IncludeSource")
+            .Value;
+
+        Assert.Equal("false", includeBuildOutput);
+        Assert.Equal("false", includeSymbols);
+        Assert.Equal("false", includeSource);
+    }
+
+    [Fact]
     public void Analyzer_implementation_projects_do_not_reference_runtime_TCJ_projects()
     {
         string[] analyzerProjects =
