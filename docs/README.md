@@ -32,6 +32,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [SQL Server integration testing](sqlserver-integration-testing.md)
 - [ASP.NET Core integration testing](aspnetcore-integration-testing.md)
 - [Architecture tests](architecture-tests.md)
+- [Analyzer diagnostic governance](analyzers/README.md)
 - [Code coverage](code-coverage.md)
 - [Mutation testing](mutation-testing.md)
 - [Property and fuzz testing](property-and-fuzz-testing.md)
