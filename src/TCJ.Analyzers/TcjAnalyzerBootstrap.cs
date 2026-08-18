@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace TCJ.Analyzers;
 
 /// <summary>
-/// Provides the analyzer assembly entry point before the first TCJ diagnostic rule is introduced.
+/// Provides the analyzer assembly bootstrap entry point.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class TcjAnalyzerBootstrap : DiagnosticAnalyzer

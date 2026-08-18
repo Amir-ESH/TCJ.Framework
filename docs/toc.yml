@@ -57,6 +57,8 @@
     href: analyzer-development.md
   - name: Analyzer Diagnostic Governance
     href: analyzers/README.md
+  - name: TCJ0001 - Conflicting Dependency Lifetime Markers
+    href: analyzers/TCJ0001.md
   - name: Code Coverage
     href: code-coverage.md
   - name: Mutation Testing
