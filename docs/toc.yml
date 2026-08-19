@@ -63,6 +63,8 @@
     href: analyzers/TCJ0002.md
   - name: TCJ0003 - Convention Dependency Must Be Effectively Public
     href: analyzers/TCJ0003.md
+  - name: TCJ0004 - Domain-event Handler Lifetime Marker Is Ignored
+    href: analyzers/TCJ0004.md
   - name: Code Coverage
     href: code-coverage.md
   - name: Mutation Testing

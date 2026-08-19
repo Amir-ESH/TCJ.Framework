@@ -99,7 +99,7 @@ builder.Services.AddTcjDependencyInjection(options =>
 
 ## Domain-event handlers
 
-Effectively public implementations of `IDomainEventHandler<TEvent>` are registered as transient services when convention scanning is used and `RegisterDomainEventHandlers` is enabled.
+Effectively public implementations of `IDomainEventHandler<TEvent>` are registered as transient services when convention scanning is used and `RegisterDomainEventHandlers` is enabled. Domain-event handlers are registered by this dedicated handler pipeline before marked dependencies are processed, and the marked-dependency pass skips handler types. As a result, TCJ lifetime markers such as `IScopedDependency` or `ISelfSingletonDependency` do not change a convention-scanned handler's transient lifetime. `TCJ0004` reports these misleading marker declarations and can remove directly declared TCJ lifetime markers without changing handler interfaces.
 
 ```csharp
 public sealed class ProductCreatedHandler

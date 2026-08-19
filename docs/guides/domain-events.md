@@ -48,6 +48,15 @@ Direct dispatch has these semantics:
 
 Direct dispatch is intentionally not coupled to EF Core `SaveChanges`. An application can dispatch before or after persistence, but it must decide what a handler failure means for its own consistency boundary.
 
+## Handler registration and lifetime
+
+TCJ has two supported handler-registration paths:
+
+- With convention scanning, effectively public concrete `IDomainEventHandler<TEvent>` implementations are discovered by the dedicated handler pipeline and registered as transient services. The later dependency-marker pass skips handler types, so TCJ lifetime markers such as `ITransientDependency`, `IScopedDependency`, `ISingletonDependency`, and their self-registration variants do not control handler lifetime. `TCJ0004` reports those misleading markers.
+- With the reflection-free path, `AddTcjDomainEvent<TEvent>()` declares the event dispatch route but does not discover handlers. Register each handler explicitly with normal `IServiceCollection` methods (`AddTransient`, `AddScoped`, or `AddSingleton`) and let that explicit registration define the handler lifetime.
+
+A handler may implement `IDomainEventHandler<TEvent>` for more than one event type. The same registration contract applies to each handler interface. Do not add TCJ dependency lifetime markers to communicate handler lifetime; use the handler-registration path itself.
+
 ## Transactional outbox
 
 For durable delivery, TCJ provides an **optional transactional outbox**. When enabled for an EF Core context, pending domain events are serialized into `TCJ_OutboxMessages` during `SaveChanges` and committed in the same database transaction as the business changes. A separate processor dispatches only committed messages later.

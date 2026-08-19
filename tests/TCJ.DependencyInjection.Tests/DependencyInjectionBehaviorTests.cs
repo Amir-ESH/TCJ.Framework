@@ -145,6 +145,21 @@ public sealed class DependencyInjectionBehaviorTests
     }
 
     [Fact]
+    public void Domain_event_handler_lifetime_markers_do_not_override_handler_pipeline_lifetime()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTcjDependencyInjection(typeof(DependencyInjectionBehaviorTests).Assembly);
+
+        ServiceDescriptor descriptor = Assert.Single(services.Where(
+            item => item.ServiceType == typeof(IDomainEventHandler<LifetimeMarkedDomainEvent>)
+                && item.ImplementationType == typeof(LifetimeMarkedDomainEventHandler)));
+
+        Assert.Equal(ServiceLifetime.Transient, descriptor.Lifetime);
+        Assert.DoesNotContain(services, item => item.ServiceType == typeof(LifetimeMarkedDomainEventHandler));
+    }
+
+    [Fact]
     public async Task Dispatcher_processes_multiple_events_and_handlers_sequentially()
     {
         var services = new ServiceCollection();
@@ -275,6 +290,16 @@ public abstract class AbstractConventionProbe : ISelfScopedDependency;
 public sealed record OrderedDomainEvent(int Sequence, DateTimeOffset OccurredOn) : IDomainEvent;
 public sealed record UnhandledDomainEvent(DateTimeOffset OccurredOn) : IDomainEvent;
 public sealed record FailingDomainEvent(DateTimeOffset OccurredOn) : IDomainEvent;
+public sealed record LifetimeMarkedDomainEvent(DateTimeOffset OccurredOn) : IDomainEvent;
+
+public sealed class LifetimeMarkedDomainEventHandler
+    : IDomainEventHandler<LifetimeMarkedDomainEvent>, IScopedDependency
+{
+    public Task HandleAsync(
+        LifetimeMarkedDomainEvent domainEvent,
+        CancellationToken cancellationToken)
+        => Task.CompletedTask;
+}
 
 public sealed class OrderedHandlerLog
 {
