@@ -16,7 +16,9 @@ public sealed class ActiveProductsByNameSpecification
 }
 ```
 
-Paging is zero-based and must be paired with ordering.
+Paging is zero-based and must be paired with deterministic primary ordering. Use `ApplyOrderBy` or `ApplyOrderByDescending` to establish the primary order, then use `ApplyThenBy`/`ApplyThenByDescending` for deterministic tie-breakers when needed. Secondary ordering alone does not establish the primary order.
+
+`TCJ2000` reports clearly unordered `ApplyPaging` calls when the analyzer can prove the construction path has no primary ordering. The rule is intentionally conservative around helper-heavy or ambiguous construction paths and does not offer a code fix because TCJ cannot safely guess the domain ordering key. See [`TCJ2000`](../analyzers/TCJ2000.md).
 
 ## Define an update specification
 
