@@ -89,6 +89,18 @@ public sealed class DependencyInjectionBehaviorTests
     }
 
     [Fact]
+    public void Convention_scanning_skips_nested_public_dependencies_inside_non_public_containers()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTcjDependencyInjection(typeof(DependencyInjectionBehaviorTests).Assembly);
+
+        Assert.DoesNotContain(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IInaccessibleNestedProbe));
+    }
+
+    [Fact]
     public void Repeated_scanning_does_not_duplicate_framework_or_marked_services()
     {
         var services = new ServiceCollection();
@@ -224,6 +236,13 @@ public sealed class DependencyInjectionBehaviorTests
         Assert.Equal(typeof(TImplementation), descriptor.ImplementationType);
         Assert.Equal(lifetime, descriptor.Lifetime);
     }
+}
+
+public interface IInaccessibleNestedProbe;
+
+internal static class InaccessibleDependencyContainer
+{
+    public sealed class NestedProbe : IInaccessibleNestedProbe, ITransientDependency;
 }
 
 public interface ITransientProbe;

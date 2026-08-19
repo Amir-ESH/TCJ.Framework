@@ -61,6 +61,8 @@
     href: analyzers/TCJ0001.md
   - name: TCJ0002 - Interface Lifetime Marker Requires a Service Contract
     href: analyzers/TCJ0002.md
+  - name: TCJ0003 - Convention Dependency Must Be Effectively Public
+    href: analyzers/TCJ0003.md
   - name: Code Coverage
     href: code-coverage.md
   - name: Mutation Testing

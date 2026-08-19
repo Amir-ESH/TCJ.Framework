@@ -2,7 +2,15 @@
 
 `TCJ.Analyzers` provides compile-time diagnostics and code fixes for TCJ Framework applications without adding runtime dependencies to the application.
 
-This infrastructure package currently contains the analyzer and code-fix assemblies but intentionally ships no TCJ diagnostic rule yet.
+The package currently includes TCJ dependency-injection diagnostics and their safe code fixes. Analyzer assets remain compile-time-only and do not add runtime dependencies to the application.
+
+## Diagnostics
+
+- `TCJ0001` reports effectively public concrete dependencies with conflicting TCJ lifetime markers.
+- `TCJ0002` reports interface-registration markers that expose no eligible service contract.
+- `TCJ0003` reports convention-marked concrete dependencies that are not effectively public. A nested dependency is scan-eligible only when it and every containing type are `public`; the automatic accessibility fix is offered only when changing the marked type itself is sufficient.
+
+See the repository analyzer reference for detailed causes, fixes, suppression guidance, and compatibility notes.
 
 ## Package model
 

@@ -166,6 +166,23 @@ public sealed class ConflictingDependencyLifetimeMarkersAnalyzerTests
     }
 
     [Fact]
+    public async Task Does_not_report_public_nested_types_inside_non_public_containers()
+    {
+        const string source = """
+            using TCJ.DependencyInjection.Lifetimes;
+
+            namespace Sample;
+
+            internal static class Container
+            {
+                public sealed class Example : ITransientDependency, IScopedDependency;
+            }
+            """;
+
+        Assert.Empty(await GetDiagnosticsAsync(source));
+    }
+
+    [Fact]
     public async Task Preserves_runtime_scanner_boundaries_for_non_public_abstract_and_domain_event_handler_types()
     {
         const string source = """

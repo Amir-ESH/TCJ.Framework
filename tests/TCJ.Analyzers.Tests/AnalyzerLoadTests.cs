@@ -23,10 +23,13 @@ public sealed class AnalyzerLoadTests
             Assert.Single(analyzers.OfType<ConflictingDependencyLifetimeMarkersAnalyzer>());
         InterfaceLifetimeMarkerWithoutServiceContractAnalyzer serviceContractAnalyzer =
             Assert.Single(analyzers.OfType<InterfaceLifetimeMarkerWithoutServiceContractAnalyzer>());
+        ConventionDependencyMustBeEffectivelyPublicAnalyzer accessibilityAnalyzer =
+            Assert.Single(analyzers.OfType<ConventionDependencyMustBeEffectivelyPublicAnalyzer>());
 
         Assert.Empty(bootstrap.SupportedDiagnostics);
         Assert.Equal("TCJ0001", Assert.Single(conflictAnalyzer.SupportedDiagnostics).Id);
         Assert.Equal("TCJ0002", Assert.Single(serviceContractAnalyzer.SupportedDiagnostics).Id);
+        Assert.Equal("TCJ0003", Assert.Single(accessibilityAnalyzer.SupportedDiagnostics).Id);
 
         foreach (DiagnosticAnalyzer analyzer in analyzers)
         {

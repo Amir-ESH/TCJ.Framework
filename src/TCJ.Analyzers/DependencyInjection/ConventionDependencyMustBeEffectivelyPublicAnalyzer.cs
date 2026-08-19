@@ -6,47 +6,37 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace TCJ.Analyzers.DependencyInjection;
 
 /// <summary>
-/// Reports effectively public concrete dependency types that implement more than one TCJ lifetime marker.
+/// Reports concrete convention dependencies whose effective accessibility prevents public-type scanning.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class ConflictingDependencyLifetimeMarkersAnalyzer : DiagnosticAnalyzer
+public sealed class ConventionDependencyMustBeEffectivelyPublicAnalyzer : DiagnosticAnalyzer
 {
-    internal const string DiagnosticId = "TCJ0001";
-    internal const string ConflictingMarkersPropertyName = "ConflictingMarkers";
+    internal const string DiagnosticId = "TCJ0003";
+    internal const string AccessibilityBlockerPropertyName = "AccessibilityBlocker";
+    internal const string SelfAccessibilityBlocker = "Self";
+    internal const string ContainingTypeAccessibilityBlocker = "ContainingType";
 
     private const string Category = "TCJ.DependencyInjection";
     private const string DomainEventHandlerMetadataName = "TCJ.Core.DomainEvents.IDomainEventHandler`1";
     private const string CompilerGeneratedAttributeMetadataName = "System.Runtime.CompilerServices.CompilerGeneratedAttribute";
 
-    private static readonly ImmutableArray<MarkerDefinition> MarkerDefinitions = ImmutableArray.Create(
-        new MarkerDefinition(
-            "TCJ.DependencyInjection.Lifetimes.ITransientDependency",
-            "ITransientDependency"),
-        new MarkerDefinition(
-            "TCJ.DependencyInjection.Lifetimes.IScopedDependency",
-            "IScopedDependency"),
-        new MarkerDefinition(
-            "TCJ.DependencyInjection.Lifetimes.ISingletonDependency",
-            "ISingletonDependency"),
-        new MarkerDefinition(
-            "TCJ.DependencyInjection.Lifetimes.ISelfTransientDependency",
-            "ISelfTransientDependency"),
-        new MarkerDefinition(
-            "TCJ.DependencyInjection.Lifetimes.ISelfScopedDependency",
-            "ISelfScopedDependency"),
-        new MarkerDefinition(
-            "TCJ.DependencyInjection.Lifetimes.ISelfSingletonDependency",
-            "ISelfSingletonDependency"));
+    private static readonly ImmutableArray<string> MarkerMetadataNames = ImmutableArray.Create(
+        "TCJ.DependencyInjection.Lifetimes.ITransientDependency",
+        "TCJ.DependencyInjection.Lifetimes.IScopedDependency",
+        "TCJ.DependencyInjection.Lifetimes.ISingletonDependency",
+        "TCJ.DependencyInjection.Lifetimes.ISelfTransientDependency",
+        "TCJ.DependencyInjection.Lifetimes.ISelfScopedDependency",
+        "TCJ.DependencyInjection.Lifetimes.ISelfSingletonDependency");
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,
-        "Dependency type has conflicting TCJ lifetime markers",
-        "Type '{0}' implements multiple TCJ lifetime markers: {1}. A dependency must declare exactly one lifetime marker",
+        "Convention dependency must be effectively public",
+        "Type '{0}' uses a TCJ convention-registration marker but is not effectively public because {1}. Convention scanning requires an effectively public concrete type",
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description:
-            "TCJ convention registration requires each effectively public concrete dependency type to implement exactly one of the six supported lifetime markers.");
+            "TCJ convention registration can discover a marked concrete dependency only when the type and every containing type are public.");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
@@ -63,19 +53,19 @@ public sealed class ConflictingDependencyLifetimeMarkersAnalyzer : DiagnosticAna
 
     private static void RegisterCompilationActions(CompilationStartAnalysisContext context)
     {
-        ImmutableArray<ResolvedMarkerDefinition>.Builder resolvedMarkers =
-            ImmutableArray.CreateBuilder<ResolvedMarkerDefinition>();
+        ImmutableArray<INamedTypeSymbol>.Builder resolvedMarkers =
+            ImmutableArray.CreateBuilder<INamedTypeSymbol>();
 
-        foreach (MarkerDefinition definition in MarkerDefinitions)
+        foreach (string metadataName in MarkerMetadataNames)
         {
-            INamedTypeSymbol? symbol = context.Compilation.GetTypeByMetadataName(definition.MetadataName);
+            INamedTypeSymbol? symbol = context.Compilation.GetTypeByMetadataName(metadataName);
             if (symbol is not null)
             {
-                resolvedMarkers.Add(new ResolvedMarkerDefinition(definition, symbol));
+                resolvedMarkers.Add(symbol);
             }
         }
 
-        if (resolvedMarkers.Count < 2)
+        if (resolvedMarkers.Count == 0)
         {
             return;
         }
@@ -84,7 +74,7 @@ public sealed class ConflictingDependencyLifetimeMarkersAnalyzer : DiagnosticAna
             context.Compilation.GetTypeByMetadataName(DomainEventHandlerMetadataName);
         INamedTypeSymbol? compilerGeneratedAttribute =
             context.Compilation.GetTypeByMetadataName(CompilerGeneratedAttributeMetadataName);
-        ImmutableArray<ResolvedMarkerDefinition> markers = resolvedMarkers.ToImmutable();
+        ImmutableArray<INamedTypeSymbol> markers = resolvedMarkers.ToImmutable();
 
         context.RegisterSymbolAction(
             symbolContext => AnalyzeNamedType(
@@ -97,7 +87,7 @@ public sealed class ConflictingDependencyLifetimeMarkersAnalyzer : DiagnosticAna
 
     private static void AnalyzeNamedType(
         SymbolAnalysisContext context,
-        ImmutableArray<ResolvedMarkerDefinition> markers,
+        ImmutableArray<INamedTypeSymbol> markers,
         INamedTypeSymbol? domainEventHandler,
         INamedTypeSymbol? compilerGeneratedAttribute)
     {
@@ -105,42 +95,31 @@ public sealed class ConflictingDependencyLifetimeMarkersAnalyzer : DiagnosticAna
 
         if (type.TypeKind != TypeKind.Class
             || type.IsAbstract
-            || !IsEffectivelyPublic(type)
             || IsCompilerGenerated(type, compilerGeneratedAttribute)
-            || IsDomainEventHandler(type, domainEventHandler))
+            || IsDomainEventHandler(type, domainEventHandler)
+            || !ImplementsConventionMarker(type, markers))
         {
             return;
         }
 
-        ImmutableArray<ResolvedMarkerDefinition>.Builder matches =
-            ImmutableArray.CreateBuilder<ResolvedMarkerDefinition>();
-
-        foreach (ResolvedMarkerDefinition marker in markers)
-        {
-            if (type.AllInterfaces.Any(
-                implemented => SymbolEqualityComparer.Default.Equals(implemented, marker.Symbol)))
-            {
-                matches.Add(marker);
-            }
-        }
-
-        if (matches.Count <= 1)
+        INamedTypeSymbol? accessibilityBlocker = GetAccessibilityBlocker(type);
+        if (accessibilityBlocker is null)
         {
             return;
         }
 
-        ImmutableArray<ResolvedMarkerDefinition> conflictingMarkers = matches.ToImmutable();
-        string markerNames = string.Join(
-            ", ",
-            conflictingMarkers.Select(marker => marker.Definition.DisplayName));
-        string markerMetadataNames = string.Join(
-            ";",
-            conflictingMarkers.Select(marker => marker.Definition.MetadataName));
+        bool blockedByContainingType = !SymbolEqualityComparer.Default.Equals(type, accessibilityBlocker);
+        string blockerDescription = blockedByContainingType
+            ? $"containing type '{accessibilityBlocker.Name}' is not public"
+            : "the type itself is not public";
+        string blockerProperty = blockedByContainingType
+            ? ContainingTypeAccessibilityBlocker
+            : SelfAccessibilityBlocker;
 
         ImmutableDictionary<string, string?> properties =
             ImmutableDictionary<string, string?>.Empty.Add(
-                ConflictingMarkersPropertyName,
-                markerMetadataNames);
+                AccessibilityBlockerPropertyName,
+                blockerProperty);
 
         context.ReportDiagnostic(
             Diagnostic.Create(
@@ -148,20 +127,43 @@ public sealed class ConflictingDependencyLifetimeMarkersAnalyzer : DiagnosticAna
                 GetTypeDeclarationLocation(type),
                 properties,
                 type.Name,
-                markerNames));
+                blockerDescription));
     }
 
-    private static bool IsEffectivelyPublic(INamedTypeSymbol type)
+    private static bool ImplementsConventionMarker(
+        INamedTypeSymbol type,
+        ImmutableArray<INamedTypeSymbol> markers)
     {
-        for (INamedTypeSymbol? current = type; current is not null; current = current.ContainingType)
+        foreach (INamedTypeSymbol marker in markers)
         {
-            if (current.DeclaredAccessibility != Accessibility.Public)
+            if (type.AllInterfaces.Any(
+                implemented => SymbolEqualityComparer.Default.Equals(implemented, marker)))
             {
-                return false;
+                return true;
             }
         }
 
-        return true;
+        return false;
+    }
+
+    private static INamedTypeSymbol? GetAccessibilityBlocker(INamedTypeSymbol type)
+    {
+        if (type.DeclaredAccessibility != Accessibility.Public)
+        {
+            return type;
+        }
+
+        for (INamedTypeSymbol? containingType = type.ContainingType;
+             containingType is not null;
+             containingType = containingType.ContainingType)
+        {
+            if (containingType.DeclaredAccessibility != Accessibility.Public)
+            {
+                return containingType;
+            }
+        }
+
+        return null;
     }
 
     private static bool IsCompilerGenerated(
@@ -207,31 +209,5 @@ public sealed class ConflictingDependencyLifetimeMarkersAnalyzer : DiagnosticAna
         }
 
         return type.Locations.First(location => location.IsInSource);
-    }
-
-    private sealed class MarkerDefinition
-    {
-        public MarkerDefinition(string metadataName, string displayName)
-        {
-            MetadataName = metadataName;
-            DisplayName = displayName;
-        }
-
-        public string MetadataName { get; }
-
-        public string DisplayName { get; }
-    }
-
-    private sealed class ResolvedMarkerDefinition
-    {
-        public ResolvedMarkerDefinition(MarkerDefinition definition, INamedTypeSymbol symbol)
-        {
-            Definition = definition;
-            Symbol = symbol;
-        }
-
-        public MarkerDefinition Definition { get; }
-
-        public INamedTypeSymbol Symbol { get; }
     }
 }
