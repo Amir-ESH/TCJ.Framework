@@ -73,6 +73,8 @@ await unitOfWork.SaveChangesAsync(cancellationToken);
 
 Write methods do not call `SaveChangesAsync` automatically.
 
+Repository implementations must not take ownership of the persistence boundary by calling Entity Framework Core `DbContext.SaveChanges`/`SaveChangesAsync` or TCJ `IUnitOfWork.SaveChangesAsync`. Commit after composing repository operations at the application/use-case boundary. `TCJ1000` reports repository-owned commits when the analyzer is enabled; it intentionally offers no code fix because moving a commit boundary requires application and transaction semantics that cannot be inferred safely. See [`TCJ1000`](../analyzers/TCJ1000.md).
+
 ## Explicit transaction
 
 ```csharp
