@@ -9,6 +9,7 @@ The package currently includes TCJ dependency-injection diagnostics and their sa
 - `TCJ0001` reports effectively public concrete dependencies with conflicting TCJ lifetime markers.
 - `TCJ0002` reports interface-registration markers that expose no eligible service contract.
 - `TCJ0003` reports convention-marked concrete dependencies that are not effectively public. A nested dependency is scan-eligible only when it and every containing type are `public`; the automatic accessibility fix is offered only when changing the marked type itself is sufficient.
+- `TCJ0004` reports domain-event handlers that also carry TCJ dependency lifetime markers. Convention-scanned handlers are registered by the handler pipeline, so those markers do not control handler lifetime; the code fix removes only directly declared TCJ lifetime markers.
 
 See the repository analyzer reference for detailed causes, fixes, suppression guidance, and compatibility notes.
 
