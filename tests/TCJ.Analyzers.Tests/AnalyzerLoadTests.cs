@@ -19,11 +19,14 @@ public sealed class AnalyzerLoadTests
         ImmutableArray<DiagnosticAnalyzer> analyzers = reference.GetAnalyzers(LanguageNames.CSharp);
 
         TcjAnalyzerBootstrap bootstrap = Assert.Single(analyzers.OfType<TcjAnalyzerBootstrap>());
-        ConflictingDependencyLifetimeMarkersAnalyzer lifetimeAnalyzer =
+        ConflictingDependencyLifetimeMarkersAnalyzer conflictAnalyzer =
             Assert.Single(analyzers.OfType<ConflictingDependencyLifetimeMarkersAnalyzer>());
+        InterfaceLifetimeMarkerWithoutServiceContractAnalyzer serviceContractAnalyzer =
+            Assert.Single(analyzers.OfType<InterfaceLifetimeMarkerWithoutServiceContractAnalyzer>());
 
         Assert.Empty(bootstrap.SupportedDiagnostics);
-        Assert.Equal("TCJ0001", Assert.Single(lifetimeAnalyzer.SupportedDiagnostics).Id);
+        Assert.Equal("TCJ0001", Assert.Single(conflictAnalyzer.SupportedDiagnostics).Id);
+        Assert.Equal("TCJ0002", Assert.Single(serviceContractAnalyzer.SupportedDiagnostics).Id);
 
         foreach (DiagnosticAnalyzer analyzer in analyzers)
         {
