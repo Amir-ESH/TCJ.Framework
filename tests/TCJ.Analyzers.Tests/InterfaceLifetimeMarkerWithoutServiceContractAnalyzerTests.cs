@@ -255,6 +255,23 @@ public sealed class InterfaceLifetimeMarkerWithoutServiceContractAnalyzerTests
     }
 
     [Fact]
+    public async Task Does_not_report_public_nested_types_inside_non_public_containers()
+    {
+        const string source = """
+            using TCJ.DependencyInjection.Lifetimes;
+
+            namespace Sample;
+
+            internal static class Container
+            {
+                public sealed class Example : IScopedDependency;
+            }
+            """;
+
+        Assert.Empty(await GetDiagnosticsAsync(source));
+    }
+
+    [Fact]
     public async Task Preserves_runtime_scanner_public_concrete_and_generated_type_boundaries()
     {
         const string source = """

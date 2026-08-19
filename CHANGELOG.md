@@ -14,6 +14,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Fixed
 
+- Aligned convention dependency scanning with effective CLR visibility and added `TCJ0003` so marked concrete dependencies that are not effectively public are diagnosed before startup; nested `public` types inside non-public containers are no longer convention-scanned.
 - Corrected the domain-event guide to distinguish direct dispatch from TCJ's optional transactional-outbox path and corrected the upgrade-testing rationale now that both baseline and target releases support outbox APIs.
 - Hardened published-package maintenance so scheduled audits use the active `develop` metadata and NuGet publication verification tolerates up to 15 minutes of propagation.
 - Pin future NuGet package README documentation links to the immutable package release tag instead of the moving `main` branch.

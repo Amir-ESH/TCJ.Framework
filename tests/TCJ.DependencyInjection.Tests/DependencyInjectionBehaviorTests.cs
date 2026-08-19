@@ -89,6 +89,30 @@ public sealed class DependencyInjectionBehaviorTests
     }
 
     [Fact]
+    public void Convention_scanning_skips_nested_public_dependencies_inside_non_public_containers()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTcjDependencyInjection(typeof(DependencyInjectionBehaviorTests).Assembly);
+
+        Assert.DoesNotContain(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IInaccessibleNestedProbe));
+    }
+
+    [Fact]
+    public void Convention_scanning_skips_abstract_marked_dependencies()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTcjDependencyInjection(typeof(DependencyInjectionBehaviorTests).Assembly);
+
+        Assert.DoesNotContain(
+            services,
+            descriptor => descriptor.ServiceType == typeof(AbstractConventionProbe));
+    }
+
+    [Fact]
     public void Repeated_scanning_does_not_duplicate_framework_or_marked_services()
     {
         var services = new ServiceCollection();
@@ -226,6 +250,13 @@ public sealed class DependencyInjectionBehaviorTests
     }
 }
 
+public interface IInaccessibleNestedProbe;
+
+internal static class InaccessibleDependencyContainer
+{
+    public sealed class NestedProbe : IInaccessibleNestedProbe, ITransientDependency;
+}
+
 public interface ITransientProbe;
 public sealed class TransientProbe : ITransientProbe, ITransientDependency;
 
@@ -238,6 +269,8 @@ public sealed class SingletonProbe : ISingletonProbe, ISingletonDependency;
 public sealed class SelfTransientProbe : ISelfTransientDependency;
 public sealed class SelfScopedProbe : ISelfScopedDependency;
 public sealed class SelfSingletonProbe : ISelfSingletonDependency;
+
+public abstract class AbstractConventionProbe : ISelfScopedDependency;
 
 public sealed record OrderedDomainEvent(int Sequence, DateTimeOffset OccurredOn) : IDomainEvent;
 public sealed record UnhandledDomainEvent(DateTimeOffset OccurredOn) : IDomainEvent;

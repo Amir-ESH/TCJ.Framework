@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace TCJ.Analyzers.DependencyInjection;
 
 /// <summary>
-/// Reports interface-registration lifetime markers on public concrete dependency types that expose no eligible service interface.
+/// Reports interface-registration lifetime markers on effectively public concrete dependency types that expose no eligible service interface.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class InterfaceLifetimeMarkerWithoutServiceContractAnalyzer : DiagnosticAnalyzer
@@ -141,7 +141,7 @@ public sealed class InterfaceLifetimeMarkerWithoutServiceContractAnalyzer : Diag
 
         if (type.TypeKind != TypeKind.Class
             || type.IsAbstract
-            || type.DeclaredAccessibility != Accessibility.Public
+            || !IsEffectivelyPublic(type)
             || IsCompilerGenerated(type, compilerGeneratedAttribute)
             || IsDomainEventHandler(type, domainEventHandler))
         {
@@ -229,6 +229,19 @@ public sealed class InterfaceLifetimeMarkerWithoutServiceContractAnalyzer : Diag
         => SymbolEqualityComparer.Default.Equals(interfaceType, dependency)
             || interfaceType.AllInterfaces.Any(
                 inherited => SymbolEqualityComparer.Default.Equals(inherited, dependency));
+
+    private static bool IsEffectivelyPublic(INamedTypeSymbol type)
+    {
+        for (INamedTypeSymbol? current = type; current is not null; current = current.ContainingType)
+        {
+            if (current.DeclaredAccessibility != Accessibility.Public)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static bool IsCompilerGenerated(
         INamedTypeSymbol type,
