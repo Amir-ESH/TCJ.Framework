@@ -185,11 +185,26 @@ public sealed class DomainEventHandlerLifetimeMarkerCodeFixProvider : CodeFixPro
 
         BaseListSyntax baseList = declaration.BaseList
             ?? throw new InvalidOperationException("The diagnostic type no longer has a base list.");
-        SeparatedSyntaxList<BaseTypeSyntax> updatedTypes = baseList.Types;
+        ImmutableArray<int> indexesToRemove = baseTypesToRemove
+            .Select(baseType => baseList.Types.IndexOf(baseType))
+            .Where(index => index >= 0)
+            .Distinct()
+            .OrderByDescending(index => index)
+            .ToImmutableArray();
 
-        foreach (BaseTypeSyntax baseType in baseTypesToRemove)
+        if (indexesToRemove.Length != baseTypesToRemove.Length)
         {
-            updatedTypes = updatedTypes.Remove(baseType);
+            return Task.FromResult(document);
+        }
+
+        // Remove by descending index instead of reusing syntax-node instances across
+        // successive SeparatedSyntaxList mutations. Each removal creates a new list,
+        // so nodes captured from the original list are not reliable removal keys for
+        // subsequent mutations.
+        SeparatedSyntaxList<BaseTypeSyntax> updatedTypes = baseList.Types;
+        foreach (int index in indexesToRemove)
+        {
+            updatedTypes = updatedTypes.RemoveAt(index);
         }
 
         TypeDeclarationSyntax updatedDeclaration = declaration.WithBaseList(
