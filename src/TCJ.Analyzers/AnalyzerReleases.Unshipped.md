@@ -11,3 +11,4 @@ TCJ0003 | TCJ.DependencyInjection | Error | Reports convention-marked concrete d
 TCJ0004 | TCJ.DependencyInjection | Warning | Reports effectively public concrete domain-event handlers that implement TCJ lifetime markers ignored by the handler registration pipeline.
 TCJ1000 | TCJ.Persistence | Warning | Reports persistence commits performed from concrete TCJ repository implementations.
 TCJ2000 | TCJ.Specifications | Warning | Reports offset paging without a provable primary ordering in the same specification construction path.
+TCJ3000 | TCJ.AotTrimming | Warning | Reports reflection-based TCJ dependency scanning in trimmed or Native AOT applications.
