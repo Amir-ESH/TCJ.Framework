@@ -61,7 +61,7 @@ public sealed class ReflectionBasedDependencyScanningCodeFixProvider : CodeFixPr
         SyntaxNode root = invocation.SyntaxTree.GetRoot(cancellationToken);
         SyntaxNode updated = root.ReplaceNode(
             invocation.ArgumentList,
-            invocation.ArgumentList.WithArguments(SeparatedSyntaxList<ArgumentSyntax>.Empty));
+            invocation.ArgumentList.WithArguments(SyntaxFactory.SeparatedList<ArgumentSyntax>()));
 
         return Task.FromResult(document.WithSyntaxRoot(updated));
     }
