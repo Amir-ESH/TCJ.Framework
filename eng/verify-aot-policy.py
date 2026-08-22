@@ -397,9 +397,18 @@ def source_package_ids(root: Path) -> tuple[str, ...]:
             xml = ET.parse(project).getroot()
         except ET.ParseError as error:
             fail(f"Invalid project XML in {relative(project, root)}: {error}")
+
         package_id_node = xml.find(".//PackageId")
         if package_id_node is None or not package_id_node.text or not package_id_node.text.strip():
             continue
+
+        # Analyzer/source-generator packages are shipped as compiler tooling and are not
+        # runtime packages in the Native AOT release manifest. They must not participate
+        # in runtime package inventory validation.
+        include_build_output = xml.find(".//IncludeBuildOutput")
+        if include_build_output is not None and (include_build_output.text or "").strip().lower() == "false":
+            continue
+
         result.append(package_id_node.text.strip())
     if len(result) != len(set(result)):
         fail("Production project PackageId values must be unique.")

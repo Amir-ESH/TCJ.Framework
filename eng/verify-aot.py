@@ -188,7 +188,12 @@ def _package_projects(root: Path, policy: Any) -> dict[str, Path]:
             for node in xml_root.iter()
             if _tag_name(node) == "PackageId" and (node.text or "").strip()
         ]
-        if len(package_ids) == 1:
+        if len(package_ids) == 1 and any(
+            package.package_id == package_ids[0] for package in policy.packages
+        ):
+            # Only runtime production packages participate in Native AOT policy validation.
+            # Analyzer/source-generator packages (for example TCJ.Generators) are shipped
+            # through analyzers/dotnet/cs and are not runtime dependencies of AOT consumers.
             result[package_ids[0]] = project
 
     for package in policy.packages:
