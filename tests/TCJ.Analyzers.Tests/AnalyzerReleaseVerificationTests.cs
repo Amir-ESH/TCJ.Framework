@@ -30,9 +30,9 @@ public sealed class AnalyzerReleaseVerificationTests
 
             foreach (DiagnosticDescriptor descriptor in analyzer.SupportedDiagnostics)
             {
-                Assert.False(string.IsNullOrWhiteSpace(descriptor.Id));
-                Assert.False(string.IsNullOrWhiteSpace(descriptor.Title.ToString()));
-                Assert.False(string.IsNullOrWhiteSpace(descriptor.Description.ToString()));
+                Assert.False(string.IsNullOrWhiteSpace(descriptor.Id), $"Diagnostic {descriptor.Id} has no id.");
+                Assert.False(string.IsNullOrWhiteSpace(descriptor.Title.ToString()), $"Diagnostic {descriptor.Id} has no title.");
+                Assert.False(string.IsNullOrWhiteSpace(descriptor.Description.ToString()), $"Diagnostic {descriptor.Id} has no description.");
             }
         }
     }
