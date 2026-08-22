@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace TCJ.Generators;
 
 [Generator]
-public sealed class StrongTypeGenerator : IIncrementalGenerator
+internal sealed class StrongTypeGenerator : IIncrementalGenerator
 {
     private const string StrongIdAttribute = "TCJ.Core.StrongTypes.StronglyTypedIdAttribute`1";
     private const string ValueObjectAttribute = "TCJ.Core.StrongTypes.ValueObjectAttribute`1";
