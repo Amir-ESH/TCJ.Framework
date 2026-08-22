@@ -11,7 +11,6 @@
     "TCJ.DependencyInjection",
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
-    "TCJ.AspNetCore",
-    "TCJ.Generators"
+    "TCJ.AspNetCore"
   ]
 }
