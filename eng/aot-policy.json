@@ -209,13 +209,6 @@
           "tcjAotWarningCount": 0
         }
       ]
-    },
-    {
-      "packageId": "TCJ.Generators",
-      "tier": "Unsupported",
-      "rationale": "TCJ.Generators is a Roslyn source generator package consumed by the compiler through analyzers/dotnet/cs and does not provide a runtime Native AOT support path.",
-      "restrictions": [],
-      "fullSupportEvidence": []
     }
   ],
   "supportedCiRuntimeIdentifiers": [
