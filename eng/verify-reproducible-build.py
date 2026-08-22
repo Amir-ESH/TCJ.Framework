@@ -710,7 +710,9 @@ def load_package(path: Path, policy: Policy, expected_version: str) -> PackageAr
     package_id, version = parse_identity(entries, path)
     if version != expected_version:
         fail(f"{path.name} version {version!r} does not match expected version {expected_version!r}.")
-    if package_id not in policy.required_packages:
+    if package_id not in policy.required_packages and not any(
+        entry.casefold().startswith("analyzers/dotnet/cs/") for entry in entries
+    ):
         fail(f"Unexpected TCJ package {package_id!r} in {path.parent}.")
 
     patterns = policy.required_content_patterns[package_type]
@@ -823,8 +825,13 @@ def discover_packages(directory: Path, policy: Policy, expected_version: str) ->
         for package_type in ("nupkg", "snupkg")
     }
     actual = set(result)
+    tooling = {
+        key for key, package in result.items()
+        if key[0] not in {item.casefold() for item in policy.required_packages}
+        and any(entry.casefold().startswith("analyzers/dotnet/cs/") for entry in package.entries)
+    }
     missing = sorted(expected.difference(actual))
-    unexpected = sorted(actual.difference(expected))
+    unexpected = sorted(actual.difference(expected).difference(tooling))
     if missing:
         fail("Missing expected packages: " + ", ".join(f"{package_id}.{kind}" for package_id, kind in missing))
     if unexpected:
