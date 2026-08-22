@@ -2,6 +2,7 @@
   <Import Project="..\..\eng\Packaging.props" />
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <IsPackable>true</IsPackable>
     <PackageId>TCJ.Generators</PackageId>
     <Title>TCJ Generators</Title>
