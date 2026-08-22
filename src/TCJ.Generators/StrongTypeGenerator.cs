@@ -13,19 +13,23 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var candidates = context.SyntaxProvider.ForAttributeWithMetadataName(
+        var strongIdCandidates = context.SyntaxProvider.ForAttributeWithMetadataName(
             StrongIdAttribute,
             static (node, _) => node is RecordDeclarationSyntax or StructDeclarationSyntax or ClassDeclarationSyntax,
             static (ctx, _) => ctx.TargetSymbol.ToDisplayString())
-            .Concat<string>(context.SyntaxProvider.ForAttributeWithMetadataName(
-                ValueObjectAttribute,
-                static (node, _) => node is RecordDeclarationSyntax or StructDeclarationSyntax or ClassDeclarationSyntax,
-                static (ctx, _) => ctx.TargetSymbol.ToDisplayString()))
             .Collect();
 
-        context.RegisterSourceOutput(candidates, static (spc, symbols) =>
+        var valueObjectCandidates = context.SyntaxProvider.ForAttributeWithMetadataName(
+            ValueObjectAttribute,
+            static (node, _) => node is RecordDeclarationSyntax or StructDeclarationSyntax or ClassDeclarationSyntax,
+            static (ctx, _) => ctx.TargetSymbol.ToDisplayString())
+            .Collect();
+
+        var candidates = strongIdCandidates.Combine(valueObjectCandidates);
+
+        context.RegisterSourceOutput(candidates, static (spc, pair) =>
         {
-            foreach (var symbol in symbols.OrderBy<string, string>(static x => x, StringComparer.Ordinal))
+            foreach (var symbol in pair.Left.Concat(pair.Right).OrderBy(static x => x, StringComparer.Ordinal))
             {
                 _ = symbol;
             }
