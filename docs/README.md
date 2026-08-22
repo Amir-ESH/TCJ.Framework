@@ -23,6 +23,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [Health checks and startup diagnostics](health-checks.md)
 - [Transactional outbox](outbox.md)
 - [Observability](observability.md)
+- [Strong typed IDs and Value Objects](guides/strong-types.md)
 
 ## Compatibility and quality
 
