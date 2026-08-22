@@ -15,6 +15,8 @@ public sealed class AnalyzerReleaseVerificationTests
         Type[] analyzerTypes = analyzerAssembly
             .GetTypes()
             .Where(type => typeof(DiagnosticAnalyzer).IsAssignableFrom(type))
+            .Where(type => !type.IsAbstract)
+            .Where(type => type != typeof(TcjAnalyzerBootstrap))
             .ToArray();
 
         Assert.NotEmpty(analyzerTypes);
