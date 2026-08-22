@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Diagnostics;
 using TCJ.Analyzers;
 
 namespace TCJ.Analyzers.Tests;
