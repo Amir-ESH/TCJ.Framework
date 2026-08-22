@@ -17,7 +17,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             StrongIdAttribute,
             static (node, _) => node is RecordDeclarationSyntax or StructDeclarationSyntax or ClassDeclarationSyntax,
             static (ctx, _) => ctx.TargetSymbol.ToDisplayString())
-            .Concat(context.SyntaxProvider.ForAttributeWithMetadataName(
+            .Concat<string>(context.SyntaxProvider.ForAttributeWithMetadataName(
                 ValueObjectAttribute,
                 static (node, _) => node is RecordDeclarationSyntax or StructDeclarationSyntax or ClassDeclarationSyntax,
                 static (ctx, _) => ctx.TargetSymbol.ToDisplayString()))
@@ -25,7 +25,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
         context.RegisterSourceOutput(candidates, static (spc, symbols) =>
         {
-            foreach (var symbol in symbols.OrderBy(static x => x, StringComparer.Ordinal))
+            foreach (var symbol in symbols.OrderBy<string, string>(static x => x, StringComparer.Ordinal))
             {
                 _ = symbol;
             }
