@@ -9,6 +9,10 @@
     <Description>Incremental source generators for TCJ strong type contracts.</Description>
     <PackageTags>tcj;dotnet;source-generator;roslyn;strong-types</PackageTags>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeSymbols>false</IncludeSymbols>
+    <IncludeSource>false</IncludeSource>
     <IsAotCompatible>false</IsAotCompatible>
     <EnablePackageValidation>false</EnablePackageValidation>
   </PropertyGroup>
@@ -19,6 +23,6 @@
     <None Include="$(MSBuildProjectDirectory)\..\..\docs\packages\TCJ.Generators.md" Pack="true" PackagePath="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 </Project>
