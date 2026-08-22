@@ -22,7 +22,8 @@ public sealed class ReflectionBasedDependencyScanningAnalyzer : DiagnosticAnalyz
         "TCJ dependency scanning uses reflection and is not compatible with {0}. Use AddTcjDependencyInjection() and explicit Microsoft DI registrations instead",
         Category,
         DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        description: "TCJ dependency scanning rules require AOT-compatible dependency registration patterns.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 

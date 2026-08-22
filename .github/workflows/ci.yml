@@ -383,6 +383,15 @@ jobs:
 
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
+      - name: Validate package version output
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ steps.package-version.outputs.value }}" || {
+            echo "Package version output is empty." >&2
+            exit 1
+          }
+
       - name: Verify NuGet package set
         run: >
           bash eng/verify-packages.sh
@@ -408,6 +417,16 @@ jobs:
           --rid linux-x64
           --packages artifacts/packages
           --output artifacts/aot/native-aot-smoke
+
+      - name: Verify Native AOT smoke result exists
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/aot/native-aot-smoke/native-aot-result.json || {
+            echo "Native AOT smoke did not produce the expected result file." >&2
+            exit 1
+          }
 
       - name: Verify packed Native AOT evidence
         if: always()
