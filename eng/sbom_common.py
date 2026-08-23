@@ -288,6 +288,22 @@ def utc_timestamp() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _is_tooling_package(path: Path) -> bool:
+    """Return whether a NuGet package is compiler tooling rather than a release runtime package."""
+    try:
+        with zipfile.ZipFile(path) as archive:
+            names = {name.casefold() for name in archive.namelist()}
+    except zipfile.BadZipFile as error:
+        fail(f"Invalid NuGet package archive {path}: {error}")
+    has_analyzer_assets = any(name.startswith("analyzers/dotnet/cs/") for name in names)
+    has_runtime_assets = any(
+        name.startswith(prefix)
+        for prefix in ("lib/", "ref/", "runtime/")
+        for name in names
+    )
+    return has_analyzer_assets and not has_runtime_assets
+
+
 @dataclass(frozen=True)
 class ReleasePackageSet:
     primary: dict[str, Path]
@@ -331,7 +347,9 @@ def discover_release_packages(
     actual_names = {
         path.name
         for path in package_directory.iterdir()
-        if path.is_file() and path.name.casefold().endswith((".nupkg", ".snupkg"))
+        if path.is_file()
+        and path.name.casefold().endswith((".nupkg", ".snupkg"))
+        and not _is_tooling_package(path)
     }
     if actual_names != expected_names:
         missing = sorted(expected_names - actual_names, key=str.casefold)
