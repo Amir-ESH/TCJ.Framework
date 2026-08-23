@@ -715,7 +715,20 @@ def load_package(path: Path, policy: Policy, expected_version: str) -> PackageAr
     ):
         fail(f"Unexpected TCJ package {package_id!r} in {path.parent}.")
 
-    patterns = policy.required_content_patterns[package_type]
+    is_tooling_package = any(
+        entry.casefold().startswith("analyzers/dotnet/cs/")
+        for entry in entries
+    )
+    if package_type == "nupkg" and is_tooling_package:
+        patterns = (
+            "_rels/.rels",
+            "[Content_Types].xml",
+            "*.nuspec",
+            "analyzers/dotnet/cs/**",
+            "package/services/metadata/core-properties/*.psmdcp",
+        )
+    else:
+        patterns = policy.required_content_patterns[package_type]
     for pattern in patterns:
         if not any(package_pattern_matches(entry, pattern) for entry in entries):
             fail(f"{path.name} is missing required package content matching {pattern!r}.")

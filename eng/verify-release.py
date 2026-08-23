@@ -473,6 +473,24 @@ def validate_symbol_package(path: Path) -> None:
             fail(f"{path.name} has no net10.0 portable PDB.")
 
 
+
+
+def is_tooling_package(path: Path) -> bool:
+    with zipfile.ZipFile(path) as archive:
+        return any(
+            name.casefold().startswith("analyzers/dotnet/cs/")
+            for name in archive.namelist()
+        )
+
+
+def validate_tooling_package(path: Path) -> None:
+    with zipfile.ZipFile(path) as archive:
+        names = archive.namelist()
+        if not any(name.casefold().startswith("analyzers/dotnet/cs/") for name in names):
+            fail(f"{path.name} has no analyzer/compiler tooling assets.")
+        if any(name.casefold().startswith(("lib/", "runtime/")) for name in names):
+            fail(f"{path.name} must not contain runtime package assets.")
+
 def validate_packages(root: Path, package_directory: Path, manifest: dict[str, object]) -> None:
     version = str(manifest["version"])
     repository = str(manifest["repository"])
@@ -485,8 +503,14 @@ def validate_packages(root: Path, package_directory: Path, manifest: dict[str, o
 
     expected_primary = {f"{package_id}.{version}.nupkg" for package_id in package_ids}
     expected_symbols = {f"{package_id}.{version}.snupkg" for package_id in package_ids}
-    actual_primary = {path.name for path in package_directory.glob("*.nupkg")}
+    all_primary_paths = sorted(package_directory.glob("*.nupkg"))
+    tooling_paths = {path.name for path in all_primary_paths if is_tooling_package(path)}
+    actual_primary = {path.name for path in all_primary_paths if path.name not in tooling_paths}
     actual_symbols = {path.name for path in package_directory.glob("*.snupkg")}
+
+    for tooling_path in all_primary_paths:
+        if tooling_path.name in tooling_paths:
+            validate_tooling_package(tooling_path)
 
     if actual_primary != expected_primary:
         fail(
