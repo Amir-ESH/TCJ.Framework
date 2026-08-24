@@ -16,7 +16,9 @@ public sealed class AnalyzerBoundaryTests
             .GetProperty("releasePackages")
             .GetProperty("runtime")
             .EnumerateArray()
-            .Select(element => element.GetString())
+            .Select(element => element.ValueKind == JsonValueKind.String
+                ? element.GetString()
+                : element.GetProperty("id").GetString())
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Cast<string>()
             .ToArray();
