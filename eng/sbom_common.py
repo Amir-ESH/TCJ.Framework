@@ -364,6 +364,17 @@ def get_release_package_ids(
     )
 
 
+def get_runtime_release_packages(manifest: dict[str, Any]) -> tuple[str, ...]:
+    """Return the normalized runtime package IDs from the release manifest.
+
+    Native AOT runtime validation must only consume releasePackages.runtime.
+    Tooling packages (for example source generators/analyzers) are not runtime
+    NuGet dependencies of packed Native AOT consumers.
+    """
+
+    return get_release_package_ids(manifest, "runtime")
+
+
 @dataclass(frozen=True)
 class ToolingPackageSpec:
     package_id: str

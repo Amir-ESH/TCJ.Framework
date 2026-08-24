@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from sbom_common import get_release_package_ids, read_json
+from sbom_common import get_runtime_release_packages, read_json
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY = ROOT / "eng/aot-policy.json"
@@ -179,7 +179,7 @@ def _runtime_package_ids(root: Path) -> tuple[str, ...]:
     manifest_path = root / "eng/release-manifest.json"
     try:
         manifest = read_json(manifest_path)
-        return get_release_package_ids(manifest, "runtime")
+        return get_runtime_release_packages(manifest)
     except (OSError, ValueError) as error:
         raise POLICY.AotPolicyError(f"Invalid release manifest: {error}") from error
 

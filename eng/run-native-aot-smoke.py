@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from sbom_common import get_release_package_ids, read_json
+from sbom_common import get_runtime_release_packages, read_json
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT = ROOT / "smoke/TCJ.NativeAot.SmokeTest/TCJ.NativeAot.SmokeTest.csproj"
@@ -51,7 +51,7 @@ def expected_packages() -> tuple[str, ...]:
 
     try:
         manifest = read_json(ROOT / "eng/release-manifest.json")
-        runtime_packages = set(get_release_package_ids(manifest, "runtime"))
+        runtime_packages = set(get_runtime_release_packages(manifest))
     except (OSError, ValueError) as error:
         raise SmokeError(f"Invalid release manifest: {error}") from error
 
