@@ -289,6 +289,82 @@ def utc_timestamp() -> str:
 
 
 @dataclass(frozen=True)
+class ReleasePackage:
+    """Normalized release package metadata from either manifest schema."""
+
+    package_id: str
+    package_type: str
+    asset_path: str | None = None
+    forbid_assets: tuple[str, ...] = ()
+
+
+def get_release_packages(manifest: dict[str, Any]) -> tuple[ReleasePackage, ...]:
+    """Read release packages from the current or legacy release manifest schema."""
+    release_packages = manifest.get("releasePackages")
+    if release_packages is None:
+        legacy_packages = manifest.get("packages")
+        if not isinstance(legacy_packages, list) or not legacy_packages:
+            raise ValueError("Release manifest packages must be a non-empty array.")
+        result: list[ReleasePackage] = []
+        for index, value in enumerate(legacy_packages):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"Release manifest packages[{index}] must be a non-empty string.")
+            result.append(ReleasePackage(value.strip(), "runtime"))
+        if len({item.package_id.casefold() for item in result}) != len(result):
+            raise ValueError("Release manifest package IDs must be unique.")
+        return tuple(result)
+
+    if not isinstance(release_packages, dict):
+        raise ValueError("Release manifest releasePackages must be an object.")
+
+    runtime = release_packages.get("runtime")
+    tooling = release_packages.get("tooling")
+    if not isinstance(runtime, list) or not runtime:
+        raise ValueError("Release manifest releasePackages.runtime must be a non-empty array.")
+    if not isinstance(tooling, list):
+        raise ValueError("Release manifest releasePackages.tooling must be an array.")
+
+    result = []
+    for index, item in enumerate(runtime):
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not item["id"].strip():
+            raise ValueError(f"Release manifest releasePackages.runtime[{index}] must contain a non-empty package ID.")
+        result.append(ReleasePackage(item["id"].strip(), "runtime"))
+
+    for index, item in enumerate(tooling):
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not item["id"].strip():
+            raise ValueError(f"Release manifest releasePackages.tooling[{index}] must contain a non-empty package ID.")
+        asset_path = item.get("assetPath")
+        forbid_assets = item.get("forbidAssets", [])
+        if not isinstance(asset_path, str) or not asset_path.strip():
+            raise ValueError(f"Release manifest tooling package {item.get('id')!r} must define a non-empty assetPath.")
+        if not isinstance(forbid_assets, list) or not all(isinstance(value, str) and value.strip() for value in forbid_assets):
+            raise ValueError(f"Release manifest tooling package {item.get('id')!r} forbidAssets must be an array of non-empty strings.")
+        result.append(
+            ReleasePackage(
+                item["id"].strip(),
+                "tooling",
+                asset_path.strip().replace("\\", "/").rstrip("/"),
+                tuple(value.strip().replace("\\", "/").rstrip("/") for value in forbid_assets),
+            )
+        )
+
+    if len({item.package_id.casefold() for item in result}) != len(result):
+        raise ValueError("Release manifest package IDs must be unique across runtime and tooling packages.")
+    return tuple(result)
+
+
+def get_release_package_ids(
+    manifest: dict[str, Any], package_type: str | None = None
+) -> tuple[str, ...]:
+    packages = get_release_packages(manifest)
+    if package_type is not None and package_type not in {"runtime", "tooling"}:
+        raise ValueError(f"Unsupported release package type: {package_type}")
+    return tuple(
+        item.package_id for item in packages if package_type is None or item.package_type == package_type
+    )
+
+
+@dataclass(frozen=True)
 class ToolingPackageSpec:
     package_id: str
     asset_path: str

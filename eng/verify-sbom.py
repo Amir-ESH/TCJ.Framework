@@ -23,6 +23,7 @@ from sbom_common import (
     package_ref,
     property_map,
     read_json,
+    get_release_package_ids,
     release_package_policy,
     sha256,
     symbol_ref,
@@ -34,7 +35,6 @@ POLICY_REQUIRED_KEYS = {
     "format": str,
     "specVersion": str,
     "fileExtension": str,
-    "requiredPackages": list,
     "requireDirectDependencies": bool,
     "requireTransitiveDependencies": bool,
     "requireHashes": bool,
@@ -83,14 +83,7 @@ def load_policy(root: Path) -> dict[str, Any]:
         fail(f"SBOM policy specVersion must be {CYCLONEDX_SPEC_VERSION}.")
     if policy["fileExtension"] != ".cdx.json":
         fail("SBOM policy fileExtension must be .cdx.json.")
-    packages = policy["requiredPackages"]
-    if not packages or not all(isinstance(item, str) and item.strip() for item in packages):
-        fail("SBOM policy requiredPackages must contain non-empty package IDs.")
-    if len({item.casefold() for item in packages}) != len(packages):
-        fail("SBOM policy requiredPackages must be unique.")
     runtime_packages, tooling_packages = release_package_policy(policy)
-    if tuple(packages) != runtime_packages:
-        fail("SBOM policy requiredPackages must exactly match releasePackages.runtime IDs.")
     if not policy["repository"].strip() or "/" not in policy["repository"]:
         fail("SBOM policy repository must use owner/name form.")
     return policy
@@ -113,10 +106,13 @@ def ensure_policy_tracked(root: Path) -> None:
 def validate_configuration(root: Path) -> dict[str, Any]:
     policy = load_policy(root)
     manifest = read_json(root / "eng" / "release-manifest.json")
-    manifest_packages = manifest.get("packages")
+    try:
+        manifest_packages = list(get_release_package_ids(manifest, "runtime"))
+    except ValueError as error:
+        fail(str(error))
     runtime_packages, _ = release_package_policy(policy)
     if manifest_packages != list(runtime_packages):
-        fail("SBOM policy releasePackages.runtime must exactly match release-manifest packages.")
+        fail("SBOM policy releasePackages.runtime must exactly match the runtime packages in release-manifest.")
     if manifest.get("repository") != policy["repository"]:
         fail("SBOM policy repository must match release-manifest repository.")
 
@@ -496,7 +492,7 @@ def main() -> int:
     if args.command == "validate-config":
         policy = validate_configuration(root)
         print(
-            f"SBOM configuration is valid for {len(policy['requiredPackages'])} release packages."
+            f"SBOM configuration is valid for {len(release_package_policy(policy)[0])} runtime release packages."
         )
         return 0
 

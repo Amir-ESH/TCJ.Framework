@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from sbom_common import get_release_package_ids
+
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY = ROOT / "eng/aot-policy.json"
 VALID_TIERS = ("Full", "Conditional", "Experimental", "Unsupported")
@@ -381,13 +383,10 @@ def release_packages(root: Path) -> tuple[str, ...]:
     manifest = require_object(
         read_json(root / RELEASE_MANIFEST, "release manifest"), "Release manifest"
     )
-    packages = manifest.get("packages")
-    if not isinstance(packages, list) or not packages:
-        fail("Release manifest packages must be a non-empty array.")
-    normalized = tuple(require_string(value, "release-manifest package") for value in packages)
-    if len(normalized) != len(set(normalized)):
-        fail("Release manifest packages must not contain duplicates.")
-    return normalized
+    try:
+        return get_release_package_ids(manifest, "runtime")
+    except ValueError as error:
+        fail(str(error))
 
 
 def source_package_ids(root: Path) -> tuple[str, ...]:

@@ -19,6 +19,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
+from sbom_common import get_release_package_ids, read_json as read_release_json
+
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY = ROOT / "eng/reproducibility-policy.json"
 DEFAULT_BUILD_A = ROOT / "artifacts/reproducibility/build-a/packages"
@@ -360,9 +362,13 @@ def validate_configuration(root: Path = ROOT, *, check_git: bool = True) -> Poli
         if f"<{property_name}>" in packaging:
             fail(f"eng/Packaging.props must inherit central {property_name} configuration instead of repeating it.")
 
-    manifest = read_json(root / "eng/release-manifest.json")
-    if not isinstance(manifest, dict) or tuple(manifest.get("packages", [])) != policy.required_packages:
-        fail("Reproducibility policy requiredPackages must exactly match eng/release-manifest.json.")
+    manifest = read_release_json(root / "eng/release-manifest.json")
+    try:
+        manifest_packages = get_release_package_ids(manifest, "runtime")
+    except ValueError as error:
+        fail(str(error))
+    if manifest_packages != policy.required_packages:
+        fail("Reproducibility policy requiredPackages must exactly match the runtime packages in eng/release-manifest.json.")
 
     project_files: list[Path] = []
     for package_id in policy.required_packages:

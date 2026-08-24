@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+
+ENG = Path(__file__).resolve().parents[1]
+if str(ENG) not in sys.path:
+    sys.path.insert(0, str(ENG))
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "verify-release.py"

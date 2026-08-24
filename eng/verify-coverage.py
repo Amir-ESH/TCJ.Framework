@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from sbom_common import get_release_package_ids
+
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY = Path(__file__).resolve().with_name("coverage-policy.json")
 WORKFLOWS = (
@@ -140,7 +142,10 @@ def parse_rate(value: object, field: str) -> float:
 def validate_config(policy: CoveragePolicy) -> None:
     manifest_path = REPOSITORY_ROOT / "eng/release-manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    manifest_packages = tuple(str(item) for item in manifest.get("packages", []))
+    try:
+        manifest_packages = get_release_package_ids(manifest, "runtime")
+    except ValueError as error:
+        fail(str(error))
     if manifest_packages != policy.expected_packages:
         fail("coverage-policy expectedPackages must match release-manifest packages in order.")
 
