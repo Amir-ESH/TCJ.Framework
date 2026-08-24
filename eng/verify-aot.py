@@ -197,7 +197,15 @@ def _full_support_package_ids(root: Path, policy: Any) -> tuple[str, ...]:
 
 
 def _runtime_aot_package_ids(root: Path) -> tuple[str, ...]:
-    return tuple(sorted(_runtime_package_ids(root)))
+    # Native AOT smoke validates the executable runtime closure, not every
+    # runtime package published by the release manifest. Tooling and runtime
+    # packages without a supported smoke path must not expand the closure.
+    policy = POLICY.validate_configuration(root, root / "eng/aot-policy.json")
+    return tuple(sorted(
+        package.package_id
+        for package in policy.packages
+        if package.tier == "Full"
+    ))
 
 
 def _package_projects(root: Path, policy: Any) -> dict[str, Path]:
@@ -941,11 +949,11 @@ def verify_runtime_result(
             for key in ("resolvedPackages", "loadedPackageVersions"):
                 value = result.get(key)
                 if not isinstance(value, dict) or sorted(value) != expected_package_set:
-                    findings.append(_result_finding(key, value, f"{key} must contain every and only runtime release package."))
+                    findings.append(_result_finding(key, value, f"{key} must contain every and only Native AOT Full support package."))
                     continue
                 wrong = {package_id: version for package_id, version in value.items() if version != expected_version}
                 if wrong:
-                    findings.append(_result_finding(key, wrong, f"{key} must report candidate version {expected_version} for every Full package."))
+                    findings.append(_result_finding(key, wrong, f"{key} must report candidate version {expected_version} for every Native AOT Full support package."))
 
             for key in ("trimWarnings", "aotWarnings", "tcjWarnings", "upstreamWarnings"):
                 value = result.get(key)

@@ -505,7 +505,7 @@ class AotVerifierTests(unittest.TestCase):
         self.assertEqual("failed", payload["status"])
         finding = next(item for item in payload["findings"] if item["property"] == "loadedPackageVersions")
         self.assertEqual("AOT100", finding["rule"])
-        self.assertIn(version, finding["message"])
+        self.assertIn(expected_version := version, finding["message"])
 
     def _read_policy(self) -> dict:
         return json.loads((self.root / "eng/aot-policy.json").read_text(encoding="utf-8"))
