@@ -196,6 +196,10 @@ def _full_support_package_ids(root: Path, policy: Any) -> tuple[str, ...]:
     return full_ids
 
 
+def _runtime_aot_package_ids(root: Path) -> tuple[str, ...]:
+    return tuple(sorted(_runtime_package_ids(root)))
+
+
 def _package_projects(root: Path, policy: Any) -> dict[str, Path]:
     result: dict[str, Path] = {}
     runtime_package_ids = set(_runtime_package_ids(root))
@@ -694,7 +698,7 @@ def _validate_packed_native_aot_smoke(root: Path, policy: Any) -> list[Finding]:
             project_references.append((element.attrib.get("Include") or "").strip())
 
     try:
-        full_packages = list(_full_support_package_ids(root, policy))
+        full_packages = list(_runtime_aot_package_ids(root))
     except POLICY.AotPolicyError as error:
         add("AOT009", "eng/aot-policy.json", "FullPackages", "invalid", str(error))
         full_packages = []
@@ -883,14 +887,14 @@ def verify_runtime_result(
     try:
         policy = POLICY.validate_configuration(root, policy_path)
         try:
-            full_packages = list(_full_support_package_ids(root, policy))
+            full_packages = list(_runtime_aot_package_ids(root))
             packed_packages = list(_packed_aot_package_ids(root))
             if sorted(full_packages) != sorted(packed_packages):
                 findings.append(
                     _result_finding(
                         "FullPackages",
                         full_packages,
-                        "The current Full support package set must match the packed Native AOT smoke closure.",
+                        "The current runtime release package set must match the packed Native AOT smoke closure.",
                     )
                 )
         except POLICY.AotPolicyError as error:
@@ -932,12 +936,12 @@ def verify_runtime_result(
 
             expected_package_set = sorted(full_packages)
             if sorted(result.get("expectedPackages") or []) != expected_package_set:
-                findings.append(_result_finding("expectedPackages", result.get("expectedPackages"), "Runtime result expectedPackages must match the current Full support tier package set."))
+                findings.append(_result_finding("expectedPackages", result.get("expectedPackages"), "Runtime result expectedPackages must match releasePackages.runtime."))
 
             for key in ("resolvedPackages", "loadedPackageVersions"):
                 value = result.get(key)
                 if not isinstance(value, dict) or sorted(value) != expected_package_set:
-                    findings.append(_result_finding(key, value, f"{key} must contain every and only Full support package."))
+                    findings.append(_result_finding(key, value, f"{key} must contain every and only runtime release package."))
                     continue
                 wrong = {package_id: version for package_id, version in value.items() if version != expected_version}
                 if wrong:

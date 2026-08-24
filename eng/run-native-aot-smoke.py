@@ -199,7 +199,7 @@ def parse_assets(package_cache: Path, packages: Path, version: str, expected: tu
         )
 
     expected_source = os.path.normcase(os.path.normpath(str(packages.resolve())))
-    for package_id in EXPECTED_PACKAGES:
+    for package_id in expected:
         metadata_path = package_cache / package_id.casefold() / version.casefold() / ".nupkg.metadata"
         if not metadata_path.is_file():
             raise SmokeError(f"Missing NuGet source metadata for {package_id} {version}: {metadata_path}")
