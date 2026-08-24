@@ -11,15 +11,17 @@ import re
 import shutil
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.parse import unquote, urlparse
+
+from sbom_common import get_release_package_ids, read_json
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT = ROOT / "smoke/TCJ.NativeAot.SmokeTest/TCJ.NativeAot.SmokeTest.csproj"
 NUGET_CONFIG = ROOT / "smoke/NuGet.Config"
 DEFAULT_PACKAGES = ROOT / "artifacts/packages"
 DEFAULT_OUTPUT = ROOT / "artifacts/aot/native-aot-smoke"
-EXPECTED_PACKAGES = ("TCJ.Core", "TCJ.DependencyInjection", "TCJ.AspNetCore")
 TCJ_LIBRARY_RE = re.compile(r"^(TCJ\.[^/]+)/(.+)$", re.IGNORECASE)
 AOT_DIAGNOSTIC_RE = re.compile(r"\bwarning\s+(IL[23]\d{3})\b", re.IGNORECASE)
 ANY_WARNING_RE = re.compile(r"\bwarning\s+[A-Z]{2,}\d+\b", re.IGNORECASE)
@@ -28,6 +30,38 @@ VERSION_LINE_RE = re.compile(r"^TCJ_PACKAGE_VERSION\s+(TCJ\.[^\s]+)\s+([^\s]+)\s
 
 class SmokeError(RuntimeError):
     pass
+
+
+def expected_packages() -> tuple[str, ...]:
+    try:
+        project_root = ET.parse(PROJECT).getroot()
+    except (ET.ParseError, OSError) as error:
+        raise SmokeError(f"Invalid Native AOT smoke project: {error}") from error
+
+    package_references = sorted(
+        {
+            (element.attrib.get("Include") or "").strip()
+            for element in project_root.iter()
+            if element.tag.rsplit("}", 1)[-1] == "PackageReference"
+            and (element.attrib.get("Include") or "").strip().startswith("TCJ.")
+        }
+    )
+    if not package_references:
+        raise SmokeError("Native AOT smoke project does not declare any TCJ PackageReference entries.")
+
+    try:
+        manifest = read_json(ROOT / "eng/release-manifest.json")
+        runtime_packages = set(get_release_package_ids(manifest, "runtime"))
+    except (OSError, ValueError) as error:
+        raise SmokeError(f"Invalid release manifest: {error}") from error
+
+    non_runtime = sorted(set(package_references) - runtime_packages)
+    if non_runtime:
+        raise SmokeError(
+            "Native AOT smoke references non-runtime TCJ package(s): "
+            + ", ".join(non_runtime)
+        )
+    return tuple(package_references)
 
 
 def normalize_architecture(value: str) -> str:
@@ -89,12 +123,12 @@ def diagnostics(output: str) -> tuple[list[str], list[str], list[str], list[str]
     return trim, aot, tcj, upstream, generic_warning_count
 
 
-def ensure_packages(packages: Path, version: str) -> None:
+def ensure_packages(packages: Path, version: str, expected: tuple[str, ...]) -> None:
     if not packages.is_dir():
         raise SmokeError(f"Packed-package feed does not exist: {packages}")
     missing = [
         package_id
-        for package_id in EXPECTED_PACKAGES
+        for package_id in expected
         if not (packages / f"{package_id}.{version}.nupkg").is_file()
     ]
     if missing:
@@ -121,7 +155,7 @@ def source_path_candidates(value: str) -> set[str]:
     return result
 
 
-def parse_assets(package_cache: Path, packages: Path, version: str) -> dict[str, str]:
+def parse_assets(package_cache: Path, packages: Path, version: str, expected: tuple[str, ...]) -> dict[str, str]:
     assets_path = PROJECT.parent / "obj/project.assets.json"
     if not assets_path.is_file():
         raise SmokeError(f"Native AOT smoke restore did not create {assets_path.relative_to(ROOT)}")
@@ -137,10 +171,10 @@ def parse_assets(package_cache: Path, packages: Path, version: str) -> dict[str,
             raise SmokeError(f"{package_id} resolved as a non-package library in Native AOT smoke.")
         resolved[package_id] = resolved_version
 
-    if set(resolved) != set(EXPECTED_PACKAGES):
+    if set(resolved) != set(expected):
         raise SmokeError(
             "Native AOT TCJ package closure mismatch: "
-            f"expected {sorted(EXPECTED_PACKAGES)}, found {sorted(resolved)}."
+            f"expected {sorted(expected)}, found {sorted(resolved)}."
         )
     wrong = {package_id: value for package_id, value in resolved.items() if value != version}
     if wrong:
@@ -181,16 +215,16 @@ def parse_assets(package_cache: Path, packages: Path, version: str) -> dict[str,
     return dict(sorted(resolved.items()))
 
 
-def loaded_versions(output: str, expected_version: str) -> dict[str, str]:
+def loaded_versions(output: str, expected_version: str, expected: tuple[str, ...]) -> dict[str, str]:
     found: dict[str, str] = {}
     for line in output.splitlines():
         match = VERSION_LINE_RE.match(line.strip())
         if match:
             found[match.group(1)] = match.group(2)
-    if set(found) != set(EXPECTED_PACKAGES):
+    if set(found) != set(expected):
         raise SmokeError(
             "Native binary did not report the full loaded TCJ package closure: "
-            f"expected {sorted(EXPECTED_PACKAGES)}, found {sorted(found)}."
+            f"expected {sorted(expected)}, found {sorted(found)}."
         )
     wrong = {package_id: value for package_id, value in found.items() if value != expected_version}
     if wrong:
@@ -203,6 +237,7 @@ def loaded_versions(output: str, expected_version: str) -> dict[str, str]:
 def execute(version: str, rid: str, packages: Path, output: Path) -> tuple[dict, bool]:
     packages = packages.resolve()
     output = output.resolve()
+    expected = expected_packages()
     if output.exists():
         shutil.rmtree(output)
     output.mkdir(parents=True, exist_ok=True)
@@ -239,7 +274,7 @@ def execute(version: str, rid: str, packages: Path, output: Path) -> tuple[dict,
         "consumerSource": "PackedNuGet",
         "usesProjectReference": False,
         "publishAot": True,
-        "expectedPackages": list(EXPECTED_PACKAGES),
+        "expectedPackages": list(expected),
         "resolvedPackages": {},
         "loadedPackageVersions": {},
         "packageSourceStatus": "not-run",
@@ -260,7 +295,9 @@ def execute(version: str, rid: str, packages: Path, output: Path) -> tuple[dict,
     all_output = ""
     result_path = output / "native-aot-result.json"
     try:
-        ensure_packages(packages, version)
+        if not version.strip():
+            raise SmokeError("Native AOT smoke package version must not be empty; CI must pass steps.package-version.outputs.value.")
+        ensure_packages(packages, version, expected)
         if packages != DEFAULT_PACKAGES.resolve():
             raise SmokeError(
                 f"Native AOT smoke NuGet.Config is pinned to {DEFAULT_PACKAGES.resolve()}; "
@@ -287,7 +324,7 @@ def execute(version: str, rid: str, packages: Path, output: Path) -> tuple[dict,
             payload["restoreStatus"] = "fail"
             raise SmokeError(f"Native AOT smoke restore exited with code {code}.")
         payload["restoreStatus"] = "pass"
-        payload["resolvedPackages"] = parse_assets(package_cache, packages, version)
+        payload["resolvedPackages"] = parse_assets(package_cache, packages, version, expected)
         payload["packageSourceStatus"] = "pass"
 
         publish_dir = output / "publish"
@@ -331,7 +368,7 @@ def execute(version: str, rid: str, packages: Path, output: Path) -> tuple[dict,
         if "TCJ Native AOT packed-package smoke passed" not in runtime_output:
             payload["executionStatus"] = "fail"
             raise SmokeError("Native AOT smoke executable did not emit the expected success marker.")
-        payload["loadedPackageVersions"] = loaded_versions(runtime_output, version)
+        payload["loadedPackageVersions"] = loaded_versions(runtime_output, version, expected)
         payload["executionStatus"] = "pass"
         payload["status"] = "passed"
         return payload, True

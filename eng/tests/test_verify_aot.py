@@ -31,6 +31,30 @@ class AotVerifierTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
+    def test_runtime_package_inventory_uses_release_manifest_runtime_only(self) -> None:
+        runtime_packages = MODULE._runtime_package_ids(self.root)
+
+        self.assertEqual(
+            (
+                "TCJ.Core",
+                "TCJ.DependencyInjection",
+                "TCJ.EntityFrameworkCore",
+                "TCJ.EntityFrameworkCore.SqlServer",
+                "TCJ.AspNetCore",
+            ),
+            runtime_packages,
+        )
+        self.assertNotIn("TCJ.Generators", runtime_packages)
+
+    def test_full_support_packages_must_match_packed_smoke_closure(self) -> None:
+        policy = MODULE.POLICY.validate_configuration(
+            self.root, self.root / "eng/aot-policy.json"
+        )
+        self.assertEqual(
+            MODULE._full_support_package_ids(self.root, policy),
+            MODULE._packed_aot_package_ids(self.root),
+        )
+
     def test_success_writes_deterministic_machine_readable_baseline(self) -> None:
         first, first_success = MODULE.verify_repository(self.root, output_path=self.output)
         first_bytes = self.output.read_bytes()
@@ -459,7 +483,7 @@ class AotVerifierTests(unittest.TestCase):
 
         self.assertTrue(success)
         self.assertEqual("passed", payload["status"])
-        self.assertEqual(sorted(MODULE.PACKED_AOT_PACKAGES), payload["fullPackages"])
+        self.assertEqual(sorted(MODULE._full_support_package_ids(self.root, MODULE.POLICY.validate_configuration(self.root, self.root / "eng/aot-policy.json"))), payload["fullPackages"])
         self.assertEqual([], payload["findings"])
 
     def test_runtime_result_rejects_intentionally_broken_loaded_package_version(self) -> None:
@@ -511,7 +535,7 @@ class AotVerifierTests(unittest.TestCase):
     def _write_runtime_result_fixture(self, *, version: str) -> tuple[Path, Path]:
         package_directory = self.root / "artifacts/packages"
         package_directory.mkdir(parents=True, exist_ok=True)
-        packages = sorted(MODULE.PACKED_AOT_PACKAGES)
+        packages = sorted(MODULE._full_support_package_ids(self.root, MODULE.POLICY.validate_configuration(self.root, self.root / "eng/aot-policy.json")))
         for package_id in packages:
             (package_directory / f"{package_id}.{version}.nupkg").write_bytes(b"fixture")
 
