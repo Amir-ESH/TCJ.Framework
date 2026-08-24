@@ -491,15 +491,18 @@ def validate_tooling_package(path: Path) -> None:
 def validate_packages(root: Path, package_directory: Path, manifest: dict[str, object]) -> None:
     version = str(manifest["version"])
     repository = str(manifest["repository"])
-    package_ids = list(get_release_package_ids(manifest))
+    runtime_package_ids = list(get_release_package_ids(manifest, "runtime"))
+    tooling_package_ids = list(get_release_package_ids(manifest, "tooling"))
+    package_ids = runtime_package_ids + tooling_package_ids
 
     if not package_directory.is_absolute():
         package_directory = root / package_directory
     if not package_directory.is_dir():
         fail(f"Package directory does not exist: {package_directory}")
 
-    expected_primary = {f"{package_id}.{version}.nupkg" for package_id in package_ids}
-    expected_symbols = {f"{package_id}.{version}.snupkg" for package_id in package_ids}
+    expected_primary = {f"{package_id}.{version}.nupkg" for package_id in runtime_package_ids}
+    expected_symbols = {f"{package_id}.{version}.snupkg" for package_id in runtime_package_ids}
+    expected_tooling = {f"{package_id}.{version}.nupkg" for package_id in tooling_package_ids}
     all_primary_paths = sorted(package_directory.glob("*.nupkg"))
     tooling_paths = {path.name for path in all_primary_paths if is_tooling_package(path)}
     actual_primary = {path.name for path in all_primary_paths if path.name not in tooling_paths}
@@ -509,10 +512,17 @@ def validate_packages(root: Path, package_directory: Path, manifest: dict[str, o
         if tooling_path.name in tooling_paths:
             validate_tooling_package(tooling_path)
 
+    actual_tooling = {path.name for path in all_primary_paths if path.name in tooling_paths}
+
     if actual_primary != expected_primary:
         fail(
             "Primary package set mismatch. "
             f"Expected {sorted(expected_primary)}, found {sorted(actual_primary)}."
+        )
+    if actual_tooling != expected_tooling:
+        fail(
+            "Tooling package set mismatch. "
+            f"Expected {sorted(expected_tooling)}, found {sorted(actual_tooling)}."
         )
     if actual_symbols != expected_symbols:
         fail(
