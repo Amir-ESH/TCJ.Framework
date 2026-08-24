@@ -22,6 +22,10 @@ package_ids=(
   TCJ.AspNetCore
 )
 
+tooling_package_ids=(
+  TCJ.Generators
+)
+
 for package_id in "${package_ids[@]}"; do
   primary="$package_directory/$package_id.$version.nupkg"
   symbols="$package_directory/$package_id.$version.snupkg"
@@ -33,6 +37,14 @@ for package_id in "${package_ids[@]}"; do
 
   if [[ ! -f "$symbols" ]]; then
     echo "Missing symbol package: $symbols" >&2
+    exit 1
+  fi
+done
+
+for package_id in "${tooling_package_ids[@]}"; do
+  tooling="$package_directory/$package_id.$version.nupkg"
+  if [[ ! -f "$tooling" ]]; then
+    echo "Missing tooling package: $tooling" >&2
     exit 1
   fi
 done

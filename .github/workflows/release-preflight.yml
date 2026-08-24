@@ -426,6 +426,24 @@ jobs:
             -p:ReproducibleBuildRoot="$root" \
             -p:RepositoryCommit="$GITHUB_SHA"
 
+      - name: Pack tooling release packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          for root in artifacts/reproducibility/build-a artifacts/reproducibility/build-b; do
+            mkdir -p "$root/packages"
+            dotnet pack src/TCJ.Generators/TCJ.Generators.csproj \\
+              --configuration Release \\
+              --no-build \\
+              --no-restore \\
+              --artifacts-path "$root" \\
+              -p:PackageOutputPath="$root/packages" \\
+              -p:Version="${{ steps.release-version.outputs.value }}" \\
+              -p:ContinuousIntegrationBuild=true \\
+              -p:ReproducibleBuildRoot="$root" \\
+              -p:RepositoryCommit="$GITHUB_SHA"
+          done
+
       - name: Compare reproducible release candidate builds
         run: >
           python3 eng/verify-reproducible-build.py compare
