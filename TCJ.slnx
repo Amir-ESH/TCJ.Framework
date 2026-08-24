@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/TCJ.Analyzers/TCJ.Analyzers.csproj" />
+    <Project Path="src/TCJ.Generators/TCJ.Generators.csproj" />
     <Project Path="src/TCJ.Analyzers.CodeFixes/TCJ.Analyzers.CodeFixes.csproj" />
     <Project Path="src/TCJ.AspNetCore/TCJ.AspNetCore.csproj" />
     <Project Path="src/TCJ.Core/TCJ.Core.csproj" />
@@ -19,6 +20,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TCJ.Analyzers.Tests/TCJ.Analyzers.Tests.csproj" />
+    <Project Path="tests/TCJ.Generators.Tests/TCJ.Generators.Tests.csproj" />
     <Project Path="tests/TCJ.Architecture.Tests/TCJ.Architecture.Tests.csproj" />
     <Project Path="tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj" />
     <Project Path="tests/TCJ.AspNetCore.Tests/TCJ.AspNetCore.Tests.csproj" />
