@@ -289,25 +289,115 @@ def utc_timestamp() -> str:
 
 
 @dataclass(frozen=True)
+class ToolingPackageSpec:
+    package_id: str
+    asset_path: str
+    forbid_assets: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ReleasePackageSet:
     primary: dict[str, Path]
     symbols: dict[str, Path]
     metadata: dict[str, NuspecMetadata]
+    tooling: dict[str, Path]
+
+
+def release_package_policy(policy: dict[str, Any]) -> tuple[tuple[str, ...], tuple[ToolingPackageSpec, ...]]:
+    release_packages = policy.get("releasePackages")
+    if release_packages is None:
+        legacy_runtime = policy.get("requiredPackages")
+        if isinstance(legacy_runtime, list) and legacy_runtime:
+            return tuple(legacy_runtime), ()
+        fail("SBOM policy releasePackages must be an object.")
+    if not isinstance(release_packages, dict):
+        fail("SBOM policy releasePackages must be an object.")
+
+    runtime = release_packages.get("runtime")
+    tooling = release_packages.get("tooling")
+    if not isinstance(runtime, list) or not runtime:
+        fail("SBOM policy releasePackages.runtime must be a non-empty array.")
+    if not isinstance(tooling, list):
+        fail("SBOM policy releasePackages.tooling must be an array.")
+
+    runtime_ids: list[str] = []
+    for item in runtime:
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not item["id"].strip():
+            fail("SBOM policy releasePackages.runtime entries must contain non-empty package IDs.")
+        runtime_ids.append(item["id"].strip())
+
+    tooling_specs: list[ToolingPackageSpec] = []
+    for item in tooling:
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not item["id"].strip():
+            fail("SBOM policy releasePackages.tooling entries must contain non-empty package IDs.")
+        asset_path = item.get("assetPath")
+        forbid_assets = item.get("forbidAssets", [])
+        if not isinstance(asset_path, str) or not asset_path.strip():
+            fail(f"SBOM policy tooling package {item['id']!r} must define a non-empty assetPath.")
+        if not isinstance(forbid_assets, list) or not all(isinstance(value, str) and value.strip() for value in forbid_assets):
+            fail(f"SBOM policy tooling package {item['id']!r} forbidAssets must be an array of non-empty strings.")
+        tooling_specs.append(
+            ToolingPackageSpec(
+                package_id=item["id"].strip(),
+                asset_path=asset_path.strip().replace("\\", "/").rstrip("/") + "/",
+                forbid_assets=tuple(
+                    value.strip().replace("\\", "/").rstrip("/") + "/" for value in forbid_assets
+                ),
+            )
+        )
+
+    all_ids = [*runtime_ids, *(item.package_id for item in tooling_specs)]
+    normalized = [item.casefold() for item in all_ids]
+    if len(normalized) != len(set(normalized)):
+        fail("SBOM policy release package IDs must be unique across runtime and tooling packages.")
+
+    return tuple(runtime_ids), tuple(tooling_specs)
+
+
+def _package_entries(path: Path) -> list[str]:
+    try:
+        with zipfile.ZipFile(path) as archive:
+            return [name.replace("\\", "/") for name in archive.namelist()]
+    except zipfile.BadZipFile as error:
+        fail(f"Invalid NuGet package archive {path}: {error}")
+
+
+def validate_tooling_package(path: Path, spec: ToolingPackageSpec, version: str) -> NuspecMetadata:
+    metadata = read_nupkg_metadata(path)
+    if metadata.package_id.casefold() != spec.package_id.casefold() or metadata.version != version:
+        fail(
+            f"Package metadata mismatch in {path.name}: expected {spec.package_id} {version}, "
+            f"found {metadata.package_id} {metadata.version}."
+        )
+
+    entries = _package_entries(path)
+    asset_prefix = spec.asset_path.casefold()
+    if not any(entry.casefold().startswith(asset_prefix) for entry in entries):
+        fail(f"Tooling package {path.name} is missing required asset path {spec.asset_path}")
+    for forbidden in spec.forbid_assets:
+        prefix = forbidden.casefold()
+        if any(entry.casefold().startswith(prefix) for entry in entries):
+            fail(f"Tooling package {path.name} contains forbidden asset path {forbidden}")
+    return metadata
 
 
 def discover_release_packages(
     package_directory: Path,
     required_packages: Iterable[str],
     version: str,
+    tooling_packages: Iterable[ToolingPackageSpec] = (),
 ) -> ReleasePackageSet:
     if not package_directory.is_dir():
         fail(f"Package directory does not exist: {package_directory}")
 
     required = list(required_packages)
+    tooling = list(tooling_packages)
     primary: dict[str, Path] = {}
     symbols: dict[str, Path] = {}
     metadata: dict[str, NuspecMetadata] = {}
+    tooling_paths: dict[str, Path] = {}
     expected_names: set[str] = set()
+    tooling_names: set[str] = set()
     for package_id in required:
         primary_name = f"{package_id}.{version}.nupkg"
         symbol_name = f"{package_id}.{version}.snupkg"
@@ -328,14 +418,24 @@ def discover_release_packages(
         symbols[package_id] = symbol_path
         metadata[package_id] = package_metadata
 
+    for spec in tooling:
+        primary_name = f"{spec.package_id}.{version}.nupkg"
+        tooling_names.add(primary_name)
+        primary_path = package_directory / primary_name
+        if not primary_path.is_file():
+            fail(f"Required tooling package is missing: {primary_path}")
+        tooling_paths[spec.package_id] = primary_path
+        validate_tooling_package(primary_path, spec, version)
+
     actual_names = {
         path.name
         for path in package_directory.iterdir()
         if path.is_file() and path.name.casefold().endswith((".nupkg", ".snupkg"))
     }
-    if actual_names != expected_names:
-        missing = sorted(expected_names - actual_names, key=str.casefold)
-        unexpected = sorted(actual_names - expected_names, key=str.casefold)
+    allowed_names = expected_names | tooling_names
+    if actual_names != allowed_names:
+        missing = sorted(allowed_names - actual_names, key=str.casefold)
+        unexpected = sorted(actual_names - allowed_names, key=str.casefold)
         details: list[str] = []
         if missing:
             details.append("missing: " + ", ".join(missing))
@@ -343,7 +443,7 @@ def discover_release_packages(
             details.append("unexpected: " + ", ".join(unexpected))
         fail("Release package set is invalid (" + "; ".join(details) + ").")
 
-    return ReleasePackageSet(primary, symbols, metadata)
+    return ReleasePackageSet(primary, symbols, metadata, tooling_paths)
 
 
 @dataclass
@@ -485,9 +585,11 @@ def build_sbom(
     commit_sha: str,
     release_tag: str,
 ) -> dict[str, Any]:
-    required_packages = policy["requiredPackages"]
+    required_packages, tooling_packages = release_package_policy(policy)
     repository = policy["repository"]
-    package_set = discover_release_packages(package_directory, required_packages, version)
+    package_set = discover_release_packages(
+        package_directory, required_packages, version, tooling_packages
+    )
     assets = load_assets_graph(root, required_packages)
 
     components: list[dict[str, Any]] = []

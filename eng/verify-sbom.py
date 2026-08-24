@@ -23,6 +23,7 @@ from sbom_common import (
     package_ref,
     property_map,
     read_json,
+    release_package_policy,
     sha256,
     symbol_ref,
     write_json,
@@ -87,6 +88,9 @@ def load_policy(root: Path) -> dict[str, Any]:
         fail("SBOM policy requiredPackages must contain non-empty package IDs.")
     if len({item.casefold() for item in packages}) != len(packages):
         fail("SBOM policy requiredPackages must be unique.")
+    runtime_packages, tooling_packages = release_package_policy(policy)
+    if tuple(packages) != runtime_packages:
+        fail("SBOM policy requiredPackages must exactly match releasePackages.runtime IDs.")
     if not policy["repository"].strip() or "/" not in policy["repository"]:
         fail("SBOM policy repository must use owner/name form.")
     return policy
@@ -110,8 +114,9 @@ def validate_configuration(root: Path) -> dict[str, Any]:
     policy = load_policy(root)
     manifest = read_json(root / "eng" / "release-manifest.json")
     manifest_packages = manifest.get("packages")
-    if manifest_packages != policy["requiredPackages"]:
-        fail("SBOM policy requiredPackages must exactly match release-manifest packages.")
+    runtime_packages, _ = release_package_policy(policy)
+    if manifest_packages != list(runtime_packages):
+        fail("SBOM policy releasePackages.runtime must exactly match release-manifest packages.")
     if manifest.get("repository") != policy["repository"]:
         fail("SBOM policy repository must match release-manifest repository.")
 
@@ -281,8 +286,10 @@ def verify_document(
     if policy["requireRepositoryReference"] and not _repository_references(sbom, policy["repository"]):
         fail("SBOM metadata does not contain the required GitHub repository reference.")
 
-    required_packages = policy["requiredPackages"]
-    package_set = discover_release_packages(package_directory, required_packages, version)
+    required_packages, tooling_packages = release_package_policy(policy)
+    package_set = discover_release_packages(
+        package_directory, required_packages, version, tooling_packages
+    )
     assets = load_assets_graph(root, required_packages)
     components = _components(sbom)
     dependencies = _dependencies(sbom)

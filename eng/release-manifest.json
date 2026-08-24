@@ -6,11 +6,33 @@
   "releaseDate": null,
   "repository": "Amir-ESH/TCJ.Framework",
   "licenseExpression": "LGPL-3.0-only",
-  "packages": [
-    "TCJ.Core",
-    "TCJ.DependencyInjection",
-    "TCJ.EntityFrameworkCore",
-    "TCJ.EntityFrameworkCore.SqlServer",
-    "TCJ.AspNetCore"
-  ]
+  "releasePackages": {
+    "runtime": [
+      {
+        "id": "TCJ.Core"
+      },
+      {
+        "id": "TCJ.DependencyInjection"
+      },
+      {
+        "id": "TCJ.EntityFrameworkCore"
+      },
+      {
+        "id": "TCJ.EntityFrameworkCore.SqlServer"
+      },
+      {
+        "id": "TCJ.AspNetCore"
+      }
+    ],
+    "tooling": [
+      {
+        "id": "TCJ.Generators",
+        "assetPath": "analyzers/dotnet/cs",
+        "forbidAssets": [
+          "lib/",
+          "runtime/"
+        ]
+      }
+    ]
+  }
 }
