@@ -1,23 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\eng\Packaging.props" />
-
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>10.0</LangVersion>
-    <AssemblyName>TCJ.Generators</AssemblyName>
-    <RootNamespace>TCJ.Generators</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>true</IsPackable>
+    <PackageId>TCJ.Generators</PackageId>
     <Title>TCJ Generators</Title>
-    <Description>Incremental Roslyn source generators for TCJ Framework strong type declarations.</Description>
-    <PackageTags>tcj;dotnet;roslyn;source-generator;incremental;strong-types</PackageTags>
+    <Description>Incremental source generators for TCJ strong type contracts.</Description>
+    <PackageTags>tcj;dotnet;source-generator;roslyn;strong-types</PackageTags>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeSymbols>false</IncludeSymbols>
+    <IncludeSource>false</IncludeSource>
     <IsAotCompatible>false</IsAotCompatible>
+    <EnablePackageValidation>false</EnablePackageValidation>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+    <None Include="$(MSBuildProjectDirectory)\..\..\LICENSE.txt" Pack="true" PackagePath="/" Link="LICENSE.txt" />
+    <None Include="$(MSBuildProjectDirectory)\..\..\docs\packages\TCJ.Generators.md" Pack="true" PackagePath="README.md" />
   </ItemGroup>
-
+  <ItemGroup>
+    <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
 </Project>

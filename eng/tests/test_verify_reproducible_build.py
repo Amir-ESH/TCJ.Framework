@@ -11,6 +11,10 @@ import zipfile
 from pathlib import Path
 
 ENG = Path(__file__).resolve().parents[1]
+if str(ENG) not in sys.path:
+    sys.path.insert(0, str(ENG))
+
+ENG = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
     "verify_reproducible_build_module",
     ENG / "verify-reproducible-build.py",

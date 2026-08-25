@@ -485,6 +485,7 @@ jobs:
           sudo apt-get install -y clang zlib1g-dev
 
       - name: Run packed Native AOT release-candidate smoke
+        id: native-aot-smoke
         run: >
           python3 eng/run-native-aot-smoke.py
           --version "${{ steps.release-version.outputs.value }}"
@@ -493,7 +494,7 @@ jobs:
           --output artifacts/aot/native-aot-smoke
 
       - name: Verify packed Native AOT release-candidate evidence
-        if: always()
+        if: ${{ always() && steps.native-aot-smoke.outcome != 'skipped' }}
         run: >
           python3 eng/verify-aot.py verify-result
           --version "${{ steps.release-version.outputs.value }}"

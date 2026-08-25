@@ -5,13 +5,35 @@
   "fileExtension": ".cdx.json",
   "generatorVersion": 1,
   "repository": "Amir-ESH/TCJ.Framework",
-  "requiredPackages": [
-    "TCJ.Core",
-    "TCJ.DependencyInjection",
-    "TCJ.EntityFrameworkCore",
-    "TCJ.EntityFrameworkCore.SqlServer",
-    "TCJ.AspNetCore"
-  ],
+  "releasePackages": {
+    "runtime": [
+      {
+        "id": "TCJ.Core"
+      },
+      {
+        "id": "TCJ.DependencyInjection"
+      },
+      {
+        "id": "TCJ.EntityFrameworkCore"
+      },
+      {
+        "id": "TCJ.EntityFrameworkCore.SqlServer"
+      },
+      {
+        "id": "TCJ.AspNetCore"
+      }
+    ],
+    "tooling": [
+      {
+        "id": "TCJ.Generators",
+        "assetPath": "analyzers/dotnet/cs",
+        "forbidAssets": [
+          "lib/",
+          "runtime/"
+        ]
+      }
+    ]
+  },
   "requireDirectDependencies": true,
   "requireTransitiveDependencies": true,
   "requireHashes": true,

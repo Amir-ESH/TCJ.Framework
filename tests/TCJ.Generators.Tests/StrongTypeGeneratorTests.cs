@@ -1,6 +1,5 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Testing;
 using TCJ.Generators;
 
 namespace TCJ.Generators.Tests;
@@ -8,23 +7,15 @@ namespace TCJ.Generators.Tests;
 public sealed class StrongTypeGeneratorTests
 {
     [Fact]
-    public void Generator_can_be_created_as_incremental_generator()
+    public void Generator_DiscoversAttributedDeclarations_WithoutGeneratingMembers()
     {
-        IIncrementalGenerator generator = new StrongTypeGenerator();
+        var syntaxTree = CSharpSyntaxTree.ParseText("[TCJ.Core.StrongTypes.StronglyTypedId<int>] public partial struct OrderId { }");
+        var compilation = CSharpCompilation.Create("Test", new[] { syntaxTree });
+        var driver = CSharpGeneratorDriver.Create(new StrongTypeGenerator());
 
-        Assert.NotNull(generator);
+        driver.RunGeneratorsAndUpdateCompilation(compilation, out var updated, out var diagnostics);
+
+        Assert.Empty(diagnostics);
+        Assert.Empty(updated.SyntaxTrees.Skip(1));
     }
-
-    [Fact]
-    public void Unrelated_syntax_changes_do_not_change_attribute_discovery_input()
-    {
-        SyntaxTree first = CSharpSyntaxTree.ParseText("namespace A; public partial record struct C;" );
-        SyntaxTree second = CSharpSyntaxTree.ParseText("namespace A; public partial record struct C { private int Value; }");
-
-        Assert.Equal(1, CountCandidateTypes(first));
-        Assert.Equal(1, CountCandidateTypes(second));
-    }
-
-    private static int CountCandidateTypes(SyntaxTree tree) =>
-        tree.GetRoot().DescendantNodes().Count(static node => node is Microsoft.CodeAnalysis.CSharp.Syntax.TypeDeclarationSyntax);
 }

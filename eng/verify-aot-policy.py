@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from sbom_common import get_release_package_ids
+
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY = ROOT / "eng/aot-policy.json"
 VALID_TIERS = ("Full", "Conditional", "Experimental", "Unsupported")
@@ -381,13 +383,10 @@ def release_packages(root: Path) -> tuple[str, ...]:
     manifest = require_object(
         read_json(root / RELEASE_MANIFEST, "release manifest"), "Release manifest"
     )
-    packages = manifest.get("packages")
-    if not isinstance(packages, list) or not packages:
-        fail("Release manifest packages must be a non-empty array.")
-    normalized = tuple(require_string(value, "release-manifest package") for value in packages)
-    if len(normalized) != len(set(normalized)):
-        fail("Release manifest packages must not contain duplicates.")
-    return normalized
+    try:
+        return get_release_package_ids(manifest, "runtime")
+    except ValueError as error:
+        fail(str(error))
 
 
 def source_package_ids(root: Path) -> tuple[str, ...]:
@@ -397,9 +396,18 @@ def source_package_ids(root: Path) -> tuple[str, ...]:
             xml = ET.parse(project).getroot()
         except ET.ParseError as error:
             fail(f"Invalid project XML in {relative(project, root)}: {error}")
+
         package_id_node = xml.find(".//PackageId")
         if package_id_node is None or not package_id_node.text or not package_id_node.text.strip():
             continue
+
+        # Analyzer/source-generator packages are shipped as compiler tooling and are not
+        # runtime packages in the Native AOT release manifest. They must not participate
+        # in runtime package inventory validation.
+        include_build_output = xml.find(".//IncludeBuildOutput")
+        if include_build_output is not None and (include_build_output.text or "").strip().lower() == "false":
+            continue
+
         result.append(package_id_node.text.strip())
     if len(result) != len(set(result)):
         fail("Production project PackageId values must be unique.")

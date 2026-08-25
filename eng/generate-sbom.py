@@ -12,6 +12,7 @@ from sbom_common import (
     SbomError,
     build_sbom,
     read_json,
+    release_package_policy,
     resolve_commit_sha,
     write_json,
 )
@@ -19,9 +20,10 @@ from sbom_common import (
 
 def load_policy(root: Path) -> dict[str, object]:
     policy = read_json(root / "eng" / "sbom-policy.json")
-    required = policy.get("requiredPackages")
-    if not isinstance(required, list) or not required:
-        raise SbomError("SBOM policy requiredPackages must be a non-empty array.")
+    try:
+        release_package_policy(policy)
+    except SbomError:
+        raise
     return policy
 
 

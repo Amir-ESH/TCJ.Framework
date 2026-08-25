@@ -419,7 +419,7 @@ jobs:
           --output artifacts/aot/native-aot-smoke
 
       - name: Verify Native AOT smoke result exists
-        if: always()
+        if: ${{ always() && steps.native-aot-smoke.outcome != 'skipped' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -429,7 +429,7 @@ jobs:
           }
 
       - name: Verify packed Native AOT evidence
-        if: always()
+        if: ${{ always() && steps.native-aot-smoke.outcome != 'skipped' }}
         run: >
           python3 eng/verify-aot.py verify-result
           --version "${{ steps.package-version.outputs.value }}"

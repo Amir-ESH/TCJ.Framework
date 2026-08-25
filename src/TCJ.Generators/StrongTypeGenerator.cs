@@ -13,44 +13,25 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValuesProvider<INamedTypeSymbol> types = context.SyntaxProvider
-            .ForAttributeWithMetadataName(
-                StrongIdAttribute,
-                static (node, _) => node is TypeDeclarationSyntax,
-                static (ctx, _) => (INamedTypeSymbol)ctx.TargetSymbol)
-            .Concat(context.SyntaxProvider.ForAttributeWithMetadataName(
-                ValueObjectAttribute,
-                static (node, _) => node is TypeDeclarationSyntax,
-                static (ctx, _) => (INamedTypeSymbol)ctx.TargetSymbol));
+        var strongIdCandidates = context.SyntaxProvider.ForAttributeWithMetadataName(
+            StrongIdAttribute,
+            static (node, _) => node is RecordDeclarationSyntax or StructDeclarationSyntax or ClassDeclarationSyntax,
+            static (ctx, _) => ctx.TargetSymbol.ToDisplayString())
+            .Collect();
 
-        context.RegisterSourceOutput(types.Collect(), static (spc, symbols) =>
+        var valueObjectCandidates = context.SyntaxProvider.ForAttributeWithMetadataName(
+            ValueObjectAttribute,
+            static (node, _) => node is RecordDeclarationSyntax or StructDeclarationSyntax or ClassDeclarationSyntax,
+            static (ctx, _) => ctx.TargetSymbol.ToDisplayString())
+            .Collect();
+
+        var candidates = strongIdCandidates.Combine(valueObjectCandidates);
+
+        context.RegisterSourceOutput(candidates, static (spc, pair) =>
         {
-            try
+            foreach (var symbol in pair.Left.Concat(pair.Right).OrderBy(static x => x, StringComparer.Ordinal))
             {
-                foreach (INamedTypeSymbol symbol in symbols
-                    .Distinct(SymbolEqualityComparer.Default)
-                    .OrderBy(static s => s.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), StringComparer.Ordinal))
-                {
-                    string hint = symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-                        .Replace("global::", string.Empty)
-                        .Replace('.', '_')
-                        .Replace('<', '_')
-                        .Replace('>', '_') + ".g.cs";
-
-                    spc.AddSource(hint, "// TCJ.Generators discovery only. No members are generated.");
-                }
-            }
-            catch (Exception ex)
-            {
-                spc.ReportDiagnostic(Diagnostic.Create(
-                    new DiagnosticDescriptor(
-                        "TCJG001",
-                        "Generator failure",
-                        ex.Message,
-                        "TCJ.Generators",
-                        DiagnosticSeverity.Error,
-                        true),
-                    Location.None));
+                _ = symbol;
             }
         });
     }

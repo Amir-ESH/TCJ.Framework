@@ -10,6 +10,8 @@ import re
 import sys
 from pathlib import Path
 
+from sbom_common import get_release_package_ids, get_release_packages, read_json
+
 CHECKSUM_PATTERN = re.compile(r"^(?P<digest>[0-9a-f]{64}) [ *](?P<name>[^/\\]+)$")
 PACKAGE_SUFFIXES = (".nupkg", ".snupkg")
 SBOM_SUFFIX = ".cdx.json"
@@ -27,13 +29,12 @@ def read_text(path: Path) -> str:
 
 def load_release_manifest(root: Path) -> dict[str, object]:
     path = root / "eng" / "release-manifest.json"
-    data = json.loads(read_text(path))
-    packages = data.get("packages")
+    data = read_json(path)
+    try:
+        get_release_packages(data)
+    except ValueError as error:
+        fail(str(error))
     version = data.get("version")
-    if not isinstance(packages, list) or not packages:
-        fail("eng/release-manifest.json must contain a non-empty packages array.")
-    if not all(isinstance(item, str) and item.strip() for item in packages):
-        fail("Release package IDs must be non-empty strings.")
     if not isinstance(version, str) or not version.strip():
         fail("eng/release-manifest.json must contain a version.")
     return data
@@ -44,7 +45,7 @@ def expected_package_names(
     version: str,
 ) -> list[str]:
     names: list[str] = []
-    for package_id_value in manifest["packages"]:
+    for package_id_value in get_release_package_ids(manifest):
         package_id = str(package_id_value)
         names.append(f"{package_id}.{version}.nupkg")
         names.append(f"{package_id}.{version}.snupkg")
