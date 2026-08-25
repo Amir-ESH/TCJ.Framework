@@ -13,9 +13,10 @@ public sealed class AnalyzerBoundaryTests
             File.ReadAllText(RepositoryLayout.Combine("eng/release-manifest.json")));
 
         string[] runtimePackages = manifest.RootElement
-            .GetProperty("packages")
+            .GetProperty("releasePackages")
+            .GetProperty("runtime")
             .EnumerateArray()
-            .Select(element => element.GetString())
+            .Select(element => element.GetProperty("id").GetString())
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Cast<string>()
             .ToArray();
