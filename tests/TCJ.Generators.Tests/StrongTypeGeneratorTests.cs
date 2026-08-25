@@ -60,6 +60,28 @@ public sealed class StrongTypeGeneratorTests
                     public bool IsDefault => Value == global::System.Guid.Empty;
 
                     /// <summary>
+                    /// Creates a new strongly typed identifier from a version 4 GUID produced by the supplied generator.
+                    /// </summary>
+                    /// <param name="generator">The GUID generator used to create the underlying value.</param>
+                    /// <returns>A strongly typed identifier containing the exact generated GUID.</returns>
+                    public static OrderId New(global::TCJ.Core.Identifiers.IGuidGenerator generator)
+                    {
+                        global::System.ArgumentNullException.ThrowIfNull(generator);
+                        return new OrderId(generator.Create());
+                    }
+
+                    /// <summary>
+                    /// Creates a new strongly typed identifier from a version 7 GUID produced by the supplied generator.
+                    /// </summary>
+                    /// <param name="generator">The GUID generator used to create the underlying value.</param>
+                    /// <returns>A strongly typed identifier containing the exact generated GUID.</returns>
+                    public static OrderId NewVersion7(global::TCJ.Core.Identifiers.IGuidGenerator generator)
+                    {
+                        global::System.ArgumentNullException.ThrowIfNull(generator);
+                        return new OrderId(generator.CreateVersion7());
+                    }
+
+                    /// <summary>
                     /// Parses a canonical GUID D-format string into a strongly typed identifier.
                     /// </summary>
                     /// <param name="s">The canonical GUID D-format text to parse.</param>
@@ -429,6 +451,136 @@ public sealed class StrongTypeGeneratorTests
         var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("Verify", BindingFlags.Public | BindingFlags.Static));
 
         Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
+    public void GuidStrongId_CreationHelpersUseInjectedGeneratorPreserveExactValuesAndGuardNull()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.Identifiers;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId;
+
+            public sealed class FakeGuidGenerator : IGuidGenerator
+            {
+                private readonly Guid _version4;
+                private readonly Guid _version7;
+
+                public FakeGuidGenerator(Guid version4, Guid version7)
+                {
+                    _version4 = version4;
+                    _version7 = version7;
+                }
+
+                public int CreateCalls { get; private set; }
+
+                public int CreateVersion7Calls { get; private set; }
+
+                public Guid Create()
+                {
+                    CreateCalls++;
+                    return _version4;
+                }
+
+                public Guid CreateVersion7()
+                {
+                    CreateVersion7Calls++;
+                    return _version7;
+                }
+            }
+
+            public static class GuidCreationProbe
+            {
+                public static bool Verify()
+                {
+                    var version4 = Guid.Parse("11111111-1111-4111-8111-111111111111");
+                    var version7 = Guid.Parse("22222222-2222-7222-8222-222222222222");
+                    var generator = new FakeGuidGenerator(version4, version7);
+
+                    var randomId = OrderId.New(generator);
+                    var orderedId = OrderId.NewVersion7(generator);
+
+                    if (randomId.Value != version4 || orderedId.Value != version7)
+                    {
+                        return false;
+                    }
+
+                    if (generator.CreateCalls != 1 || generator.CreateVersion7Calls != 1)
+                    {
+                        return false;
+                    }
+
+                    try
+                    {
+                        _ = OrderId.New(null!);
+                        return false;
+                    }
+                    catch (ArgumentNullException exception) when (exception.ParamName == "generator")
+                    {
+                    }
+
+                    try
+                    {
+                        _ = OrderId.NewVersion7(null!);
+                        return false;
+                    }
+                    catch (ArgumentNullException exception) when (exception.ParamName == "generator")
+                    {
+                    }
+
+                    return true;
+                }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var generated = Assert.Single(result.GeneratedSources);
+        Assert.Contains("generator.Create()", generated.Source, StringComparison.Ordinal);
+        Assert.Contains("generator.CreateVersion7()", generated.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Guid.NewGuid", generated.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("new global::TCJ.Core.Identifiers.GuidGenerator", generated.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ServiceProvider", generated.Source, StringComparison.Ordinal);
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var probeType = Assert.IsAssignableFrom<Type>(assembly.GetType("GuidCreationProbe"));
+        var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("Verify", BindingFlags.Public | BindingFlags.Static));
+
+        Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
+    public void NumericStrongIds_DoNotGenerateGuidCreationHelpers()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<int>]
+            public readonly partial record struct IntId;
+
+            [StronglyTypedId<long>]
+            public readonly partial record struct LongId;
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Equal(2, result.GeneratedSources.Count);
+        Assert.All(result.GeneratedSources, static generated =>
+        {
+            Assert.DoesNotContain("IGuidGenerator", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain(" New(", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("NewVersion7", generated.Source, StringComparison.Ordinal);
+        });
     }
 
     [Fact]
@@ -1206,6 +1358,7 @@ public sealed class StrongTypeGeneratorTests
     {
         var parseOptions = new CSharpParseOptions(LanguageVersion.Latest);
         var syntaxTrees = sources
+            .Append(GuidGeneratorContractSource)
             .Select(source => CSharpSyntaxTree.ParseText(source, parseOptions))
             .ToArray();
 
@@ -1252,6 +1405,18 @@ public sealed class StrongTypeGeneratorTests
         [System.AttributeUsage(System.AttributeTargets.Struct | System.AttributeTargets.Class)]
         public sealed class ValueObjectAttribute<T> : System.Attribute
         {
+        }
+        """;
+
+    private const string GuidGeneratorContractSource =
+        """
+        namespace TCJ.Core.Identifiers;
+
+        public interface IGuidGenerator
+        {
+            System.Guid Create();
+
+            System.Guid CreateVersion7();
         }
         """;
 }

@@ -166,6 +166,35 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source, memberIndent + "/// </summary>");
         AppendLine(source, memberIndent + "public bool IsDefault => Value == global::System.Guid.Empty;");
         AppendLine(source);
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Creates a new strongly typed identifier from a version 4 GUID produced by the supplied generator.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"generator\">The GUID generator used to create the underlying value.</param>");
+        AppendLine(source, memberIndent + "/// <returns>A strongly typed identifier containing the exact generated GUID.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName)
+            .Append(" New(global::TCJ.Core.Identifiers.IGuidGenerator generator)");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "global::System.ArgumentNullException.ThrowIfNull(generator);");
+        source.Append(bodyIndent).Append("return new ").Append(model.TypeName).Append("(generator.Create());");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "}");
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Creates a new strongly typed identifier from a version 7 GUID produced by the supplied generator.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"generator\">The GUID generator used to create the underlying value.</param>");
+        AppendLine(source, memberIndent + "/// <returns>A strongly typed identifier containing the exact generated GUID.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName)
+            .Append(" NewVersion7(global::TCJ.Core.Identifiers.IGuidGenerator generator)");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "global::System.ArgumentNullException.ThrowIfNull(generator);");
+        source.Append(bodyIndent).Append("return new ").Append(model.TypeName).Append("(generator.CreateVersion7());");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "}");
+        AppendLine(source);
 
         AppendLine(source, memberIndent + "/// <summary>");
         AppendLine(source, memberIndent + "/// Parses a canonical GUID D-format string into a strongly typed identifier.");
