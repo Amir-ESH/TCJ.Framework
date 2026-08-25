@@ -10,14 +10,7 @@ public sealed class StrongTypeGeneratorTests
     public void Generator_DiscoversAttributedDeclarations_WithoutGeneratingMembers()
     {
         var compilation = CreateCompilation(
-            """
-            namespace TCJ.Core.StrongTypes;
-
-            [System.AttributeUsage(System.AttributeTargets.Struct)]
-            public sealed class StronglyTypedIdAttribute<T> : System.Attribute
-            {
-            }
-            """,
+            AttributeSource,
             """
             using TCJ.Core.StrongTypes;
 
@@ -50,11 +43,11 @@ public sealed class StrongTypeGeneratorTests
         var withUnrelatedSyntax = CreateCompilation(
             AttributeSource,
             """
-            class UnrelatedType
+            using TCJ.Core.StrongTypes;
+
+            internal sealed class UnrelatedType
             {
             }
-
-            using TCJ.Core.StrongTypes;
 
             [StronglyTypedId<int>]
             public partial struct OrderId
@@ -69,29 +62,37 @@ public sealed class StrongTypeGeneratorTests
     }
 
     private static GeneratorResult RunGenerator(CSharpCompilation compilation)
-    {
-        var driver = CSharpGeneratorDriver.Create(new StrongTypeGenerator());
-        driver.RunGeneratorsAndUpdateCompilation(
-            compilation,
-            out _,
-            out var diagnostics);
-
-        var runResult = driver.GetRunResult();
-
-        return new GeneratorResult(
-            diagnostics,
-            runResult.Results
-                .SelectMany(static result => result.GeneratedSources)
-                .Select(static source => source.HintName)
-                .OrderBy(static name => name, StringComparer.Ordinal)
-                .ToArray());
-    }
+	{
+		var driver = CSharpGeneratorDriver.Create(new StrongTypeGenerator());
+	
+		driver.RunGeneratorsAndUpdateCompilation(
+			compilation,
+			out _,
+			out var diagnostics);
+	
+		var runResult = driver.GetRunResult();
+	
+		var generatedSources = runResult.Results
+			.Where(static result => !result.GeneratedSources.IsDefault)
+			.SelectMany(static result => result.GeneratedSources)
+			.Select(static source => source.HintName)
+			.OrderBy(static name => name, StringComparer.Ordinal)
+			.ToArray();
+	
+		return new GeneratorResult(
+			diagnostics,
+			generatedSources);
+	}
 
     private static CSharpCompilation CreateCompilation(params string[] sources)
     {
+        var syntaxTrees = sources
+            .Select(static source => CSharpSyntaxTree.ParseText(source))
+            .ToArray();
+
         return CSharpCompilation.Create(
             "Test",
-            sources.Select(CSharpSyntaxTree.ParseText),
+            syntaxTrees,
             new[]
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
