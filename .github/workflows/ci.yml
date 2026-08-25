@@ -332,7 +332,7 @@ jobs:
           --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
-          --logger "trx;LogFileName=test-results.trx"
+          --logger "trx;LogFilePrefix=test-results"
           --results-directory TestResults
 
       - name: Generate architecture-test summary
