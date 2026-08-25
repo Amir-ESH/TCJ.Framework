@@ -4,7 +4,8 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>10.0</LangVersion>
-    <PackageId>TCJ.Generators</PackageId>
+    <AssemblyName>TCJ.Generators</AssemblyName>
+    <RootNamespace>TCJ.Generators</RootNamespace>
     <Title>TCJ Generators</Title>
     <Description>Incremental Roslyn source generators for TCJ Framework strong type declarations.</Description>
     <PackageTags>tcj;dotnet;roslyn;source-generator;incremental;strong-types</PackageTags>
@@ -19,7 +20,4 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-  </ItemGroup>
 </Project>
