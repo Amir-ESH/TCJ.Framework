@@ -491,7 +491,7 @@ def validate_tooling_package(path: Path) -> None:
 def validate_packages(root: Path, package_directory: Path, manifest: dict[str, object]) -> None:
     version = str(manifest["version"])
     repository = str(manifest["repository"])
-    package_ids = list(get_release_package_ids(manifest))
+    package_ids = list(get_release_package_ids(manifest, "runtime"))
 
     if not package_directory.is_absolute():
         package_directory = root / package_directory
