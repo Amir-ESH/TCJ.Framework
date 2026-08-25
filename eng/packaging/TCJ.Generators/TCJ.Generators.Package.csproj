@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>10.0</LangVersion>
+    <IncludeSource>false</IncludeSource>
     <PackageId>TCJ.Generators</PackageId>
     <Title>TCJ Generators</Title>
     <Description>Incremental Roslyn source generators for TCJ Framework strong type declarations.</Description>
@@ -17,6 +18,10 @@
     <ProjectReference Include="..\..\..\src\TCJ.Generators\TCJ.Generators.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\src\TCJ.Generators\bin\$(Configuration)\netstandard2.0\TCJ.Generators.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None
+      Include="..\..\..\src\TCJ.Generators\bin\$(Configuration)\netstandard2.0\TCJ.Generators.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false" />
   </ItemGroup>
 </Project>
