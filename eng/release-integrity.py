@@ -48,7 +48,6 @@ def expected_package_names(
     for package_id_value in get_release_package_ids(manifest):
         package_id = str(package_id_value)
         names.append(f"{package_id}.{version}.nupkg")
-        names.append(f"{package_id}.{version}.snupkg")
     return sorted(names, key=str.casefold)
 
 
