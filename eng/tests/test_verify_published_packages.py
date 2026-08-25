@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+ENG = Path(__file__).resolve().parents[1]
+if str(ENG) not in sys.path:
+    sys.path.insert(0, str(ENG))
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "verify-published-packages.py"

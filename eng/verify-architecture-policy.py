@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
+from sbom_common import get_release_package_ids
+
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY = ROOT / "eng/architecture-policy.json"
 DEFAULT_SUMMARY = ROOT / "artifacts/architecture/ARCHITECTURE_TEST_SUMMARY.md"
@@ -328,9 +330,10 @@ def validate_configuration(
         read_json(root / "eng/release-manifest.json", "release manifest"),
         "Release manifest",
     )
-    packages = manifest.get("packages")
-    if not isinstance(packages, list) or any(not isinstance(item, str) for item in packages):
-        fail("eng/release-manifest.json packages must be an array of strings.")
+    try:
+        packages = list(get_release_package_ids(manifest, "runtime"))
+    except ValueError as error:
+        fail(str(error))
     if set(packages) != set(REQUIRED_ASSEMBLIES):
         fail(
             "Architecture policy assembly names must match release-manifest package IDs. "

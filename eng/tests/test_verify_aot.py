@@ -9,12 +9,23 @@ import tempfile
 import unittest
 from pathlib import Path
 
+ENG = Path(__file__).resolve().parents[1]
+if str(ENG) not in sys.path:
+    sys.path.insert(0, str(ENG))
+
 MODULE_PATH = Path(__file__).resolve().parents[1] / "verify-aot.py"
 SPEC = importlib.util.spec_from_file_location("verify_aot", MODULE_PATH)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
+
+RUNNER_PATH = ENG / "run-native-aot-smoke.py"
+RUNNER_SPEC = importlib.util.spec_from_file_location("run_native_aot_smoke", RUNNER_PATH)
+assert RUNNER_SPEC and RUNNER_SPEC.loader
+RUNNER = importlib.util.module_from_spec(RUNNER_SPEC)
+sys.modules[RUNNER_SPEC.name] = RUNNER
+RUNNER_SPEC.loader.exec_module(RUNNER)
 
 
 class AotVerifierTests(unittest.TestCase):
@@ -422,9 +433,18 @@ class AotVerifierTests(unittest.TestCase):
         payload, success = MODULE.verify_repository(self.root, output_path=self.output)
 
         self.assertFalse(success)
-        findings = [item for item in payload["findings"] if item["rule"] == "AOT009"]
-        self.assertTrue(any(item["property"] == "FullPackages" for item in findings))
-        self.assertTrue(any(item["property"] == "TCJ.EntityFrameworkCore" for item in findings))
+        self.assertTrue(
+            any(
+                item["rule"] == "AOT008" and item["property"] == "PackageReference"
+                for item in payload["findings"]
+            )
+        )
+        self.assertTrue(
+            any(
+                item["rule"] == "AOT009" and item["property"] == "TCJ.EntityFrameworkCore"
+                for item in payload["findings"]
+            )
+        )
 
     def test_current_repository_wires_blocking_packed_aot_gates_into_ci_and_release(self) -> None:
         repository_root = MODULE.ROOT
@@ -440,6 +460,84 @@ class AotVerifierTests(unittest.TestCase):
             text = workflow.read_text(encoding="utf-8")
             for command in commands:
                 self.assertIn(command, text, f"{name} must block on the Important 8 Native AOT gate")
+            self.assertIn("id: native-aot-smoke", text)
+            self.assertIn("steps.native-aot-smoke.outcome != 'skipped'", text)
+
+    def test_native_aot_smoke_uses_normalized_runtime_packages_and_excludes_tooling(self) -> None:
+        manifest = json.loads((MODULE.ROOT / "eng/release-manifest.json").read_text(encoding="utf-8"))
+        runtime_packages = set(RUNNER.runtime_package_ids())
+        tooling_packages = {item["id"] for item in manifest["releasePackages"]["tooling"]}
+        smoke_packages = set(RUNNER.smoke_package_ids())
+
+        self.assertTrue(tooling_packages)
+        self.assertTrue(smoke_packages.issubset(runtime_packages))
+        self.assertTrue(smoke_packages.isdisjoint(tooling_packages))
+        policy = json.loads((MODULE.ROOT / "eng/aot-policy.json").read_text(encoding="utf-8"))
+        full_packages = {item["packageId"] for item in policy["packages"] if item["tier"] == "Full"}
+        self.assertEqual(full_packages, smoke_packages)
+
+    def test_packed_native_aot_smoke_rejects_tooling_package_reference(self) -> None:
+        manifest = json.loads((self.root / "eng/release-manifest.json").read_text(encoding="utf-8"))
+        tooling_package = manifest["releasePackages"]["tooling"][0]["id"]
+        fixture = self.root / MODULE.PACKED_AOT_FIXTURE
+        text = fixture.read_text(encoding="utf-8").replace(
+            "</Project>",
+            f'<ItemGroup><PackageReference Include="{tooling_package}" Version="$(TCJNativeAotPackageVersion)" /></ItemGroup></Project>',
+        )
+        fixture.write_text(text, encoding="utf-8")
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        finding = next(
+            item for item in payload["findings"]
+            if item["rule"] == "AOT008" and item["property"] == "RuntimePackageReference"
+        )
+        self.assertEqual(tooling_package, finding["value"])
+
+    def test_runtime_result_empty_version_reports_version_flow_error_without_fake_package_names(self) -> None:
+        result_path = self.root / MODULE.PACKED_AOT_RESULT
+        package_directory = self.root / "artifacts/packages"
+        package_directory.mkdir(parents=True, exist_ok=True)
+
+        payload, success = MODULE.verify_runtime_result(
+            root=self.root,
+            expected_version="",
+            result_path=result_path,
+            package_directory=package_directory,
+            output_path=self.root / "artifacts/aot/runtime-result.json",
+        )
+
+        self.assertFalse(success)
+        properties = [item["property"] for item in payload["findings"]]
+        self.assertIn("packageVersion", properties)
+        self.assertIn("result", properties)
+        self.assertNotIn("package", properties)
+
+    def test_smoke_runner_writes_result_for_empty_version(self) -> None:
+        output = self.root / "artifacts/aot/runner-empty-version"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(RUNNER_PATH),
+                "--version",
+                "",
+                "--output",
+                str(output),
+            ],
+            cwd=MODULE.ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertNotEqual(0, completed.returncode)
+        result_path = output / "native-aot-result.json"
+        self.assertTrue(result_path.is_file())
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        self.assertEqual("", result["packageVersion"])
+        self.assertEqual("failed", result["status"])
+        self.assertIn("Package version must be non-empty", result["failure"])
 
     def test_runtime_result_accepts_exact_full_package_execution_evidence(self) -> None:
         version = "9.9.9-test"
@@ -455,7 +553,7 @@ class AotVerifierTests(unittest.TestCase):
 
         self.assertTrue(success)
         self.assertEqual("passed", payload["status"])
-        self.assertEqual(sorted(MODULE.PACKED_AOT_PACKAGES), payload["fullPackages"])
+        self.assertEqual(self._full_package_ids(), payload["fullPackages"])
         self.assertEqual([], payload["findings"])
 
     def test_runtime_result_rejects_intentionally_broken_loaded_package_version(self) -> None:
@@ -504,10 +602,16 @@ class AotVerifierTests(unittest.TestCase):
             "tcjAotWarningCount": 0,
         }
 
+    def _full_package_ids(self) -> list[str]:
+        policy = self._read_policy()
+        return sorted(
+            item["packageId"] for item in policy["packages"] if item["tier"] == "Full"
+        )
+
     def _write_runtime_result_fixture(self, *, version: str) -> tuple[Path, Path]:
         package_directory = self.root / "artifacts/packages"
         package_directory.mkdir(parents=True, exist_ok=True)
-        packages = sorted(MODULE.PACKED_AOT_PACKAGES)
+        packages = self._full_package_ids()
         for package_id in packages:
             (package_directory / f"{package_id}.{version}.nupkg").write_bytes(b"fixture")
 

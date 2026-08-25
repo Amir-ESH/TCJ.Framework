@@ -8,6 +8,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+ENG = Path(__file__).resolve().parents[1]
+if str(ENG) not in sys.path:
+    sys.path.insert(0, str(ENG))
+
 MODULE_PATH = Path(__file__).resolve().parents[1] / "verify-architecture-policy.py"
 SPEC = importlib.util.spec_from_file_location("verify_architecture_policy", MODULE_PATH)
 assert SPEC and SPEC.loader

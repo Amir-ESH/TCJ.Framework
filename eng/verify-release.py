@@ -11,6 +11,8 @@ import zipfile
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
+from sbom_common import get_release_package_ids, get_release_packages
+
 SEMVER_PATTERN = re.compile(
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
     r"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?"
@@ -51,7 +53,6 @@ def read_manifest(root: Path) -> dict[str, object]:
         "releaseDate",
         "repository",
         "licenseExpression",
-        "packages",
     }
     missing = sorted(required.difference(data))
     if missing:
@@ -84,13 +85,10 @@ def read_manifest(root: Path) -> dict[str, object]:
     if not license_expression:
         fail("Manifest licenseExpression must be a non-empty SPDX expression.")
 
-    packages = data["packages"]
-    if not isinstance(packages, list) or not packages:
-        fail("Manifest packages must be a non-empty array.")
-    if not all(isinstance(item, str) and item.strip() for item in packages):
-        fail("Manifest package IDs must be non-empty strings.")
-    if len(packages) != len(set(packages)):
-        fail("Manifest package IDs must be unique.")
+    try:
+        get_release_packages(data)
+    except ValueError as error:
+        fail(str(error))
 
     return data
 
@@ -140,11 +138,10 @@ def read_published_manifest(root: Path) -> dict[str, object]:
     if not license_expression:
         fail("Published release licenseExpression must be a non-empty SPDX expression.")
 
-    packages = data["packages"]
-    if not isinstance(packages, list) or not packages:
-        fail("Published release packages must be a non-empty array.")
-    if not all(isinstance(item, str) and item.strip() for item in packages):
-        fail("Published release package IDs must be non-empty strings.")
+    try:
+        get_release_package_ids(data, "runtime")
+    except ValueError as error:
+        fail(str(error))
 
     return data
 
@@ -473,10 +470,28 @@ def validate_symbol_package(path: Path) -> None:
             fail(f"{path.name} has no net10.0 portable PDB.")
 
 
+
+
+def is_tooling_package(path: Path) -> bool:
+    with zipfile.ZipFile(path) as archive:
+        return any(
+            name.casefold().startswith("analyzers/dotnet/cs/")
+            for name in archive.namelist()
+        )
+
+
+def validate_tooling_package(path: Path) -> None:
+    with zipfile.ZipFile(path) as archive:
+        names = archive.namelist()
+        if not any(name.casefold().startswith("analyzers/dotnet/cs/") for name in names):
+            fail(f"{path.name} has no analyzer/compiler tooling assets.")
+        if any(name.casefold().startswith(("lib/", "runtime/")) for name in names):
+            fail(f"{path.name} must not contain runtime package assets.")
+
 def validate_packages(root: Path, package_directory: Path, manifest: dict[str, object]) -> None:
     version = str(manifest["version"])
     repository = str(manifest["repository"])
-    package_ids = [str(item) for item in manifest["packages"]]
+    package_ids = list(get_release_package_ids(manifest, "runtime"))
 
     if not package_directory.is_absolute():
         package_directory = root / package_directory
@@ -485,8 +500,14 @@ def validate_packages(root: Path, package_directory: Path, manifest: dict[str, o
 
     expected_primary = {f"{package_id}.{version}.nupkg" for package_id in package_ids}
     expected_symbols = {f"{package_id}.{version}.snupkg" for package_id in package_ids}
-    actual_primary = {path.name for path in package_directory.glob("*.nupkg")}
+    all_primary_paths = sorted(package_directory.glob("*.nupkg"))
+    tooling_paths = {path.name for path in all_primary_paths if is_tooling_package(path)}
+    actual_primary = {path.name for path in all_primary_paths if path.name not in tooling_paths}
     actual_symbols = {path.name for path in package_directory.glob("*.snupkg")}
+
+    for tooling_path in all_primary_paths:
+        if tooling_path.name in tooling_paths:
+            validate_tooling_package(tooling_path)
 
     if actual_primary != expected_primary:
         fail(
@@ -534,7 +555,7 @@ def main() -> int:
     manifest = read_manifest(root)
     status = str(manifest["status"])
     version = str(manifest["version"])
-    package_ids = [str(item) for item in manifest["packages"]]
+    package_ids = list(get_release_package_ids(manifest))
 
     if args.require_ready and status != "ready":
         fail(
@@ -568,8 +589,10 @@ def main() -> int:
         )
     if published_manifest["repository"] != manifest["repository"]:
         fail("Published and development manifests must use the same repository.")
-    if set(published_manifest["packages"]) != set(manifest["packages"]):
-        fail("Published and development manifests must contain the same package IDs.")
+    published_package_ids = set(get_release_package_ids(published_manifest, "runtime"))
+    current_runtime_package_ids = set(get_release_package_ids(manifest, "runtime"))
+    if not published_package_ids.issubset(current_runtime_package_ids):
+        fail("Published runtime packages must remain present in the current release manifest.")
     if semver_key(version) <= semver_key(published_version):
         fail(
             f"Development version {version!r} must be newer than published "

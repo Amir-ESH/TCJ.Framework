@@ -11,12 +11,12 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from sbom_common import get_release_package_ids, read_json
+
 
 def load_package_ids(root: Path) -> list[str]:
-    manifest = json.loads(
-        (root / "eng" / "release-manifest.json").read_text(encoding="utf-8")
-    )
-    return [str(item) for item in manifest["packages"]]
+    manifest = read_json(root / "eng" / "release-manifest.json")
+    return list(get_release_package_ids(manifest))
 
 
 def package_exists(package_id: str) -> bool:

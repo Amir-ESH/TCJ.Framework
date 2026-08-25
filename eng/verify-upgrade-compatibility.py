@@ -13,12 +13,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Iterable
 
+from sbom_common import get_release_package_ids
+
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_REL = Path("eng/upgrade-compatibility-policy.json")
-REQUIRED_PACKAGES = {
-    "TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore",
-    "TCJ.EntityFrameworkCore.SqlServer", "TCJ.AspNetCore",
-}
 NUGET_ORG = "https://api.nuget.org/v3/index.json"
 ALLOWED_CLASSIFICATIONS = {"Equivalent", "Compatible improvement", "Documented change", "Intentional breaking change"}
 
@@ -121,6 +119,13 @@ def markdown_anchor_exists(text: str, anchor: str) -> bool:
     return False
 
 
+def runtime_release_packages(metadata: dict[str, Any]) -> set[str]:
+    try:
+        return set(get_release_package_ids(metadata, "runtime"))
+    except ValueError as error:
+        fail(str(error))
+
+
 def load_policy(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     policy = read_json(root / POLICY_REL)
     if not isinstance(policy, dict): fail("Upgrade compatibility policy must be an object.")
@@ -138,7 +143,15 @@ def load_policy(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any], dict
     if missing: fail(f"Upgrade policy is missing fields: {', '.join(missing)}")
     if policy["schemaVersion"] != 1: fail("Unsupported upgrade policy schemaVersion.")
     if policy["configuration"] != "Release" or policy["targetFramework"] != "net10.0": fail("Initial upgrade matrix must validate Release/net10.0.")
-    if set(policy["requiredPackages"]) != REQUIRED_PACKAGES or len(policy["requiredPackages"]) != 5: fail("Upgrade policy must cover exactly all five TCJ packages.")
+    baseline = read_json(root / policy["baselineMetadata"])
+    target = read_json(root / policy["targetMetadata"])
+    manifest = read_json(root / policy["breakingChangesManifest"])
+    baseline_packages = runtime_release_packages(baseline)
+    target_packages = runtime_release_packages(target)
+    if baseline_packages != target_packages:
+        fail("Baseline and target release metadata must cover the same runtime packages.")
+    if set(policy["requiredPackages"]) != target_packages:
+        fail("Upgrade policy requiredPackages must exactly match target runtime release packages.")
     boolean_guarantees = [
         "requireBaselineRestore", "requireBaselineBuild", "requireBaselineRun", "requireTargetRestore",
         "requireTargetBuild", "requireTargetRun", "requirePackageOnlyReferences", "requireSourceTreeHash",
@@ -149,10 +162,8 @@ def load_policy(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any], dict
     ]
     for key in boolean_guarantees:
         if policy.get(key) is not True: fail(f"{key} must be true.")
-    baseline = read_json(root / policy["baselineMetadata"]); target = read_json(root / policy["targetMetadata"]); manifest = read_json(root / policy["breakingChangesManifest"])
     for metadata, name in ((baseline, "baseline"), (target, "target")):
         if not isinstance(metadata, dict) or not metadata.get("version"): fail(f"{name} release metadata does not define a version.")
-        if set(metadata.get("packages", [])) != REQUIRED_PACKAGES: fail(f"{name} release metadata does not cover all five packages.")
     if semver_key(target["version"]) <= semver_key(baseline["version"]): fail("Target release version must be newer than the published baseline.")
     if manifest.get("schemaVersion") != 1 or manifest.get("fromVersion") != baseline["version"] or manifest.get("toVersion") != target["version"]:
         fail("Breaking-change manifest versions must match release metadata.")
@@ -192,7 +203,7 @@ def load_policy(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any], dict
         if "AddTcjOutbox" in program_text or "AddTcjOutboxProcessor" in program_text:
             fail(f"Existing baseline/target scenario {scenario['name']} must remain outbox-disabled so direct-upgrade behavior proves explicit opt-in compatibility.")
         coverage.update(actual); critical.extend([project_rel, expected_rel])
-    if coverage != REQUIRED_PACKAGES: fail("Upgrade scenarios do not cover all five TCJ packages.")
+    if coverage != target_packages: fail("Upgrade scenarios do not cover all five TCJ packages.")
     validate_nuget_config(root / "upgrade-tests/NuGet.Baseline.Config", target=False)
     validate_nuget_config(root / "upgrade-tests/NuGet.Target.Config", target=True)
     critical.extend([Path("upgrade-tests/NuGet.Baseline.Config"), Path("upgrade-tests/NuGet.Target.Config"), Path("upgrade-tests/TCJ.UpgradeTests.slnx")])
@@ -229,7 +240,7 @@ def load_policy(root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any], dict
         if missing_change: fail(f"Breaking-change entry is missing fields: {', '.join(sorted(missing_change))}")
         if change["id"] in ids: fail(f"Duplicate breaking-change id: {change['id']}")
         ids.add(change["id"])
-        if change["package"] not in REQUIRED_PACKAGES: fail(f"Unknown breaking-change package: {change['package']}")
+        if change["package"] not in target_packages: fail(f"Unknown breaking-change package: {change['package']}")
         if change["approved"] is not True or not isinstance(change["approvedBy"], str) or not change["approvedBy"].strip(): fail(f"Breaking change must include explicit maintainer approval metadata: {change['id']}")
         if not set(change["affectedScenarios"]).issubset(scenario_names) or not change["affectedScenarios"]: fail(f"Stale or missing affected scenario in {change['id']}")
         if not markdown_anchor_exists(guide, change["migrationGuideSection"]): fail(f"Migration guide section not found for {change['id']}: {change['migrationGuideSection']}")
@@ -271,6 +282,7 @@ def normalize_source(value: str) -> str:
 
 
 def verify_results(policy: dict[str, Any], baseline_meta: dict[str, Any], target_meta: dict[str, Any], manifest: dict[str, Any], args: argparse.Namespace, *, published: bool) -> dict[str, Any]:
+    required_packages = runtime_release_packages(target_meta)
     if args.baseline_version != baseline_meta["version"] or args.target_version != target_meta["version"]:
         fail(f"Requested versions must match metadata: {baseline_meta['version']} -> {target_meta['version']}")
     results_root = Path(args.results).resolve(); suite = read_json(results_root / "suite-result.json")
@@ -279,7 +291,7 @@ def verify_results(policy: dict[str, Any], baseline_meta: dict[str, Any], target
     if suite.get("targetSourceMode") != expected_mode: fail(f"Suite target source mode must be {expected_mode}.")
     if not published:
         target_packages = Path(args.target_packages).resolve()
-        missing_packages = [package for package in policy["requiredPackages"] if not (target_packages / f"{package}.{args.target_version}.nupkg").is_file()]
+        missing_packages = [package for package in required_packages if not (target_packages / f"{package}.{args.target_version}.nupkg").is_file()]
         if missing_packages: fail(f"Target candidate feed is missing expected packages: {', '.join(missing_packages)}")
     expected_names = set(policy["publishedScenarios"] if published else [s["name"] for s in policy["scenarios"]])
     scenario_results = suite.get("scenarios")
@@ -323,7 +335,7 @@ def verify_results(policy: dict[str, Any], baseline_meta: dict[str, Any], target
         behavior_artifact = Path(args.output).resolve() / "behavior-diffs" / f"{name}.json"
         if not dependency_artifact.is_file() or not behavior_artifact.is_file(): fail(f"Required dependency/behavior diff artifact is missing for {name}.")
         consumer_dependency_changes = set(diff.get("added", [])) | set(diff.get("removed", []))
-        consumer_dependency_changes.update(item.get("package") for item in diff.get("versionChanged", []) if item.get("package") not in REQUIRED_PACKAGES)
+        consumer_dependency_changes.update(item.get("package") for item in diff.get("versionChanged", []) if item.get("package") not in required_packages)
         undocumented = sorted(pkg for pkg in consumer_dependency_changes if pkg and pkg.casefold() not in guide_text and pkg.casefold() not in changelog_text)
         if undocumented: fail(f"Consumer-facing dependency changes are not documented for {name}: {', '.join(undocumented)}")
         totals["dependencyAdditions"] += len(diff.get("added", [])); totals["dependencyRemovals"] += len(diff.get("removed", [])); totals["dependencyUpgrades"] += len(diff.get("upgraded", [])); totals["dependencyDowngrades"] += len(diff.get("downgraded", []))
@@ -372,7 +384,7 @@ def main() -> int:
     args = parser.parse_args()
     policy, baseline, target, manifest = load_policy(); validate_repository_wiring()
     if args.command == "validate-config":
-        print(f"Upgrade compatibility configuration is valid: {baseline['version']} -> {target['version']}, scenarios={len(policy['scenarios'])}, packages=5."); return 0
+        print(f"Upgrade compatibility configuration is valid: {baseline['version']} -> {target['version']}, scenarios={len(policy['scenarios'])}, packages={len(runtime_release_packages(target))}."); return 0
     published = args.command == "verify-published"
     totals = verify_results(policy, baseline, target, manifest, args, published=published)
     write_summary(args.output.resolve(), args.baseline_version, args.target_version, totals, published=published)

@@ -14,6 +14,8 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from sbom_common import get_release_package_ids, get_release_packages
+
 _VALIDATOR_PATH = Path(__file__).resolve().with_name("verify-release.py")
 _VALIDATOR_SPEC = importlib.util.spec_from_file_location("tcj_verify_release", _VALIDATOR_PATH)
 if _VALIDATOR_SPEC is None or _VALIDATOR_SPEC.loader is None:
@@ -80,9 +82,10 @@ def load_manifest(path: Path) -> dict[str, object]:
         fail(f"Published version is not valid semantic versioning: {version}")
     if data["tag"] != f"v{version}":
         fail("Published release tag must be the version prefixed with 'v'.")
-    packages = data["packages"]
-    if not isinstance(packages, list) or not packages:
-        fail("Published release packages must be a non-empty array.")
+    try:
+        get_release_package_ids(data, "runtime")
+    except ValueError as error:
+        fail(str(error))
     return data
 
 
@@ -175,7 +178,7 @@ def verify_once(
     failures: list[str] = []
     repository = str(manifest["repository"])
 
-    for package_id_value in manifest["packages"]:
+    for package_id_value in get_release_package_ids(manifest, "runtime"):
         package_id = str(package_id_value)
         if not version_in_flat_container(package_id, version, flat_container_base_url):
             failures.append(f"{package_id} {version} is absent from the flat container")
@@ -252,9 +255,10 @@ def expected_readmes_for_current_release(
         return None
 
     repository_root = release_manifest_path.resolve().parents[1]
-    package_ids = release_manifest.get("packages", [])
-    if not isinstance(package_ids, list) or not package_ids:
-        fail("eng/release-manifest.json must define packages for README verification.")
+    try:
+        package_ids = get_release_package_ids(release_manifest)
+    except ValueError as error:
+        fail(str(error))
 
     readmes: dict[str, bytes] = {}
     for package_id_value in package_ids:

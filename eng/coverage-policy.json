@@ -3,7 +3,7 @@
   "reportPattern": "TestResults/**/coverage.cobertura.xml",
   "minimumLineCoverage": 15.0,
   "minimumBranchCoverage": 10.0,
-  "minimumReportCount": 12,
+  "minimumReportCount": 13,
   "expectedPackages": [
     "TCJ.Core",
     "TCJ.DependencyInjection",
