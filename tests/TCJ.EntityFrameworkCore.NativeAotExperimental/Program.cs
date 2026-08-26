@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using TCJ.Core.Entities;
-using TCJ.Core.StrongTypes;
 using TCJ.EntityFrameworkCore.Abstractions;
 using TCJ.EntityFrameworkCore.Extensions;
 using TCJ.EntityFrameworkCore.StrongTypes;
@@ -65,5 +64,3 @@ public sealed class ExperimentalRecord : RowVersionAuditedEntity<ExperimentalRec
     public string Name { get; set; } = string.Empty;
 }
 
-[StronglyTypedId<Guid>]
-public readonly partial record struct ExperimentalRecordId;
