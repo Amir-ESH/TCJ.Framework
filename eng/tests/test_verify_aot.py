@@ -282,15 +282,7 @@ class AotVerifierTests(unittest.TestCase):
         self.assertTrue(any(item["property"] == "Microsoft.EntityFrameworkCore.Tasks" for item in findings))
         self.assertTrue(any("compiled model" in item["message"].lower() for item in findings))
 
-    def test_ef_nativeaot_fixture_requires_generated_strong_id_static_registration_path(self) -> None:
-        fixture = self.root / MODULE.EF_NATIVEAOT_FIXTURE
-        fixture.write_text(
-            fixture.read_text(encoding="utf-8").replace(
-                r'    <ProjectReference Include="..\TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes\TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes.csproj" />' + "\n",
-                '',
-            ),
-            encoding="utf-8",
-        )
+    def test_ef_nativeaot_fixture_requires_strong_id_static_registration_path(self) -> None:
         program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
         program.write_text(
             program.read_text(encoding="utf-8").replace("        modelBuilder.ApplyStrongIdConversions(strongIds);\n", ""),
@@ -301,29 +293,14 @@ class AotVerifierTests(unittest.TestCase):
 
         self.assertFalse(success)
         findings = [item for item in payload["findings"] if item["rule"] == "AOT007"]
-        self.assertTrue(any(item["property"] == "ProjectReference" for item in findings))
         self.assertTrue(any(item["property"] == "Program.cs" and item["value"] == "ApplyStrongIdConversions(" for item in findings))
 
-    def test_ef_nativeaot_fixture_requires_generator_to_remain_analyzer_only(self) -> None:
-        fixture = self.root / MODULE.EF_NATIVEAOT_STRONG_TYPES_FIXTURE
-        fixture.write_text(
-            fixture.read_text(encoding="utf-8").replace(' OutputItemType="Analyzer" ReferenceOutputAssembly="false"', ''),
-            encoding="utf-8",
-        )
-
-        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
-
-        self.assertFalse(success)
-        findings = [item for item in payload["findings"] if item["rule"] == "AOT007"]
-        self.assertTrue(any(item["property"] == "TCJ.Generators.OutputItemType" for item in findings))
-        self.assertTrue(any(item["property"] == "TCJ.Generators.ReferenceOutputAssembly" for item in findings))
-
-    def test_ef_nativeaot_fixture_requires_generated_conversion_members_from_metadata(self) -> None:
+    def test_ef_nativeaot_fixture_requires_source_stable_strong_id_conversion_mirror(self) -> None:
         program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
         program.write_text(
             program.read_text(encoding="utf-8").replace(
-                "ExperimentalRecordId.StrongIdConversion.ToBackingValue",
-                "ExperimentalRecordId.MissingConversion.ToBackingValue",
+                "public readonly record struct ExperimentalRecordId(Guid Value)",
+                "public readonly record struct ExperimentalRecordId",
             ),
             encoding="utf-8",
         )
@@ -335,7 +312,29 @@ class AotVerifierTests(unittest.TestCase):
         self.assertTrue(
             any(
                 item["property"] == "Program.cs"
-                and item["value"] == "ExperimentalRecordId.StrongIdConversion.ToBackingValue"
+                and item["value"] == "public readonly record struct ExperimentalRecordId(Guid Value)"
+                for item in findings
+            )
+        )
+
+    def test_ef_nativeaot_fixture_requires_closed_conversion_expression_shape(self) -> None:
+        program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
+        program.write_text(
+            program.read_text(encoding="utf-8").replace(
+                "static value => new ExperimentalRecordId(value);",
+                "static value => default;",
+            ),
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [item for item in payload["findings"] if item["rule"] == "AOT007"]
+        self.assertTrue(
+            any(
+                item["property"] == "Program.cs"
+                and item["value"] == "static value => new ExperimentalRecordId(value);"
                 for item in findings
             )
         )
@@ -735,8 +734,6 @@ class AotVerifierTests(unittest.TestCase):
             "compatibility/Consumers/AspNetCore.MinimalApi/AspNetCore.MinimalApi.csproj",
             "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/TCJ.EntityFrameworkCore.NativeAotExperimental.csproj",
             "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/Program.cs",
-            "tests/TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes/TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes.csproj",
-            "tests/TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes/ExperimentalRecordId.cs",
         ):
             source = source_root / relative
             target = self.root / relative

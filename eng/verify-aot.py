@@ -38,17 +38,10 @@ ANALYZER_PROPERTIES = (
 REPORT_SCHEMA_VERSION = 1
 EF_NATIVEAOT_FIXTURE = "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/TCJ.EntityFrameworkCore.NativeAotExperimental.csproj"
 EF_NATIVEAOT_PROGRAM = "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/Program.cs"
-EF_NATIVEAOT_STRONG_TYPES_FIXTURE = "tests/TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes/TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes.csproj"
-EF_NATIVEAOT_STRONG_ID_SOURCE = "tests/TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes/ExperimentalRecordId.cs"
 EF_NATIVEAOT_PROJECT_REFERENCES = (
     "../../src/TCJ.Core/TCJ.Core.csproj",
-    "../TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes/TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes.csproj",
     "../../src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
     "../../src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
-)
-EF_NATIVEAOT_STRONG_TYPES_PROJECT_REFERENCES = (
-    "../../src/TCJ.Core/TCJ.Core.csproj",
-    "../../src/TCJ.Generators/TCJ.Generators.csproj",
 )
 
 PACKED_AOT_FIXTURE = "smoke/TCJ.NativeAot.SmokeTest/TCJ.NativeAot.SmokeTest.csproj"
@@ -554,67 +547,8 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
         add(
             "ProjectReference",
             ", ".join(project_references) or "<missing>",
-            "The experimental fixture must exercise TCJ.Core, generated Strong ID metadata, TCJ.EntityFrameworkCore, and TCJ.EntityFrameworkCore.SqlServer by project reference. Packed-package publish/execute evidence belongs to Important 8.",
+            "The experimental fixture must exercise exactly TCJ.Core, TCJ.EntityFrameworkCore, and TCJ.EntityFrameworkCore.SqlServer by project reference. Packed-package publish/execute evidence belongs to Important 8.",
         )
-
-    strong_types_fixture = root / EF_NATIVEAOT_STRONG_TYPES_FIXTURE
-    if not strong_types_fixture.is_file():
-        add(
-            "StrongTypesFixture",
-            "missing",
-            "The experimental EF NativeAOT fixture must compile its generated Strong ID in a referenced metadata project so EF query precompilation does not depend on source-generator execution inside EF Core\'s secondary MSBuildWorkspace.",
-        )
-    else:
-        try:
-            strong_types_root = ET.parse(strong_types_fixture).getroot()
-        except ET.ParseError as error:
-            add("StrongTypesFixture", "invalid XML", f"The generated Strong ID fixture is invalid XML: {error}")
-        else:
-            strong_types_references = sorted(
-                (element.attrib.get("Include") or "").strip().replace("\\", "/")
-                for element in strong_types_root.iter()
-                if _tag_name(element) == "ProjectReference"
-            )
-            expected_strong_types_references = sorted(EF_NATIVEAOT_STRONG_TYPES_PROJECT_REFERENCES)
-            if strong_types_references != expected_strong_types_references:
-                add(
-                    "StrongTypesFixture.ProjectReference",
-                    ", ".join(strong_types_references) or "<missing>",
-                    "The generated Strong ID metadata fixture must reference only TCJ.Core and TCJ.Generators; the generator remains analyzer-only and outside the startup project runtime closure.",
-                )
-
-            generator_references = [
-                element for element in strong_types_root.iter()
-                if _tag_name(element) == "ProjectReference"
-                and (element.attrib.get("Include") or "").strip().replace("\\", "/") == "../../src/TCJ.Generators/TCJ.Generators.csproj"
-            ]
-            if len(generator_references) == 1:
-                generator_reference = generator_references[0]
-                if (generator_reference.attrib.get("OutputItemType") or "").strip() != "Analyzer":
-                    add(
-                        "TCJ.Generators.OutputItemType",
-                        (generator_reference.attrib.get("OutputItemType") or "<missing>").strip(),
-                        "The generated Strong ID metadata fixture must consume TCJ.Generators only as an analyzer/source generator.",
-                    )
-                if (generator_reference.attrib.get("ReferenceOutputAssembly") or "").strip().lower() != "false":
-                    add(
-                        "TCJ.Generators.ReferenceOutputAssembly",
-                        (generator_reference.attrib.get("ReferenceOutputAssembly") or "<missing>").strip(),
-                        "The generated Strong ID metadata fixture must not add TCJ.Generators as a runtime assembly reference.",
-                    )
-
-    strong_id_source = root / EF_NATIVEAOT_STRONG_ID_SOURCE
-    if not strong_id_source.is_file():
-        add("StrongIdSource", "missing", "The generated Strong ID metadata fixture must declare ExperimentalRecordId with StronglyTypedId<Guid>.")
-    else:
-        strong_id_text = strong_id_source.read_text(encoding="utf-8")
-        for fragment in ("[StronglyTypedId<Guid>]", "partial record struct ExperimentalRecordId"):
-            if fragment not in strong_id_text:
-                add(
-                    "StrongIdSource",
-                    fragment,
-                    f"The generated Strong ID metadata fixture must include '{fragment}' so the NativeAOT startup project consumes a real generated Strong ID from referenced metadata.",
-                )
 
     program = root / EF_NATIVEAOT_PROGRAM
     if not program.is_file():
@@ -628,6 +562,10 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
         "ExperimentalRecordId.StrongIdConversion.ToBackingValue",
         "ExperimentalRecordId.StrongIdConversion.FromBackingValue",
         "ApplyStrongIdConversions(",
+        "public readonly record struct ExperimentalRecordId(Guid Value)",
+        "public static class StrongIdConversion",
+        "static value => value.Value;",
+        "static value => new ExperimentalRecordId(value);",
         "ApplyTcjSqlServerConventions()",
         "ToListAsync()",
         'args.Contains("--execute-query", StringComparer.Ordinal)',

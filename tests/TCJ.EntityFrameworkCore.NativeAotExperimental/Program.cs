@@ -64,3 +64,19 @@ public sealed class ExperimentalRecord : RowVersionAuditedEntity<ExperimentalRec
     public string Name { get; set; } = string.Empty;
 }
 
+// This fixture mirrors the provider-neutral conversion surface emitted by TCJ.Generators.
+// EF Core query precompilation recompiles startup sources in a secondary MSBuildWorkspace,
+// where analyzer-generated members are not reliably available. Generator output itself is
+// covered by TCJ.Generators.Tests and the SQL Server integration tests use real generated IDs.
+public readonly record struct ExperimentalRecordId(Guid Value)
+{
+    public static class StrongIdConversion
+    {
+        public static global::System.Linq.Expressions.Expression<global::System.Func<ExperimentalRecordId, Guid>> ToBackingValue { get; } =
+            static value => value.Value;
+
+        public static global::System.Linq.Expressions.Expression<global::System.Func<Guid, ExperimentalRecordId>> FromBackingValue { get; } =
+            static value => new ExperimentalRecordId(value);
+    }
+}
+

@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\TCJ.Core\TCJ.Core.csproj" />
-    <ProjectReference Include="..\TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes\TCJ.EntityFrameworkCore.NativeAotExperimental.StrongTypes.csproj" />
     <ProjectReference Include="..\..\src\TCJ.EntityFrameworkCore\TCJ.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\TCJ.EntityFrameworkCore.SqlServer\TCJ.EntityFrameworkCore.SqlServer.csproj" />
   </ItemGroup>
