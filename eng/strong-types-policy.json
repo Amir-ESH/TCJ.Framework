@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "documentation": "docs/guides/strong-types.md",
   "generationContract": {
-    "status": "architecture-only-no-generator-implementation",
+    "status": "guid-strong-id-generation",
     "generatedTypes": "readonly partial record struct",
     "immutability": true,
     "runtimeReflectionRequired": false
@@ -32,7 +32,7 @@
   },
   "packageOwnership": {
     "TCJ.Core": "domain contracts and runtime-safe abstractions only",
-    "TCJ.Generators": "future source generation APIs and generated code production",
+    "TCJ.Generators": "compile-time source generation APIs and generated code production",
     "TCJ.EntityFrameworkCore": "EF Core persistence integration only",
     "TCJ.AspNetCore": "HTTP serialization and API integration only"
   },
