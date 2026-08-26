@@ -50,6 +50,25 @@ Guid backToGuid = (Guid)fromGuid;
 
 `default(OrderId)` remains valid and reports `IsDefault == true`. No implicit conversion between `OrderId` and `Guid` is generated; conversions in both directions require an explicit cast and preserve the exact underlying value.
 
+### Explicit GUID creation
+
+Guid-backed Strong IDs integrate with `TCJ.Core.Identifiers.IGuidGenerator` through two explicit creation helpers. The generator dependency is supplied by the caller, so creation remains deterministic in tests and generated Strong ID code does not call `Guid.NewGuid()`, resolve services, or obtain time from ambient state:
+
+```csharp
+using TCJ.Core.Identifiers;
+
+public sealed class OrderService(IGuidGenerator guidGenerator)
+{
+    public OrderId CreateRandomId() => OrderId.New(guidGenerator);
+
+    public OrderId CreateTimeOrderedId() => OrderId.NewVersion7(guidGenerator);
+}
+```
+
+`OrderId.New(generator)` calls `IGuidGenerator.Create()` and wraps the exact returned version 4 GUID. `OrderId.NewVersion7(generator)` calls `IGuidGenerator.CreateVersion7()` and wraps the exact returned version 7 GUID. Both helpers throw `ArgumentNullException` when `generator` is `null`. No equivalent creation helpers are generated for `int`- or `long`-backed IDs.
+
+GUID v7 is not an implicit or universal default. Prefer `NewVersion7` only when the application persistence strategy benefits from roughly time-ordered identifiers, such as reducing index locality costs for GUID primary keys. Use `New` when a random v4 identifier is the intended policy. Keeping the choice at the call site makes the generation policy visible and testable.
+
 ### Parsing and formatting contract
 
 Guid-backed Strong IDs implement `IParsable<TSelf>`, `ISpanParsable<TSelf>`, `IFormattable`, and `ISpanFormattable`. The generated string and span parsing APIs accept the canonical GUID `D` wire form. `TryParse` returns `false` and the default ID for ordinary invalid input instead of throwing, while `Parse` follows the normal parsing contract and throws `FormatException` for malformed text.

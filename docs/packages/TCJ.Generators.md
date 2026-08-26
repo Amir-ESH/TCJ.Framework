@@ -12,6 +12,8 @@ The package generates Strongly Typed IDs as `readonly partial record struct` dec
 
 Generated members include an explicit value constructor, immutable `Value`, deterministic `IsDefault`, string and span `Parse`/`TryParse`, `IParsable<TSelf>`/`ISpanParsable<TSelf>`, `IFormattable`/`ISpanFormattable`, allocation-friendly `TryFormat`, explicit conversions to and from the backing primitive, and a dedicated `System.Text.Json` converter. Implicit conversions remain disabled.
 
+Guid-backed IDs also expose explicit `New(IGuidGenerator)` and `NewVersion7(IGuidGenerator)` helpers. `New` delegates to `IGuidGenerator.Create()` for a version 4 GUID, while `NewVersion7` delegates to `IGuidGenerator.CreateVersion7()` for a version 7 GUID; each Strong ID preserves the exact value returned by the injected generator and rejects a null generator. These helpers are not generated for `int` or `long` IDs, and generated code does not call `Guid.NewGuid()` or resolve a generator through a service locator. GUID v7 is an explicit application choice rather than a hidden default; prefer it only when the persistence strategy benefits from roughly time-ordered GUIDs.
+
 Numeric parsing uses `NumberStyles.Integer` with `CultureInfo.InvariantCulture`; provider arguments are ignored so current culture cannot change wire behavior. Boundary values, zero, and negative values round-trip exactly; overflow fails according to the underlying BCL integer parsing contract.
 
 ## System.Text.Json contract
