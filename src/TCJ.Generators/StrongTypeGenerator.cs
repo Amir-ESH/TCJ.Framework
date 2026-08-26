@@ -36,7 +36,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             static (ctx, _) => ctx.TargetSymbol.ToDisplayString())
             .Collect();
 
-        context.RegisterSourceOutput(valueObjectCandidates, static (_, candidates) =>
+        context.RegisterSourceOutput(valueObjectCandidates, static (spc, candidates) =>
         {
             foreach (var symbol in candidates.OrderBy(static x => x, StringComparer.Ordinal))
             {
