@@ -93,9 +93,23 @@ OrderId parsed = OrderId.Parse(wireText);
 int value = (int)parsed;
 ```
 
+### System.Text.Json scalar contract
+
+Every supported Strong ID receives a dedicated generated `StrongIdJsonConverter : JsonConverter<TStrongId>` and is annotated to use that converter. JSON remains a scalar compatibility contract rather than exposing the generated `Value` member as an object property:
+
+- `Guid`-backed IDs serialize as canonical `D`-format JSON strings, for example `"7a29be31-268d-4f2b-babc-fce0ce1cb46c"`;
+- `int`- and `long`-backed IDs serialize as JSON numbers, for example `-42`;
+- Strong IDs are never serialized as `{ "value": ... }` objects.
+
+Deserialization reconstructs the Strong ID through its generated value constructor. A `Guid` ID accepts only a JSON string containing a valid GUID value, while numeric IDs accept only JSON numbers representable by their exact backing type. Wrong token kinds, malformed scalar values, overflow, fractional values for integer IDs, and JSON `null` for a non-nullable Strong ID throw `JsonException`. Converter-generated exception messages intentionally avoid echoing the malformed scalar value.
+
+The converter path is closed and static per ID type. Generated code does not use `JsonConverterFactory`, `MakeGenericType`, runtime type scanning, `Activator`, or reflection-based converter discovery code. This preserves the Strong ID AOT-first contract.
+
+Native AOT consumers must still follow the normal System.Text.Json AOT rule: include Strong ID types in a source-generated `JsonSerializerContext` and use metadata-based serialization when custom converters participate. If the context and Strong IDs are generated in the same compilation, explicitly add each generated `StrongIdJsonConverter` to the `JsonSerializerOptions.Converters` collection before constructing the context; Roslyn generators do not consume another generator's newly emitted source in the same generation pass. This registration is static and does not require reflection or runtime type scanning.
+
 ### Minimal API friendliness
 
-The generated `TryParse`/parsing contracts make supported Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. This task does not add JSON converters, model binders, or OpenAPI schema integration; those remain separate integrations.
+The generated `TryParse`/parsing contracts make supported Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. Model binders and OpenAPI schema integration remain separate integrations.
 
 ## Primitive-backed Value Objects
 
