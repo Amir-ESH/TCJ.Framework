@@ -37,6 +37,7 @@ public sealed class StrongTypeGeneratorTests
                 /// <summary>
                 /// Represents a strongly typed identifier backed by a GUID value.
                 /// </summary>
+                [global::System.Text.Json.Serialization.JsonConverter(typeof(OrderId.StrongIdJsonConverter))]
                 public readonly partial record struct OrderId : global::System.IParsable<OrderId>, global::System.ISpanParsable<OrderId>, global::System.IFormattable, global::System.ISpanFormattable
                 {
                     /// <summary>
@@ -188,6 +189,44 @@ public sealed class StrongTypeGeneratorTests
                     /// <param name="value">The strongly typed identifier.</param>
                     /// <returns>The exact underlying GUID value.</returns>
                     public static explicit operator global::System.Guid(OrderId value) => value.Value;
+
+                    /// <summary>
+                    /// Converts this strongly typed identifier to and from its scalar System.Text.Json representation.
+                    /// </summary>
+                    public sealed class StrongIdJsonConverter : global::System.Text.Json.Serialization.JsonConverter<OrderId>
+                    {
+                        /// <summary>
+                        /// Initializes a new instance of the generated Strong ID JSON converter.
+                        /// </summary>
+                        public StrongIdJsonConverter()
+                        {
+                        }
+
+                        /// <inheritdoc />
+                        public override bool HandleNull => true;
+
+                        /// <inheritdoc />
+                        public override OrderId Read(ref global::System.Text.Json.Utf8JsonReader reader, global::System.Type typeToConvert, global::System.Text.Json.JsonSerializerOptions options)
+                        {
+                            if (reader.TokenType != global::System.Text.Json.JsonTokenType.String)
+                            {
+                                throw new global::System.Text.Json.JsonException("Expected a JSON string token for OrderId.");
+                            }
+
+                            if (!reader.TryGetGuid(out var value))
+                            {
+                                throw new global::System.Text.Json.JsonException("Invalid GUID value for OrderId.");
+                            }
+
+                            return new OrderId(value);
+                        }
+
+                        /// <inheritdoc />
+                        public override void Write(global::System.Text.Json.Utf8JsonWriter writer, OrderId value, global::System.Text.Json.JsonSerializerOptions options)
+                        {
+                            writer.WriteStringValue(value.Value);
+                        }
+                    }
                 }
             }
 
@@ -556,6 +595,7 @@ public sealed class StrongTypeGeneratorTests
             /// <summary>
             /// Represents a strongly typed identifier backed by a {{backingDescription}} value.
             /// </summary>
+            [global::System.Text.Json.Serialization.JsonConverter(typeof({{typeName}}.StrongIdJsonConverter))]
             public readonly partial record struct {{typeName}} : global::System.IParsable<{{typeName}}>, global::System.ISpanParsable<{{typeName}}>, global::System.IFormattable, global::System.ISpanFormattable
             {
                 /// <summary>
@@ -700,6 +740,44 @@ public sealed class StrongTypeGeneratorTests
                 /// <param name="value">The strongly typed identifier.</param>
                 /// <returns>The exact underlying numeric value.</returns>
                 public static explicit operator {{backingType}}({{typeName}} value) => value.Value;
+
+                /// <summary>
+                /// Converts this strongly typed identifier to and from its scalar System.Text.Json representation.
+                /// </summary>
+                public sealed class StrongIdJsonConverter : global::System.Text.Json.Serialization.JsonConverter<{{typeName}}>
+                {
+                    /// <summary>
+                    /// Initializes a new instance of the generated Strong ID JSON converter.
+                    /// </summary>
+                    public StrongIdJsonConverter()
+                    {
+                    }
+
+                    /// <inheritdoc />
+                    public override bool HandleNull => true;
+
+                    /// <inheritdoc />
+                    public override {{typeName}} Read(ref global::System.Text.Json.Utf8JsonReader reader, global::System.Type typeToConvert, global::System.Text.Json.JsonSerializerOptions options)
+                    {
+                        if (reader.TokenType != global::System.Text.Json.JsonTokenType.Number)
+                        {
+                            throw new global::System.Text.Json.JsonException("Expected a JSON number token for {{typeName}}.");
+                        }
+
+                        if (!reader.{{(backingKeyword == "int" ? "TryGetInt32" : "TryGetInt64")}}(out var value))
+                        {
+                            throw new global::System.Text.Json.JsonException("Invalid numeric value for {{typeName}}.");
+                        }
+
+                        return new {{typeName}}(value);
+                    }
+
+                    /// <inheritdoc />
+                    public override void Write(global::System.Text.Json.Utf8JsonWriter writer, {{typeName}} value, global::System.Text.Json.JsonSerializerOptions options)
+                    {
+                        writer.WriteNumberValue(value.Value);
+                    }
+                }
             }
 
             """;
@@ -941,7 +1019,134 @@ public sealed class StrongTypeGeneratorTests
     }
 
     [Fact]
-    public void GuidStrongId_GeneratedCode_DoesNotUseReflection()
+    public void StrongIds_JsonRoundTripAsBackingScalars()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using System.Text.Json;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct GuidId;
+
+            [StronglyTypedId<int>]
+            public readonly partial record struct IntId;
+
+            [StronglyTypedId<long>]
+            public readonly partial record struct LongId;
+
+            public static class StrongIdJsonProbe
+            {
+                public static bool VerifyRoundTrips()
+                {
+                    var guid = Guid.Parse("7a29be31-268d-4f2b-babc-fce0ce1cb46c");
+                    var guidId = new GuidId(guid);
+                    var intId = new IntId(-42);
+                    var longId = new LongId(long.MaxValue);
+
+                    string guidJson = JsonSerializer.Serialize(guidId);
+                    string intJson = JsonSerializer.Serialize(intId);
+                    string longJson = JsonSerializer.Serialize(longId);
+
+                    return string.Equals(guidJson, "\"7a29be31-268d-4f2b-babc-fce0ce1cb46c\"", StringComparison.Ordinal) &&
+                           string.Equals(intJson, "-42", StringComparison.Ordinal) &&
+                           string.Equals(longJson, "9223372036854775807", StringComparison.Ordinal) &&
+                           JsonSerializer.Deserialize<GuidId>(guidJson) == guidId &&
+                           JsonSerializer.Deserialize<IntId>(intJson) == intId &&
+                           JsonSerializer.Deserialize<LongId>(longJson) == longId;
+                }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var probeType = Assert.IsAssignableFrom<Type>(assembly.GetType("StrongIdJsonProbe"));
+        var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("VerifyRoundTrips", BindingFlags.Public | BindingFlags.Static));
+
+        Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
+    public void StrongIds_JsonRejectInvalidTokensMalformedValuesAndNullWithoutEchoingRawValues()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using System.Text.Json;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct GuidId;
+
+            [StronglyTypedId<int>]
+            public readonly partial record struct IntId;
+
+            [StronglyTypedId<long>]
+            public readonly partial record struct LongId;
+
+            public static class StrongIdJsonInvalidProbe
+            {
+                public static bool VerifyInvalidInputs()
+                {
+                    return ThrowsJson<GuidId>("123") &&
+                           ThrowsJsonWithoutEcho<GuidId>("\"not-a-guid-secret\"", "not-a-guid-secret") &&
+                           ThrowsJson<GuidId>("null") &&
+                           ThrowsJson<IntId>("\"42\"") &&
+                           ThrowsJson<IntId>("1.5") &&
+                           ThrowsJsonWithoutEcho<IntId>("2147483648", "2147483648") &&
+                           ThrowsJson<IntId>("null") &&
+                           ThrowsJson<LongId>("\"42\"") &&
+                           ThrowsJsonWithoutEcho<LongId>("9223372036854775808", "9223372036854775808") &&
+                           ThrowsJson<LongId>("null");
+                }
+
+                private static bool ThrowsJson<T>(string json)
+                {
+                    try
+                    {
+                        _ = JsonSerializer.Deserialize<T>(json);
+                        return false;
+                    }
+                    catch (JsonException)
+                    {
+                        return true;
+                    }
+                }
+
+                private static bool ThrowsJsonWithoutEcho<T>(string json, string rawValue)
+                {
+                    try
+                    {
+                        _ = JsonSerializer.Deserialize<T>(json);
+                        return false;
+                    }
+                    catch (JsonException exception)
+                    {
+                        return !exception.Message.Contains(rawValue, StringComparison.Ordinal);
+                    }
+                }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var probeType = Assert.IsAssignableFrom<Type>(assembly.GetType("StrongIdJsonInvalidProbe"));
+        var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("VerifyInvalidInputs", BindingFlags.Public | BindingFlags.Static));
+
+        Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
+    public void StrongIdJsonConverters_AreDedicatedAndDoNotUseReflectionFactoriesOrRuntimeCodeGeneration()
     {
         var compilation = CreateCompilation(
             AttributeSource,
@@ -950,15 +1155,28 @@ public sealed class StrongTypeGeneratorTests
             using TCJ.Core.StrongTypes;
 
             [StronglyTypedId<Guid>]
-            public readonly partial record struct OrderId;
+            public readonly partial record struct GuidId;
+
+            [StronglyTypedId<int>]
+            public readonly partial record struct IntId;
+
+            [StronglyTypedId<long>]
+            public readonly partial record struct LongId;
             """);
 
         var result = RunGenerator(compilation);
-        var generated = Assert.Single(result.GeneratedSources);
 
-        Assert.DoesNotContain("System.Reflection", generated.Source, StringComparison.Ordinal);
-        Assert.DoesNotContain("GetType(", generated.Source, StringComparison.Ordinal);
-        Assert.DoesNotContain("Activator", generated.Source, StringComparison.Ordinal);
+        Assert.Equal(3, result.GeneratedSources.Count);
+        foreach (var generated in result.GeneratedSources)
+        {
+            Assert.Contains("public sealed class StrongIdJsonConverter : global::System.Text.Json.Serialization.JsonConverter<", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("Serialization.JsonConverter(typeof(", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("JsonConverterFactory", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("MakeGenericType", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("System.Reflection", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("GetType(", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Activator", generated.Source, StringComparison.Ordinal);
+        }
     }
 
     private static GeneratorResult RunGenerator(CSharpCompilation compilation)

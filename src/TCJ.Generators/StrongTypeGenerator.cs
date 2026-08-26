@@ -125,6 +125,11 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source, indent + "/// Represents a strongly typed identifier backed by a GUID value.");
         AppendLine(source, indent + "/// </summary>");
         source.Append(indent)
+            .Append("[global::System.Text.Json.Serialization.JsonConverter(typeof(")
+            .Append(model.TypeName)
+            .Append(".StrongIdJsonConverter))]");
+        AppendLine(source);
+        source.Append(indent)
             .Append(model.Accessibility)
             .Append(" readonly partial record struct ")
             .Append(model.TypeName)
@@ -327,6 +332,9 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         source.Append(memberIndent).Append("public static explicit operator global::System.Guid(").Append(model.TypeName)
             .Append(" value) => value.Value;");
         AppendLine(source);
+        AppendLine(source);
+
+        AppendGuidJsonConverter(source, model, memberIndent, bodyIndent);
 
         AppendLine(source, indent + "}");
 
@@ -360,6 +368,11 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         source.Append(indent).Append("/// Represents a strongly typed identifier backed by a ").Append(backingDescription).Append(" value.");
         AppendLine(source);
         AppendLine(source, indent + "/// </summary>");
+        source.Append(indent)
+            .Append("[global::System.Text.Json.Serialization.JsonConverter(typeof(")
+            .Append(model.TypeName)
+            .Append(".StrongIdJsonConverter))]");
+        AppendLine(source);
         source.Append(indent)
             .Append(model.Accessibility)
             .Append(" readonly partial record struct ")
@@ -563,6 +576,9 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         source.Append(memberIndent).Append("public static explicit operator ").Append(backingType).Append("(").Append(model.TypeName)
             .Append(" value) => value.Value;");
         AppendLine(source);
+        AppendLine(source);
+
+        AppendNumericJsonConverter(source, model, memberIndent, bodyIndent);
 
         AppendLine(source, indent + "}");
 
@@ -572,6 +588,121 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         }
 
         return source.ToString();
+    }
+
+
+    private static void AppendGuidJsonConverter(
+        StringBuilder source,
+        StrongIdModel model,
+        string memberIndent,
+        string bodyIndent)
+    {
+        var converterBodyIndent = bodyIndent + "    ";
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Converts this strongly typed identifier to and from its scalar System.Text.Json representation.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "public sealed class StrongIdJsonConverter : global::System.Text.Json.Serialization.JsonConverter<" + model.TypeName + ">");
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Initializes a new instance of the generated Strong ID JSON converter.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        AppendLine(source, bodyIndent + "public StrongIdJsonConverter()");
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <inheritdoc />");
+        AppendLine(source, bodyIndent + "public override bool HandleNull => true;");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <inheritdoc />");
+        source.Append(bodyIndent).Append("public override ").Append(model.TypeName)
+            .Append(" Read(ref global::System.Text.Json.Utf8JsonReader reader, global::System.Type typeToConvert, global::System.Text.Json.JsonSerializerOptions options)");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, converterBodyIndent + "if (reader.TokenType != global::System.Text.Json.JsonTokenType.String)");
+        AppendLine(source, converterBodyIndent + "{");
+        source.Append(converterBodyIndent).Append("    throw new global::System.Text.Json.JsonException(\"Expected a JSON string token for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, converterBodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, converterBodyIndent + "if (!reader.TryGetGuid(out var value))");
+        AppendLine(source, converterBodyIndent + "{");
+        source.Append(converterBodyIndent).Append("    throw new global::System.Text.Json.JsonException(\"Invalid GUID value for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, converterBodyIndent + "}");
+        AppendLine(source);
+        source.Append(converterBodyIndent).Append("return new ").Append(model.TypeName).Append("(value);");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <inheritdoc />");
+        source.Append(bodyIndent).Append("public override void Write(global::System.Text.Json.Utf8JsonWriter writer, ")
+            .Append(model.TypeName).Append(" value, global::System.Text.Json.JsonSerializerOptions options)");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, converterBodyIndent + "writer.WriteStringValue(value.Value);");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source, memberIndent + "}");
+    }
+
+    private static void AppendNumericJsonConverter(
+        StringBuilder source,
+        StrongIdModel model,
+        string memberIndent,
+        string bodyIndent)
+    {
+        var converterBodyIndent = bodyIndent + "    ";
+        var tryGetMethod = model.BackingKind == StrongIdBackingKind.Int32 ? "TryGetInt32" : "TryGetInt64";
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Converts this strongly typed identifier to and from its scalar System.Text.Json representation.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "public sealed class StrongIdJsonConverter : global::System.Text.Json.Serialization.JsonConverter<" + model.TypeName + ">");
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Initializes a new instance of the generated Strong ID JSON converter.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        AppendLine(source, bodyIndent + "public StrongIdJsonConverter()");
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <inheritdoc />");
+        AppendLine(source, bodyIndent + "public override bool HandleNull => true;");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <inheritdoc />");
+        source.Append(bodyIndent).Append("public override ").Append(model.TypeName)
+            .Append(" Read(ref global::System.Text.Json.Utf8JsonReader reader, global::System.Type typeToConvert, global::System.Text.Json.JsonSerializerOptions options)");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, converterBodyIndent + "if (reader.TokenType != global::System.Text.Json.JsonTokenType.Number)");
+        AppendLine(source, converterBodyIndent + "{");
+        source.Append(converterBodyIndent).Append("    throw new global::System.Text.Json.JsonException(\"Expected a JSON number token for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, converterBodyIndent + "}");
+        AppendLine(source);
+        source.Append(converterBodyIndent).Append("if (!reader.").Append(tryGetMethod).Append("(out var value))");
+        AppendLine(source);
+        AppendLine(source, converterBodyIndent + "{");
+        source.Append(converterBodyIndent).Append("    throw new global::System.Text.Json.JsonException(\"Invalid numeric value for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, converterBodyIndent + "}");
+        AppendLine(source);
+        source.Append(converterBodyIndent).Append("return new ").Append(model.TypeName).Append("(value);");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <inheritdoc />");
+        source.Append(bodyIndent).Append("public override void Write(global::System.Text.Json.Utf8JsonWriter writer, ")
+            .Append(model.TypeName).Append(" value, global::System.Text.Json.JsonSerializerOptions options)");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, converterBodyIndent + "writer.WriteNumberValue(value.Value);");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source, memberIndent + "}");
     }
 
 

@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using TCJ.AspNetCore.Extensions;
 using TCJ.AspNetCore.Results;
 using TCJ.Core.Results;
+using TCJ.Core.StrongTypes;
+
+VerifyStrongIdJson();
 
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -44,6 +47,35 @@ if (unhandledBody.Contains("native-aot-sensitive-detail", StringComparison.Ordin
 await app.StopAsync();
 Console.WriteLine("TCJ.AspNetCore Native AOT smoke passed");
 
+static void VerifyStrongIdJson()
+{
+    var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    // TCJ and System.Text.Json generators share the same input compilation, so register the concrete generated converters explicitly.
+    options.Converters.Add(new NativeAotGuidId.StrongIdJsonConverter());
+    options.Converters.Add(new NativeAotIntId.StrongIdJsonConverter());
+    options.Converters.Add(new NativeAotLongId.StrongIdJsonConverter());
+    var jsonContext = new NativeAotSmokeJsonContext(options);
+
+    var guidValue = Guid.Parse("7a29be31-268d-4f2b-babc-fce0ce1cb46c");
+    var guidId = new NativeAotGuidId(guidValue);
+    var intId = new NativeAotIntId(-42);
+    var longId = new NativeAotLongId(long.MaxValue);
+
+    string guidJson = JsonSerializer.Serialize(guidId, jsonContext.NativeAotGuidId);
+    string intJson = JsonSerializer.Serialize(intId, jsonContext.NativeAotIntId);
+    string longJson = JsonSerializer.Serialize(longId, jsonContext.NativeAotLongId);
+
+    if (!string.Equals(guidJson, "\"7a29be31-268d-4f2b-babc-fce0ce1cb46c\"", StringComparison.Ordinal) ||
+        !string.Equals(intJson, "-42", StringComparison.Ordinal) ||
+        !string.Equals(longJson, "9223372036854775807", StringComparison.Ordinal) ||
+        JsonSerializer.Deserialize(guidJson, jsonContext.NativeAotGuidId) != guidId ||
+        JsonSerializer.Deserialize(intJson, jsonContext.NativeAotIntId) != intId ||
+        JsonSerializer.Deserialize(longJson, jsonContext.NativeAotLongId) != longId)
+    {
+        throw new InvalidOperationException("Generated Strong ID JSON converters did not preserve the scalar round-trip contract.");
+    }
+}
+
 static Microsoft.AspNetCore.Http.IResult ThrowUnhandled() =>
     throw new InvalidOperationException("native-aot-sensitive-detail");
 
@@ -69,8 +101,20 @@ static async Task<string> AssertResponseAsync(HttpClient client, string path, Ht
 
 internal sealed record SmokeResponse(string Value);
 
+[StronglyTypedId<Guid>]
+internal readonly partial record struct NativeAotGuidId;
+
+[StronglyTypedId<int>]
+internal readonly partial record struct NativeAotIntId;
+
+[StronglyTypedId<long>]
+internal readonly partial record struct NativeAotLongId;
+
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, GenerationMode = JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(SmokeResponse))]
+[JsonSerializable(typeof(NativeAotGuidId))]
+[JsonSerializable(typeof(NativeAotIntId))]
+[JsonSerializable(typeof(NativeAotLongId))]
 internal sealed partial class NativeAotSmokeJsonContext : JsonSerializerContext
 {
 }
