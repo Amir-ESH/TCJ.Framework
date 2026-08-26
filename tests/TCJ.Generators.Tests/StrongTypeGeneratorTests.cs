@@ -37,7 +37,7 @@ public sealed class StrongTypeGeneratorTests
                 /// <summary>
                 /// Represents a strongly typed identifier backed by a GUID value.
                 /// </summary>
-                public readonly partial record struct OrderId
+                public readonly partial record struct OrderId : global::System.IParsable<OrderId>, global::System.ISpanParsable<OrderId>, global::System.IFormattable, global::System.ISpanFormattable
                 {
                     /// <summary>
                     /// Initializes a new instance of the <see cref="OrderId"/> struct.
@@ -59,10 +59,135 @@ public sealed class StrongTypeGeneratorTests
                     public bool IsDefault => Value == global::System.Guid.Empty;
 
                     /// <summary>
+                    /// Parses a canonical GUID D-format string into a strongly typed identifier.
+                    /// </summary>
+                    /// <param name="s">The canonical GUID D-format text to parse.</param>
+                    /// <returns>The parsed strongly typed identifier.</returns>
+                    public static OrderId Parse(string s) => new(global::System.Guid.ParseExact(s, "D"));
+
+                    /// <summary>
+                    /// Parses a canonical GUID D-format string into a strongly typed identifier.
+                    /// </summary>
+                    /// <param name="s">The canonical GUID D-format text to parse.</param>
+                    /// <param name="provider">Ignored. Parsing always uses culture-stable GUID semantics.</param>
+                    /// <returns>The parsed strongly typed identifier.</returns>
+                    public static OrderId Parse(string s, global::System.IFormatProvider? provider) => new(global::System.Guid.ParseExact(s, "D"));
+
+                    /// <summary>
+                    /// Parses canonical GUID D-format characters into a strongly typed identifier.
+                    /// </summary>
+                    /// <param name="s">The canonical GUID D-format characters to parse.</param>
+                    /// <returns>The parsed strongly typed identifier.</returns>
+                    public static OrderId Parse(global::System.ReadOnlySpan<char> s) => new(global::System.Guid.ParseExact(s, "D"));
+
+                    /// <summary>
+                    /// Parses canonical GUID D-format characters into a strongly typed identifier.
+                    /// </summary>
+                    /// <param name="s">The canonical GUID D-format characters to parse.</param>
+                    /// <param name="provider">Ignored. Parsing always uses culture-stable GUID semantics.</param>
+                    /// <returns>The parsed strongly typed identifier.</returns>
+                    public static OrderId Parse(global::System.ReadOnlySpan<char> s, global::System.IFormatProvider? provider) => new(global::System.Guid.ParseExact(s, "D"));
+
+                    /// <summary>
+                    /// Tries to parse canonical GUID D-format text into a strongly typed identifier.
+                    /// </summary>
+                    /// <param name="s">The canonical GUID D-format text to parse.</param>
+                    /// <param name="result">When successful, receives the parsed identifier; otherwise, the default identifier.</param>
+                    /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
+                    public static bool TryParse(string? s, out OrderId result) => TryParse(s, null, out result);
+
+                    /// <summary>
+                    /// Tries to parse canonical GUID D-format text into a strongly typed identifier.
+                    /// </summary>
+                    /// <param name="s">The canonical GUID D-format text to parse.</param>
+                    /// <param name="provider">Ignored. Parsing always uses culture-stable GUID semantics.</param>
+                    /// <param name="result">When successful, receives the parsed identifier; otherwise, the default identifier.</param>
+                    /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
+                    public static bool TryParse(string? s, global::System.IFormatProvider? provider, out OrderId result)
+                    {
+                        if (global::System.Guid.TryParseExact(s, "D", out var value))
+                        {
+                            result = new OrderId(value);
+                            return true;
+                        }
+
+                        result = default;
+                        return false;
+                    }
+
+                    /// <summary>
+                    /// Tries to parse canonical GUID D-format characters into a strongly typed identifier.
+                    /// </summary>
+                    /// <param name="s">The canonical GUID D-format characters to parse.</param>
+                    /// <param name="result">When successful, receives the parsed identifier; otherwise, the default identifier.</param>
+                    /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
+                    public static bool TryParse(global::System.ReadOnlySpan<char> s, out OrderId result) => TryParse(s, null, out result);
+
+                    /// <summary>
+                    /// Tries to parse canonical GUID D-format characters into a strongly typed identifier.
+                    /// </summary>
+                    /// <param name="s">The canonical GUID D-format characters to parse.</param>
+                    /// <param name="provider">Ignored. Parsing always uses culture-stable GUID semantics.</param>
+                    /// <param name="result">When successful, receives the parsed identifier; otherwise, the default identifier.</param>
+                    /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
+                    public static bool TryParse(global::System.ReadOnlySpan<char> s, global::System.IFormatProvider? provider, out OrderId result)
+                    {
+                        if (global::System.Guid.TryParseExact(s, "D", out var value))
+                        {
+                            result = new OrderId(value);
+                            return true;
+                        }
+
+                        result = default;
+                        return false;
+                    }
+
+                    /// <summary>
                     /// Returns the identifier value in the canonical GUID D format.
                     /// </summary>
                     /// <returns>The canonical textual representation of the underlying GUID.</returns>
-                    public override string ToString() => Value.ToString("D");
+                    public override string ToString() => Value.ToString("D", global::System.Globalization.CultureInfo.InvariantCulture);
+
+                    /// <summary>
+                    /// Formats the identifier using a GUID format specifier and culture-stable semantics.
+                    /// </summary>
+                    /// <param name="format">A GUID format specifier. Null or empty uses the canonical D format.</param>
+                    /// <param name="formatProvider">Ignored. Formatting always uses invariant culture.</param>
+                    /// <returns>The formatted identifier.</returns>
+                    public string ToString(string? format, global::System.IFormatProvider? formatProvider) =>
+                        Value.ToString(global::System.String.IsNullOrEmpty(format) ? "D" : format, global::System.Globalization.CultureInfo.InvariantCulture);
+
+                    /// <summary>
+                    /// Tries to format the identifier into the supplied character span without allocating a string.
+                    /// </summary>
+                    /// <param name="destination">The span that receives the formatted identifier.</param>
+                    /// <param name="charsWritten">When successful, receives the number of characters written.</param>
+                    /// <param name="format">A GUID format specifier. Empty uses the canonical D format.</param>
+                    /// <param name="provider">Ignored. Formatting always uses culture-stable GUID semantics.</param>
+                    /// <returns><see langword="true"/> if the destination was large enough; otherwise, <see langword="false"/>.</returns>
+                    public bool TryFormat(global::System.Span<char> destination, out int charsWritten, global::System.ReadOnlySpan<char> format = default, global::System.IFormatProvider? provider = null)
+                    {
+                        if (format.IsEmpty)
+                        {
+                            format = "D";
+                        }
+
+                        return Value.TryFormat(destination, out charsWritten, format);
+                    }
+
+                    /// <summary>
+                    /// Explicitly converts a GUID value to the strongly typed identifier.
+                    /// </summary>
+                    /// <param name="value">The underlying GUID value.</param>
+                    /// <returns>A strongly typed identifier containing the exact GUID value.</returns>
+                    public static explicit operator OrderId(global::System.Guid value) => new(value);
+
+                    /// <summary>
+                    /// Explicitly converts the strongly typed identifier to its underlying GUID value.
+                    /// </summary>
+                    /// <param name="value">The strongly typed identifier.</param>
+                    /// <returns>The exact underlying GUID value.</returns>
+                    public static explicit operator global::System.Guid(OrderId value) => value.Value;
                 }
             }
 
@@ -119,6 +244,155 @@ public sealed class StrongTypeGeneratorTests
     }
 
     [Fact]
+    public void GuidStrongId_ImplementsParsingAndFormattingContracts()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId;
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+        var orderId = Assert.IsAssignableFrom<INamedTypeSymbol>(result.OutputCompilation.GetTypeByMetadataName("OrderId"));
+        var interfaces = orderId.AllInterfaces.Select(static type => type.ToDisplayString()).ToArray();
+
+        Assert.Contains("System.IParsable<OrderId>", interfaces);
+        Assert.Contains("System.ISpanParsable<OrderId>", interfaces);
+        Assert.Contains("System.IFormattable", interfaces);
+        Assert.Contains("System.ISpanFormattable", interfaces);
+    }
+
+    [Fact]
+    public void GuidStrongId_ParsesFormatsAndExplicitlyConverts_WithStableInvariantWireSemantics()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using System.Globalization;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId;
+
+            public static class StrongIdProbe
+            {
+                public static bool Verify()
+                {
+                    var previousCulture = CultureInfo.CurrentCulture;
+                    var previousUiCulture = CultureInfo.CurrentUICulture;
+
+                    try
+                    {
+                        CultureInfo.CurrentCulture = new CultureInfo("fa-IR");
+                        CultureInfo.CurrentUICulture = new CultureInfo("fa-IR");
+
+                        var value = Guid.Parse("7a29be31-268d-4f2b-babc-fce0ce1cb46c");
+                        var expectedText = value.ToString("D", CultureInfo.InvariantCulture);
+                        var id = (OrderId)value;
+
+                        if ((Guid)id != value || id.Value != value)
+                        {
+                            return false;
+                        }
+
+                        if (!string.Equals(id.ToString(), expectedText, StringComparison.Ordinal))
+                        {
+                            return false;
+                        }
+
+                        if (!string.Equals(id.ToString(null, CultureInfo.CurrentCulture), expectedText, StringComparison.Ordinal))
+                        {
+                            return false;
+                        }
+
+                        var parsed = OrderId.Parse(expectedText);
+                        var parsedWithProvider = OrderId.Parse(expectedText, CultureInfo.CurrentCulture);
+                        var parsedFromSpan = OrderId.Parse(expectedText.AsSpan(), CultureInfo.CurrentCulture);
+                        if (parsed != id || parsedWithProvider != id || parsedFromSpan != id)
+                        {
+                            return false;
+                        }
+
+                        if (!OrderId.TryParse(expectedText, out var tryParsed) || tryParsed != id)
+                        {
+                            return false;
+                        }
+
+                        if (!OrderId.TryParse(expectedText.AsSpan(), CultureInfo.CurrentCulture, out var spanParsed) || spanParsed != id)
+                        {
+                            return false;
+                        }
+
+                        if (OrderId.TryParse("not-a-guid", out var invalid) || !invalid.IsDefault)
+                        {
+                            return false;
+                        }
+
+                        if (OrderId.TryParse(null, out var nullInput) || !nullInput.IsDefault)
+                        {
+                            return false;
+                        }
+
+                        if (OrderId.TryParse(value.ToString("N"), out _))
+                        {
+                            return false;
+                        }
+
+                        try
+                        {
+                            _ = OrderId.Parse("not-a-guid");
+                            return false;
+                        }
+                        catch (FormatException)
+                        {
+                        }
+
+                        Span<char> buffer = stackalloc char[36];
+                        if (!id.TryFormat(buffer, out var charsWritten) || charsWritten != 36)
+                        {
+                            return false;
+                        }
+
+                        if (!string.Equals(new string(buffer[..charsWritten]), expectedText, StringComparison.Ordinal))
+                        {
+                            return false;
+                        }
+
+                        Span<char> tooSmall = stackalloc char[35];
+                        if (id.TryFormat(tooSmall, out _))
+                        {
+                            return false;
+                        }
+
+                        return true;
+                    }
+                    finally
+                    {
+                        CultureInfo.CurrentCulture = previousCulture;
+                        CultureInfo.CurrentUICulture = previousUiCulture;
+                    }
+                }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var probeType = Assert.IsAssignableFrom<Type>(assembly.GetType("StrongIdProbe"));
+        var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("Verify", BindingFlags.Public | BindingFlags.Static));
+
+        Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
     public void GuidStrongId_DoesNotExposeImplicitPrimitiveConversions()
     {
         var compilation = CreateCompilation(
@@ -135,11 +409,20 @@ public sealed class StrongTypeGeneratorTests
         var orderId = Assert.IsAssignableFrom<ITypeSymbol>(result.OutputCompilation.GetTypeByMetadataName("OrderId"));
         var guid = Assert.IsAssignableFrom<ITypeSymbol>(result.OutputCompilation.GetTypeByMetadataName("System.Guid"));
 
-        Assert.False(result.OutputCompilation.ClassifyConversion(orderId, guid).IsImplicit);
-        Assert.False(result.OutputCompilation.ClassifyConversion(guid, orderId).IsImplicit);
+        var toGuid = result.OutputCompilation.ClassifyConversion(orderId, guid);
+        var fromGuid = result.OutputCompilation.ClassifyConversion(guid, orderId);
+
+        Assert.False(toGuid.IsImplicit);
+        Assert.False(fromGuid.IsImplicit);
+        Assert.True(toGuid.IsExplicit);
+        Assert.True(fromGuid.IsExplicit);
         Assert.DoesNotContain(
             orderId.GetMembers().OfType<IMethodSymbol>(),
             static member => member.MethodKind == MethodKind.Conversion && member.Name == "op_Implicit");
+        Assert.Equal(
+            2,
+            orderId.GetMembers().OfType<IMethodSymbol>().Count(
+                static member => member.MethodKind == MethodKind.Conversion && member.Name == "op_Explicit"));
     }
 
     [Fact]
