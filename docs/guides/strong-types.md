@@ -29,7 +29,7 @@ using TCJ.Core.StrongTypes;
 public readonly partial record struct OrderId;
 ```
 
-The generator supplies an explicit `OrderId(Guid value)` constructor, an immutable `Guid Value` property, `IsDefault`, and a deterministic `ToString()` that uses the canonical GUID `D` format:
+The generator supplies an explicit `OrderId(Guid value)` constructor, an immutable `Guid Value` property, `IsDefault`, culture-stable parsing/formatting APIs, and explicit conversion operators. The default wire representation is the canonical GUID `D` format:
 
 ```csharp
 var value = Guid.Parse("7a29be31-268d-4f2b-babc-fce0ce1cb46c");
@@ -38,9 +38,27 @@ var orderId = new OrderId(value);
 Guid underlying = orderId.Value;
 bool isDefault = orderId.IsDefault;
 string text = orderId.ToString();
+
+OrderId parsed = OrderId.Parse(text);
+bool parsedSuccessfully = OrderId.TryParse(text, out OrderId parsedAgain);
+
+OrderId fromGuid = (OrderId)value;
+Guid backToGuid = (Guid)fromGuid;
 ```
 
-`default(OrderId)` remains valid and reports `IsDefault == true`. No implicit conversion between `OrderId` and `Guid` is generated.
+`default(OrderId)` remains valid and reports `IsDefault == true`. No implicit conversion between `OrderId` and `Guid` is generated; conversions in both directions require an explicit cast and preserve the exact underlying value.
+
+### Parsing and formatting contract
+
+Guid-backed Strong IDs implement `IParsable<TSelf>`, `ISpanParsable<TSelf>`, `IFormattable`, and `ISpanFormattable`. The generated string and span parsing APIs accept the canonical GUID `D` wire form. `TryParse` returns `false` and the default ID for ordinary invalid input instead of throwing, while `Parse` follows the normal parsing contract and throws `FormatException` for malformed text.
+
+The default `ToString()` and `TryFormat` output is always canonical `D` format and uses invariant/culture-stable GUID semantics. Provider arguments are intentionally ignored so changing `CurrentCulture` cannot change the wire representation. Explicit non-default GUID format specifiers can still be requested through the formatting interfaces; those formatted alternatives are not the default wire form.
+
+The span-based parsing and formatting overloads avoid intermediate strings at application boundaries where callers already have spans.
+
+### Minimal API friendliness
+
+The generated `TryParse`/parsing contracts make Guid-backed Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. This task does not add JSON converters, model binders, or OpenAPI schema integration; those remain separate integrations.
 
 ## Primitive-backed Value Objects
 

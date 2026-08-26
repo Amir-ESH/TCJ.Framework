@@ -105,7 +105,12 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         source.Append(indent)
             .Append(model.Accessibility)
             .Append(" readonly partial record struct ")
-            .Append(model.TypeName);
+            .Append(model.TypeName)
+            .Append(" : global::System.IParsable<")
+            .Append(model.TypeName)
+            .Append(">, global::System.ISpanParsable<")
+            .Append(model.TypeName)
+            .Append(">, global::System.IFormattable, global::System.ISpanFormattable");
         AppendLine(source);
         AppendLine(source, indent + "{");
 
@@ -136,10 +141,170 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source);
 
         AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Parses a canonical GUID D-format string into a strongly typed identifier.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The canonical GUID D-format text to parse.</param>");
+        AppendLine(source, memberIndent + "/// <returns>The parsed strongly typed identifier.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName)
+            .Append(" Parse(string s) => new(global::System.Guid.ParseExact(s, \"D\"));");
+        AppendLine(source);
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Parses a canonical GUID D-format string into a strongly typed identifier.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The canonical GUID D-format text to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"provider\">Ignored. Parsing always uses culture-stable GUID semantics.</param>");
+        AppendLine(source, memberIndent + "/// <returns>The parsed strongly typed identifier.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName)
+            .Append(" Parse(string s, global::System.IFormatProvider? provider) => new(global::System.Guid.ParseExact(s, \"D\"));");
+        AppendLine(source);
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Parses canonical GUID D-format characters into a strongly typed identifier.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The canonical GUID D-format characters to parse.</param>");
+        AppendLine(source, memberIndent + "/// <returns>The parsed strongly typed identifier.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName)
+            .Append(" Parse(global::System.ReadOnlySpan<char> s) => new(global::System.Guid.ParseExact(s, \"D\"));");
+        AppendLine(source);
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Parses canonical GUID D-format characters into a strongly typed identifier.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The canonical GUID D-format characters to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"provider\">Ignored. Parsing always uses culture-stable GUID semantics.</param>");
+        AppendLine(source, memberIndent + "/// <returns>The parsed strongly typed identifier.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName)
+            .Append(" Parse(global::System.ReadOnlySpan<char> s, global::System.IFormatProvider? provider) => new(global::System.Guid.ParseExact(s, \"D\"));");
+        AppendLine(source);
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Tries to parse canonical GUID D-format text into a strongly typed identifier.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The canonical GUID D-format text to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"result\">When successful, receives the parsed identifier; otherwise, the default identifier.</param>");
+        AppendLine(source, memberIndent + "/// <returns><see langword=\"true\"/> when parsing succeeds; otherwise, <see langword=\"false\"/>.</returns>");
+        source.Append(memberIndent).Append("public static bool TryParse(string? s, out ").Append(model.TypeName)
+            .Append(" result) => TryParse(s, null, out result);");
+        AppendLine(source);
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Tries to parse canonical GUID D-format text into a strongly typed identifier.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The canonical GUID D-format text to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"provider\">Ignored. Parsing always uses culture-stable GUID semantics.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"result\">When successful, receives the parsed identifier; otherwise, the default identifier.</param>");
+        AppendLine(source, memberIndent + "/// <returns><see langword=\"true\"/> when parsing succeeds; otherwise, <see langword=\"false\"/>.</returns>");
+        source.Append(memberIndent).Append("public static bool TryParse(string? s, global::System.IFormatProvider? provider, out ")
+            .Append(model.TypeName).Append(" result)");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "if (global::System.Guid.TryParseExact(s, \"D\", out var value))");
+        AppendLine(source, bodyIndent + "{");
+        source.Append(bodyIndent).Append("    result = new ").Append(model.TypeName).Append("(value);");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "    return true;");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "result = default;");
+        AppendLine(source, bodyIndent + "return false;");
+        AppendLine(source, memberIndent + "}");
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Tries to parse canonical GUID D-format characters into a strongly typed identifier.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The canonical GUID D-format characters to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"result\">When successful, receives the parsed identifier; otherwise, the default identifier.</param>");
+        AppendLine(source, memberIndent + "/// <returns><see langword=\"true\"/> when parsing succeeds; otherwise, <see langword=\"false\"/>.</returns>");
+        source.Append(memberIndent).Append("public static bool TryParse(global::System.ReadOnlySpan<char> s, out ").Append(model.TypeName)
+            .Append(" result) => TryParse(s, null, out result);");
+        AppendLine(source);
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Tries to parse canonical GUID D-format characters into a strongly typed identifier.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The canonical GUID D-format characters to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"provider\">Ignored. Parsing always uses culture-stable GUID semantics.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"result\">When successful, receives the parsed identifier; otherwise, the default identifier.</param>");
+        AppendLine(source, memberIndent + "/// <returns><see langword=\"true\"/> when parsing succeeds; otherwise, <see langword=\"false\"/>.</returns>");
+        source.Append(memberIndent).Append("public static bool TryParse(global::System.ReadOnlySpan<char> s, global::System.IFormatProvider? provider, out ")
+            .Append(model.TypeName).Append(" result)");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "if (global::System.Guid.TryParseExact(s, \"D\", out var value))");
+        AppendLine(source, bodyIndent + "{");
+        source.Append(bodyIndent).Append("    result = new ").Append(model.TypeName).Append("(value);");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "    return true;");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "result = default;");
+        AppendLine(source, bodyIndent + "return false;");
+        AppendLine(source, memberIndent + "}");
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
         AppendLine(source, memberIndent + "/// Returns the identifier value in the canonical GUID D format.");
         AppendLine(source, memberIndent + "/// </summary>");
         AppendLine(source, memberIndent + "/// <returns>The canonical textual representation of the underlying GUID.</returns>");
-        AppendLine(source, memberIndent + "public override string ToString() => Value.ToString(\"D\");");
+        AppendLine(source, memberIndent + "public override string ToString() => Value.ToString(\"D\", global::System.Globalization.CultureInfo.InvariantCulture);");
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Formats the identifier using a GUID format specifier and culture-stable semantics.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"format\">A GUID format specifier. Null or empty uses the canonical D format.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"formatProvider\">Ignored. Formatting always uses invariant culture.</param>");
+        AppendLine(source, memberIndent + "/// <returns>The formatted identifier.</returns>");
+        AppendLine(source, memberIndent + "public string ToString(string? format, global::System.IFormatProvider? formatProvider) =>");
+        AppendLine(source, bodyIndent + "Value.ToString(global::System.String.IsNullOrEmpty(format) ? \"D\" : format, global::System.Globalization.CultureInfo.InvariantCulture);");
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Tries to format the identifier into the supplied character span without allocating a string.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"destination\">The span that receives the formatted identifier.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"charsWritten\">When successful, receives the number of characters written.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"format\">A GUID format specifier. Empty uses the canonical D format.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"provider\">Ignored. Formatting always uses culture-stable GUID semantics.</param>");
+        AppendLine(source, memberIndent + "/// <returns><see langword=\"true\"/> if the destination was large enough; otherwise, <see langword=\"false\"/>.</returns>");
+        AppendLine(source, memberIndent + "public bool TryFormat(global::System.Span<char> destination, out int charsWritten, global::System.ReadOnlySpan<char> format = default, global::System.IFormatProvider? provider = null)");
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "if (format.IsEmpty)");
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, bodyIndent + "    format = \"D\";");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "return Value.TryFormat(destination, out charsWritten, format);");
+        AppendLine(source, memberIndent + "}");
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Explicitly converts a GUID value to the strongly typed identifier.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"value\">The underlying GUID value.</param>");
+        AppendLine(source, memberIndent + "/// <returns>A strongly typed identifier containing the exact GUID value.</returns>");
+        source.Append(memberIndent).Append("public static explicit operator ").Append(model.TypeName)
+            .Append("(global::System.Guid value) => new(value);");
+        AppendLine(source);
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Explicitly converts the strongly typed identifier to its underlying GUID value.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        source.Append(memberIndent).Append("/// <param name=\"value\">The strongly typed identifier.</param>");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "/// <returns>The exact underlying GUID value.</returns>");
+        source.Append(memberIndent).Append("public static explicit operator global::System.Guid(").Append(model.TypeName)
+            .Append(" value) => value.Value;");
+        AppendLine(source);
 
         AppendLine(source, indent + "}");
 
