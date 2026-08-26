@@ -8,13 +8,15 @@ This document defines the v1 architecture contract for generated strongly typed 
 
 Strongly Typed IDs are generated as immutable `readonly partial record struct` declarations from attributes.
 
-The v1 policy reserves these backing types:
+The v1 generator supports these backing types:
 
-- `Guid`
-- `int`
-- `long`
+| Backing type | Default/wire representation | Parsing semantics | Default value |
+| --- | --- | --- | --- |
+| `Guid` | Canonical `D` format | Canonical `D`, culture-stable | `Guid.Empty` |
+| `int` | Invariant base-10 integer text | `NumberStyles.Integer` + `InvariantCulture` | `0` |
+| `long` | Invariant base-10 integer text | `NumberStyles.Integer` + `InvariantCulture` | `0` |
 
-The current generator implementation emits Strong ID behavior for `Guid`. Integer-backed generation is intentionally deferred to the later integer-support task.
+Other numeric backing types are not supported in v1 and do not receive generated Strong ID members.
 
 Generated IDs use record-struct value equality. Default struct values remain possible, and generated APIs expose deterministic `IsDefault` semantics. Primitive conversions are not implicit.
 
@@ -56,9 +58,44 @@ The default `ToString()` and `TryFormat` output is always canonical `D` format a
 
 The span-based parsing and formatting overloads avoid intermediate strings at application boundaries where callers already have spans.
 
+### Integer-backed IDs
+
+`int`- and `long`-backed Strong IDs expose the same parsing/formatting interface surface as Guid-backed IDs:
+
+```csharp
+using TCJ.Core.StrongTypes;
+
+[StronglyTypedId<int>]
+public readonly partial record struct OrderId;
+
+[StronglyTypedId<long>]
+public readonly partial record struct EventId;
+```
+
+Their default wire representation is the invariant base-10 representation of the underlying integer. Parsing uses `NumberStyles.Integer` with `CultureInfo.InvariantCulture`, so signs and the normal integer whitespace accepted by that style are supported, while culture-specific thousands separators are not part of the wire contract.
+
+Provider arguments on generated parsing and formatting APIs are intentionally ignored. This keeps wire behavior stable when `CurrentCulture` changes. Explicit numeric format strings are still available through `IFormattable`/`ISpanFormattable` for display scenarios and are evaluated with invariant culture; alternate display formats are not the default wire representation.
+
+Boundary behavior follows the underlying BCL integer contract:
+
+- negative values and `int.MinValue`/`int.MaxValue` or `long.MinValue`/`long.MaxValue` round-trip exactly;
+- `0` is accepted, is the default value, and reports `IsDefault == true`;
+- `TryParse` returns `false` and the default ID for malformed or overflowing input;
+- `Parse` throws `FormatException` for malformed input and `OverflowException` for values outside the backing type range;
+- conversions in both directions are explicit and preserve the exact underlying numeric value.
+
+For example:
+
+```csharp
+OrderId id = (OrderId)(-42);
+string wireText = id.ToString(); // "-42"
+OrderId parsed = OrderId.Parse(wireText);
+int value = (int)parsed;
+```
+
 ### Minimal API friendliness
 
-The generated `TryParse`/parsing contracts make Guid-backed Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. This task does not add JSON converters, model binders, or OpenAPI schema integration; those remain separate integrations.
+The generated `TryParse`/parsing contracts make supported Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. This task does not add JSON converters, model binders, or OpenAPI schema integration; those remain separate integrations.
 
 ## Primitive-backed Value Objects
 
