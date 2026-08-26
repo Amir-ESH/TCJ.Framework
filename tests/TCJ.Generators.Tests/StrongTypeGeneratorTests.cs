@@ -13,6 +13,7 @@ public sealed class StrongTypeGeneratorTests
         var compilation = CreateCompilation(
             AttributeSource,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             namespace Sales.Orders;
@@ -77,6 +78,7 @@ public sealed class StrongTypeGeneratorTests
         var compilation = CreateCompilation(
             AttributeSource,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             [StronglyTypedId<Guid>]
@@ -122,6 +124,7 @@ public sealed class StrongTypeGeneratorTests
         var compilation = CreateCompilation(
             AttributeSource,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             [StronglyTypedId<Guid>]
@@ -145,6 +148,7 @@ public sealed class StrongTypeGeneratorTests
         var compilation = CreateCompilation(
             AttributeSource,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             namespace Sales;
@@ -174,6 +178,7 @@ public sealed class StrongTypeGeneratorTests
         var compilation = CreateCompilation(
             AttributeSource,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             namespace Sales
@@ -186,6 +191,7 @@ public sealed class StrongTypeGeneratorTests
             }
             """,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             namespace Shipping.Labels;
@@ -208,6 +214,7 @@ public sealed class StrongTypeGeneratorTests
         var withoutUnrelatedSyntax = CreateCompilation(
             AttributeSource,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             [StronglyTypedId<Guid>]
@@ -217,6 +224,7 @@ public sealed class StrongTypeGeneratorTests
         var withUnrelatedSyntax = CreateCompilation(
             AttributeSource,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             internal sealed class UnrelatedType
@@ -257,6 +265,7 @@ public sealed class StrongTypeGeneratorTests
         var compilation = CreateCompilation(
             AttributeSource,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             [StronglyTypedId<Guid>]
@@ -276,6 +285,7 @@ public sealed class StrongTypeGeneratorTests
         var compilation = CreateCompilation(
             AttributeSource,
             """
+            using System;
             using TCJ.Core.StrongTypes;
 
             [StronglyTypedId<Guid>]
