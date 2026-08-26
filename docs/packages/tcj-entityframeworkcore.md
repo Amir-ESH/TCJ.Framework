@@ -9,7 +9,7 @@ dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.3
 ```
 
 - **Target framework:** `net10.0`
-- **Main namespaces:** `TCJ.EntityFrameworkCore.Repositories`, `TCJ.EntityFrameworkCore.Specifications`, `TCJ.EntityFrameworkCore.UnitOfWork`, `TCJ.EntityFrameworkCore.Extensions`
+- **Main namespaces:** `TCJ.EntityFrameworkCore.Repositories`, `TCJ.EntityFrameworkCore.Specifications`, `TCJ.EntityFrameworkCore.UnitOfWork`, `TCJ.EntityFrameworkCore.Extensions`, `TCJ.EntityFrameworkCore.StrongTypes`
 - **Primary entry points:** `AddTcjEntityFrameworkCore`, `IRepository<TEntity>`, `Specification<TEntity>`, and `IUnitOfWork`
 
 ```csharp
@@ -52,6 +52,27 @@ When the context is registered separately, calling `AddTcjPersistenceInterceptor
 - `IDataSeeder`
 - `IEntitySearcher`
 - `TimeProvider.System` when no replacement exists
+
+## Strongly Typed ID conversions
+
+Generated Strong IDs are registered explicitly; this package does not scan assemblies to discover them. Configure the model first, build a `StrongIdConversionRegistry`, and apply it:
+
+```csharp
+using TCJ.EntityFrameworkCore.Extensions;
+using TCJ.EntityFrameworkCore.StrongTypes;
+
+var strongIds = new StrongIdConversionRegistry()
+    .Register<OrderId, Guid>(
+        OrderId.StrongIdConversion.ToBackingValue,
+        OrderId.StrongIdConversion.FromBackingValue)
+    .Register<CustomerNumber, int>(
+        CustomerNumber.StrongIdConversion.ToBackingValue,
+        CustomerNumber.StrongIdConversion.FromBackingValue);
+
+modelBuilder.ApplyStrongIdConversions(strongIds);
+```
+
+The registry supports generated `Guid`, `int`, and `long` IDs and applies their primitive conversions consistently to matching keys, foreign keys, nullable wrappers, and ordinary properties. Duplicate use of the same generated registration is idempotent; conflicting registrations or an already-configured different property converter fail explicitly. The registry is provider-neutral and does not add SQL Server behavior.
 
 ## Repository behavior
 

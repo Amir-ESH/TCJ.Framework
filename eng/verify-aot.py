@@ -40,6 +40,7 @@ EF_NATIVEAOT_FIXTURE = "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/TCJ.
 EF_NATIVEAOT_PROGRAM = "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/Program.cs"
 EF_NATIVEAOT_PROJECT_REFERENCES = (
     "../../src/TCJ.Core/TCJ.Core.csproj",
+    "../../src/TCJ.Generators/TCJ.Generators.csproj",
     "../../src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
     "../../src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
 )
@@ -547,8 +548,28 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
         add(
             "ProjectReference",
             ", ".join(project_references) or "<missing>",
-            "The experimental fixture must exercise exactly TCJ.Core, TCJ.EntityFrameworkCore, and TCJ.EntityFrameworkCore.SqlServer by project reference. Packed-package publish/execute evidence belongs to Important 8.",
+            "The experimental fixture must exercise TCJ.Core, the TCJ.Generators analyzer, TCJ.EntityFrameworkCore, and TCJ.EntityFrameworkCore.SqlServer by project reference. Packed-package publish/execute evidence belongs to Important 8.",
         )
+
+    generator_references = [
+        element for element in xml_root.iter()
+        if _tag_name(element) == "ProjectReference"
+        and (element.attrib.get("Include") or "").strip().replace("\\", "/") == "../../src/TCJ.Generators/TCJ.Generators.csproj"
+    ]
+    if len(generator_references) == 1:
+        generator_reference = generator_references[0]
+        if (generator_reference.attrib.get("OutputItemType") or "").strip() != "Analyzer":
+            add(
+                "TCJ.Generators.OutputItemType",
+                (generator_reference.attrib.get("OutputItemType") or "<missing>").strip(),
+                "The experimental EF NativeAOT fixture must consume TCJ.Generators only as an analyzer/source generator.",
+            )
+        if (generator_reference.attrib.get("ReferenceOutputAssembly") or "").strip().lower() != "false":
+            add(
+                "TCJ.Generators.ReferenceOutputAssembly",
+                (generator_reference.attrib.get("ReferenceOutputAssembly") or "<missing>").strip(),
+                "The experimental EF NativeAOT fixture must not add TCJ.Generators as a runtime assembly reference.",
+            )
 
     program = root / EF_NATIVEAOT_PROGRAM
     if not program.is_file():
@@ -558,6 +579,8 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
     source = program.read_text(encoding="utf-8")
     required_fragments = (
         "UseSqlServer(",
+        "StrongIdConversionRegistry",
+        "ApplyStrongIdConversions(",
         "ApplyTcjSqlServerConventions()",
         "ToListAsync()",
         'args.Contains("--execute-query", StringComparer.Ordinal)',
@@ -567,7 +590,7 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
             add(
                 "Program.cs",
                 fragment,
-                f"The experimental EF NativeAOT fixture must include '{fragment}' so provider setup, TCJ SQL Server conventions, and a statically analyzable EF query are exercised.",
+                f"The experimental EF NativeAOT fixture must include '{fragment}' so provider setup, explicit Strong ID conversion, TCJ SQL Server conventions, and a statically analyzable EF query are exercised.",
             )
 
     if "LoadNamesAsync(ExperimentalNativeAotDbContext" in source:

@@ -363,6 +363,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source);
         AppendLine(source);
 
+        AppendStrongIdConversion(source, model, GuidTypeName, memberIndent, bodyIndent);
+        AppendLine(source);
         AppendGuidJsonConverter(source, model, memberIndent, bodyIndent);
 
         AppendLine(source, indent + "}");
@@ -607,6 +609,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source);
         AppendLine(source);
 
+        AppendStrongIdConversion(source, model, backingType, memberIndent, bodyIndent);
+        AppendLine(source);
         AppendNumericJsonConverter(source, model, memberIndent, bodyIndent);
 
         AppendLine(source, indent + "}");
@@ -619,6 +623,44 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         return source.ToString();
     }
 
+
+    private static void AppendStrongIdConversion(
+        StringBuilder source,
+        StrongIdModel model,
+        string backingType,
+        string memberIndent,
+        string bodyIndent)
+    {
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Provides provider-neutral conversion expressions between this strongly typed identifier and its backing value.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "public static class StrongIdConversion");
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Gets the conversion expression from the strongly typed identifier to its backing value.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        source.Append(bodyIndent)
+            .Append("public static global::System.Linq.Expressions.Expression<global::System.Func<")
+            .Append(model.TypeName)
+            .Append(", ")
+            .Append(backingType)
+            .Append(">> ToBackingValue { get; } = static value => value.Value;");
+        AppendLine(source);
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Gets the conversion expression from the backing value to the strongly typed identifier.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        source.Append(bodyIndent)
+            .Append("public static global::System.Linq.Expressions.Expression<global::System.Func<")
+            .Append(backingType)
+            .Append(", ")
+            .Append(model.TypeName)
+            .Append(">> FromBackingValue { get; } = static value => new ")
+            .Append(model.TypeName)
+            .Append("(value);");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "}");
+    }
 
     private static void AppendGuidJsonConverter(
         StringBuilder source,

@@ -282,6 +282,42 @@ class AotVerifierTests(unittest.TestCase):
         self.assertTrue(any(item["property"] == "Microsoft.EntityFrameworkCore.Tasks" for item in findings))
         self.assertTrue(any("compiled model" in item["message"].lower() for item in findings))
 
+    def test_ef_nativeaot_fixture_requires_generated_strong_id_static_registration_path(self) -> None:
+        fixture = self.root / MODULE.EF_NATIVEAOT_FIXTURE
+        fixture.write_text(
+            fixture.read_text(encoding="utf-8").replace(
+                r'    <ProjectReference Include="..\..\src\TCJ.Generators\TCJ.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" GlobalPropertiesToRemove="TreatWarningsAsErrors;WarningsNotAsErrors" />' + "\n",
+                '',
+            ),
+            encoding="utf-8",
+        )
+        program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
+        program.write_text(
+            program.read_text(encoding="utf-8").replace("        modelBuilder.ApplyStrongIdConversions(strongIds);\n", ""),
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [item for item in payload["findings"] if item["rule"] == "AOT007"]
+        self.assertTrue(any(item["property"] == "ProjectReference" for item in findings))
+        self.assertTrue(any(item["property"] == "Program.cs" and item["value"] == "ApplyStrongIdConversions(" for item in findings))
+
+    def test_ef_nativeaot_fixture_requires_generator_to_remain_analyzer_only(self) -> None:
+        fixture = self.root / MODULE.EF_NATIVEAOT_FIXTURE
+        fixture.write_text(
+            fixture.read_text(encoding="utf-8").replace(' OutputItemType="Analyzer" ReferenceOutputAssembly="false"', ''),
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [item for item in payload["findings"] if item["rule"] == "AOT007"]
+        self.assertTrue(any(item["property"] == "TCJ.Generators.OutputItemType" for item in findings))
+        self.assertTrue(any(item["property"] == "TCJ.Generators.ReferenceOutputAssembly" for item in findings))
+
     def test_ef_nativeaot_fixture_rejects_restricted_runtime_discovery_paths(self) -> None:
         program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
         program.write_text(

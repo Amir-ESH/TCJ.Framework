@@ -126,6 +126,71 @@ The converter path is closed and static per ID type. Generated code does not use
 
 Native AOT consumers must still follow the normal System.Text.Json AOT rule: include Strong ID types in a source-generated `JsonSerializerContext` and use metadata-based serialization when custom converters participate. If the context and Strong IDs are generated in the same compilation, explicitly add each generated `StrongIdJsonConverter` to the `JsonSerializerOptions.Converters` collection before constructing the context; Roslyn generators do not consume another generator's newly emitted source in the same generation pass. This registration is static and does not require reflection or runtime type scanning.
 
+## Explicit EF Core conversion registration
+
+EF Core integration remains explicit and provider-neutral. Generated Strong IDs expose a nested `StrongIdConversion` class containing two BCL expression trees, `ToBackingValue` and `FromBackingValue`. These expressions do not reference EF Core, so domain projects can declare and use Strong IDs without depending on `TCJ.EntityFrameworkCore`.
+
+Register each Strong ID/backing-type pair explicitly in the EF project, then apply the registry after configuring the entity model:
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using TCJ.Core.StrongTypes;
+using TCJ.EntityFrameworkCore.Extensions;
+using TCJ.EntityFrameworkCore.StrongTypes;
+
+[StronglyTypedId<Guid>]
+public readonly partial record struct OrderId;
+
+[StronglyTypedId<int>]
+public readonly partial record struct LegacyOrderId;
+
+[StronglyTypedId<long>]
+public readonly partial record struct OrderSequence;
+
+public sealed class Order
+{
+    public OrderId Id { get; set; }
+
+    public LegacyOrderId LegacyNumber { get; set; }
+
+    public OrderSequence Sequence { get; set; }
+
+    public OrderId? ParentOrderId { get; set; }
+}
+
+public sealed class OrdersDbContext(DbContextOptions<OrdersDbContext> options)
+    : DbContext(options)
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.HasKey(static order => order.Id);
+            entity.Property(static order => order.LegacyNumber);
+            entity.Property(static order => order.Sequence);
+            entity.Property(static order => order.ParentOrderId);
+        });
+
+        var strongIds = new StrongIdConversionRegistry()
+            .Register<OrderId, Guid>(
+                OrderId.StrongIdConversion.ToBackingValue,
+                OrderId.StrongIdConversion.FromBackingValue)
+            .Register<LegacyOrderId, int>(
+                LegacyOrderId.StrongIdConversion.ToBackingValue,
+                LegacyOrderId.StrongIdConversion.FromBackingValue)
+            .Register<OrderSequence, long>(
+                OrderSequence.StrongIdConversion.ToBackingValue,
+                OrderSequence.StrongIdConversion.FromBackingValue);
+
+        modelBuilder.ApplyStrongIdConversions(strongIds);
+    }
+}
+```
+
+`ApplyStrongIdConversions` walks only the EF model metadata already being built; it does not scan application assemblies or discover Strong IDs through reflection. The same registered converter is applied to matching keys, foreign keys, ordinary properties, and nullable wrappers. EF Core keeps database `NULL` values outside value converters, so the non-nullable Strong ID converter is also valid for nullable Strong ID properties. Generated Strong IDs are immutable record structs with value equality, so EF Core's normal struct comparison/snapshot semantics remain correct and no custom mutable-value comparer is required.
+
+Repeated registration with the same generated expression instances is idempotent. Registering the same Strong ID with a different backing type or different expressions, or applying the registry over a property that already has a different converter, fails with an explicit `InvalidOperationException`. The supported primitive backing types are `Guid`, `int`, and `long`. Provider-specific SQL behavior remains outside this registry.
+
 ### Minimal API friendliness
 
 The generated `TryParse`/parsing contracts make supported Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. Model binders and OpenAPI schema integration remain separate integrations.

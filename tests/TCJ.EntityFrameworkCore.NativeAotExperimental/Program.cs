@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using TCJ.Core.Entities;
+using TCJ.Core.StrongTypes;
 using TCJ.EntityFrameworkCore.Abstractions;
+using TCJ.EntityFrameworkCore.Extensions;
+using TCJ.EntityFrameworkCore.StrongTypes;
 using TCJ.EntityFrameworkCore.SqlServer.Extensions;
 
 namespace TcjEfNativeAot;
@@ -44,13 +47,23 @@ public sealed class ExperimentalNativeAotDbContext : DbContext, IReadDbContext, 
         modelBuilder.Entity<ExperimentalRecord>(builder =>
         {
             builder.HasKey(static record => record.Id);
+            builder.Property(static record => record.Id).ValueGeneratedNever();
             builder.Property(static record => record.Name).HasMaxLength(128).IsRequired();
         });
+
+        var strongIds = new StrongIdConversionRegistry()
+            .Register<ExperimentalRecordId, Guid>(
+                ExperimentalRecordId.StrongIdConversion.ToBackingValue,
+                ExperimentalRecordId.StrongIdConversion.FromBackingValue);
+        modelBuilder.ApplyStrongIdConversions(strongIds);
         modelBuilder.ApplyTcjSqlServerConventions();
     }
 }
 
-public sealed class ExperimentalRecord : RowVersionAuditedEntity<Guid>
+public sealed class ExperimentalRecord : RowVersionAuditedEntity<ExperimentalRecordId>
 {
     public string Name { get; set; } = string.Empty;
 }
+
+[StronglyTypedId<Guid>]
+public readonly partial record struct ExperimentalRecordId;
