@@ -1792,9 +1792,127 @@ public sealed class StrongTypeGeneratorTests
         Assert.Contains("public static global::TCJ.Core.Results.Result<EmailAddress> Create(global::System.String value)", generated.Source, StringComparison.Ordinal);
         Assert.Contains("var validation = Validate(value)", generated.Source, StringComparison.Ordinal);
         Assert.Contains("Result.Failure<EmailAddress>(validation.Errors)", generated.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Normalize(", generated.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("normalizedValue", generated.Source, StringComparison.Ordinal);
         Assert.DoesNotContain("public EmailAddress(global::System.String value)", generated.Source, StringComparison.Ordinal);
         Assert.DoesNotContain("System.Reflection", generated.Source, StringComparison.Ordinal);
         Assert.DoesNotContain("Activator", generated.Source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ValueObject_Normalize_RunsBeforeValidationAndStoresNormalizedValue()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct EmailAddress
+            {
+                private static string Normalize(string value) => value.Trim().ToUpperInvariant();
+
+                private static Result Validate(string value)
+                    => value == "USER@EXAMPLE.COM"
+                        ? Result.Success()
+                        : Result.Failure(new ResultError("email.normalized", "Validation did not observe normalized input."));
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var generated = Assert.Single(result.GeneratedSources);
+        Assert.Contains("var normalizedValue = Normalize(value);", generated.Source, StringComparison.Ordinal);
+        Assert.Contains("var validation = Validate(normalizedValue)", generated.Source, StringComparison.Ordinal);
+        Assert.Contains("new EmailAddress(normalizedValue)", generated.Source, StringComparison.Ordinal);
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var type = Assert.IsAssignableFrom<Type>(assembly.GetType("EmailAddress"));
+        var create = Assert.IsAssignableFrom<MethodInfo>(type.GetMethod("Create", BindingFlags.Public | BindingFlags.Static));
+        var valueProperty = Assert.IsAssignableFrom<PropertyInfo>(type.GetProperty("Value"));
+
+        var createResult = create.Invoke(null, new object?[] { "  user@example.com  " });
+        Assert.NotNull(createResult);
+        Assert.True(Assert.IsType<bool>(createResult!.GetType().GetProperty("IsSuccess")!.GetValue(createResult)));
+        var valueObject = createResult.GetType().GetProperty("Value")!.GetValue(createResult);
+        Assert.NotNull(valueObject);
+        Assert.Equal("USER@EXAMPLE.COM", valueProperty.GetValue(valueObject));
+    }
+
+    [Fact]
+    public void ValueObject_WithoutNormalize_PreservesOriginalInput()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct DisplayName
+            {
+                private static Result Validate(string value) => Result.Success();
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var type = Assert.IsAssignableFrom<Type>(assembly.GetType("DisplayName"));
+        var create = Assert.IsAssignableFrom<MethodInfo>(type.GetMethod("Create", BindingFlags.Public | BindingFlags.Static));
+        var valueProperty = Assert.IsAssignableFrom<PropertyInfo>(type.GetProperty("Value"));
+
+        const string input = "  Alice  ";
+        var createResult = create.Invoke(null, new object?[] { input });
+        Assert.NotNull(createResult);
+        Assert.True(Assert.IsType<bool>(createResult!.GetType().GetProperty("IsSuccess")!.GetValue(createResult)));
+        var valueObject = createResult.GetType().GetProperty("Value")!.GetValue(createResult);
+        Assert.NotNull(valueObject);
+        Assert.Equal(input, valueProperty.GetValue(valueObject));
+    }
+
+    [Fact]
+    public void ValueObject_Normalize_CanMakeInputFailValidation()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct RequiredText
+            {
+                private static string Normalize(string value) => value.Trim();
+
+                private static Result Validate(string value)
+                    => value.Length == 0
+                        ? Result.Failure(new ResultError("text.required", "Text is required."))
+                        : Result.Success();
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var type = Assert.IsAssignableFrom<Type>(assembly.GetType("RequiredText"));
+        var create = Assert.IsAssignableFrom<MethodInfo>(type.GetMethod("Create", BindingFlags.Public | BindingFlags.Static));
+
+        var createResult = create.Invoke(null, new object?[] { "   " });
+        Assert.NotNull(createResult);
+        Assert.True(Assert.IsType<bool>(createResult!.GetType().GetProperty("IsFailure")!.GetValue(createResult)));
+        var errors = Assert.IsAssignableFrom<System.Collections.IEnumerable>(
+                createResult.GetType().GetProperty("Errors")!.GetValue(createResult))
+            .Cast<object>()
+            .ToArray();
+        Assert.Single(errors);
     }
 
     [Fact]
@@ -1937,6 +2055,42 @@ public sealed class StrongTypeGeneratorTests
         var diagnostic = Assert.Single(result.GeneratorDiagnostics);
         Assert.Equal("TCJ4006", diagnostic.Id);
         Assert.Contains("Validate(string value)", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+    }
+
+    [Theory]
+    [InlineData("private string Normalize(string value) => value;")]
+    [InlineData("private static int Normalize(string value) => 0;")]
+    [InlineData("private static string Normalize(int value) => value.ToString();")]
+    [InlineData("private static string Normalize(ref string value) => value;")]
+    [InlineData("private static string Normalize<T>(string value) => value;")]
+    [InlineData("private static Task<string> Normalize(string value) => Task.FromResult(value);")]
+    [InlineData("private static string Normalize(string value) => value; private static string Normalize(int value) => value.ToString();")]
+    public void ValueObject_RejectsInvalidOrAmbiguousNormalizationSignatures(string normalizeMember)
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            $$"""
+            using System.Threading.Tasks;
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct EmailAddress
+            {
+                private static Result Validate(string value) => Result.Success();
+
+                {{normalizeMember}}
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4006", diagnostic.Id);
+        Assert.Contains("Normalize(string value)", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Contains("exactly one", diagnostic.GetMessage(), StringComparison.Ordinal);
         Assert.Empty(result.GeneratedSources);
         Assert.Null(result.GeneratorException);
     }

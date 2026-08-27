@@ -83,7 +83,7 @@ internal static class StrongTypeDiagnostics
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description:
-            "TCJ Value Objects must use the supported readonly partial record struct shape, a supported primitive backing type, and exactly one application-defined static Result Validate(TValue value) method.");
+            "TCJ Value Objects must use the supported readonly partial record struct shape, a supported primitive backing type, exactly one application-defined static Result Validate(TValue value) method, and when normalization is declared, exactly one static TValue Normalize(TValue value) method.");
 
     internal static readonly DiagnosticDescriptor ValueObjectGeneratedMemberCollision = new(
         ValueObjectGeneratedMemberCollisionDiagnosticId,
