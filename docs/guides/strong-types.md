@@ -199,9 +199,11 @@ The generated `TryParse`/parsing contracts make supported Strong IDs friendly to
 
 Value Objects are immutable generated record structs backed by a single primitive value with explicit application-owned validation. The v1 generator supports `string`, `Guid`, `int`, `long`, and `decimal` backing types.
 
-A Value Object declaration must be a top-level public or internal `readonly partial record struct` and must provide exactly one static `Result Validate(TValue value)` method. TCJ generates an immutable `Value` property, `IsDefault`, a private backing-value constructor, and `Create(TValue)` returning `Result<TValueObject>`. TCJ never invents domain validation rules.
+A Value Object declaration must be a top-level public or internal `readonly partial record struct` and must provide exactly one static `Result Validate(TValue value)` method. It may optionally provide exactly one static `TValue Normalize(TValue value)` method. TCJ generates an immutable `Value` property, `IsDefault`, a private backing-value constructor, and `Create(TValue)` returning `Result<TValueObject>`. TCJ never invents domain validation or normalization rules.
 
-`Create` calls `Validate` before construction. When validation fails, the generated result preserves every original `ResultError` instance in order. Successful values use normal record-struct equality. The unavoidable `default(TValueObject)` state remains possible for structs and is explicitly observable with `IsDefault`.
+Construction is deterministic and ordered as `input -> Normalize (optional) -> Validate -> construct`. When `Normalize` is absent, `Create` passes the original input directly to `Validate` and stores that original value after successful validation. When `Normalize` is present, `Validate` always receives the normalized value and successful construction stores that same normalized value. Validation failures continue to preserve every original `ResultError` instance in order. Successful values use normal record-struct equality. The unavoidable `default(TValueObject)` state remains possible for structs and is explicitly observable with `IsDefault`.
+
+Normalization is application-owned, synchronous, and pure by contract. A normalizer should be a deterministic function of its input: it must not perform I/O, resolve services, read databases, consult clocks or environment variables, or depend on mutable global state. TCJ does not inject ambient culture or perform trimming, casing, canonicalization, or any other hidden transformation. When normalization needs culture-independent casing or formatting, choose that behavior explicitly in application code, for example `ToLowerInvariant()`.
 
 ### Complete EmailAddress example
 
@@ -213,6 +215,9 @@ using TCJ.Core.StrongTypes;
 [ValueObject<string>]
 public readonly partial record struct EmailAddress
 {
+    private static string Normalize(string value)
+        => value.Trim().ToLowerInvariant();
+
     private static Result Validate(string value)
     {
         var errors = new List<ResultError>();
@@ -233,12 +238,12 @@ public readonly partial record struct EmailAddress
     }
 }
 
-Result<EmailAddress> emailResult = EmailAddress.Create("customer@example.com");
+Result<EmailAddress> emailResult = EmailAddress.Create("  Customer@Example.com  ");
 
 if (emailResult.IsSuccess)
 {
     EmailAddress email = emailResult.Value;
-    string underlying = email.Value;
+    string underlying = email.Value; // "customer@example.com"
     bool isDefault = email.IsDefault; // false
 }
 

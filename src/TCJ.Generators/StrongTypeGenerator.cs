@@ -218,6 +218,31 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
                 $"declare exactly one user-defined static TCJ.Core.Results.Result Validate({backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} value) method"));
         }
 
+        var normalizationMethods = symbol.GetMembers("Normalize")
+            .OfType<IMethodSymbol>()
+            .Where(static method => !method.IsImplicitlyDeclared && method.Locations.Any(static location => location.IsInSource))
+            .ToArray();
+        var exactNormalizationMethods = normalizationMethods
+            .Where(method => method.MethodKind == MethodKind.Ordinary
+                && method.IsStatic
+                && method.Arity == 0
+                && !method.ReturnsByRef
+                && !method.ReturnsByRefReadonly
+                && AreSameType(method.ReturnType, backingTypeSymbol)
+                && MatchesParameters(method, new[] { backingTypeSymbol }, new[] { RefKind.None }))
+            .ToArray();
+        var hasNormalizer = normalizationMethods.Length == 1 && exactNormalizationMethods.Length == 1;
+
+        if (normalizationMethods.Length != 0 && !hasNormalizer)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.InvalidValueObjectDeclaration,
+                declarationLocation,
+                symbol.Name,
+                $"normalization, when declared, must be exactly one user-defined static {backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} Normalize({backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} value) method; remove invalid or ambiguous Normalize overloads"));
+        }
+
         if (isRecordStruct && isTopLevel && isNonGeneric && isSupportedAccessibility && isSupportedBackingType)
         {
             AddValueObjectMemberCollisionDiagnostics(diagnostics, symbol, compilation);
@@ -234,7 +259,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             accessibility,
             typeName,
             $"TCJ.ValueObject.{qualifiedName}.g.cs",
-            generatedBackingType);
+            generatedBackingType,
+            hasNormalizer);
 
         return new ValueObjectCandidate(
             symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
@@ -325,7 +351,17 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source, bodyIndent + "/// <returns>A successful result containing the value object, or the original validation errors.</returns>");
         AppendLine(source, bodyIndent + $"public static global::TCJ.Core.Results.Result<{model.TypeName}> Create({model.BackingType} value)");
         AppendLine(source, bodyIndent + "{");
-        AppendLine(source, bodyIndent + "    var validation = Validate(value)");
+        if (model.HasNormalizer)
+        {
+            AppendLine(source, bodyIndent + "    var normalizedValue = Normalize(value);");
+            AppendLine(source);
+            AppendLine(source, bodyIndent + "    var validation = Validate(normalizedValue)");
+        }
+        else
+        {
+            AppendLine(source, bodyIndent + "    var validation = Validate(value)");
+        }
+
         AppendLine(source, bodyIndent + $"        ?? throw new global::System.InvalidOperationException(\"{model.TypeName}.Validate must return a TCJ Result instance.\");");
         AppendLine(source);
         AppendLine(source, bodyIndent + "    if (validation.IsFailure)");
@@ -333,7 +369,11 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source, bodyIndent + $"        return global::TCJ.Core.Results.Result.Failure<{model.TypeName}>(validation.Errors);");
         AppendLine(source, bodyIndent + "    }");
         AppendLine(source);
-        AppendLine(source, bodyIndent + $"    return global::TCJ.Core.Results.Result.Success(new {model.TypeName}(value));");
+        AppendLine(
+            source,
+            bodyIndent + (model.HasNormalizer
+                ? $"    return global::TCJ.Core.Results.Result.Success(new {model.TypeName}(normalizedValue));"
+                : $"    return global::TCJ.Core.Results.Result.Success(new {model.TypeName}(value));"));
         AppendLine(source, bodyIndent + "}");
         AppendLine(source, memberIndent + "}");
 
@@ -1368,13 +1408,15 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             string accessibility,
             string typeName,
             string hintName,
-            string backingType)
+            string backingType,
+            bool hasNormalizer)
         {
             NamespaceName = namespaceName;
             Accessibility = accessibility;
             TypeName = typeName;
             HintName = hintName;
             BackingType = backingType;
+            HasNormalizer = hasNormalizer;
         }
 
         public string? NamespaceName { get; }
@@ -1387,6 +1429,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
         public string BackingType { get; }
 
+        public bool HasNormalizer { get; }
+
         public bool Equals(ValueObjectModel? other)
         {
             return other is not null
@@ -1394,7 +1438,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
                 && string.Equals(Accessibility, other.Accessibility, StringComparison.Ordinal)
                 && string.Equals(TypeName, other.TypeName, StringComparison.Ordinal)
                 && string.Equals(HintName, other.HintName, StringComparison.Ordinal)
-                && string.Equals(BackingType, other.BackingType, StringComparison.Ordinal);
+                && string.Equals(BackingType, other.BackingType, StringComparison.Ordinal)
+                && HasNormalizer == other.HasNormalizer;
         }
 
         public override bool Equals(object? obj)
@@ -1412,6 +1457,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
                 hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(TypeName);
                 hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(HintName);
                 hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(BackingType);
+                hashCode = (hashCode * 31) + HasNormalizer.GetHashCode();
                 return hashCode;
             }
         }
