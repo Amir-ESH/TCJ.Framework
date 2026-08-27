@@ -16,9 +16,15 @@ Guid-backed IDs also expose explicit `New(IGuidGenerator)` and `NewVersion7(IGui
 
 Numeric parsing uses `NumberStyles.Integer` with `CultureInfo.InvariantCulture`; provider arguments are ignored so current culture cannot change wire behavior. Boundary values, zero, and negative values round-trip exactly; overflow fails according to the underlying BCL integer parsing contract.
 
+## Primitive Value Objects
+
+`[ValueObject<TValue>]` supports `string`, `Guid`, `int`, `long`, and `decimal` on top-level public/internal `readonly partial record struct` declarations. The application must provide exactly one static `TCJ.Core.Results.Result Validate(TValue value)` method. Generated members are an immutable `Value` property, deterministic `IsDefault`, and `Create(TValue)` returning `Result<TValueObject>`. The backing-value constructor is private so the normal non-default construction path validates first. Failed validation preserves all original `ResultError` instances and ordering.
+
+Value Object generation does not add domain rules, implicit primitive conversions, reflection-based equality, or composite multi-property behavior.
+
 ## Generator diagnostics
 
-Invalid Strong ID declarations are rejected with stable `TCJ.StrongTypes` compiler diagnostics instead of being silently skipped or producing partial generated output. Fatal diagnostics are errors, are reported at the declaration, conflicting member, or conflicting attribute that caused the problem, and do not prevent unrelated valid Strong IDs from generating.
+Invalid strong-type declarations are rejected with stable `TCJ.StrongTypes` compiler diagnostics instead of being silently skipped or producing partial generated output. Fatal diagnostics are errors, are reported at the declaration, conflicting member, or conflicting attribute that caused the problem, and do not prevent unrelated valid strong types from generating.
 
 | ID | Contract |
 | --- | --- |
@@ -28,6 +34,8 @@ Invalid Strong ID declarations are rejected with stable `TCJ.StrongTypes` compil
 | `TCJ4003` | Strong ID declarations must be non-generic. |
 | `TCJ4004` | User members must not collide with generated constructor, value, parsing/formatting, conversion, creation-helper, persistence-helper, or JSON-converter API. |
 | `TCJ4005` | A declaration must have one unambiguous TCJ strong-type attribute contract. |
+| `TCJ4006` | Value Objects must use the supported declaration/backing-type contract and exact application-defined `Result Validate(TValue value)` signature. |
+| `TCJ4007` | User constructors and members must not bypass or collide with the generated Value Object API. |
 
 Diagnostic ordering and generated hint names are deterministic. A fatal diagnostic on one declaration suppresses generation only for that declaration.
 

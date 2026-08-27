@@ -1763,6 +1763,261 @@ public sealed class StrongTypeGeneratorTests
         }
     }
 
+    [Fact]
+    public void ValueObject_GeneratedSource_UsesValidatedPrivateConstruction()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            namespace Sales.Customers;
+
+            [ValueObject<string>]
+            public readonly partial record struct EmailAddress
+            {
+                private static Result Validate(string value) => Result.Success();
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.GeneratorDiagnostics);
+        var generated = Assert.Single(result.GeneratedSources);
+        Assert.Equal("TCJ.ValueObject.Sales.Customers.EmailAddress.g.cs", generated.HintName);
+        Assert.Contains("private EmailAddress(global::System.String value)", generated.Source, StringComparison.Ordinal);
+        Assert.Contains("public global::System.String Value { get; }", generated.Source, StringComparison.Ordinal);
+        Assert.Contains("public bool IsDefault", generated.Source, StringComparison.Ordinal);
+        Assert.Contains("public static global::TCJ.Core.Results.Result<EmailAddress> Create(global::System.String value)", generated.Source, StringComparison.Ordinal);
+        Assert.Contains("var validation = Validate(value)", generated.Source, StringComparison.Ordinal);
+        Assert.Contains("Result.Failure<EmailAddress>(validation.Errors)", generated.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("public EmailAddress(global::System.String value)", generated.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Reflection", generated.Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Activator", generated.Source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ValueObject_Create_PreservesValidationErrorsAndUsesRecordEqualityAndDefaultSemantics()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct EmailAddress
+            {
+                public static readonly ResultError RequiredError = new("email.required", "Email is required.");
+                public static readonly ResultError FormatError = new("email.format", "Email format is invalid.");
+
+                private static Result Validate(string value)
+                {
+                    return string.IsNullOrWhiteSpace(value)
+                        ? Result.Failure(new[] { RequiredError, FormatError })
+                        : Result.Success();
+                }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var type = Assert.IsAssignableFrom<Type>(assembly.GetType("EmailAddress"));
+        var create = Assert.IsAssignableFrom<MethodInfo>(type.GetMethod("Create", BindingFlags.Public | BindingFlags.Static));
+        var valueProperty = Assert.IsAssignableFrom<PropertyInfo>(type.GetProperty("Value"));
+        var isDefaultProperty = Assert.IsAssignableFrom<PropertyInfo>(type.GetProperty("IsDefault"));
+
+        var successResult = create.Invoke(null, new object?[] { "user@example.com" });
+        Assert.NotNull(successResult);
+        Assert.True(Assert.IsType<bool>(successResult!.GetType().GetProperty("IsSuccess")!.GetValue(successResult)));
+        var first = successResult.GetType().GetProperty("Value")!.GetValue(successResult);
+        Assert.NotNull(first);
+
+        var secondResult = create.Invoke(null, new object?[] { "user@example.com" });
+        Assert.NotNull(secondResult);
+        var second = secondResult!.GetType().GetProperty("Value")!.GetValue(secondResult);
+        Assert.NotNull(second);
+        Assert.Equal(first, second);
+        Assert.Equal(first.GetHashCode(), second.GetHashCode());
+        Assert.Equal("user@example.com", valueProperty.GetValue(first));
+        Assert.False(Assert.IsType<bool>(isDefaultProperty.GetValue(first)));
+
+        var failureResult = create.Invoke(null, new object?[] { "" });
+        Assert.NotNull(failureResult);
+        Assert.True(Assert.IsType<bool>(failureResult!.GetType().GetProperty("IsFailure")!.GetValue(failureResult)));
+        var errors = Assert.IsAssignableFrom<System.Collections.IEnumerable>(failureResult.GetType().GetProperty("Errors")!.GetValue(failureResult))
+            .Cast<object>()
+            .ToArray();
+        Assert.Equal(2, errors.Length);
+        Assert.Same(type.GetField("RequiredError", BindingFlags.Public | BindingFlags.Static)!.GetValue(null), errors[0]);
+        Assert.Same(type.GetField("FormatError", BindingFlags.Public | BindingFlags.Static)!.GetValue(null), errors[1]);
+
+        var defaultValue = Activator.CreateInstance(type);
+        Assert.NotNull(defaultValue);
+        Assert.Null(valueProperty.GetValue(defaultValue));
+        Assert.True(Assert.IsType<bool>(isDefaultProperty.GetValue(defaultValue)));
+
+        Assert.Null(type.GetConstructor(new[] { typeof(string) }));
+        Assert.NotNull(type.GetConstructor(
+            BindingFlags.NonPublic | BindingFlags.Instance,
+            binder: null,
+            new[] { typeof(string) },
+            modifiers: null));
+    }
+
+    [Theory]
+    [InlineData("string", "global::System.String", "StringValue")]
+    [InlineData("System.Guid", "global::System.Guid", "GuidValue")]
+    [InlineData("int", "global::System.Int32", "IntValue")]
+    [InlineData("long", "global::System.Int64", "LongValue")]
+    [InlineData("decimal", "global::System.Decimal", "DecimalValue")]
+    public void ValueObject_SupportsEveryV1BackingType(string backingType, string expectedBackingType, string typeName)
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            $$"""
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<{{backingType}}>]
+            public readonly partial record struct {{typeName}}
+            {
+                private static Result Validate({{backingType}} value) => Result.Success();
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+        var generated = Assert.Single(result.GeneratedSources);
+        Assert.Equal($"TCJ.ValueObject.{typeName}.g.cs", generated.HintName);
+
+        var generatedType = Assert.IsAssignableFrom<INamedTypeSymbol>(result.OutputCompilation.GetTypeByMetadataName(typeName));
+        var value = Assert.IsAssignableFrom<IPropertySymbol>(generatedType.GetMembers("Value").Single());
+        Assert.Equal(expectedBackingType, value.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        var create = Assert.IsAssignableFrom<IMethodSymbol>(generatedType.GetMembers("Create").Single());
+        var returnType = Assert.IsAssignableFrom<INamedTypeSymbol>(create.ReturnType);
+        Assert.Equal("Result", returnType.Name);
+        Assert.Equal("TCJ.Core.Results", returnType.ContainingNamespace.ToDisplayString());
+        Assert.True(SymbolEqualityComparer.Default.Equals(generatedType, Assert.Single(returnType.TypeArguments)));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("private static Result Validate(int value) => Result.Success();")]
+    [InlineData("private Result Validate(string value) => Result.Success();")]
+    [InlineData("private static Result<string> Validate(string value) => Result.Success(value);")]
+    [InlineData("private static Result Validate(ref string value) => Result.Success();")]
+    public void ValueObject_RequiresExactApplicationValidationSignature(string validateMember)
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            $$"""
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct EmailAddress
+            {
+                {{validateMember}}
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4006", diagnostic.Id);
+        Assert.Contains("Validate(string value)", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+    }
+
+    [Theory]
+    [InlineData("[ValueObject<string>] public readonly record struct EmailAddress { private static Result Validate(string value) => Result.Success(); }")]
+    [InlineData("[ValueObject<string>] public partial record struct EmailAddress { private static Result Validate(string value) => Result.Success(); }")]
+    [InlineData("[ValueObject<string>] public readonly partial record class EmailAddress { private static Result Validate(string value) => Result.Success(); }")]
+    [InlineData("[ValueObject<string>] public readonly partial record struct EmailAddress<T> { private static Result Validate(string value) => Result.Success(); }")]
+    public void ValueObject_RejectsUnsupportedDeclarationShapes(string declaration)
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            $$"""
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            {{declaration}}
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.NotEmpty(result.GeneratorDiagnostics);
+        Assert.All(result.GeneratorDiagnostics, static diagnostic => Assert.Equal("TCJ4006", diagnostic.Id));
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+    }
+
+    [Fact]
+    public void ValueObject_RejectsUnsupportedBackingType()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<DateTime>]
+            public readonly partial record struct LocalDate
+            {
+                private static Result Validate(DateTime value) => Result.Success();
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4006", diagnostic.Id);
+        Assert.Contains("unsupported", diagnostic.GetMessage(), StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+    }
+
+    [Theory]
+    [InlineData("public string Value { get; }")]
+    [InlineData("public bool IsDefault => false;")]
+    [InlineData("public static EmailAddress Create(int value) => default;")]
+    [InlineData("public EmailAddress() { }")]
+    [InlineData("public EmailAddress(string value) { }")]
+    public void ValueObject_RejectsMembersThatBypassOrCollideWithGeneratedApi(string conflictingMember)
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            $$"""
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct EmailAddress
+            {
+                private static Result Validate(string value) => Result.Success();
+
+                {{conflictingMember}}
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4007", diagnostic.Id);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+    }
+
     private static string GetDiagnosticLocationText(Diagnostic diagnostic)
     {
         Assert.True(diagnostic.Location.IsInSource);
@@ -1801,6 +2056,7 @@ public sealed class StrongTypeGeneratorTests
         var parseOptions = new CSharpParseOptions(LanguageVersion.Latest);
         var syntaxTrees = sources
             .Append(GuidGeneratorContractSource)
+            .Append(ResultContractSource)
             .Select(source => CSharpSyntaxTree.ParseText(source, parseOptions))
             .ToArray();
 
@@ -1863,6 +2119,72 @@ public sealed class StrongTypeGeneratorTests
         [System.AttributeUsage(System.AttributeTargets.Struct | System.AttributeTargets.Class)]
         public sealed class ValueObjectAttribute<T> : System.Attribute
         {
+        }
+        """;
+
+
+    private const string ResultContractSource =
+        """
+        #nullable enable
+
+        namespace TCJ.Core.Results;
+
+        public sealed class ResultError
+        {
+            public ResultError(string code, string message)
+            {
+                Code = code;
+                Message = message;
+            }
+
+            public string Code { get; }
+
+            public string Message { get; }
+        }
+
+        public class Result
+        {
+            private readonly System.Collections.Generic.IReadOnlyList<ResultError> _errors;
+
+            protected Result(bool isSuccess, System.Collections.Generic.IEnumerable<ResultError> errors)
+            {
+                IsSuccess = isSuccess;
+                _errors = new System.Collections.Generic.List<ResultError>(errors).AsReadOnly();
+            }
+
+            public bool IsSuccess { get; }
+
+            public bool IsFailure => !IsSuccess;
+
+            public System.Collections.Generic.IReadOnlyList<ResultError> Errors => _errors;
+
+            public static Result Success() => new(true, System.Array.Empty<ResultError>());
+
+            public static Result Failure(ResultError error) => new(false, new[] { error });
+
+            public static Result Failure(System.Collections.Generic.IEnumerable<ResultError> errors) => new(false, errors);
+
+            public static Result<T> Success<T>(T value) => new(value);
+
+            public static Result<T> Failure<T>(System.Collections.Generic.IEnumerable<ResultError> errors) => new(errors);
+        }
+
+        public sealed class Result<T> : Result
+        {
+            private readonly T? _value;
+
+            internal Result(T value) : base(true, System.Array.Empty<ResultError>())
+            {
+                _value = value;
+            }
+
+            internal Result(System.Collections.Generic.IEnumerable<ResultError> errors) : base(false, errors)
+            {
+            }
+
+            public T Value => IsSuccess
+                ? _value!
+                : throw new System.InvalidOperationException("A failed result does not contain a value.");
         }
         """;
 

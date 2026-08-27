@@ -60,17 +60,274 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
         var valueObjectCandidates = context.SyntaxProvider.ForAttributeWithMetadataName(
             ValueObjectAttribute,
-            static (node, _) => node is RecordDeclarationSyntax or StructDeclarationSyntax or ClassDeclarationSyntax,
-            static (ctx, _) => ctx.TargetSymbol.ToDisplayString())
+            static (node, _) => node is TypeDeclarationSyntax,
+            static (ctx, cancellationToken) => AnalyzeValueObject(ctx, cancellationToken));
+
+        var supportedValueObjects = valueObjectCandidates
+            .Where(static candidate => candidate is not null && candidate.CanGenerate)
+            .Select(static (candidate, _) => candidate!.Model!);
+
+        context.RegisterSourceOutput(supportedValueObjects, static (spc, candidate) =>
+        {
+            spc.AddSource(candidate.HintName, GenerateValueObject(candidate));
+        });
+
+        var valueObjectDiagnosticCandidates = valueObjectCandidates
+            .Where(static candidate => candidate is not null && candidate.Diagnostics.Length > 0)
+            .Select(static (candidate, _) => candidate!)
             .Collect();
 
-        context.RegisterSourceOutput(valueObjectCandidates, static (spc, candidates) =>
+        context.RegisterSourceOutput(valueObjectDiagnosticCandidates, static (spc, candidates) =>
         {
-            foreach (var symbol in candidates.OrderBy(static x => x, StringComparer.Ordinal))
+            foreach (var candidate in candidates
+                .GroupBy(static candidate => candidate.SortKey, StringComparer.Ordinal)
+                .OrderBy(static group => group.Key, StringComparer.Ordinal)
+                .Select(static group => group.First()))
             {
-                _ = symbol;
+                foreach (var diagnostic in candidate.Diagnostics
+                    .OrderBy(static diagnostic => diagnostic.SourceTreeOrdinal)
+                    .ThenBy(static diagnostic => diagnostic.Location.SourceSpan.Start)
+                    .ThenBy(static diagnostic => diagnostic.Descriptor.Id, StringComparer.Ordinal)
+                    .ThenBy(static diagnostic => diagnostic.MessageSortKey, StringComparer.Ordinal))
+                {
+                    spc.ReportDiagnostic(diagnostic.CreateDiagnostic());
+                }
             }
         });
+    }
+
+    private static ValueObjectCandidate? AnalyzeValueObject(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
+    {
+        if (context.TargetSymbol is not INamedTypeSymbol symbol || context.TargetNode is not TypeDeclarationSyntax declaration)
+        {
+            return null;
+        }
+
+        var diagnostics = new List<StrongIdDiagnostic>();
+        var declarationLocation = declaration.Identifier.GetLocation();
+        var compilation = context.SemanticModel.Compilation;
+        var strongIdAttributes = symbol.GetAttributes()
+            .Where(static attribute => IsAttribute(attribute, StrongIdAttribute))
+            .ToArray();
+        var valueObjectAttributes = symbol.GetAttributes()
+            .Where(static attribute => IsAttribute(attribute, ValueObjectAttribute))
+            .ToArray();
+
+        // Strong ID analysis owns TCJ4005 for declarations that combine both contracts.
+        if (strongIdAttributes.Length != 0 || valueObjectAttributes.Length != 1)
+        {
+            return new ValueObjectCandidate(
+                symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                null,
+                diagnostics.ToImmutableArray());
+        }
+
+        var valueObjectAttribute = valueObjectAttributes[0];
+        if (valueObjectAttribute.AttributeClass is null || valueObjectAttribute.AttributeClass.TypeArguments.Length != 1)
+        {
+            return new ValueObjectCandidate(
+                symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                null,
+                diagnostics.ToImmutableArray());
+        }
+
+        var backingTypeSymbol = valueObjectAttribute.AttributeClass.TypeArguments[0];
+        var backingType = backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var isSupportedBackingType = backingTypeSymbol.SpecialType is
+                SpecialType.System_String or
+                SpecialType.System_Int32 or
+                SpecialType.System_Int64 or
+                SpecialType.System_Decimal
+            || string.Equals(backingType, GuidTypeName, StringComparison.Ordinal);
+
+        var isPartial = declaration.Modifiers.Any(static modifier => modifier.IsKind(SyntaxKind.PartialKeyword));
+        var isReadOnly = declaration.Modifiers.Any(static modifier => modifier.IsKind(SyntaxKind.ReadOnlyKeyword));
+        var isRecordStruct = declaration is RecordDeclarationSyntax recordDeclaration
+            && recordDeclaration.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword);
+        var isTopLevel = symbol.ContainingType is null;
+        var isNonGeneric = symbol.TypeParameters.Length == 0;
+        var isFileLocal = declaration.Modifiers.Any(static modifier => modifier.IsKind(SyntaxKind.FileKeyword));
+        var isSupportedAccessibility = !isFileLocal
+            && symbol.DeclaredAccessibility is Accessibility.Public or Accessibility.Internal;
+
+        if (!isPartial)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.InvalidValueObjectDeclaration,
+                declarationLocation,
+                symbol.Name,
+                "the declaration must be partial"));
+        }
+
+        if (!isRecordStruct || !isReadOnly || !isTopLevel || !isSupportedAccessibility)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.InvalidValueObjectDeclaration,
+                declarationLocation,
+                symbol.Name,
+                "the declaration must be a top-level public or internal readonly record struct"));
+        }
+
+        if (!isNonGeneric)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.InvalidValueObjectDeclaration,
+                declarationLocation,
+                symbol.Name,
+                "the declaration must not declare type parameters"));
+        }
+
+        if (!isSupportedBackingType)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.InvalidValueObjectDeclaration,
+                GetAttributeLocation(valueObjectAttribute, declarationLocation, cancellationToken),
+                symbol.Name,
+                $"backing type '{backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)}' is unsupported; supported backing types are string, Guid, int, long, and decimal"));
+        }
+
+        var resultType = compilation.GetTypeByMetadataName("TCJ.Core.Results.Result");
+        var exactValidationMethods = resultType is null
+            ? Array.Empty<IMethodSymbol>()
+            : symbol.GetMembers("Validate")
+                .OfType<IMethodSymbol>()
+                .Where(static method => !method.IsImplicitlyDeclared && method.Locations.Any(static location => location.IsInSource))
+                .Where(method => method.MethodKind == MethodKind.Ordinary
+                    && method.IsStatic
+                    && method.Arity == 0
+                    && !method.ReturnsByRef
+                    && !method.ReturnsByRefReadonly
+                    && AreSameType(method.ReturnType, resultType)
+                    && MatchesParameters(method, new[] { backingTypeSymbol }, new[] { RefKind.None }))
+                .ToArray();
+
+        if (exactValidationMethods.Length != 1)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.InvalidValueObjectDeclaration,
+                declarationLocation,
+                symbol.Name,
+                $"declare exactly one user-defined static TCJ.Core.Results.Result Validate({backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} value) method"));
+        }
+
+        if (isRecordStruct && isTopLevel && isNonGeneric && isSupportedAccessibility && isSupportedBackingType)
+        {
+            AddValueObjectMemberCollisionDiagnostics(diagnostics, symbol, compilation);
+        }
+
+        var namespaceName = symbol.ContainingNamespace.IsGlobalNamespace
+            ? null
+            : symbol.ContainingNamespace.ToDisplayString();
+        var accessibility = symbol.DeclaredAccessibility == Accessibility.Public ? "public" : "internal";
+        var typeName = EscapeIdentifier(symbol.Name);
+        var qualifiedName = namespaceName is null ? symbol.Name : namespaceName + "." + symbol.Name;
+        var model = new ValueObjectModel(
+            namespaceName,
+            accessibility,
+            typeName,
+            $"TCJ.ValueObject.{qualifiedName}.g.cs",
+            backingType);
+
+        return new ValueObjectCandidate(
+            symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            model,
+            diagnostics.ToImmutableArray());
+    }
+
+    private static void AddValueObjectMemberCollisionDiagnostics(
+        List<StrongIdDiagnostic> diagnostics,
+        INamedTypeSymbol valueObject,
+        Compilation compilation)
+    {
+        foreach (var member in valueObject.GetMembers()
+            .Where(static member => !member.IsImplicitlyDeclared && member.Locations.Any(static location => location.IsInSource))
+            .OrderBy(static member => member.Locations.First(static location => location.IsInSource).SourceSpan.Start)
+            .ThenBy(static member => member.Name, StringComparer.Ordinal))
+        {
+            var conflicts = member.Name is "Value" or "IsDefault" or "Create"
+                || member is IMethodSymbol { MethodKind: MethodKind.Constructor };
+
+            if (!conflicts)
+            {
+                continue;
+            }
+
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.ValueObjectGeneratedMemberCollision,
+                member.Locations.First(static location => location.IsInSource),
+                member.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+                valueObject.Name));
+        }
+    }
+
+    private static string GenerateValueObject(ValueObjectModel model)
+    {
+        var source = new StringBuilder();
+        AppendLine(source, "// <auto-generated/>");
+        AppendLine(source, "#nullable enable");
+        AppendLine(source);
+
+        var memberIndent = string.Empty;
+        var bodyIndent = "    ";
+        if (model.NamespaceName is not null)
+        {
+            AppendLine(source, $"namespace {model.NamespaceName}");
+            AppendLine(source, "{");
+            memberIndent = "    ";
+            bodyIndent = "        ";
+        }
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Represents a validated primitive-backed value object.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + $"{model.Accessibility} readonly partial record struct {model.TypeName}");
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + $"private {model.TypeName}({model.BackingType} value)");
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, bodyIndent + "    Value = value;");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Gets the validated underlying value.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        AppendLine(source, bodyIndent + $"public {model.BackingType} Value {{ get; }}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Gets a value indicating whether this instance contains the default backing value.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        AppendLine(source, bodyIndent + $"public bool IsDefault => global::System.Collections.Generic.EqualityComparer<{model.BackingType}>.Default.Equals(Value, default);");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Validates and creates a value object instance.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        AppendLine(source, bodyIndent + "/// <param name=\"value\">The candidate backing value.</param>");
+        AppendLine(source, bodyIndent + "/// <returns>A successful result containing the value object, or the original validation errors.</returns>");
+        AppendLine(source, bodyIndent + $"public static global::TCJ.Core.Results.Result<{model.TypeName}> Create({model.BackingType} value)");
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, bodyIndent + "    var validation = Validate(value)");
+        AppendLine(source, bodyIndent + $"        ?? throw new global::System.InvalidOperationException(\"{model.TypeName}.Validate must return a TCJ Result instance.\");");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "    if (validation.IsFailure)");
+        AppendLine(source, bodyIndent + "    {");
+        AppendLine(source, bodyIndent + $"        return global::TCJ.Core.Results.Result.Failure<{model.TypeName}>(validation.Errors);");
+        AppendLine(source, bodyIndent + "    }");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + $"    return global::TCJ.Core.Results.Result.Success(new {model.TypeName}(value));");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source, memberIndent + "}");
+
+        if (model.NamespaceName is not null)
+        {
+            AppendLine(source, "}");
+        }
+
+        return source.ToString();
     }
 
     private static StrongIdCandidate? AnalyzeStrongId(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
@@ -1066,6 +1323,83 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
                SyntaxFacts.GetContextualKeywordKind(identifier) != SyntaxKind.None
             ? "@" + identifier
             : identifier;
+    }
+
+    private sealed class ValueObjectCandidate
+    {
+        public ValueObjectCandidate(
+            string sortKey,
+            ValueObjectModel? model,
+            ImmutableArray<StrongIdDiagnostic> diagnostics)
+        {
+            SortKey = sortKey;
+            Model = model;
+            Diagnostics = diagnostics;
+        }
+
+        public string SortKey { get; }
+
+        public ValueObjectModel? Model { get; }
+
+        public ImmutableArray<StrongIdDiagnostic> Diagnostics { get; }
+
+        public bool CanGenerate => Model is not null && Diagnostics.Length == 0;
+    }
+
+    private sealed class ValueObjectModel : IEquatable<ValueObjectModel>
+    {
+        public ValueObjectModel(
+            string? namespaceName,
+            string accessibility,
+            string typeName,
+            string hintName,
+            string backingType)
+        {
+            NamespaceName = namespaceName;
+            Accessibility = accessibility;
+            TypeName = typeName;
+            HintName = hintName;
+            BackingType = backingType;
+        }
+
+        public string? NamespaceName { get; }
+
+        public string Accessibility { get; }
+
+        public string TypeName { get; }
+
+        public string HintName { get; }
+
+        public string BackingType { get; }
+
+        public bool Equals(ValueObjectModel? other)
+        {
+            return other is not null
+                && string.Equals(NamespaceName, other.NamespaceName, StringComparison.Ordinal)
+                && string.Equals(Accessibility, other.Accessibility, StringComparison.Ordinal)
+                && string.Equals(TypeName, other.TypeName, StringComparison.Ordinal)
+                && string.Equals(HintName, other.HintName, StringComparison.Ordinal)
+                && string.Equals(BackingType, other.BackingType, StringComparison.Ordinal);
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is ValueObjectModel other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = 17;
+                hashCode = (hashCode * 31) + (NamespaceName is null ? 0 : StringComparer.Ordinal.GetHashCode(NamespaceName));
+                hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(Accessibility);
+                hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(TypeName);
+                hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(HintName);
+                hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(BackingType);
+                return hashCode;
+            }
+        }
     }
 
     private sealed class StrongIdCandidate

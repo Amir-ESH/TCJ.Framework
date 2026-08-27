@@ -79,6 +79,10 @@
     href: analyzers/TCJ4004.md
   - name: TCJ4005 - Strong Type Attributes Are Ambiguous
     href: analyzers/TCJ4005.md
+  - name: TCJ4006 - Value Object Declaration Is Invalid
+    href: analyzers/TCJ4006.md
+  - name: TCJ4007 - Value Object Member Conflicts with Generated API
+    href: analyzers/TCJ4007.md
   - name: Code Coverage
     href: code-coverage.md
   - name: Mutation Testing
