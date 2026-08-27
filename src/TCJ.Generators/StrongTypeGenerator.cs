@@ -15,9 +15,11 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 {
     private const string StrongIdAttribute = "TCJ.Core.StrongTypes.StronglyTypedIdAttribute`1";
     private const string ValueObjectAttribute = "TCJ.Core.StrongTypes.ValueObjectAttribute`1";
+    private const string StringTypeName = "global::System.String";
     private const string GuidTypeName = "global::System.Guid";
     private const string Int32TypeName = "global::System.Int32";
     private const string Int64TypeName = "global::System.Int64";
+    private const string DecimalTypeName = "global::System.Decimal";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -133,6 +135,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
         var backingTypeSymbol = valueObjectAttribute.AttributeClass.TypeArguments[0];
         var backingType = backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var generatedBackingType = GetGeneratedBackingTypeName(backingTypeSymbol);
         var isSupportedBackingType = backingTypeSymbol.SpecialType is
                 SpecialType.System_String or
                 SpecialType.System_Int32 or
@@ -231,12 +234,24 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             accessibility,
             typeName,
             $"TCJ.ValueObject.{qualifiedName}.g.cs",
-            backingType);
+            generatedBackingType);
 
         return new ValueObjectCandidate(
             symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             model,
             diagnostics.ToImmutableArray());
+    }
+
+    private static string GetGeneratedBackingTypeName(ITypeSymbol backingType)
+    {
+        return backingType.SpecialType switch
+        {
+            SpecialType.System_String => StringTypeName,
+            SpecialType.System_Int32 => Int32TypeName,
+            SpecialType.System_Int64 => Int64TypeName,
+            SpecialType.System_Decimal => DecimalTypeName,
+            _ => backingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+        };
     }
 
     private static void AddValueObjectMemberCollisionDiagnostics(

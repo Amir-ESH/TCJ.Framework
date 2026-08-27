@@ -1870,12 +1870,12 @@ public sealed class StrongTypeGeneratorTests
     }
 
     [Theory]
-    [InlineData("string", "global::System.String", "StringValue")]
-    [InlineData("System.Guid", "global::System.Guid", "GuidValue")]
-    [InlineData("int", "global::System.Int32", "IntValue")]
-    [InlineData("long", "global::System.Int64", "LongValue")]
-    [InlineData("decimal", "global::System.Decimal", "DecimalValue")]
-    public void ValueObject_SupportsEveryV1BackingType(string backingType, string expectedBackingType, string typeName)
+    [InlineData("string", "System.String", "StringValue")]
+    [InlineData("System.Guid", "System.Guid", "GuidValue")]
+    [InlineData("int", "System.Int32", "IntValue")]
+    [InlineData("long", "System.Int64", "LongValue")]
+    [InlineData("decimal", "System.Decimal", "DecimalValue")]
+    public void ValueObject_SupportsEveryV1BackingType(string backingType, string expectedBackingTypeMetadataName, string typeName)
     {
         var compilation = CreateCompilation(
             AttributeSource,
@@ -1898,9 +1898,13 @@ public sealed class StrongTypeGeneratorTests
         Assert.Equal($"TCJ.ValueObject.{typeName}.g.cs", generated.HintName);
 
         var generatedType = Assert.IsAssignableFrom<INamedTypeSymbol>(result.OutputCompilation.GetTypeByMetadataName(typeName));
+        var expectedBackingType = Assert.IsAssignableFrom<INamedTypeSymbol>(
+            result.OutputCompilation.GetTypeByMetadataName(expectedBackingTypeMetadataName));
         var value = Assert.IsAssignableFrom<IPropertySymbol>(generatedType.GetMembers("Value").Single());
-        Assert.Equal(expectedBackingType, value.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        Assert.True(SymbolEqualityComparer.Default.Equals(expectedBackingType, value.Type));
+        Assert.Contains($"public global::{expectedBackingTypeMetadataName} Value {{ get; }}", generated.Source, StringComparison.Ordinal);
         var create = Assert.IsAssignableFrom<IMethodSymbol>(generatedType.GetMembers("Create").Single());
+        Assert.True(SymbolEqualityComparer.Default.Equals(expectedBackingType, Assert.Single(create.Parameters).Type));
         var returnType = Assert.IsAssignableFrom<INamedTypeSymbol>(create.ReturnType);
         Assert.Equal("Result", returnType.Name);
         Assert.Equal("TCJ.Core.Results", returnType.ContainingNamespace.ToDisplayString());
