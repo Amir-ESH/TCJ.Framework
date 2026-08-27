@@ -136,12 +136,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         var backingTypeSymbol = valueObjectAttribute.AttributeClass.TypeArguments[0];
         var backingType = backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var generatedBackingType = GetGeneratedBackingTypeName(backingTypeSymbol);
-        var isSupportedBackingType = backingTypeSymbol.SpecialType is
-                SpecialType.System_String or
-                SpecialType.System_Int32 or
-                SpecialType.System_Int64 or
-                SpecialType.System_Decimal
-            || string.Equals(backingType, GuidTypeName, StringComparison.Ordinal);
+        var backingKind = GetValueObjectBackingKind(backingTypeSymbol, backingType);
+        var isSupportedBackingType = backingKind != ValueObjectBackingKind.Unsupported;
 
         var isPartial = declaration.Modifiers.Any(static modifier => modifier.IsKind(SyntaxKind.PartialKeyword));
         var isReadOnly = declaration.Modifiers.Any(static modifier => modifier.IsKind(SyntaxKind.ReadOnlyKeyword));
@@ -260,6 +256,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             typeName,
             $"TCJ.ValueObject.{qualifiedName}.g.cs",
             generatedBackingType,
+            backingKind,
             hasNormalizer);
 
         return new ValueObjectCandidate(
@@ -280,6 +277,19 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         };
     }
 
+    private static ValueObjectBackingKind GetValueObjectBackingKind(ITypeSymbol backingType, string fullyQualifiedBackingType)
+    {
+        return backingType.SpecialType switch
+        {
+            SpecialType.System_String => ValueObjectBackingKind.String,
+            SpecialType.System_Int32 => ValueObjectBackingKind.Int32,
+            SpecialType.System_Int64 => ValueObjectBackingKind.Int64,
+            SpecialType.System_Decimal => ValueObjectBackingKind.Decimal,
+            _ when string.Equals(fullyQualifiedBackingType, GuidTypeName, StringComparison.Ordinal) => ValueObjectBackingKind.Guid,
+            _ => ValueObjectBackingKind.Unsupported,
+        };
+    }
+
     private static void AddValueObjectMemberCollisionDiagnostics(
         List<StrongIdDiagnostic> diagnostics,
         INamedTypeSymbol valueObject,
@@ -290,7 +300,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             .OrderBy(static member => member.Locations.First(static location => location.IsInSource).SourceSpan.Start)
             .ThenBy(static member => member.Name, StringComparer.Ordinal))
         {
-            var conflicts = member.Name is "Value" or "IsDefault" or "Create"
+            var conflicts = member.Name is "Value" or "IsDefault" or "Create" or "Parse" or "TryParse" or "ValueObjectJsonConverter"
                 || member is IMethodSymbol { MethodKind: MethodKind.Constructor };
 
             if (!conflicts)
@@ -327,7 +337,21 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source, memberIndent + "/// <summary>");
         AppendLine(source, memberIndent + "/// Represents a validated primitive-backed value object.");
         AppendLine(source, memberIndent + "/// </summary>");
-        AppendLine(source, memberIndent + $"{model.Accessibility} readonly partial record struct {model.TypeName}");
+        source.Append(memberIndent)
+            .Append("[global::System.Text.Json.Serialization.JsonConverter(typeof(")
+            .Append(model.TypeName)
+            .Append(".ValueObjectJsonConverter))]");
+        AppendLine(source);
+        source.Append(memberIndent)
+            .Append(model.Accessibility)
+            .Append(" readonly partial record struct ")
+            .Append(model.TypeName)
+            .Append(" : global::System.IParsable<")
+            .Append(model.TypeName)
+            .Append(">, global::System.ISpanParsable<")
+            .Append(model.TypeName)
+            .Append(">");
+        AppendLine(source);
         AppendLine(source, memberIndent + "{");
         AppendLine(source, bodyIndent + $"private {model.TypeName}({model.BackingType} value)");
         AppendLine(source, bodyIndent + "{");
@@ -375,6 +399,12 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
                 ? $"    return global::TCJ.Core.Results.Result.Success(new {model.TypeName}(normalizedValue));"
                 : $"    return global::TCJ.Core.Results.Result.Success(new {model.TypeName}(value));"));
         AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+
+        AppendValueObjectParsing(source, model, bodyIndent);
+        AppendLine(source);
+        AppendValueObjectJsonConverter(source, model, bodyIndent);
+
         AppendLine(source, memberIndent + "}");
 
         if (model.NamespaceName is not null)
@@ -383,6 +413,333 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         }
 
         return source.ToString();
+    }
+
+    private static void AppendValueObjectParsing(StringBuilder source, ValueObjectModel model, string memberIndent)
+    {
+        var bodyIndent = memberIndent + "    ";
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Parses culture-stable text and validates the resulting value object.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The text to parse.</param>");
+        AppendLine(source, memberIndent + "/// <returns>The parsed and validated value object.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName).Append(" Parse(string s) => Parse(s, null);");
+        AppendLine(source);
+        AppendLine(source);
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Parses culture-stable text and validates the resulting value object.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The text to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"provider\">Ignored. Parsing always uses the generated wire contract.</param>");
+        AppendLine(source, memberIndent + "/// <returns>The parsed and validated value object.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName)
+            .Append(" Parse(string s, global::System.IFormatProvider? provider)");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "global::System.ArgumentNullException.ThrowIfNull(s);");
+        AppendLine(source);
+        source.Append(bodyIndent).Append("if (TryParse(s, provider, out var result))");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, bodyIndent + "    return result;");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        source.Append(bodyIndent).Append("throw new global::System.FormatException(\"Invalid text for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "}");
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Attempts to parse culture-stable text and validate the resulting value object.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The text to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"result\">The parsed value object when parsing and validation succeed.</param>");
+        AppendLine(source, memberIndent + "/// <returns><see langword=\"true\"/> when parsing and validation succeed; otherwise <see langword=\"false\"/>.</returns>");
+        source.Append(memberIndent).Append("public static bool TryParse(string? s, out ").Append(model.TypeName)
+            .Append(" result) => TryParse(s, null, out result);");
+        AppendLine(source);
+        AppendLine(source);
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Attempts to parse culture-stable text and validate the resulting value object.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The text to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"provider\">Ignored. Parsing always uses the generated wire contract.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"result\">The parsed value object when parsing and validation succeed.</param>");
+        AppendLine(source, memberIndent + "/// <returns><see langword=\"true\"/> when parsing and validation succeed; otherwise <see langword=\"false\"/>.</returns>");
+        source.Append(memberIndent).Append("public static bool TryParse(string? s, global::System.IFormatProvider? provider, out ")
+            .Append(model.TypeName).Append(" result)");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "if (s is null)");
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, bodyIndent + "    result = default;");
+        AppendLine(source, bodyIndent + "    return false;");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendValueObjectBackingTryParse(source, model, "s", false, bodyIndent);
+        AppendValueObjectValidationTryParse(source, bodyIndent);
+        AppendLine(source, memberIndent + "}");
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Parses culture-stable characters and validates the resulting value object.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The characters to parse.</param>");
+        AppendLine(source, memberIndent + "/// <returns>The parsed and validated value object.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName)
+            .Append(" Parse(global::System.ReadOnlySpan<char> s) => Parse(s, null);");
+        AppendLine(source);
+        AppendLine(source);
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Parses culture-stable characters and validates the resulting value object.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The characters to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"provider\">Ignored. Parsing always uses the generated wire contract.</param>");
+        AppendLine(source, memberIndent + "/// <returns>The parsed and validated value object.</returns>");
+        source.Append(memberIndent).Append("public static ").Append(model.TypeName)
+            .Append(" Parse(global::System.ReadOnlySpan<char> s, global::System.IFormatProvider? provider)");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "{");
+        source.Append(bodyIndent).Append("if (TryParse(s, provider, out var result))");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, bodyIndent + "    return result;");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        source.Append(bodyIndent).Append("throw new global::System.FormatException(\"Invalid text for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "}");
+        AppendLine(source);
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Attempts to parse culture-stable characters and validate the resulting value object.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The characters to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"result\">The parsed value object when parsing and validation succeed.</param>");
+        AppendLine(source, memberIndent + "/// <returns><see langword=\"true\"/> when parsing and validation succeed; otherwise <see langword=\"false\"/>.</returns>");
+        source.Append(memberIndent).Append("public static bool TryParse(global::System.ReadOnlySpan<char> s, out ")
+            .Append(model.TypeName).Append(" result) => TryParse(s, null, out result);");
+        AppendLine(source);
+        AppendLine(source);
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Attempts to parse culture-stable characters and validate the resulting value object.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "/// <param name=\"s\">The characters to parse.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"provider\">Ignored. Parsing always uses the generated wire contract.</param>");
+        AppendLine(source, memberIndent + "/// <param name=\"result\">The parsed value object when parsing and validation succeed.</param>");
+        AppendLine(source, memberIndent + "/// <returns><see langword=\"true\"/> when parsing and validation succeed; otherwise <see langword=\"false\"/>.</returns>");
+        source.Append(memberIndent).Append("public static bool TryParse(global::System.ReadOnlySpan<char> s, global::System.IFormatProvider? provider, out ")
+            .Append(model.TypeName).Append(" result)");
+        AppendLine(source);
+        AppendLine(source, memberIndent + "{");
+        AppendValueObjectBackingTryParse(source, model, "s", true, bodyIndent);
+        AppendValueObjectValidationTryParse(source, bodyIndent);
+        AppendLine(source, memberIndent + "}");
+    }
+
+    private static void AppendValueObjectBackingTryParse(StringBuilder source, ValueObjectModel model, string inputName, bool isSpanInput, string indent)
+    {
+        switch (model.BackingKind)
+        {
+            case ValueObjectBackingKind.String:
+                source.Append(indent).Append("var backingValue = ").Append(inputName);
+                if (isSpanInput)
+                {
+                    source.Append(".ToString()");
+                }
+                source.Append(";");
+                AppendLine(source);
+                break;
+            case ValueObjectBackingKind.Guid:
+                source.Append(indent).Append("if (!global::System.Guid.TryParseExact(").Append(inputName).Append(", \"D\", out var backingValue))");
+                AppendLine(source);
+                AppendValueObjectParseFailure(source, indent);
+                break;
+            case ValueObjectBackingKind.Int32:
+                source.Append(indent).Append("if (!global::System.Int32.TryParse(").Append(inputName)
+                    .Append(", global::System.Globalization.NumberStyles.Integer, global::System.Globalization.CultureInfo.InvariantCulture, out var backingValue))");
+                AppendLine(source);
+                AppendValueObjectParseFailure(source, indent);
+                break;
+            case ValueObjectBackingKind.Int64:
+                source.Append(indent).Append("if (!global::System.Int64.TryParse(").Append(inputName)
+                    .Append(", global::System.Globalization.NumberStyles.Integer, global::System.Globalization.CultureInfo.InvariantCulture, out var backingValue))");
+                AppendLine(source);
+                AppendValueObjectParseFailure(source, indent);
+                break;
+            case ValueObjectBackingKind.Decimal:
+                source.Append(indent).Append("if (!global::System.Decimal.TryParse(").Append(inputName)
+                    .Append(", global::System.Globalization.NumberStyles.AllowLeadingWhite | global::System.Globalization.NumberStyles.AllowTrailingWhite | global::System.Globalization.NumberStyles.AllowLeadingSign | global::System.Globalization.NumberStyles.AllowDecimalPoint, global::System.Globalization.CultureInfo.InvariantCulture, out var backingValue))");
+                AppendLine(source);
+                AppendValueObjectParseFailure(source, indent);
+                break;
+            default:
+                throw new InvalidOperationException("Unsupported Value Object backing kind.");
+        }
+    }
+
+    private static void AppendValueObjectParseFailure(StringBuilder source, string indent)
+    {
+        AppendLine(source, indent + "{");
+        AppendLine(source, indent + "    result = default;");
+        AppendLine(source, indent + "    return false;");
+        AppendLine(source, indent + "}");
+        AppendLine(source);
+    }
+
+    private static void AppendValueObjectValidationTryParse(StringBuilder source, string indent)
+    {
+        AppendLine(source, indent + "var creation = Create(backingValue);");
+        AppendLine(source, indent + "if (creation.IsFailure)");
+        AppendLine(source, indent + "{");
+        AppendLine(source, indent + "    result = default;");
+        AppendLine(source, indent + "    return false;");
+        AppendLine(source, indent + "}");
+        AppendLine(source);
+        AppendLine(source, indent + "result = creation.Value;");
+        AppendLine(source, indent + "return true;");
+    }
+
+    private static void AppendValueObjectJsonConverter(StringBuilder source, ValueObjectModel model, string memberIndent)
+    {
+        var bodyIndent = memberIndent + "    ";
+        var converterBodyIndent = bodyIndent + "    ";
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Converts this value object to and from its validated scalar System.Text.Json representation.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "public sealed class ValueObjectJsonConverter : global::System.Text.Json.Serialization.JsonConverter<" + model.TypeName + ">");
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Initializes a new instance of the generated Value Object JSON converter.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        AppendLine(source, bodyIndent + "public ValueObjectJsonConverter()");
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <inheritdoc />");
+        AppendLine(source, bodyIndent + "public override bool HandleNull => true;");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <inheritdoc />");
+        source.Append(bodyIndent).Append("public override ").Append(model.TypeName)
+            .Append(" Read(ref global::System.Text.Json.Utf8JsonReader reader, global::System.Type typeToConvert, global::System.Text.Json.JsonSerializerOptions options)");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "{");
+        AppendLine(source, converterBodyIndent + "if (reader.TokenType == global::System.Text.Json.JsonTokenType.Null)");
+        AppendLine(source, converterBodyIndent + "{");
+        source.Append(converterBodyIndent).Append("    throw new global::System.Text.Json.JsonException(\"JSON null is not valid for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, converterBodyIndent + "}");
+        AppendLine(source);
+        AppendValueObjectJsonReadBackingValue(source, model, converterBodyIndent);
+        AppendLine(source, converterBodyIndent + "var creation = Create(backingValue);");
+        AppendLine(source, converterBodyIndent + "if (creation.IsFailure)");
+        AppendLine(source, converterBodyIndent + "{");
+        source.Append(converterBodyIndent).Append("    throw new global::System.Text.Json.JsonException(\"Value failed validation for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, converterBodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, converterBodyIndent + "return creation.Value;");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <inheritdoc />");
+        source.Append(bodyIndent).Append("public override void Write(global::System.Text.Json.Utf8JsonWriter writer, ")
+            .Append(model.TypeName).Append(" value, global::System.Text.Json.JsonSerializerOptions options)");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "{");
+        if (model.BackingKind == ValueObjectBackingKind.String)
+        {
+            AppendLine(source, converterBodyIndent + "if (value.Value is null)");
+            AppendLine(source, converterBodyIndent + "{");
+            source.Append(converterBodyIndent).Append("    throw new global::System.Text.Json.JsonException(\"The default ")
+                .Append(model.TypeName).Append(" value cannot be serialized because its string backing value is null.\");");
+            AppendLine(source);
+            AppendLine(source, converterBodyIndent + "}");
+            AppendLine(source);
+            AppendLine(source, converterBodyIndent + "writer.WriteStringValue(value.Value);");
+        }
+        else if (model.BackingKind == ValueObjectBackingKind.Guid)
+        {
+            AppendLine(source, converterBodyIndent + "writer.WriteStringValue(value.Value);");
+        }
+        else
+        {
+            AppendLine(source, converterBodyIndent + "writer.WriteNumberValue(value.Value);");
+        }
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source, memberIndent + "}");
+    }
+
+    private static void AppendValueObjectJsonReadBackingValue(StringBuilder source, ValueObjectModel model, string indent)
+    {
+        switch (model.BackingKind)
+        {
+            case ValueObjectBackingKind.String:
+                AppendLine(source, indent + "if (reader.TokenType != global::System.Text.Json.JsonTokenType.String)");
+                AppendLine(source, indent + "{");
+                source.Append(indent).Append("    throw new global::System.Text.Json.JsonException(\"Expected a JSON string token for ")
+                    .Append(model.TypeName).Append(".\");");
+                AppendLine(source);
+                AppendLine(source, indent + "}");
+                AppendLine(source);
+                AppendLine(source, indent + "var backingValue = reader.GetString()");
+                source.Append(indent).Append("    ?? throw new global::System.Text.Json.JsonException(\"JSON null is not valid for ")
+                    .Append(model.TypeName).Append(".\");");
+                AppendLine(source);
+                AppendLine(source);
+                break;
+            case ValueObjectBackingKind.Guid:
+                AppendLine(source, indent + "if (reader.TokenType != global::System.Text.Json.JsonTokenType.String)");
+                AppendLine(source, indent + "{");
+                source.Append(indent).Append("    throw new global::System.Text.Json.JsonException(\"Expected a JSON string token for ")
+                    .Append(model.TypeName).Append(".\");");
+                AppendLine(source);
+                AppendLine(source, indent + "}");
+                AppendLine(source);
+                AppendLine(source, indent + "if (!reader.TryGetGuid(out var backingValue))");
+                AppendLine(source, indent + "{");
+                source.Append(indent).Append("    throw new global::System.Text.Json.JsonException(\"Invalid GUID value for ")
+                    .Append(model.TypeName).Append(".\");");
+                AppendLine(source);
+                AppendLine(source, indent + "}");
+                AppendLine(source);
+                break;
+            case ValueObjectBackingKind.Int32:
+                AppendValueObjectNumericJsonRead(source, model, indent, "TryGetInt32");
+                break;
+            case ValueObjectBackingKind.Int64:
+                AppendValueObjectNumericJsonRead(source, model, indent, "TryGetInt64");
+                break;
+            case ValueObjectBackingKind.Decimal:
+                AppendValueObjectNumericJsonRead(source, model, indent, "TryGetDecimal");
+                break;
+            default:
+                throw new InvalidOperationException("Unsupported Value Object backing kind.");
+        }
+    }
+
+    private static void AppendValueObjectNumericJsonRead(StringBuilder source, ValueObjectModel model, string indent, string tryGetMethod)
+    {
+        AppendLine(source, indent + "if (reader.TokenType != global::System.Text.Json.JsonTokenType.Number)");
+        AppendLine(source, indent + "{");
+        source.Append(indent).Append("    throw new global::System.Text.Json.JsonException(\"Expected a JSON number token for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, indent + "}");
+        AppendLine(source);
+        source.Append(indent).Append("if (!reader.").Append(tryGetMethod).Append("(out var backingValue))");
+        AppendLine(source);
+        AppendLine(source, indent + "{");
+        source.Append(indent).Append("    throw new global::System.Text.Json.JsonException(\"Invalid numeric value for ")
+            .Append(model.TypeName).Append(".\");");
+        AppendLine(source);
+        AppendLine(source, indent + "}");
+        AppendLine(source);
     }
 
     private static StrongIdCandidate? AnalyzeStrongId(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
@@ -1409,6 +1766,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             string typeName,
             string hintName,
             string backingType,
+            ValueObjectBackingKind backingKind,
             bool hasNormalizer)
         {
             NamespaceName = namespaceName;
@@ -1416,6 +1774,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             TypeName = typeName;
             HintName = hintName;
             BackingType = backingType;
+            BackingKind = backingKind;
             HasNormalizer = hasNormalizer;
         }
 
@@ -1429,6 +1788,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
         public string BackingType { get; }
 
+        public ValueObjectBackingKind BackingKind { get; }
+
         public bool HasNormalizer { get; }
 
         public bool Equals(ValueObjectModel? other)
@@ -1439,6 +1800,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
                 && string.Equals(TypeName, other.TypeName, StringComparison.Ordinal)
                 && string.Equals(HintName, other.HintName, StringComparison.Ordinal)
                 && string.Equals(BackingType, other.BackingType, StringComparison.Ordinal)
+                && BackingKind == other.BackingKind
                 && HasNormalizer == other.HasNormalizer;
         }
 
@@ -1457,6 +1819,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
                 hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(TypeName);
                 hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(HintName);
                 hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(BackingType);
+                hashCode = (hashCode * 31) + BackingKind.GetHashCode();
                 hashCode = (hashCode * 31) + HasNormalizer.GetHashCode();
                 return hashCode;
             }
@@ -1598,5 +1961,15 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         Guid,
         Int32,
         Int64
+    }
+
+    private enum ValueObjectBackingKind
+    {
+        Unsupported,
+        String,
+        Guid,
+        Int32,
+        Int64,
+        Decimal
     }
 }

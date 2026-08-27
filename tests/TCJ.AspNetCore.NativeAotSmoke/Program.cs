@@ -9,6 +9,7 @@ using TCJ.Core.Results;
 using TCJ.Core.StrongTypes;
 
 VerifyStrongIdJson();
+VerifyValueObjectJson();
 
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -76,6 +77,47 @@ static void VerifyStrongIdJson()
     }
 }
 
+static void VerifyValueObjectJson()
+{
+    var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    // Register concrete generated converters explicitly because the TCJ and System.Text.Json generators run in the same compilation.
+    options.Converters.Add(new NativeAotEmailAddress.ValueObjectJsonConverter());
+    options.Converters.Add(new NativeAotAmount.ValueObjectJsonConverter());
+    var jsonContext = new NativeAotSmokeJsonContext(options);
+
+    NativeAotEmailAddress email = JsonSerializer.Deserialize("\"  Customer@Example.com  \"", jsonContext.NativeAotEmailAddress);
+    var amountResult = NativeAotAmount.Create(125.50m);
+    if (amountResult.IsFailure)
+    {
+        throw new InvalidOperationException("Native AOT Value Object fixture failed to create a valid amount.");
+    }
+
+    NativeAotAmount amount = amountResult.Value;
+    string emailJson = JsonSerializer.Serialize(email, jsonContext.NativeAotEmailAddress);
+    string amountJson = JsonSerializer.Serialize(amount, jsonContext.NativeAotAmount);
+
+    bool invalidRejectedSafely;
+    const string rejectedValue = "native-aot-sensitive-value";
+    try
+    {
+        _ = JsonSerializer.Deserialize($"\"{rejectedValue}\"", jsonContext.NativeAotEmailAddress);
+        invalidRejectedSafely = false;
+    }
+    catch (JsonException exception)
+    {
+        invalidRejectedSafely = !exception.Message.Contains(rejectedValue, StringComparison.Ordinal);
+    }
+
+    if (!string.Equals(email.Value, "customer@example.com", StringComparison.Ordinal) ||
+        !string.Equals(emailJson, "\"customer@example.com\"", StringComparison.Ordinal) ||
+        amount.Value != 125.50m ||
+        JsonSerializer.Deserialize(amountJson, jsonContext.NativeAotAmount) != amount ||
+        !invalidRejectedSafely)
+    {
+        throw new InvalidOperationException("Generated Value Object parsing/JSON converters did not preserve validated scalar Native AOT behavior.");
+    }
+}
+
 static Microsoft.AspNetCore.Http.IResult ThrowUnhandled() =>
     throw new InvalidOperationException("native-aot-sensitive-detail");
 
@@ -110,11 +152,33 @@ internal readonly partial record struct NativeAotIntId;
 [StronglyTypedId<long>]
 internal readonly partial record struct NativeAotLongId;
 
+[ValueObject<string>]
+internal readonly partial record struct NativeAotEmailAddress
+{
+    private static string Normalize(string value) => value.Trim().ToLowerInvariant();
+
+    private static Result Validate(string value)
+        => value.Contains('@')
+            ? Result.Success()
+            : Result.Failure(new ResultError("email.invalid", "Rejected Value Object input."));
+}
+
+[ValueObject<decimal>]
+internal readonly partial record struct NativeAotAmount
+{
+    private static Result Validate(decimal value)
+        => value >= 0m
+            ? Result.Success()
+            : Result.Failure(new ResultError("amount.negative", "Amount must be non-negative."));
+}
+
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, GenerationMode = JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(SmokeResponse))]
 [JsonSerializable(typeof(NativeAotGuidId))]
 [JsonSerializable(typeof(NativeAotIntId))]
 [JsonSerializable(typeof(NativeAotLongId))]
+[JsonSerializable(typeof(NativeAotEmailAddress))]
+[JsonSerializable(typeof(NativeAotAmount))]
 internal sealed partial class NativeAotSmokeJsonContext : JsonSerializerContext
 {
 }

@@ -278,9 +278,27 @@ Result<MoneyAmount> rejected = MoneyAmount.Create(-1m);
 bool failed = rejected.IsFailure; // true
 ```
 
-The same generation contract applies to `Guid`, `int`, and `long` backing types. Primitive conversions are not generated implicitly, and Value Object v1 does not add parsing, JSON, EF Core, or arbitrary composite-object behavior.
+The same generation contract applies to `Guid`, `int`, and `long` backing types. Primitive conversions are not generated implicitly.
 
-Composite multi-field value objects are not generated; consumers should use normal records for those cases.
+### Parsing and System.Text.Json boundary contract
+
+Generated Value Objects implement `IParsable<TSelf>` and `ISpanParsable<TSelf>`. Text input is converted to the backing primitive with a deterministic wire-oriented parser and then passed to `Create(TValue)`, so parsing cannot bypass application normalization or validation:
+
+| Backing type | Text parsing contract | JSON scalar |
+| --- | --- | --- |
+| `string` | The supplied text is the candidate value; `Normalize` and `Validate` still run | JSON string |
+| `Guid` | Canonical `D` format | JSON string |
+| `int` | `NumberStyles.Integer` + `InvariantCulture` | JSON number |
+| `long` | `NumberStyles.Integer` + `InvariantCulture` | JSON number |
+| `decimal` | `AllowLeadingWhite | AllowTrailingWhite | AllowLeadingSign | AllowDecimalPoint` + `InvariantCulture` | JSON number |
+
+Provider arguments are intentionally ignored. `TryParse` returns `false` and the default Value Object when either primitive parsing or domain validation fails. `Parse` throws a generic `FormatException` for rejected text and does not embed the rejected input or application `ResultError` details in its message.
+
+Every supported Value Object also receives a dedicated generated `ValueObjectJsonConverter : JsonConverter<TValueObject>` and is annotated to use it. Serialization writes only the underlying scalar; it never exposes `{ "value": ... }`, `Result`, or validation-error internals. Deserialization reads only the expected scalar token, then calls `Create(TValue)`. A failed `Result` becomes a generic `JsonException`, so normalization and validation remain mandatory while the raw rejected value and validation messages stay out of converter-generated exceptions. JSON `null` is rejected for the non-nullable Value Object contract. A default string-backed Value Object is also rejected during serialization because its unavoidable struct-default backing value is `null` and therefore cannot represent a valid non-null string Value Object.
+
+The generated converter is closed over the concrete Value Object type and does not use `JsonConverterFactory`, runtime type scanning, `MakeGenericType`, `Activator`, or reflection. Native AOT consumers should include generated Value Object types in a source-generated `JsonSerializerContext`. When TCJ and System.Text.Json generators run in the same compilation, explicitly register each concrete `ValueObjectJsonConverter` before constructing the context, exactly as with generated Strong ID converters.
+
+Composite multi-field value objects are not generated; consumers should use normal records for those cases. EF Core integration remains a separate concern.
 
 ## Examples
 

@@ -46,6 +46,10 @@ class RequiredPrGateTests(unittest.TestCase):
         selected = self.required("develop", "tests/TCJ.AspNetCore.NativeAotSmoke/Program.cs")
         self.assertIn("aspnetcore_integration", selected)
 
+    def test_generator_change_selects_aspnetcore_native_aot_gate(self):
+        selected = self.required("develop", "src/TCJ.Generators/StrongTypeGenerator.cs")
+        self.assertIn("aspnetcore_integration", selected)
+
     def test_ef_nativeaot_experimental_fixture_selects_sqlserver_gate(self):
         selected = self.required(
             "develop",

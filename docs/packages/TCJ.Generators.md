@@ -18,7 +18,9 @@ Numeric parsing uses `NumberStyles.Integer` with `CultureInfo.InvariantCulture`;
 
 ## Primitive Value Objects
 
-`[ValueObject<TValue>]` supports `string`, `Guid`, `int`, `long`, and `decimal` on top-level public/internal `readonly partial record struct` declarations. The application must provide exactly one static `TCJ.Core.Results.Result Validate(TValue value)` method. Generated members are an immutable `Value` property, deterministic `IsDefault`, and `Create(TValue)` returning `Result<TValueObject>`. The backing-value constructor is private so the normal non-default construction path validates first. Failed validation preserves all original `ResultError` instances and ordering.
+`[ValueObject<TValue>]` supports `string`, `Guid`, `int`, `long`, and `decimal` on top-level public/internal `readonly partial record struct` declarations. The application must provide exactly one static `TCJ.Core.Results.Result Validate(TValue value)` method and may provide the documented deterministic `Normalize(TValue)` hook. Generated members include immutable `Value`, deterministic `IsDefault`, `Create(TValue)` returning `Result<TValueObject>`, culture-stable string/span `Parse` and `TryParse`, `IParsable<TSelf>`/`ISpanParsable<TSelf>`, and a dedicated `System.Text.Json` converter. The backing-value constructor remains private so normal non-default construction, parsing, and deserialization all pass through the same normalization/validation pipeline. Failed `Create` calls preserve the original `ResultError` instances and ordering.
+
+Value Object text parsing uses the input directly for `string`, canonical `D` parsing for `Guid`, `NumberStyles.Integer` plus `InvariantCulture` for `int`/`long`, and `AllowLeadingWhite | AllowTrailingWhite | AllowLeadingSign | AllowDecimalPoint` plus `InvariantCulture` for `decimal`. Provider arguments do not change the wire contract. `TryParse` returns `false` when primitive parsing or validation fails; `Parse` throws a generic `FormatException` without embedding the rejected input.
 
 Value Object generation does not add domain rules, implicit primitive conversions, reflection-based equality, or composite multi-property behavior.
 
@@ -64,6 +66,18 @@ var context = new AppJsonContext(options);
 ```
 
 This explicit registration is closed over the concrete Strong ID type and does not use runtime type scanning, reflection, `MakeGenericType`, or a converter factory.
+
+### Value Object JSON contract
+
+Generated Value Objects serialize as backing scalars: `string`/`Guid` use JSON strings and `int`/`long`/`decimal` use JSON numbers. Deserialization accepts only the expected scalar token and then calls the generated `Create(TValue)` path, so optional normalization and application validation cannot be bypassed. Validation failures become generic `JsonException` instances; converter-generated messages do not include the raw rejected value or `ResultError` details. JSON `null` is rejected for non-nullable Value Objects, and serialization rejects the unavoidable default state of a string-backed Value Object because its backing string is `null`.
+
+Each Value Object has its own public nested `ValueObjectJsonConverter : JsonConverter<TValueObject>`. No converter factory, runtime type scanning, `MakeGenericType`, `Activator`, or reflection-based construction is emitted. Native AOT consumers should include Value Object types in source-generated JSON metadata and explicitly register concrete generated converters when the TCJ and System.Text.Json generators share one compilation:
+
+```csharp
+var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+options.Converters.Add(new EmailAddress.ValueObjectJsonConverter());
+var context = new AppJsonContext(options);
+```
 
 ## Persistence conversion expressions
 

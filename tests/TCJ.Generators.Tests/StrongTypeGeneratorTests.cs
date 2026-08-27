@@ -1764,6 +1764,369 @@ public sealed class StrongTypeGeneratorTests
     }
 
     [Fact]
+    public void ValueObjects_TextParsing_IsCultureStableAndReusesNormalizationAndValidation()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using System.Globalization;
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct NormalizedCode
+            {
+                private static string Normalize(string value) => value.Trim().ToUpperInvariant();
+
+                private static Result Validate(string value)
+                    => value.Length == 3
+                        ? Result.Success()
+                        : Result.Failure(new ResultError("code.length", "Code must have three characters."));
+            }
+
+            [ValueObject<Guid>]
+            public readonly partial record struct GuidValue
+            {
+                private static Result Validate(Guid value) => Result.Success();
+            }
+
+            [ValueObject<int>]
+            public readonly partial record struct IntValue
+            {
+                private static Result Validate(int value) => value >= 0
+                    ? Result.Success()
+                    : Result.Failure(new ResultError("int.negative", "Value must be non-negative."));
+            }
+
+            [ValueObject<long>]
+            public readonly partial record struct LongValue
+            {
+                private static Result Validate(long value) => Result.Success();
+            }
+
+            [ValueObject<decimal>]
+            public readonly partial record struct DecimalValue
+            {
+                private static Result Validate(decimal value) => Result.Success();
+            }
+
+            public static class ValueObjectParsingProbe
+            {
+                public static bool Verify()
+                {
+                    CultureInfo originalCulture = CultureInfo.CurrentCulture;
+                    try
+                    {
+                        CultureInfo.CurrentCulture = new CultureInfo("fr-FR");
+
+                        bool normalized = NormalizedCode.TryParse("  abc  ", out var code) &&
+                                          string.Equals(code.Value, "ABC", StringComparison.Ordinal) &&
+                                          NormalizedCode.TryParse(" xyz ".AsSpan(), out var spanCode) &&
+                                          string.Equals(spanCode.Value, "XYZ", StringComparison.Ordinal);
+
+                        bool validationCannotBeBypassed = !NormalizedCode.TryParse(" x ", out _) &&
+                                                          !IntValue.TryParse("-42", out _) &&
+                                                          ThrowsFormatWithoutEcho("sensitive-invalid-code");
+
+                        bool primitives = GuidValue.TryParse("7a29be31-268d-4f2b-babc-fce0ce1cb46c", out var guidValue) &&
+                                          guidValue.Value == Guid.Parse("7a29be31-268d-4f2b-babc-fce0ce1cb46c") &&
+                                          IntValue.TryParse("42", CultureInfo.GetCultureInfo("fa-IR"), out var intValue) && intValue.Value == 42 &&
+                                          LongValue.TryParse(long.MaxValue.ToString(CultureInfo.InvariantCulture), out var longValue) && longValue.Value == long.MaxValue &&
+                                          DecimalValue.TryParse("1250.50", CultureInfo.GetCultureInfo("fr-FR"), out var decimalValue) && decimalValue.Value == 1250.50m &&
+                                          !DecimalValue.TryParse("1250,50", out _);
+
+                        return normalized && validationCannotBeBypassed && primitives;
+                    }
+                    finally
+                    {
+                        CultureInfo.CurrentCulture = originalCulture;
+                    }
+                }
+
+                private static bool ThrowsFormatWithoutEcho(string rawValue)
+                {
+                    try
+                    {
+                        _ = NormalizedCode.Parse(rawValue);
+                        return false;
+                    }
+                    catch (FormatException exception)
+                    {
+                        return !exception.Message.Contains(rawValue, StringComparison.Ordinal);
+                    }
+                }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var probeType = Assert.IsAssignableFrom<Type>(assembly.GetType("ValueObjectParsingProbe"));
+        var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("Verify", BindingFlags.Public | BindingFlags.Static));
+
+        Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
+    public void ValueObjects_JsonRoundTripAsValidatedBackingScalarsForEverySupportedType()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using System.Text.Json;
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct EmailAddress
+            {
+                private static string Normalize(string value) => value.Trim().ToLowerInvariant();
+
+                private static Result Validate(string value)
+                    => value.Contains('@')
+                        ? Result.Success()
+                        : Result.Failure(new ResultError("email.format", "Email is invalid."));
+            }
+
+            [ValueObject<Guid>]
+            public readonly partial record struct GuidValue
+            {
+                private static Result Validate(Guid value) => Result.Success();
+            }
+
+            [ValueObject<int>]
+            public readonly partial record struct IntValue
+            {
+                private static Result Validate(int value) => Result.Success();
+            }
+
+            [ValueObject<long>]
+            public readonly partial record struct LongValue
+            {
+                private static Result Validate(long value) => Result.Success();
+            }
+
+            [ValueObject<decimal>]
+            public readonly partial record struct DecimalValue
+            {
+                private static Result Validate(decimal value) => Result.Success();
+            }
+
+            public static class ValueObjectJsonRoundTripProbe
+            {
+                public static bool Verify()
+                {
+                    var email = JsonSerializer.Deserialize<EmailAddress>("\"  Customer@Example.com  \"");
+                    var guid = Guid.Parse("7a29be31-268d-4f2b-babc-fce0ce1cb46c");
+                    var guidValue = GuidValue.Create(guid).Value;
+                    var intValue = IntValue.Create(-42).Value;
+                    var longValue = LongValue.Create(long.MaxValue).Value;
+                    var decimalValue = DecimalValue.Create(1250.50m).Value;
+
+                    string emailJson = JsonSerializer.Serialize(email);
+                    string guidJson = JsonSerializer.Serialize(guidValue);
+                    string intJson = JsonSerializer.Serialize(intValue);
+                    string longJson = JsonSerializer.Serialize(longValue);
+                    string decimalJson = JsonSerializer.Serialize(decimalValue);
+
+                    using var emailDocument = JsonDocument.Parse(emailJson);
+                    using var guidDocument = JsonDocument.Parse(guidJson);
+                    using var intDocument = JsonDocument.Parse(intJson);
+                    using var longDocument = JsonDocument.Parse(longJson);
+                    using var decimalDocument = JsonDocument.Parse(decimalJson);
+
+                    return string.Equals(email.Value, "customer@example.com", StringComparison.Ordinal) &&
+                           string.Equals(emailJson, "\"customer@example.com\"", StringComparison.Ordinal) &&
+                           emailDocument.RootElement.ValueKind == JsonValueKind.String &&
+                           guidDocument.RootElement.ValueKind == JsonValueKind.String &&
+                           intDocument.RootElement.ValueKind == JsonValueKind.Number &&
+                           longDocument.RootElement.ValueKind == JsonValueKind.Number &&
+                           decimalDocument.RootElement.ValueKind == JsonValueKind.Number &&
+                           JsonSerializer.Deserialize<GuidValue>(guidJson) == guidValue &&
+                           JsonSerializer.Deserialize<IntValue>(intJson) == intValue &&
+                           JsonSerializer.Deserialize<LongValue>(longJson) == longValue &&
+                           JsonSerializer.Deserialize<DecimalValue>(decimalJson) == decimalValue;
+                }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var probeType = Assert.IsAssignableFrom<Type>(assembly.GetType("ValueObjectJsonRoundTripProbe"));
+        var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("Verify", BindingFlags.Public | BindingFlags.Static));
+
+        Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
+    public void ValueObjects_JsonRejectInvalidPayloadsAndValidationFailuresWithoutEchoingRejectedValues()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using System.Text.Json;
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct SecretCode
+            {
+                private static Result Validate(string value)
+                    => value == "allowed"
+                        ? Result.Success()
+                        : Result.Failure(new ResultError("secret.invalid", "Rejected value: " + value));
+            }
+
+            [ValueObject<int>]
+            public readonly partial record struct PositiveNumber
+            {
+                private static Result Validate(int value)
+                    => value > 0
+                        ? Result.Success()
+                        : Result.Failure(new ResultError("number.invalid", "Rejected value: " + value));
+            }
+
+            [ValueObject<Guid>]
+            public readonly partial record struct GuidValue
+            {
+                private static Result Validate(Guid value) => Result.Success();
+            }
+
+            public static class ValueObjectJsonInvalidProbe
+            {
+                public static bool Verify()
+                {
+                    return ThrowsJson<SecretCode>("null") &&
+                           ThrowsJson<SecretCode>("123") &&
+                           ThrowsJsonWithoutEcho<SecretCode>("\"sensitive-secret-value\"", "sensitive-secret-value") &&
+                           ThrowsJsonWithoutEcho<PositiveNumber>("-987654", "-987654") &&
+                           ThrowsJson<GuidValue>("123") &&
+                           ThrowsJsonWithoutEcho<GuidValue>("\"not-a-guid-secret\"", "not-a-guid-secret") &&
+                           ThrowsJsonOnDefaultStringWrite();
+                }
+
+                private static bool ThrowsJson<T>(string json)
+                {
+                    try
+                    {
+                        _ = JsonSerializer.Deserialize<T>(json);
+                        return false;
+                    }
+                    catch (JsonException)
+                    {
+                        return true;
+                    }
+                }
+
+                private static bool ThrowsJsonWithoutEcho<T>(string json, string rawValue)
+                {
+                    try
+                    {
+                        _ = JsonSerializer.Deserialize<T>(json);
+                        return false;
+                    }
+                    catch (JsonException exception)
+                    {
+                        return !exception.Message.Contains(rawValue, StringComparison.Ordinal);
+                    }
+                }
+
+                private static bool ThrowsJsonOnDefaultStringWrite()
+                {
+                    try
+                    {
+                        _ = JsonSerializer.Serialize(default(SecretCode));
+                        return false;
+                    }
+                    catch (JsonException)
+                    {
+                        return true;
+                    }
+                }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var probeType = Assert.IsAssignableFrom<Type>(assembly.GetType("ValueObjectJsonInvalidProbe"));
+        var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("Verify", BindingFlags.Public | BindingFlags.Static));
+
+        Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
+    public void ValueObjectJsonConverters_AreDedicatedValidatedAndDoNotUseReflectionFactoriesOrRuntimeCodeGeneration()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [ValueObject<string>]
+            public readonly partial record struct StringValue
+            {
+                private static Result Validate(string value) => Result.Success();
+            }
+
+            [ValueObject<Guid>]
+            public readonly partial record struct GuidValue
+            {
+                private static Result Validate(Guid value) => Result.Success();
+            }
+
+            [ValueObject<int>]
+            public readonly partial record struct IntValue
+            {
+                private static Result Validate(int value) => Result.Success();
+            }
+
+            [ValueObject<long>]
+            public readonly partial record struct LongValue
+            {
+                private static Result Validate(long value) => Result.Success();
+            }
+
+            [ValueObject<decimal>]
+            public readonly partial record struct DecimalValue
+            {
+                private static Result Validate(decimal value) => Result.Success();
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Equal(5, result.GeneratedSources.Count);
+        foreach (var generated in result.GeneratedSources)
+        {
+            Assert.Contains("public sealed class ValueObjectJsonConverter : global::System.Text.Json.Serialization.JsonConverter<", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("Serialization.JsonConverter(typeof(", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("var creation = Create(backingValue);", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("creation.IsFailure", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("global::System.IParsable<", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("global::System.ISpanParsable<", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("validation.Errors", generated.Source[(generated.Source.IndexOf("class ValueObjectJsonConverter", StringComparison.Ordinal))..], StringComparison.Ordinal);
+            Assert.DoesNotContain("JsonConverterFactory", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("MakeGenericType", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("System.Reflection", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("GetType(", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Activator", generated.Source, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void ValueObject_GeneratedSource_UsesValidatedPrivateConstruction()
     {
         var compilation = CreateCompilation(
@@ -2149,6 +2512,9 @@ public sealed class StrongTypeGeneratorTests
     [InlineData("public string Value { get; }")]
     [InlineData("public bool IsDefault => false;")]
     [InlineData("public static EmailAddress Create(int value) => default;")]
+    [InlineData("public static EmailAddress Parse(string value) => default;")]
+    [InlineData("public static bool TryParse(string value, out EmailAddress result) { result = default; return false; }")]
+    [InlineData("public sealed class ValueObjectJsonConverter { }")]
     [InlineData("public EmailAddress() { }")]
     [InlineData("public EmailAddress(string value) { }")]
     public void ValueObject_RejectsMembersThatBypassOrCollideWithGeneratedApi(string conflictingMember)
