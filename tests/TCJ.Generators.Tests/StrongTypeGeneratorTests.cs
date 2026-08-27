@@ -213,6 +213,22 @@ public sealed class StrongTypeGeneratorTests
                     public static explicit operator global::System.Guid(OrderId value) => value.Value;
 
                     /// <summary>
+                    /// Provides provider-neutral conversion expressions between this strongly typed identifier and its backing value.
+                    /// </summary>
+                    public static class StrongIdConversion
+                    {
+                        /// <summary>
+                        /// Gets the conversion expression from the strongly typed identifier to its backing value.
+                        /// </summary>
+                        public static global::System.Linq.Expressions.Expression<global::System.Func<OrderId, global::System.Guid>> ToBackingValue { get; } = static value => value.Value;
+
+                        /// <summary>
+                        /// Gets the conversion expression from the backing value to the strongly typed identifier.
+                        /// </summary>
+                        public static global::System.Linq.Expressions.Expression<global::System.Func<global::System.Guid, OrderId>> FromBackingValue { get; } = static value => new OrderId(value);
+                    }
+
+                    /// <summary>
                     /// Converts this strongly typed identifier to and from its scalar System.Text.Json representation.
                     /// </summary>
                     public sealed class StrongIdJsonConverter : global::System.Text.Json.Serialization.JsonConverter<OrderId>
@@ -894,6 +910,22 @@ public sealed class StrongTypeGeneratorTests
                 public static explicit operator {{backingType}}({{typeName}} value) => value.Value;
 
                 /// <summary>
+                /// Provides provider-neutral conversion expressions between this strongly typed identifier and its backing value.
+                /// </summary>
+                public static class StrongIdConversion
+                {
+                    /// <summary>
+                    /// Gets the conversion expression from the strongly typed identifier to its backing value.
+                    /// </summary>
+                    public static global::System.Linq.Expressions.Expression<global::System.Func<{{typeName}}, {{backingType}}>> ToBackingValue { get; } = static value => value.Value;
+
+                    /// <summary>
+                    /// Gets the conversion expression from the backing value to the strongly typed identifier.
+                    /// </summary>
+                    public static global::System.Linq.Expressions.Expression<global::System.Func<{{backingType}}, {{typeName}}>> FromBackingValue { get; } = static value => new {{typeName}}(value);
+                }
+
+                /// <summary>
                 /// Converts this strongly typed identifier to and from its scalar System.Text.Json representation.
                 /// </summary>
                 public sealed class StrongIdJsonConverter : global::System.Text.Json.Serialization.JsonConverter<{{typeName}}>
@@ -1295,6 +1327,42 @@ public sealed class StrongTypeGeneratorTests
         var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("VerifyInvalidInputs", BindingFlags.Public | BindingFlags.Static));
 
         Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
+    public void StrongIdConversionExpressions_AreGeneratedWithoutEfOrRuntimeTypeActivation()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct GuidId;
+
+            [StronglyTypedId<int>]
+            public readonly partial record struct IntId;
+
+            [StronglyTypedId<long>]
+            public readonly partial record struct LongId;
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Equal(3, result.GeneratedSources.Count);
+        foreach (var generated in result.GeneratedSources)
+        {
+            Assert.Contains("public static class StrongIdConversion", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("global::System.Linq.Expressions.Expression<global::System.Func<", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("ToBackingValue { get; } = static value => value.Value;", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("FromBackingValue { get; } = static value => new ", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Microsoft.EntityFrameworkCore", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("MakeGenericType", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("System.Reflection", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Activator", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Assembly.", generated.Source, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

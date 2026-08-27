@@ -10,7 +10,7 @@ The package generates Strongly Typed IDs as `readonly partial record struct` dec
 | `int` | Invariant base-10 integer text | JSON number | `0` |
 | `long` | Invariant base-10 integer text | JSON number | `0` |
 
-Generated members include an explicit value constructor, immutable `Value`, deterministic `IsDefault`, string and span `Parse`/`TryParse`, `IParsable<TSelf>`/`ISpanParsable<TSelf>`, `IFormattable`/`ISpanFormattable`, allocation-friendly `TryFormat`, explicit conversions to and from the backing primitive, and a dedicated `System.Text.Json` converter. Implicit conversions remain disabled.
+Generated members include an explicit value constructor, immutable `Value`, deterministic `IsDefault`, string and span `Parse`/`TryParse`, `IParsable<TSelf>`/`ISpanParsable<TSelf>`, `IFormattable`/`ISpanFormattable`, allocation-friendly `TryFormat`, explicit conversions to and from the backing primitive, a nested provider-neutral `StrongIdConversion` expression pair for persistence integrations, and a dedicated `System.Text.Json` converter. Implicit conversions remain disabled.
 
 Guid-backed IDs also expose explicit `New(IGuidGenerator)` and `NewVersion7(IGuidGenerator)` helpers. `New` delegates to `IGuidGenerator.Create()` for a version 4 GUID, while `NewVersion7` delegates to `IGuidGenerator.CreateVersion7()` for a version 7 GUID; each Strong ID preserves the exact value returned by the injected generator and rejects a null generator. These helpers are not generated for `int` or `long` IDs, and generated code does not call `Guid.NewGuid()` or resolve a generator through a service locator. GUID v7 is an explicit application choice rather than a hidden default; prefer it only when the persistence strategy benefits from roughly time-ordered GUIDs.
 
@@ -42,4 +42,6 @@ var context = new AppJsonContext(options);
 
 This explicit registration is closed over the concrete Strong ID type and does not use runtime type scanning, reflection, `MakeGenericType`, or a converter factory.
 
-EF Core integration remains a separate concern.
+## Persistence conversion expressions
+
+Each supported Strong ID also exposes `StrongIdConversion.ToBackingValue` and `StrongIdConversion.FromBackingValue` as closed `Expression<Func<...>>` instances. They depend only on BCL expression APIs and the generated value constructor/property; they do not reference EF Core or a database provider. `TCJ.EntityFrameworkCore` consumes these expressions through its explicit Strong ID conversion registry.

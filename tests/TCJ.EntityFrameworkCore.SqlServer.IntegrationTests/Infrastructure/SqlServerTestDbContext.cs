@@ -14,6 +14,8 @@ internal sealed class SqlServerTestDbContext(DbContextOptions<SqlServerTestDbCon
 
     public DbSet<SqlServerChild> Children => Set<SqlServerChild>();
 
+    public DbSet<SqlServerStrongIdRecord> StrongIdRecords => Set<SqlServerStrongIdRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

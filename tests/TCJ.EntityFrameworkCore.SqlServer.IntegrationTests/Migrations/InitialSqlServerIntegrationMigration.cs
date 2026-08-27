@@ -32,6 +32,20 @@ internal sealed partial class InitialSqlServerIntegrationMigration : Migration
             });
 
         migrationBuilder.CreateTable(
+            name: "StrongIdRecords",
+            columns: table => new
+            {
+                Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                IntId = table.Column<int>(type: "int", nullable: false),
+                LongId = table.Column<long>(type: "bigint", nullable: false),
+                OptionalGuidId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_StrongIdRecords", value => value.Id);
+            });
+
+        migrationBuilder.CreateTable(
             name: "IntegrationParents",
             columns: table => new
             {
@@ -81,5 +95,6 @@ internal sealed partial class InitialSqlServerIntegrationMigration : Migration
         migrationBuilder.DropTable(name: "IntegrationChildren");
         migrationBuilder.DropTable(name: "IntegrationEntities");
         migrationBuilder.DropTable(name: "IntegrationParents");
+        migrationBuilder.DropTable(name: "StrongIdRecords");
     }
 }

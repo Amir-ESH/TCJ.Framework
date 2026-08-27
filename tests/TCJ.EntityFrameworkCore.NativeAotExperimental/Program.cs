@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using TCJ.Core.Entities;
 using TCJ.EntityFrameworkCore.Abstractions;
+using TCJ.EntityFrameworkCore.Extensions;
+using TCJ.EntityFrameworkCore.StrongTypes;
 using TCJ.EntityFrameworkCore.SqlServer.Extensions;
 
 namespace TcjEfNativeAot;
@@ -44,13 +46,37 @@ public sealed class ExperimentalNativeAotDbContext : DbContext, IReadDbContext, 
         modelBuilder.Entity<ExperimentalRecord>(builder =>
         {
             builder.HasKey(static record => record.Id);
+            builder.Property(static record => record.Id).ValueGeneratedNever();
             builder.Property(static record => record.Name).HasMaxLength(128).IsRequired();
         });
+
+        var strongIds = new StrongIdConversionRegistry()
+            .Register<ExperimentalRecordId, Guid>(
+                ExperimentalRecordId.StrongIdConversion.ToBackingValue,
+                ExperimentalRecordId.StrongIdConversion.FromBackingValue);
+        modelBuilder.ApplyStrongIdConversions(strongIds);
         modelBuilder.ApplyTcjSqlServerConventions();
     }
 }
 
-public sealed class ExperimentalRecord : RowVersionAuditedEntity<Guid>
+public sealed class ExperimentalRecord : RowVersionAuditedEntity<ExperimentalRecordId>
 {
     public string Name { get; set; } = string.Empty;
 }
+
+// This fixture mirrors the provider-neutral conversion surface emitted by TCJ.Generators.
+// EF Core query precompilation recompiles startup sources in a secondary MSBuildWorkspace,
+// where analyzer-generated members are not reliably available. Generator output itself is
+// covered by TCJ.Generators.Tests and the SQL Server integration tests use real generated IDs.
+public readonly record struct ExperimentalRecordId(Guid Value)
+{
+    public static class StrongIdConversion
+    {
+        public static global::System.Linq.Expressions.Expression<global::System.Func<ExperimentalRecordId, Guid>> ToBackingValue { get; } =
+            static value => value.Value;
+
+        public static global::System.Linq.Expressions.Expression<global::System.Func<Guid, ExperimentalRecordId>> FromBackingValue { get; } =
+            static value => new ExperimentalRecordId(value);
+    }
+}
+

@@ -282,6 +282,63 @@ class AotVerifierTests(unittest.TestCase):
         self.assertTrue(any(item["property"] == "Microsoft.EntityFrameworkCore.Tasks" for item in findings))
         self.assertTrue(any("compiled model" in item["message"].lower() for item in findings))
 
+    def test_ef_nativeaot_fixture_requires_strong_id_static_registration_path(self) -> None:
+        program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
+        program.write_text(
+            program.read_text(encoding="utf-8").replace("        modelBuilder.ApplyStrongIdConversions(strongIds);\n", ""),
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [item for item in payload["findings"] if item["rule"] == "AOT007"]
+        self.assertTrue(any(item["property"] == "Program.cs" and item["value"] == "ApplyStrongIdConversions(" for item in findings))
+
+    def test_ef_nativeaot_fixture_requires_source_stable_strong_id_conversion_mirror(self) -> None:
+        program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
+        program.write_text(
+            program.read_text(encoding="utf-8").replace(
+                "public readonly record struct ExperimentalRecordId(Guid Value)",
+                "public readonly record struct ExperimentalRecordId",
+            ),
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [item for item in payload["findings"] if item["rule"] == "AOT007"]
+        self.assertTrue(
+            any(
+                item["property"] == "Program.cs"
+                and item["value"] == "public readonly record struct ExperimentalRecordId(Guid Value)"
+                for item in findings
+            )
+        )
+
+    def test_ef_nativeaot_fixture_requires_closed_conversion_expression_shape(self) -> None:
+        program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
+        program.write_text(
+            program.read_text(encoding="utf-8").replace(
+                "static value => new ExperimentalRecordId(value);",
+                "static value => default;",
+            ),
+            encoding="utf-8",
+        )
+
+        payload, success = MODULE.verify_repository(self.root, output_path=self.output)
+
+        self.assertFalse(success)
+        findings = [item for item in payload["findings"] if item["rule"] == "AOT007"]
+        self.assertTrue(
+            any(
+                item["property"] == "Program.cs"
+                and item["value"] == "static value => new ExperimentalRecordId(value);"
+                for item in findings
+            )
+        )
+
     def test_ef_nativeaot_fixture_rejects_restricted_runtime_discovery_paths(self) -> None:
         program = self.root / MODULE.EF_NATIVEAOT_PROGRAM
         program.write_text(

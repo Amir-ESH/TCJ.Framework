@@ -558,6 +558,14 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
     source = program.read_text(encoding="utf-8")
     required_fragments = (
         "UseSqlServer(",
+        "StrongIdConversionRegistry",
+        "ExperimentalRecordId.StrongIdConversion.ToBackingValue",
+        "ExperimentalRecordId.StrongIdConversion.FromBackingValue",
+        "ApplyStrongIdConversions(",
+        "public readonly record struct ExperimentalRecordId(Guid Value)",
+        "public static class StrongIdConversion",
+        "static value => value.Value;",
+        "static value => new ExperimentalRecordId(value);",
         "ApplyTcjSqlServerConventions()",
         "ToListAsync()",
         'args.Contains("--execute-query", StringComparer.Ordinal)',
@@ -567,7 +575,7 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
             add(
                 "Program.cs",
                 fragment,
-                f"The experimental EF NativeAOT fixture must include '{fragment}' so provider setup, TCJ SQL Server conventions, and a statically analyzable EF query are exercised.",
+                f"The experimental EF NativeAOT fixture must include '{fragment}' so provider setup, explicit Strong ID conversion, TCJ SQL Server conventions, and a statically analyzable EF query are exercised.",
             )
 
     if "LoadNamesAsync(ExperimentalNativeAotDbContext" in source:

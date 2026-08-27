@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TCJ.EntityFrameworkCore.Extensions;
+using TCJ.EntityFrameworkCore.StrongTypes;
 using TCJ.EntityFrameworkCore.SqlServer.Extensions;
 
 namespace TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.Infrastructure;
@@ -81,6 +82,30 @@ internal static class SqlServerTestDbContextModelBuilder
                   .IsRequired()
                   .OnDelete(DeleteBehavior.Restrict);
         });
+
+        modelBuilder.Entity<SqlServerStrongIdRecord>(entity =>
+        {
+            entity.ToTable("StrongIdRecords");
+            entity.HasKey(value => value.Id);
+            entity.Property(value => value.Id)
+                  .ValueGeneratedNever()
+                  .HasColumnType("uniqueidentifier");
+            entity.Property(value => value.IntId).HasColumnType("int");
+            entity.Property(value => value.LongId).HasColumnType("bigint");
+            entity.Property(value => value.OptionalGuidId).HasColumnType("uniqueidentifier");
+        });
+
+        var strongIds = new StrongIdConversionRegistry()
+            .Register<SqlServerStrongGuidId, Guid>(
+                SqlServerStrongGuidId.StrongIdConversion.ToBackingValue,
+                SqlServerStrongGuidId.StrongIdConversion.FromBackingValue)
+            .Register<SqlServerStrongIntId, int>(
+                SqlServerStrongIntId.StrongIdConversion.ToBackingValue,
+                SqlServerStrongIntId.StrongIdConversion.FromBackingValue)
+            .Register<SqlServerStrongLongId, long>(
+                SqlServerStrongLongId.StrongIdConversion.ToBackingValue,
+                SqlServerStrongLongId.StrongIdConversion.FromBackingValue);
+        modelBuilder.ApplyStrongIdConversions(strongIds);
 
         modelBuilder.ApplySoftDeleteQueryFilters();
         modelBuilder.ApplyTcjSqlServerConventions();
