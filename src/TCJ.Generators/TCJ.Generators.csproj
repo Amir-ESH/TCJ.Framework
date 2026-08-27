@@ -19,6 +19,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="../TCJ.Analyzers/DiagnosticCategoryAndIdRanges.txt" Link="DiagnosticCategoryAndIdRanges.txt" />
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
     <None Include="$(MSBuildProjectDirectory)\..\..\LICENSE.txt" Pack="true" PackagePath="/" Link="LICENSE.txt" />
     <None Include="$(MSBuildProjectDirectory)\..\..\docs\packages\TCJ.Generators.md" Pack="true" PackagePath="README.md" />
   </ItemGroup>

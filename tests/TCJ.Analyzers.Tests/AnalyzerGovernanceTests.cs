@@ -29,24 +29,14 @@ public sealed class AnalyzerGovernanceTests
     ];
 
     [Fact]
-    public void Roslyn_governance_files_are_build_enforced()
+    public void Roslyn_governance_files_are_build_enforced_for_analyzers_and_generators()
     {
-        XDocument project = XDocument.Load(
-            RepositoryLayout.Combine("src/TCJ.Analyzers/TCJ.Analyzers.csproj"));
-
-        string[] additionalFiles = project.Descendants()
-            .Where(element => element.Name.LocalName == "AdditionalFiles")
-            .Select(element => (string?)element.Attribute("Include"))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Cast<string>()
-            .Select(Path.GetFileName)
-            .ToArray();
-
-        Assert.Contains("DiagnosticCategoryAndIdRanges.txt", additionalFiles);
-        Assert.Contains("AnalyzerReleases.Shipped.md", additionalFiles);
-        Assert.Contains("AnalyzerReleases.Unshipped.md", additionalFiles);
+        AssertGovernanceFiles("src/TCJ.Analyzers/TCJ.Analyzers.csproj");
+        AssertGovernanceFiles("src/TCJ.Generators/TCJ.Generators.csproj");
 
         string editorConfig = File.ReadAllText(RepositoryLayout.Combine(".editorconfig"));
+        Assert.Contains("[src/TCJ.Analyzers/**.cs]", editorConfig, StringComparison.Ordinal);
+        Assert.Contains("[src/TCJ.Generators/**.cs]", editorConfig, StringComparison.Ordinal);
         Assert.Contains("dotnet_diagnostic.RS1018.severity = error", editorConfig, StringComparison.Ordinal);
         Assert.Contains("dotnet_diagnostic.RS1019.severity = error", editorConfig, StringComparison.Ordinal);
         Assert.Contains("dotnet_diagnostic.RS1020.severity = error", editorConfig, StringComparison.Ordinal);
@@ -132,8 +122,16 @@ public sealed class AnalyzerGovernanceTests
         Assert.True(File.Exists(shippedPath), $"Missing release tracking file '{shippedPath}'.");
         Assert.True(File.Exists(unshippedPath), $"Missing release tracking file '{unshippedPath}'.");
 
+        string generatorShippedPath = RepositoryLayout.Combine("src/TCJ.Generators/AnalyzerReleases.Shipped.md");
+        string generatorUnshippedPath = RepositoryLayout.Combine("src/TCJ.Generators/AnalyzerReleases.Unshipped.md");
+
+        Assert.True(File.Exists(generatorShippedPath), $"Missing generator release tracking file '{generatorShippedPath}'.");
+        Assert.True(File.Exists(generatorUnshippedPath), $"Missing generator release tracking file '{generatorUnshippedPath}'.");
+
         ImmutableArray<ReleaseEntry> newRules = ReadNewRuleEntries(shippedPath)
-            .AddRange(ReadNewRuleEntries(unshippedPath));
+            .AddRange(ReadNewRuleEntries(unshippedPath))
+            .AddRange(ReadNewRuleEntries(generatorShippedPath))
+            .AddRange(ReadNewRuleEntries(generatorUnshippedPath));
 
         string[] reusedIds = newRules
             .GroupBy(entry => entry.Id, StringComparer.Ordinal)
@@ -184,6 +182,50 @@ public sealed class AnalyzerGovernanceTests
                 Assert.Contains(heading, document, StringComparison.Ordinal);
             }
         }
+    }
+
+    [Fact]
+    public void Every_generator_release_entry_has_documentation_from_the_required_template()
+    {
+        string shippedPath = RepositoryLayout.Combine("src/TCJ.Generators/AnalyzerReleases.Shipped.md");
+        string unshippedPath = RepositoryLayout.Combine("src/TCJ.Generators/AnalyzerReleases.Unshipped.md");
+        ImmutableArray<ReleaseEntry> entries = ReadNewRuleEntries(shippedPath)
+            .AddRange(ReadNewRuleEntries(unshippedPath));
+
+        Assert.NotEmpty(entries);
+        foreach (ReleaseEntry entry in entries)
+        {
+            string documentPath = RepositoryLayout.Combine($"docs/analyzers/{entry.Id}.md");
+            Assert.True(
+                File.Exists(documentPath),
+                $"Generator diagnostic '{entry.Id}' must have documentation at '{documentPath}'.");
+
+            string document = File.ReadAllText(documentPath);
+            Assert.True(
+                document.StartsWith($"# {entry.Id}:", StringComparison.Ordinal),
+                $"Generator diagnostic documentation '{documentPath}' must start with '# {entry.Id}:'.");
+            foreach (string heading in RequiredDocumentationHeadings)
+            {
+                Assert.Contains(heading, document, StringComparison.Ordinal);
+            }
+        }
+    }
+
+    private static void AssertGovernanceFiles(string projectRelativePath)
+    {
+        XDocument project = XDocument.Load(RepositoryLayout.Combine(projectRelativePath));
+
+        string[] additionalFiles = project.Descendants()
+            .Where(element => element.Name.LocalName == "AdditionalFiles")
+            .Select(element => (string?)element.Attribute("Include"))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Cast<string>()
+            .Select(static value => Path.GetFileName(value.Replace('\\', '/')))
+            .ToArray();
+
+        Assert.Contains("DiagnosticCategoryAndIdRanges.txt", additionalFiles);
+        Assert.Contains("AnalyzerReleases.Shipped.md", additionalFiles);
+        Assert.Contains("AnalyzerReleases.Unshipped.md", additionalFiles);
     }
 
     private static ImmutableArray<DiagnosticDescriptor> GetRegisteredDescriptors()

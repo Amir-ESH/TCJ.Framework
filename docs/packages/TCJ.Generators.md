@@ -16,6 +16,21 @@ Guid-backed IDs also expose explicit `New(IGuidGenerator)` and `NewVersion7(IGui
 
 Numeric parsing uses `NumberStyles.Integer` with `CultureInfo.InvariantCulture`; provider arguments are ignored so current culture cannot change wire behavior. Boundary values, zero, and negative values round-trip exactly; overflow fails according to the underlying BCL integer parsing contract.
 
+## Generator diagnostics
+
+Invalid Strong ID declarations are rejected with stable `TCJ.StrongTypes` compiler diagnostics instead of being silently skipped or producing partial generated output. Fatal diagnostics are errors, are reported at the declaration, conflicting member, or conflicting attribute that caused the problem, and do not prevent unrelated valid Strong IDs from generating.
+
+| ID | Contract |
+| --- | --- |
+| `TCJ4000` | The Strong ID declaration must be `partial`. |
+| `TCJ4001` | The declaration must use the supported top-level public/internal `readonly record struct` shape. |
+| `TCJ4002` | The backing type must be `Guid`, `int`, or `long`. |
+| `TCJ4003` | Strong ID declarations must be non-generic. |
+| `TCJ4004` | User members must not collide with generated constructor, value, parsing/formatting, conversion, creation-helper, persistence-helper, or JSON-converter API. |
+| `TCJ4005` | A declaration must have one unambiguous TCJ strong-type attribute contract. |
+
+Diagnostic ordering and generated hint names are deterministic. A fatal diagnostic on one declaration suppresses generation only for that declaration.
+
 ## System.Text.Json contract
 
 Strong IDs serialize as their backing scalar rather than as an object containing `Value`:

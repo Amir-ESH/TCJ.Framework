@@ -67,6 +67,18 @@
     href: analyzers/TCJ0004.md
   - name: TCJ2000 - Offset Paging Requires Deterministic Primary Ordering
     href: analyzers/TCJ2000.md
+  - name: TCJ4000 - Strong ID Declaration Must Be Partial
+    href: analyzers/TCJ4000.md
+  - name: TCJ4001 - Strong ID Declaration Has an Unsupported Shape
+    href: analyzers/TCJ4001.md
+  - name: TCJ4002 - Strong ID Backing Type Is Unsupported
+    href: analyzers/TCJ4002.md
+  - name: TCJ4003 - Generic Strong ID Declarations Are Unsupported
+    href: analyzers/TCJ4003.md
+  - name: TCJ4004 - Strong ID Member Conflicts with Generated API
+    href: analyzers/TCJ4004.md
+  - name: TCJ4005 - Strong Type Attributes Are Ambiguous
+    href: analyzers/TCJ4005.md
   - name: Code Coverage
     href: code-coverage.md
   - name: Mutation Testing

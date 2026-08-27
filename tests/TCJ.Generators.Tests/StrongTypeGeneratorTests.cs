@@ -1164,7 +1164,81 @@ public sealed class StrongTypeGeneratorTests
     }
 
     [Fact]
-    public void Generator_DoesNotGenerateUnsupportedNumericStrongIds()
+    public void Generator_ReportsNonPartialStrongIdDeclaration()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly record struct OrderId;
+            """);
+
+        var result = RunGenerator(compilation);
+
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4000", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Contains("OrderId", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static item => item.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Theory]
+    [InlineData("public partial record struct OrderId;")]
+    [InlineData("public readonly partial struct OrderId { }")]
+    [InlineData("public partial class OrderId { }")]
+    [InlineData("file readonly partial record struct OrderId;")]
+    public void Generator_ReportsUnsupportedStrongIdDeclarationShapes(string declaration)
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            $$"""
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            {{declaration}}
+            """);
+
+        var result = RunGenerator(compilation);
+
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4001", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Contains("OrderId", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+    }
+
+    [Fact]
+    public void Generator_ReportsNestedStrongIdAsUnsupportedShape()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            public static class Container
+            {
+                [StronglyTypedId<Guid>]
+                public readonly partial record struct OrderId;
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Equal("TCJ4001", Assert.Single(result.GeneratorDiagnostics).Id);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+    }
+
+    [Fact]
+    public void Generator_ReportsUnsupportedStrongIdBackingType()
     {
         var compilation = CreateCompilation(
             AttributeSource,
@@ -1177,13 +1251,17 @@ public sealed class StrongTypeGeneratorTests
 
         var result = RunGenerator(compilation);
 
-        Assert.Empty(result.GeneratorDiagnostics);
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4002", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Contains("decimal", diagnostic.GetMessage(), StringComparison.Ordinal);
         Assert.Empty(result.GeneratedSources);
-        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+        Assert.Null(result.GeneratorException);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static item => item.Severity == DiagnosticSeverity.Error));
     }
 
     [Fact]
-    public void Generator_DoesNotGenerateGenericStrongIdsBeforeDiagnosticsIssue()
+    public void Generator_ReportsGenericStrongIdDeclaration()
     {
         var compilation = CreateCompilation(
             AttributeSource,
@@ -1197,9 +1275,295 @@ public sealed class StrongTypeGeneratorTests
 
         var result = RunGenerator(compilation);
 
-        Assert.Empty(result.GeneratorDiagnostics);
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4003", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Contains("OrderId", diagnostic.GetMessage(), StringComparison.Ordinal);
         Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static item => item.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void Generator_ReportsEveryConflictingUserDefinedGeneratedApiMember()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.Identifiers;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId
+            {
+                public OrderId(Guid value) { Value = value; }
+                public Guid Value { get; }
+                public static OrderId Parse(string value) => default;
+                public static explicit operator OrderId(Guid value) => default;
+                public static OrderId New(IGuidGenerator generator) => default;
+                public static class StrongIdConversion { }
+                public sealed class StrongIdJsonConverter { }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Equal(7, result.GeneratorDiagnostics.Count);
+        Assert.All(result.GeneratorDiagnostics, static diagnostic =>
+        {
+            Assert.Equal("TCJ4004", diagnostic.Id);
+            Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+            Assert.True(diagnostic.Location.IsInSource);
+        });
+        Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.GetMessage().Contains("Value", StringComparison.Ordinal));
+        Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.GetMessage().Contains("Parse", StringComparison.Ordinal));
+        Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.GetMessage().Contains("operator", StringComparison.Ordinal));
+        Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.GetMessage().Contains("New", StringComparison.Ordinal));
+        Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.GetMessage().Contains("StrongIdConversion", StringComparison.Ordinal));
+        Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.GetMessage().Contains("StrongIdJsonConverter", StringComparison.Ordinal));
+        var collisionLocations = result.GeneratorDiagnostics.Select(GetDiagnosticLocationText).ToArray();
+        Assert.Contains("Value", collisionLocations);
+        Assert.Contains("Parse", collisionLocations);
+        Assert.Contains("StrongIdJsonConverter", collisionLocations);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
         Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void Generator_ReportsNonMethodMemberNamedLikeGeneratedMethod()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId
+            {
+                public static int Parse => 0;
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4004", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.True(diagnostic.Location.IsInSource);
+        Assert.Contains("Parse", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static item => item.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void Generator_ReportsRefOutSignatureCollision()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId
+            {
+                public static bool TryParse(string? value, ref OrderId result) => false;
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("TCJ4004", diagnostic.Id);
+        Assert.Contains("TryParse", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+        Assert.Empty(compilation.GetDiagnostics().Where(static item => item.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void Generator_AllowsNonConflictingUserDefinedOverloads()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId
+            {
+                public static OrderId Parse(int value) => default;
+                public static OrderId New() => default;
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Single(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void Generator_ReportsAmbiguousStrongIdAndValueObjectAttributesAtBothAttributes()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            [ValueObject<Guid>]
+            public readonly partial record struct OrderId;
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Equal(2, result.GeneratorDiagnostics.Count);
+        Assert.All(result.GeneratorDiagnostics, static diagnostic =>
+        {
+            Assert.Equal("TCJ4005", diagnostic.Id);
+            Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+            Assert.True(diagnostic.Location.IsInSource);
+        });
+        Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.GetMessage().Contains("StronglyTypedIdAttribute", StringComparison.Ordinal));
+        Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.GetMessage().Contains("ValueObjectAttribute", StringComparison.Ordinal));
+        var attributeLocations = result.GeneratorDiagnostics.Select(GetDiagnosticLocationText).ToArray();
+        Assert.Contains(attributeLocations, static text => text.Contains("StronglyTypedId<Guid>", StringComparison.Ordinal));
+        Assert.Contains(attributeLocations, static text => text.Contains("ValueObject<Guid>", StringComparison.Ordinal));
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void Generator_ReportsDuplicateStrongIdAttributesAtEachAttribute()
+    {
+        var compilation = CreateCompilation(
+            RepeatableStrongIdAttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId;
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Equal(2, result.GeneratorDiagnostics.Count);
+        Assert.All(result.GeneratorDiagnostics, static diagnostic => Assert.Equal("TCJ4005", diagnostic.Id));
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void Generator_DeduplicatesDuplicateAttributeDiagnosticsAcrossPartialDeclarations()
+    {
+        var compilation = CreateCompilation(
+            RepeatableStrongIdAttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId;
+            """,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId;
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Equal(2, result.GeneratorDiagnostics.Count);
+        Assert.All(result.GeneratorDiagnostics, static diagnostic => Assert.Equal("TCJ4005", diagnostic.Id));
+        Assert.Empty(result.GeneratedSources);
+        Assert.Null(result.GeneratorException);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void InvalidStrongId_DoesNotBlockValidUnrelatedStrongIdOrChangeItsHintName()
+    {
+        var validOnly = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            namespace Sales;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId;
+            """);
+        var withInvalid = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            namespace Sales;
+
+            [StronglyTypedId<Guid>]
+            public readonly record struct BrokenId;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId;
+            """);
+
+        var validResult = RunGenerator(validOnly);
+        var mixedResult = RunGenerator(withInvalid);
+
+        Assert.Empty(validResult.GeneratorDiagnostics);
+        Assert.Equal("TCJ4000", Assert.Single(mixedResult.GeneratorDiagnostics).Id);
+        var validSource = Assert.Single(validResult.GeneratedSources);
+        var mixedSource = Assert.Single(mixedResult.GeneratedSources);
+        Assert.Equal(validSource.HintName, mixedSource.HintName);
+        Assert.Equal(validSource.Source, mixedSource.Source);
+        Assert.Equal("TCJ.StronglyTypedId.Sales.OrderId.g.cs", mixedSource.HintName);
+        Assert.Null(mixedResult.GeneratorException);
+    }
+
+    [Fact]
+    public void Generator_DiagnosticOrdering_IsDeterministicAcrossInvalidTypes()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<decimal>]
+            public readonly partial record struct ZuluId;
+
+            [StronglyTypedId<Guid>]
+            public readonly record struct AlphaId;
+            """);
+
+        var first = RunGenerator(compilation);
+        var second = RunGenerator(compilation);
+
+        Assert.Equal(
+            first.GeneratorDiagnostics.Select(static diagnostic => (diagnostic.Id, diagnostic.GetMessage())),
+            second.GeneratorDiagnostics.Select(static diagnostic => (diagnostic.Id, diagnostic.GetMessage())));
+        Assert.Equal(new[] { "TCJ4000", "TCJ4002" }, first.GeneratorDiagnostics.Select(static diagnostic => diagnostic.Id));
+        Assert.Contains("AlphaId", first.GeneratorDiagnostics[0].GetMessage(), StringComparison.Ordinal);
+        Assert.Contains("ZuluId", first.GeneratorDiagnostics[1].GetMessage(), StringComparison.Ordinal);
+        Assert.Null(first.GeneratorException);
+        Assert.Null(second.GeneratorException);
     }
 
     [Fact]
@@ -1399,6 +1763,13 @@ public sealed class StrongTypeGeneratorTests
         }
     }
 
+    private static string GetDiagnosticLocationText(Diagnostic diagnostic)
+    {
+        Assert.True(diagnostic.Location.IsInSource);
+        var sourceTree = Assert.IsAssignableFrom<SyntaxTree>(diagnostic.Location.SourceTree);
+        return sourceTree.GetText().ToString(diagnostic.Location.SourceSpan);
+    }
+
     private static GeneratorResult RunGenerator(CSharpCompilation compilation)
     {
         GeneratorDriver driver = CSharpGeneratorDriver.Create(new StrongTypeGenerator());
@@ -1416,10 +1787,13 @@ public sealed class StrongTypeGeneratorTests
             .OrderBy(static source => source.HintName, StringComparer.Ordinal)
             .ToArray();
 
+        var generatorException = Assert.Single(runResult.Results).Exception;
+
         return new GeneratorResult(
             diagnostics,
             generatedSources,
-            (CSharpCompilation)outputCompilation);
+            (CSharpCompilation)outputCompilation,
+            generatorException);
     }
 
     private static CSharpCompilation CreateCompilation(params string[] sources)
@@ -1459,13 +1833,29 @@ public sealed class StrongTypeGeneratorTests
     private sealed record GeneratorResult(
         IReadOnlyList<Diagnostic> GeneratorDiagnostics,
         IReadOnlyList<GeneratedSource> GeneratedSources,
-        CSharpCompilation OutputCompilation);
+        CSharpCompilation OutputCompilation,
+        Exception? GeneratorException);
 
     private const string AttributeSource =
         """
         namespace TCJ.Core.StrongTypes;
 
-        [System.AttributeUsage(System.AttributeTargets.Struct)]
+        [System.AttributeUsage(System.AttributeTargets.Struct | System.AttributeTargets.Class)]
+        public sealed class StronglyTypedIdAttribute<T> : System.Attribute
+        {
+        }
+
+        [System.AttributeUsage(System.AttributeTargets.Struct | System.AttributeTargets.Class)]
+        public sealed class ValueObjectAttribute<T> : System.Attribute
+        {
+        }
+        """;
+
+    private const string RepeatableStrongIdAttributeSource =
+        """
+        namespace TCJ.Core.StrongTypes;
+
+        [System.AttributeUsage(System.AttributeTargets.Struct | System.AttributeTargets.Class, AllowMultiple = true)]
         public sealed class StronglyTypedIdAttribute<T> : System.Attribute
         {
         }

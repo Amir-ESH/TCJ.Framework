@@ -68,8 +68,15 @@ trim_trailing_whitespace = false
 [src/TCJ.Core/DomainEvents/IDomainEventHandler.cs]
 dotnet_diagnostic.CA1711.severity = none
 
-# TCJ analyzer diagnostic governance
+# TCJ analyzer and generator diagnostic governance
 [src/TCJ.Analyzers/**.cs]
+dotnet_diagnostic.RS1018.severity = error
+dotnet_diagnostic.RS1019.severity = error
+dotnet_diagnostic.RS1020.severity = error
+dotnet_diagnostic.RS1021.severity = error
+dotnet_analyzer_diagnostic.category-MicrosoftCodeAnalysisReleaseTracking.severity = error
+
+[src/TCJ.Generators/**.cs]
 dotnet_diagnostic.RS1018.severity = error
 dotnet_diagnostic.RS1019.severity = error
 dotnet_diagnostic.RS1020.severity = error
