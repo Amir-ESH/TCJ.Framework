@@ -197,24 +197,93 @@ The generated `TryParse`/parsing contracts make supported Strong IDs friendly to
 
 ## Primitive-backed Value Objects
 
-Value Objects are immutable generated record structs backed by a single primitive value with explicit validation.
+Value Objects are immutable generated record structs backed by a single primitive value with explicit application-owned validation. The v1 generator supports `string`, `Guid`, `int`, `long`, and `decimal` backing types.
 
-Supported v1 backing types:
+A Value Object declaration must be a top-level public or internal `readonly partial record struct` and must provide exactly one static `Result Validate(TValue value)` method. TCJ generates an immutable `Value` property, `IsDefault`, a private backing-value constructor, and `Create(TValue)` returning `Result<TValueObject>`. TCJ never invents domain validation rules.
 
-- `string`
-- `Guid`
-- `int`
-- `long`
-- `decimal`
+`Create` calls `Validate` before construction. When validation fails, the generated result preserves every original `ResultError` instance in order. Successful values use normal record-struct equality. The unavoidable `default(TValueObject)` state remains possible for structs and is explicitly observable with `IsDefault`.
+
+### Complete EmailAddress example
+
+```csharp
+using System.Collections.Generic;
+using TCJ.Core.Results;
+using TCJ.Core.StrongTypes;
+
+[ValueObject<string>]
+public readonly partial record struct EmailAddress
+{
+    private static Result Validate(string value)
+    {
+        var errors = new List<ResultError>();
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            errors.Add(new ResultError("email.required", "Email is required."));
+        }
+
+        if (!string.IsNullOrWhiteSpace(value) && !value.Contains('@'))
+        {
+            errors.Add(new ResultError("email.format", "Email must contain an '@' character."));
+        }
+
+        return errors.Count == 0
+            ? Result.Success()
+            : Result.Failure(errors);
+    }
+}
+
+Result<EmailAddress> emailResult = EmailAddress.Create("customer@example.com");
+
+if (emailResult.IsSuccess)
+{
+    EmailAddress email = emailResult.Value;
+    string underlying = email.Value;
+    bool isDefault = email.IsDefault; // false
+}
+
+Result<EmailAddress> invalid = EmailAddress.Create("");
+IReadOnlyList<ResultError> errors = invalid.Errors;
+```
+
+The generated `EmailAddress(string)` constructor is private. Normal non-default creation therefore goes through `EmailAddress.Create(...)`; `default(EmailAddress)` remains possible by normal CLR struct semantics and reports `IsDefault == true`.
+
+### Complete numeric Value Object example
+
+```csharp
+using TCJ.Core.Results;
+using TCJ.Core.StrongTypes;
+
+[ValueObject<decimal>]
+public readonly partial record struct MoneyAmount
+{
+    private static Result Validate(decimal value)
+        => value < 0m
+            ? Result.Failure(new ResultError(
+                "money.negative",
+                "Money amount cannot be negative."))
+            : Result.Success();
+}
+
+Result<MoneyAmount> amountResult = MoneyAmount.Create(125.50m);
+MoneyAmount amount = amountResult.Value;
+decimal underlying = amount.Value;
+
+Result<MoneyAmount> rejected = MoneyAmount.Create(-1m);
+bool failed = rejected.IsFailure; // true
+```
+
+The same generation contract applies to `Guid`, `int`, and `long` backing types. Primitive conversions are not generated implicitly, and Value Object v1 does not add parsing, JSON, EF Core, or arbitrary composite-object behavior.
 
 Composite multi-field value objects are not generated; consumers should use normal records for those cases.
 
 ## Examples
 
-Planned and implemented strong-type examples include:
+Implemented strong-type examples include:
 
-- `OrderId` as a Guid-backed strongly typed ID
-- `EmailAddress` as a primitive-backed Value Object
+- `OrderId` as a Guid-backed strongly typed ID.
+- `EmailAddress` as a validated string-backed Value Object.
+- `MoneyAmount` as a validated decimal-backed Value Object.
 
 ## Package ownership
 

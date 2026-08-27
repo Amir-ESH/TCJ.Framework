@@ -10,6 +10,8 @@ internal static class StrongTypeDiagnostics
     internal const string GenericDeclarationDiagnosticId = "TCJ4003";
     internal const string GeneratedMemberCollisionDiagnosticId = "TCJ4004";
     internal const string AmbiguousAttributesDiagnosticId = "TCJ4005";
+    internal const string InvalidValueObjectDeclarationDiagnosticId = "TCJ4006";
+    internal const string ValueObjectGeneratedMemberCollisionDiagnosticId = "TCJ4007";
 
     private const string Category = "TCJ.StrongTypes";
 
@@ -72,4 +74,24 @@ internal static class StrongTypeDiagnostics
         isEnabledByDefault: true,
         description:
             "A declaration must select one unambiguous TCJ strong-type generation contract.");
+
+    internal static readonly DiagnosticDescriptor InvalidValueObjectDeclaration = new(
+        InvalidValueObjectDeclarationDiagnosticId,
+        "Value Object declaration is invalid",
+        "Value Object '{0}' cannot be generated because {1}",
+        Category,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description:
+            "TCJ Value Objects must use the supported readonly partial record struct shape, a supported primitive backing type, and exactly one application-defined static Result Validate(TValue value) method.");
+
+    internal static readonly DiagnosticDescriptor ValueObjectGeneratedMemberCollision = new(
+        ValueObjectGeneratedMemberCollisionDiagnosticId,
+        "Value Object member conflicts with generated API",
+        "Member '{0}' on Value Object '{1}' conflicts with the generated Value Object API",
+        Category,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description:
+            "TCJ reserves generated Value Object member names and constructors so Create remains the normal validated construction path.");
 }

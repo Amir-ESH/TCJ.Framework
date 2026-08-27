@@ -11,3 +11,5 @@ TCJ4002 | TCJ.StrongTypes | Error | Reports Strong ID backing types other than G
 TCJ4003 | TCJ.StrongTypes | Error | Reports generic Strong ID declarations.
 TCJ4004 | TCJ.StrongTypes | Error | Reports user-defined members that collide with generated Strong ID API members.
 TCJ4005 | TCJ.StrongTypes | Error | Reports duplicate or ambiguous TCJ strong-type attributes on one declaration.
+TCJ4006 | TCJ.StrongTypes | Error | Reports invalid primitive Value Object declarations, backing types, or Validate signatures.
+TCJ4007 | TCJ.StrongTypes | Error | Reports user-defined constructors or members that collide with the generated Value Object API.

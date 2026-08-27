@@ -16,6 +16,12 @@ Guid-backed IDs also expose explicit `New(IGuidGenerator)` and `NewVersion7(IGui
 
 Numeric parsing uses `NumberStyles.Integer` with `CultureInfo.InvariantCulture`; provider arguments are ignored so current culture cannot change wire behavior. Boundary values, zero, and negative values round-trip exactly; overflow fails according to the underlying BCL integer parsing contract.
 
+## Primitive Value Objects
+
+`[ValueObject<TValue>]` supports `string`, `Guid`, `int`, `long`, and `decimal` on top-level public/internal `readonly partial record struct` declarations. The application must provide exactly one static `TCJ.Core.Results.Result Validate(TValue value)` method. Generated members are an immutable `Value` property, deterministic `IsDefault`, and `Create(TValue)` returning `Result<TValueObject>`. The backing-value constructor is private so the normal non-default construction path validates first. Failed validation preserves all original `ResultError` instances and ordering.
+
+Value Object generation does not add domain rules, implicit primitive conversions, reflection-based equality, or composite multi-property behavior.
+
 ## System.Text.Json contract
 
 Strong IDs serialize as their backing scalar rather than as an object containing `Value`:
