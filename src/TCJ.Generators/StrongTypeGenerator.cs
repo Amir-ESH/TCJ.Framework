@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -20,16 +23,39 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
     {
         var strongIdCandidates = context.SyntaxProvider.ForAttributeWithMetadataName(
             StrongIdAttribute,
-            static (node, _) => node is RecordDeclarationSyntax or StructDeclarationSyntax or ClassDeclarationSyntax,
-            static (ctx, _) => CreateStrongIdModel(ctx));
+            static (node, _) => node is TypeDeclarationSyntax,
+            static (ctx, cancellationToken) => AnalyzeStrongId(ctx, cancellationToken));
 
         var supportedStrongIds = strongIdCandidates
-            .Where(static candidate => candidate is not null && candidate.IsSupportedBacking && candidate.IsSupportedDeclaration)
-            .Select(static (candidate, _) => candidate!);
+            .Where(static candidate => candidate is not null && candidate.CanGenerate)
+            .Select(static (candidate, _) => candidate!.Model!);
 
         context.RegisterSourceOutput(supportedStrongIds, static (spc, candidate) =>
         {
             spc.AddSource(candidate.HintName, GenerateStrongId(candidate));
+        });
+
+        var diagnosticCandidates = strongIdCandidates
+            .Where(static candidate => candidate is not null && candidate.Diagnostics.Length > 0)
+            .Select(static (candidate, _) => candidate!)
+            .Collect();
+
+        context.RegisterSourceOutput(diagnosticCandidates, static (spc, candidates) =>
+        {
+            foreach (var candidate in candidates
+                .GroupBy(static candidate => candidate.SortKey, StringComparer.Ordinal)
+                .OrderBy(static group => group.Key, StringComparer.Ordinal)
+                .Select(static group => group.First()))
+            {
+                foreach (var diagnostic in candidate.Diagnostics
+                    .OrderBy(static diagnostic => diagnostic.SourceTreeOrdinal)
+                    .ThenBy(static diagnostic => diagnostic.Location.SourceSpan.Start)
+                    .ThenBy(static diagnostic => diagnostic.Descriptor.Id, StringComparer.Ordinal)
+                    .ThenBy(static diagnostic => diagnostic.MessageSortKey, StringComparer.Ordinal))
+                {
+                    spc.ReportDiagnostic(diagnostic.CreateDiagnostic());
+                }
+            }
         });
 
         var valueObjectCandidates = context.SyntaxProvider.ForAttributeWithMetadataName(
@@ -47,20 +73,51 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         });
     }
 
-    private static StrongIdModel? CreateStrongIdModel(GeneratorAttributeSyntaxContext context)
+    private static StrongIdCandidate? AnalyzeStrongId(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
     {
-        if (context.TargetSymbol is not INamedTypeSymbol symbol || context.TargetNode is not RecordDeclarationSyntax declaration)
+        if (context.TargetSymbol is not INamedTypeSymbol symbol || context.TargetNode is not TypeDeclarationSyntax declaration)
         {
             return null;
         }
 
-        var attributeClass = context.Attributes.FirstOrDefault()?.AttributeClass;
-        if (attributeClass is null || attributeClass.TypeArguments.Length != 1)
+        var diagnostics = new List<StrongIdDiagnostic>();
+        var declarationLocation = declaration.Identifier.GetLocation();
+        var compilation = context.SemanticModel.Compilation;
+        var strongIdAttributes = symbol.GetAttributes()
+            .Where(static attribute => IsAttribute(attribute, StrongIdAttribute))
+            .ToArray();
+        var valueObjectAttributes = symbol.GetAttributes()
+            .Where(static attribute => IsAttribute(attribute, ValueObjectAttribute))
+            .ToArray();
+
+        if (strongIdAttributes.Length != 1 || valueObjectAttributes.Length != 0)
         {
-            return null;
+            foreach (var attribute in strongIdAttributes.Concat(valueObjectAttributes)
+                .OrderBy(static attribute => attribute.ApplicationSyntaxReference?.Span.Start ?? int.MaxValue))
+            {
+                var attributeName = attribute.AttributeClass?.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+                    ?? "unknown";
+                diagnostics.Add(new StrongIdDiagnostic(
+                    compilation,
+                    StrongTypeDiagnostics.AmbiguousAttributes,
+                    GetAttributeLocation(attribute, declarationLocation, cancellationToken),
+                    attributeName,
+                    symbol.Name));
+            }
+
+            return new StrongIdCandidate(
+                symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                null,
+                diagnostics.ToImmutableArray());
         }
 
-        var backingTypeSymbol = attributeClass.TypeArguments[0];
+        var strongIdAttribute = strongIdAttributes[0];
+        if (strongIdAttribute?.AttributeClass is null || strongIdAttribute.AttributeClass.TypeArguments.Length != 1)
+        {
+            return new StrongIdCandidate(symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), null, diagnostics.ToImmutableArray());
+        }
+
+        var backingTypeSymbol = strongIdAttribute.AttributeClass.TypeArguments[0];
         var backingType = backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var backingKind = backingTypeSymbol.SpecialType switch
         {
@@ -69,26 +126,247 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             _ when string.Equals(backingType, GuidTypeName, StringComparison.Ordinal) => StrongIdBackingKind.Guid,
             _ => StrongIdBackingKind.Unsupported
         };
+
         var isPartial = declaration.Modifiers.Any(static modifier => modifier.IsKind(SyntaxKind.PartialKeyword));
         var isReadOnly = declaration.Modifiers.Any(static modifier => modifier.IsKind(SyntaxKind.ReadOnlyKeyword));
-        var isRecordStruct = declaration.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword);
+        var isRecordStruct = declaration is RecordDeclarationSyntax recordDeclaration
+            && recordDeclaration.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword);
         var isTopLevel = symbol.ContainingType is null;
         var isNonGeneric = symbol.TypeParameters.Length == 0;
-        var isSupportedAccessibility = symbol.DeclaredAccessibility is Accessibility.Public or Accessibility.Internal;
+        var isFileLocal = declaration.Modifiers.Any(static modifier => modifier.IsKind(SyntaxKind.FileKeyword));
+        var isSupportedAccessibility = !isFileLocal
+            && symbol.DeclaredAccessibility is Accessibility.Public or Accessibility.Internal;
+
+        if (!isPartial)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.NonPartial,
+                declarationLocation,
+                symbol.Name));
+        }
+
+        if (!isRecordStruct || !isReadOnly || !isTopLevel || !isSupportedAccessibility)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.UnsupportedShape,
+                declarationLocation,
+                symbol.Name));
+        }
+
+        if (!isNonGeneric)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.GenericDeclaration,
+                declarationLocation,
+                symbol.Name));
+        }
+
+        if (backingKind == StrongIdBackingKind.Unsupported)
+        {
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.UnsupportedBackingType,
+                GetAttributeLocation(strongIdAttribute, declarationLocation, cancellationToken),
+                symbol.Name,
+                backingTypeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+        }
+
+        if (backingKind != StrongIdBackingKind.Unsupported && isRecordStruct && isTopLevel && isNonGeneric && isSupportedAccessibility)
+        {
+            AddGeneratedMemberCollisionDiagnostics(
+                diagnostics,
+                symbol,
+                backingTypeSymbol,
+                backingKind,
+                compilation);
+        }
+
         var namespaceName = symbol.ContainingNamespace.IsGlobalNamespace
             ? null
             : symbol.ContainingNamespace.ToDisplayString();
         var accessibility = symbol.DeclaredAccessibility == Accessibility.Public ? "public" : "internal";
         var typeName = EscapeIdentifier(symbol.Name);
         var qualifiedName = namespaceName is null ? symbol.Name : namespaceName + "." + symbol.Name;
-
-        return new StrongIdModel(
+        var model = new StrongIdModel(
             namespaceName,
             accessibility,
             typeName,
             $"TCJ.StronglyTypedId.{qualifiedName}.g.cs",
-            backingKind,
-            isRecordStruct && isPartial && isReadOnly && isTopLevel && isNonGeneric && isSupportedAccessibility);
+            backingKind);
+
+        return new StrongIdCandidate(
+            symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            model,
+            diagnostics.ToImmutableArray());
+    }
+
+    private static bool IsAttribute(AttributeData attribute, string metadataName)
+    {
+        var attributeClass = attribute.AttributeClass?.OriginalDefinition;
+        if (attributeClass is null)
+        {
+            return false;
+        }
+
+        var namespaceName = attributeClass.ContainingNamespace.IsGlobalNamespace
+            ? string.Empty
+            : attributeClass.ContainingNamespace.ToDisplayString() + ".";
+        return string.Equals(namespaceName + attributeClass.MetadataName, metadataName, StringComparison.Ordinal);
+    }
+
+    private static Location GetAttributeLocation(
+        AttributeData attribute,
+        Location fallback,
+        CancellationToken cancellationToken)
+    {
+        return attribute.ApplicationSyntaxReference?.GetSyntax(cancellationToken).GetLocation() ?? fallback;
+    }
+
+    private static void AddGeneratedMemberCollisionDiagnostics(
+        List<StrongIdDiagnostic> diagnostics,
+        INamedTypeSymbol strongId,
+        ITypeSymbol backingType,
+        StrongIdBackingKind backingKind,
+        Compilation compilation)
+    {
+        foreach (var member in strongId.GetMembers()
+            .Where(static member => !member.IsImplicitlyDeclared && member.Locations.Any(static location => location.IsInSource))
+            .OrderBy(static member => member.Locations.First(static location => location.IsInSource).SourceSpan.Start)
+            .ThenBy(static member => member.Name, StringComparer.Ordinal))
+        {
+            if (!ConflictsWithGeneratedApi(member, strongId, backingType, backingKind, compilation))
+            {
+                continue;
+            }
+
+            diagnostics.Add(new StrongIdDiagnostic(
+                compilation,
+                StrongTypeDiagnostics.GeneratedMemberCollision,
+                member.Locations.First(static location => location.IsInSource),
+                member.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+                strongId.Name));
+        }
+    }
+
+    private static bool ConflictsWithGeneratedApi(
+        ISymbol member,
+        INamedTypeSymbol strongId,
+        ITypeSymbol backingType,
+        StrongIdBackingKind backingKind,
+        Compilation compilation)
+    {
+        if (member.Name is "Value" or "IsDefault" or "StrongIdConversion" or "StrongIdJsonConverter")
+        {
+            return true;
+        }
+
+        if (member is not IMethodSymbol method)
+        {
+            return member.Name is "Parse" or "TryParse" or "ToString" or "TryFormat"
+                || (backingKind == StrongIdBackingKind.Guid
+                    && (string.Equals(member.Name, "New", StringComparison.Ordinal)
+                        || string.Equals(member.Name, "NewVersion7", StringComparison.Ordinal)));
+        }
+
+        if (method.MethodKind == MethodKind.Constructor)
+        {
+            return MatchesParameters(method, new[] { backingType }, new[] { RefKind.None });
+        }
+
+        if (method.MethodKind == MethodKind.Conversion && method.Parameters.Length == 1)
+        {
+            return (AreSameType(method.Parameters[0].Type, backingType) && AreSameType(method.ReturnType, strongId))
+                || (AreSameType(method.Parameters[0].Type, strongId) && AreSameType(method.ReturnType, backingType));
+        }
+
+        if (method.MethodKind != MethodKind.Ordinary || method.Arity != 0)
+        {
+            return false;
+        }
+
+        var stringType = compilation.GetSpecialType(SpecialType.System_String);
+        var charType = compilation.GetSpecialType(SpecialType.System_Char);
+        var intType = compilation.GetSpecialType(SpecialType.System_Int32);
+        var formatProviderType = compilation.GetTypeByMetadataName("System.IFormatProvider");
+        var readOnlySpanDefinition = compilation.GetTypeByMetadataName("System.ReadOnlySpan`1");
+        var spanDefinition = compilation.GetTypeByMetadataName("System.Span`1");
+        var readOnlySpanOfChar = readOnlySpanDefinition?.Construct(charType);
+        var spanOfChar = spanDefinition?.Construct(charType);
+
+        if (MatchesMethod(method, "Parse", new ITypeSymbol?[] { stringType }, new[] { RefKind.None })
+            || MatchesMethod(method, "Parse", new ITypeSymbol?[] { stringType, formatProviderType }, new[] { RefKind.None, RefKind.None })
+            || MatchesMethod(method, "Parse", new ITypeSymbol?[] { readOnlySpanOfChar }, new[] { RefKind.None })
+            || MatchesMethod(method, "Parse", new ITypeSymbol?[] { readOnlySpanOfChar, formatProviderType }, new[] { RefKind.None, RefKind.None })
+            || MatchesMethod(method, "TryParse", new ITypeSymbol?[] { stringType, strongId }, new[] { RefKind.None, RefKind.Out })
+            || MatchesMethod(method, "TryParse", new ITypeSymbol?[] { stringType, formatProviderType, strongId }, new[] { RefKind.None, RefKind.None, RefKind.Out })
+            || MatchesMethod(method, "TryParse", new ITypeSymbol?[] { readOnlySpanOfChar, strongId }, new[] { RefKind.None, RefKind.Out })
+            || MatchesMethod(method, "TryParse", new ITypeSymbol?[] { readOnlySpanOfChar, formatProviderType, strongId }, new[] { RefKind.None, RefKind.None, RefKind.Out })
+            || MatchesMethod(method, "ToString", Array.Empty<ITypeSymbol?>(), Array.Empty<RefKind>())
+            || MatchesMethod(method, "ToString", new ITypeSymbol?[] { stringType, formatProviderType }, new[] { RefKind.None, RefKind.None })
+            || MatchesMethod(method, "TryFormat", new ITypeSymbol?[] { spanOfChar, intType, readOnlySpanOfChar, formatProviderType }, new[] { RefKind.None, RefKind.Out, RefKind.None, RefKind.None }))
+        {
+            return true;
+        }
+
+        if (backingKind != StrongIdBackingKind.Guid)
+        {
+            return false;
+        }
+
+        var guidGeneratorType = compilation.GetTypeByMetadataName("TCJ.Core.Identifiers.IGuidGenerator");
+        return MatchesMethod(method, "New", new ITypeSymbol?[] { guidGeneratorType }, new[] { RefKind.None })
+            || MatchesMethod(method, "NewVersion7", new ITypeSymbol?[] { guidGeneratorType }, new[] { RefKind.None });
+    }
+
+    private static bool MatchesMethod(
+        IMethodSymbol method,
+        string name,
+        ITypeSymbol?[] parameterTypes,
+        RefKind[] refKinds)
+    {
+        return string.Equals(method.Name, name, StringComparison.Ordinal)
+            && MatchesParameters(method, parameterTypes, refKinds);
+    }
+
+    private static bool MatchesParameters(
+        IMethodSymbol method,
+        ITypeSymbol?[] parameterTypes,
+        RefKind[] refKinds)
+    {
+        if (method.Parameters.Length != parameterTypes.Length || parameterTypes.Length != refKinds.Length)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < parameterTypes.Length; index++)
+        {
+            if (parameterTypes[index] is null
+                || !AreEquivalentParameterRefKinds(method.Parameters[index].RefKind, refKinds[index])
+                || !AreSameType(method.Parameters[index].Type, parameterTypes[index]!))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AreEquivalentParameterRefKinds(RefKind userRefKind, RefKind generatedRefKind)
+    {
+        if (generatedRefKind == RefKind.None)
+        {
+            return userRefKind == RefKind.None;
+        }
+
+        return userRefKind != RefKind.None;
+    }
+
+    private static bool AreSameType(ITypeSymbol left, ITypeSymbol right)
+    {
+        return SymbolEqualityComparer.Default.Equals(left, right);
     }
 
     private static string GenerateStrongId(StrongIdModel model)
@@ -790,6 +1068,79 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             : identifier;
     }
 
+    private sealed class StrongIdCandidate
+    {
+        public StrongIdCandidate(
+            string sortKey,
+            StrongIdModel? model,
+            ImmutableArray<StrongIdDiagnostic> diagnostics)
+        {
+            SortKey = sortKey;
+            Model = model;
+            Diagnostics = diagnostics;
+        }
+
+        public string SortKey { get; }
+
+        public StrongIdModel? Model { get; }
+
+        public ImmutableArray<StrongIdDiagnostic> Diagnostics { get; }
+
+        public bool CanGenerate => Model is not null && Diagnostics.Length == 0;
+    }
+
+    private sealed class StrongIdDiagnostic
+    {
+        private readonly object[] _messageArguments;
+
+        public StrongIdDiagnostic(
+            Compilation compilation,
+            DiagnosticDescriptor descriptor,
+            Location location,
+            params object[] messageArguments)
+        {
+            Descriptor = descriptor;
+            Location = location;
+            SourceTreeOrdinal = GetSourceTreeOrdinal(compilation, location.SourceTree);
+            _messageArguments = messageArguments;
+            MessageSortKey = string.Join("|", messageArguments.Select(static argument => argument?.ToString() ?? string.Empty));
+        }
+
+        public DiagnosticDescriptor Descriptor { get; }
+
+        public Location Location { get; }
+
+        public int SourceTreeOrdinal { get; }
+
+        public string MessageSortKey { get; }
+
+        private static int GetSourceTreeOrdinal(Compilation compilation, SyntaxTree? sourceTree)
+        {
+            if (sourceTree is null)
+            {
+                return int.MaxValue;
+            }
+
+            var ordinal = 0;
+            foreach (var syntaxTree in compilation.SyntaxTrees)
+            {
+                if (ReferenceEquals(syntaxTree, sourceTree))
+                {
+                    return ordinal;
+                }
+
+                ordinal++;
+            }
+
+            return int.MaxValue;
+        }
+
+        public Diagnostic CreateDiagnostic()
+        {
+            return Diagnostic.Create(Descriptor, Location, _messageArguments);
+        }
+    }
+
     private sealed class StrongIdModel : IEquatable<StrongIdModel>
     {
         public StrongIdModel(
@@ -797,15 +1148,13 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             string accessibility,
             string typeName,
             string hintName,
-            StrongIdBackingKind backingKind,
-            bool isSupportedDeclaration)
+            StrongIdBackingKind backingKind)
         {
             NamespaceName = namespaceName;
             Accessibility = accessibility;
             TypeName = typeName;
             HintName = hintName;
             BackingKind = backingKind;
-            IsSupportedDeclaration = isSupportedDeclaration;
         }
 
         public string? NamespaceName { get; }
@@ -818,10 +1167,6 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
         public StrongIdBackingKind BackingKind { get; }
 
-        public bool IsSupportedBacking => BackingKind != StrongIdBackingKind.Unsupported;
-
-        public bool IsSupportedDeclaration { get; }
-
         public bool Equals(StrongIdModel? other)
         {
             return other is not null &&
@@ -829,8 +1174,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
                    string.Equals(Accessibility, other.Accessibility, StringComparison.Ordinal) &&
                    string.Equals(TypeName, other.TypeName, StringComparison.Ordinal) &&
                    string.Equals(HintName, other.HintName, StringComparison.Ordinal) &&
-                   BackingKind == other.BackingKind &&
-                   IsSupportedDeclaration == other.IsSupportedDeclaration;
+                   BackingKind == other.BackingKind;
         }
 
         public override bool Equals(object? obj)
@@ -848,7 +1192,6 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
                 hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(TypeName);
                 hashCode = (hashCode * 31) + StringComparer.Ordinal.GetHashCode(HintName);
                 hashCode = (hashCode * 31) + BackingKind.GetHashCode();
-                hashCode = (hashCode * 31) + IsSupportedDeclaration.GetHashCode();
                 return hashCode;
             }
         }

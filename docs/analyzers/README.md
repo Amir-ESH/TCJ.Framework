@@ -1,12 +1,12 @@
-# TCJ analyzer diagnostic governance
+# TCJ analyzer and generator diagnostic governance
 
-TCJ analyzer diagnostic IDs are public compatibility identifiers. Consumers can configure severity and suppressions by ID, so an ID that has shipped must never be renamed, renumbered, or reused for a different meaning.
+TCJ analyzer and source-generator diagnostic IDs are public compatibility identifiers. Consumers can configure severity and suppressions by ID, so an ID that has shipped must never be renamed, renumbered, or reused for a different meaning.
 
 This governance applies before the first TCJ diagnostic is introduced. A diagnostic is not ready to merge or ship unless its ID, category, default severity, release metadata, documentation, and code-fix policy satisfy the rules below.
 
 ## Diagnostic ID namespace and category ranges
 
-All analyzer diagnostics use the `TCJxxxx` namespace with exactly four decimal digits. `TCJ0000` is intentionally not allocated.
+All TCJ analyzer and generator diagnostics use the `TCJxxxx` namespace with exactly four decimal digits. `TCJ0000` is intentionally not allocated.
 
 | Category | Diagnostic category string | Allocated IDs | Intended rules |
 | --- | --- | --- | --- |
@@ -18,15 +18,15 @@ All analyzer diagnostics use the `TCJxxxx` namespace with exactly four decimal d
 
 `TCJ5000`-`TCJ9999` are reserved for future categories. Do not allocate from the reserved range without an explicit governance change that defines the category first.
 
-The machine-readable source for the allocated category ranges is `src/TCJ.Analyzers/DiagnosticCategoryAndIdRanges.txt`. The analyzer project supplies that file to `Microsoft.CodeAnalysis.Analyzers`, and repository `.editorconfig` settings promote the relevant Roslyn governance diagnostics to build errors.
+The machine-readable source for the allocated category ranges is `src/TCJ.Analyzers/DiagnosticCategoryAndIdRanges.txt`. Both the analyzer and generator projects supply that shared file to `Microsoft.CodeAnalysis.Analyzers`, and repository `.editorconfig` settings promote the relevant Roslyn governance diagnostics to build errors.
 
 ## ID stability rules
 
 - Allocate the next available ID from the rule's category range. Do not choose IDs for visual grouping inside a range.
 - Never reuse a shipped ID, even after its original rule is removed.
 - Never change the meaning of a shipped ID to avoid allocating a new one.
-- A category change for an existing rule is a compatibility event and must be recorded in analyzer release tracking.
-- A diagnostic ID must be unique across the entire `TCJ.Analyzers` assembly, not only inside one analyzer type.
+- A category change for an existing rule is a compatibility event and must be recorded in release tracking.
+- A diagnostic ID must be unique across the TCJ analyzer and generator assemblies, not only inside one analyzer type or project.
 
 ## Default severity rules
 
@@ -68,24 +68,24 @@ Do not offer a code fix when remediation requires choosing domain semantics, mov
 
 ## Release tracking
 
-`src/TCJ.Analyzers/AnalyzerReleases.Unshipped.md` tracks diagnostic metadata that has not shipped. `src/TCJ.Analyzers/AnalyzerReleases.Shipped.md` is the immutable historical record of released diagnostics.
+`src/TCJ.Analyzers/AnalyzerReleases.*.md` tracks analyzer diagnostics and `src/TCJ.Generators/AnalyzerReleases.*.md` tracks source-generator diagnostics. Each project build-enforces its release metadata, and diagnostic IDs remain unique across both assemblies. Shipped release history is immutable.
 
 When adding a diagnostic:
 
 1. Allocate an unused ID from `DiagnosticCategoryAndIdRanges.txt`.
 2. Create the `DiagnosticDescriptor` with the allocated category and default severity.
-3. Add the rule to `AnalyzerReleases.Unshipped.md` using the Roslyn release-tracking format.
+3. Add the rule to the owning analyzer or generator project's `AnalyzerReleases.Unshipped.md` using the Roslyn release-tracking format.
 4. Add `docs/analyzers/TCJxxxx.md` from the diagnostic documentation template.
-5. Add focused analyzer tests and, when required by the policy above, code-fix tests.
-6. Run the analyzer test project. The governance tests reject duplicate IDs, out-of-range IDs/categories, missing release tracking, and missing diagnostic documentation.
+5. Add focused analyzer or generator tests and, when required by the policy above, code-fix tests.
+6. Run the relevant diagnostic and governance test projects. The governance tests reject duplicate IDs, out-of-range IDs/categories, missing release tracking, and missing diagnostic documentation.
 
 At release time, move unshipped entries into a versioned section in `AnalyzerReleases.Shipped.md`. Do not delete shipped history to make a validation failure disappear.
 
-The analyzer project treats Roslyn release-tracking diagnostics as errors. This means a descriptor that is missing from release metadata, has stale metadata, or reuses invalid release history blocks the analyzer build instead of becoming a warning that can accidentally ship.
+The analyzer and generator projects treat Roslyn release-tracking diagnostics as errors. This means a descriptor that is missing from release metadata, has stale metadata, or reuses invalid release history blocks the owning build instead of becoming a warning that can accidentally ship.
 
 ## Suppression and severity configuration
 
-Consumers configure TCJ analyzer severities with standard `.editorconfig` settings. TCJ does not require a proprietary suppression file.
+Consumers configure TCJ diagnostic severities with standard `.editorconfig` settings. TCJ does not require a proprietary suppression file.
 
 ```ini
 [*.cs]
