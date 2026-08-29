@@ -193,7 +193,9 @@ Repeated registration with the same generated expression instances is idempotent
 
 ### Minimal API friendliness
 
-The generated `TryParse`/parsing contracts make supported Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. Model binders and OpenAPI schema integration remain separate integrations.
+The generated `TryParse`/parsing contracts make supported Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. In ordinary JIT-hosted Minimal APIs, runtime request-delegate creation observes the completed generated type, so typed Strong ID and Value Object parameters can use those parsing contracts directly. Model binders and OpenAPI schema integration remain separate integrations.
+
+Native AOT uses the ASP.NET Core Request Delegate Generator (RDG) at compile time. Roslyn source generators run independently against the same input compilation, so RDG cannot observe `TryParse` members emitted by `TCJ.Generators` later in that same compilation. For Native AOT endpoints, bind the route/query/header value as `string` and call the generated `TryParse` method inside the handler. This remains reflection-free, preserves the generated normalization/validation path, and is the pattern exercised by the packaged Native AOT release smoke.
 
 ## Primitive-backed Value Objects
 
@@ -342,6 +344,24 @@ The supported backing types are `string`, `Guid`, `int`, `long`, and `decimal`. 
 Database materialization always executes the same generated `Create(TValue)` path used by application code. Normalization therefore runs before validation, and persisted data that no longer satisfies current validation is not silently accepted. Such legacy data throws an `InvalidOperationException` identifying the Value Object type and instructing the operator to review or migrate the stored value; the rejected scalar and application validation messages are intentionally omitted. TCJ does not rewrite or migrate invalid rows automatically. Generated Value Objects are immutable record structs, so EF's normal value comparison and snapshot semantics are sufficient and no custom mutable-value comparer is registered.
 
 Composite multi-field value objects are not generated; consumers should use normal records for those cases.
+
+## Diagnostics and generated API versioning
+
+Strong-type diagnostics are part of the public developer contract. `TCJ4000` through `TCJ4007` are tracked through the standard analyzer release files and each diagnostic has dedicated documentation under `docs/analyzers/`. Do not renumber or reuse a released diagnostic ID to make an incompatible declaration compile.
+
+Generated members are public API when the annotated type is public. Changes to constructors, parsing/formatting members, JSON converters, persistence conversion expressions, or their signatures therefore require the same compatibility review and package validation as handwritten public API. The scalar JSON representation and EF provider value are compatibility surfaces as well: changing either can break stored data or wire clients even when source compilation still succeeds.
+
+## Packed packages, determinism, and release verification
+
+The release contract is verified from local `.nupkg` files rather than repository `ProjectReference` edges. The packed Strong Types consumer combines `TCJ.Core`, analyzer-only `TCJ.Generators`, `TCJ.EntityFrameworkCore`, and `TCJ.AspNetCore`; it exercises generated construction, validation, scalar JSON, Minimal API parsing, and explicit EF conversion registration against the candidate package set.
+
+`TCJ.Generators` is compile-time tooling. Its implementation assembly must exist only at `analyzers/dotnet/cs/TCJ.Generators.dll` inside the package and must never appear under `lib/`, `runtime/`, normal application output, or Native AOT publish output.
+
+For identical inputs, TCJ Strong Type generated source is required to be byte-for-byte deterministic across clean rebuilds. The incremental generator also tracks its Strong ID and Value Object model stages so tests can prove an unrelated syntax-tree edit reuses unchanged strong-type models instead of regenerating every type.
+
+A release benchmark builds a package-only fixture containing hundreds of Strong IDs and Value Objects after restore. The policy uses a coarse median rebuild budget across multiple measured runs, with a warmup, so CI catches material generator regressions without relying on unrealistic microsecond precision. The budget and fixture sizes live in `eng/strong-types-policy.json` and changes to them require review.
+
+`eng/verify-strong-types.py verify-packed` is a blocking CI/release gate. It verifies the generator package layout, executes the package-only consumer, compares generated sources from two clean rebuilds, and enforces the generator performance budget. Native AOT verification separately publishes and executes the package-only AOT consumer and fails if `TCJ.Generators.dll` is present in publish output.
 
 ## Examples
 

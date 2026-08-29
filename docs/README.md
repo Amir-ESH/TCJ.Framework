@@ -63,6 +63,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [0.1.0-preview.3 to 0.1.0-preview.4 migration guide](migrations/0.1.0-preview.3-to-0.1.0-preview.4.md)
 - [0.1.0-preview.2 to 0.1.0-preview.3 migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md)
 - [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
+- [0.1.0-preview.4 development release notes](release-notes/0.1.0-preview.4.md)
 - [0.1.0-preview.3 release notes](release-notes/0.1.0-preview.3.md)
 - [0.1.0-preview.2 release notes](release-notes/0.1.0-preview.2.md)
 - [0.1.0-preview.1 release notes](release-notes/0.1.0-preview.1.md)

@@ -30,7 +30,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
         var supportedStrongIds = strongIdCandidates
             .Where(static candidate => candidate is not null && candidate.CanGenerate)
-            .Select(static (candidate, _) => candidate!.Model!);
+            .Select(static (candidate, _) => candidate!.Model!)
+            .WithTrackingName("TCJ.StrongTypes.StrongIdModels");
 
         context.RegisterSourceOutput(supportedStrongIds, static (spc, candidate) =>
         {
@@ -67,7 +68,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
 
         var supportedValueObjects = valueObjectCandidates
             .Where(static candidate => candidate is not null && candidate.CanGenerate)
-            .Select(static (candidate, _) => candidate!.Model!);
+            .Select(static (candidate, _) => candidate!.Model!)
+            .WithTrackingName("TCJ.StrongTypes.ValueObjectModels");
 
         context.RegisterSourceOutput(supportedValueObjects, static (spc, candidate) =>
         {

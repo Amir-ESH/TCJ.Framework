@@ -37,16 +37,24 @@ def _tag_name(element: ET.Element) -> str:
     return element.tag.rsplit("}", 1)[-1]
 
 
-def runtime_package_ids() -> tuple[str, ...]:
+def release_package_ids(kind: str) -> tuple[str, ...]:
     if not RELEASE_MANIFEST.is_file():
         raise SmokeError(f"Release manifest does not exist: {RELEASE_MANIFEST}")
     try:
         manifest = json.loads(RELEASE_MANIFEST.read_text(encoding="utf-8"))
         if not isinstance(manifest, dict):
             raise ValueError("release manifest root must be a JSON object")
-        return tuple(sorted(get_release_package_ids(manifest, "runtime")))
+        return tuple(sorted(get_release_package_ids(manifest, kind)))
     except (json.JSONDecodeError, ValueError) as error:
-        raise SmokeError(f"Invalid release manifest runtime package inventory: {error}") from error
+        raise SmokeError(f"Invalid release manifest {kind} package inventory: {error}") from error
+
+
+def runtime_package_ids() -> tuple[str, ...]:
+    return release_package_ids("runtime")
+
+
+def tooling_package_ids() -> tuple[str, ...]:
+    return release_package_ids("tooling")
 
 
 def smoke_package_ids() -> tuple[str, ...]:
@@ -64,15 +72,17 @@ def smoke_package_ids() -> tuple[str, ...]:
         }
     )
     if not package_ids:
-        raise SmokeError("Native AOT smoke project does not reference any TCJ runtime packages.")
+        raise SmokeError("Native AOT smoke project does not reference any TCJ packages.")
 
-    runtime_packages = set(runtime_package_ids())
-    non_runtime = sorted(set(package_ids) - runtime_packages)
-    if non_runtime:
+    supported_packages = set(runtime_package_ids()) | set(tooling_package_ids())
+    unsupported = sorted(set(package_ids) - supported_packages)
+    if unsupported:
         raise SmokeError(
-            "Native AOT smoke references non-runtime release package(s): "
-            + ", ".join(non_runtime)
+            "Native AOT smoke references package(s) outside the normalized release inventory: "
+            + ", ".join(unsupported)
         )
+    if "TCJ.Generators" not in package_ids:
+        raise SmokeError("Native AOT smoke must consume TCJ.Generators from the packed analyzer package.")
     return tuple(package_ids)
 
 
@@ -296,8 +306,12 @@ def execute(version: str, rid: str, packages: Path, output: Path) -> tuple[dict,
         "usesProjectReference": False,
         "publishAot": True,
         "expectedPackages": [],
+        "expectedRuntimePackages": [],
+        "expectedToolingPackages": [],
         "resolvedPackages": {},
         "loadedPackageVersions": {},
+        "publishOutputToolingStatus": "not-run",
+        "forbiddenPublishAssemblies": [],
         "packageSourceStatus": "not-run",
         "restoreStatus": "not-run",
         "publishStatus": "not-run",
@@ -319,7 +333,11 @@ def execute(version: str, rid: str, packages: Path, output: Path) -> tuple[dict,
         if not version:
             raise SmokeError("Package version must be non-empty.")
         expected_packages = smoke_package_ids()
+        expected_runtime_packages = tuple(sorted(set(expected_packages) & set(runtime_package_ids())))
+        expected_tooling_packages = tuple(sorted(set(expected_packages) & set(tooling_package_ids())))
         payload["expectedPackages"] = list(expected_packages)
+        payload["expectedRuntimePackages"] = list(expected_runtime_packages)
+        payload["expectedToolingPackages"] = list(expected_tooling_packages)
         ensure_packages(packages, version, expected_packages)
         if packages != DEFAULT_PACKAGES.resolve():
             raise SmokeError(
@@ -369,6 +387,19 @@ def execute(version: str, rid: str, packages: Path, output: Path) -> tuple[dict,
             raise SmokeError(f"Native AOT smoke publish exited with code {code}.")
         payload["publishStatus"] = "pass"
 
+        forbidden_publish_assemblies = sorted(
+            path.relative_to(publish_dir).as_posix()
+            for path in publish_dir.rglob("TCJ.Generators.dll")
+        )
+        payload["forbiddenPublishAssemblies"] = forbidden_publish_assemblies
+        if forbidden_publish_assemblies:
+            payload["publishOutputToolingStatus"] = "fail"
+            raise SmokeError(
+                "Native AOT publish output contains the generator implementation DLL: "
+                + ", ".join(forbidden_publish_assemblies)
+            )
+        payload["publishOutputToolingStatus"] = "pass"
+
         trim, aot, tcj, upstream, warning_count = diagnostics(all_output)
         payload["trimWarnings"] = trim
         payload["aotWarnings"] = aot
@@ -394,7 +425,7 @@ def execute(version: str, rid: str, packages: Path, output: Path) -> tuple[dict,
             payload["executionStatus"] = "fail"
             raise SmokeError("Native AOT smoke executable did not emit the expected success marker.")
         payload["loadedPackageVersions"] = loaded_versions(
-            runtime_output, version, expected_packages
+            runtime_output, version, expected_runtime_packages
         )
         payload["executionStatus"] = "pass"
         payload["status"] = "passed"
