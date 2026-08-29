@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
@@ -17,6 +18,61 @@ SPEC = importlib.util.spec_from_file_location("verify_release", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+
+
+class PublishedReleaseManifestTests(unittest.TestCase):
+    def write_manifest(self, root: Path, value: dict[str, object]) -> None:
+        eng = root / "eng"
+        eng.mkdir(parents=True)
+        (eng / "published-release.json").write_text(
+            json.dumps(value),
+            encoding="utf-8",
+        )
+
+    @staticmethod
+    def common_manifest(schema_version: int) -> dict[str, object]:
+        return {
+            "schemaVersion": schema_version,
+            "version": "0.1.0-preview.3",
+            "tag": "v0.1.0-preview.3",
+            "releaseDate": "2026-08-16",
+            "repository": "Amir-ESH/TCJ.Framework",
+            "licenseExpression": "LGPL-3.0-only",
+        }
+
+    def test_schema1_published_manifest_remains_supported(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = self.common_manifest(1)
+            manifest["packages"] = ["TCJ.Core"]
+            self.write_manifest(root, manifest)
+
+            loaded = MODULE.read_published_manifest(root)
+
+            self.assertEqual(loaded["version"], "0.1.0-preview.3")
+
+    def test_schema2_published_manifest_supports_tooling(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = self.common_manifest(2)
+            manifest["releasePackages"] = {
+                "runtime": [{"id": "TCJ.Core"}],
+                "tooling": [
+                    {
+                        "id": "TCJ.Generators",
+                        "assetPath": "analyzers/dotnet/cs",
+                        "forbidAssets": ["lib/", "runtime/"],
+                    }
+                ],
+            }
+            self.write_manifest(root, manifest)
+
+            loaded = MODULE.read_published_manifest(root)
+
+            self.assertEqual(
+                [package.package_id for package in MODULE.get_release_packages(loaded)],
+                ["TCJ.Core", "TCJ.Generators"],
+            )
 
 
 class ReleasePackageLicenseTests(unittest.TestCase):

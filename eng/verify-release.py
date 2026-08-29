@@ -120,13 +120,20 @@ def read_published_manifest(root: Path) -> dict[str, object]:
         "releaseDate",
         "repository",
         "licenseExpression",
-        "packages",
     }
     missing = sorted(required.difference(data))
     if missing:
         fail(f"Published release manifest is missing fields: {', '.join(missing)}")
-    if data["schemaVersion"] != 1:
-        fail("Unsupported published release manifest schemaVersion; expected 1.")
+
+    schema_version = data["schemaVersion"]
+    if schema_version == 1:
+        if "packages" not in data:
+            fail("Published release schemaVersion 1 manifest must contain packages.")
+    elif schema_version == 2:
+        if "releasePackages" not in data:
+            fail("Published release schemaVersion 2 manifest must contain releasePackages.")
+    else:
+        fail("Unsupported published release manifest schemaVersion; expected 1 or 2.")
 
     version = str(data["version"])
     if not SEMVER_PATTERN.fullmatch(version):
@@ -139,7 +146,7 @@ def read_published_manifest(root: Path) -> dict[str, object]:
         fail("Published release licenseExpression must be a non-empty SPDX expression.")
 
     try:
-        get_release_package_ids(data, "runtime")
+        get_release_packages(data)
     except ValueError as error:
         fail(str(error))
 
@@ -406,6 +413,7 @@ def validate_primary_package(
     *,
     expected_readme: bytes | None = None,
     enforce_readme_policy: bool = False,
+    require_runtime_assembly: bool = True,
 ) -> None:
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
@@ -457,9 +465,10 @@ def validate_primary_package(
                 fail(f"{path.name} README.md must be valid UTF-8: {error}")
             validate_package_readme_text(readme_text, package_id, f"{path.name}:README.md", version)
 
-        dlls = [name for name in names if re.fullmatch(r"lib/net10\.0/[^/]+\.dll", name)]
-        if not dlls:
-            fail(f"{path.name} has no net10.0 library assembly.")
+        if require_runtime_assembly:
+            dlls = [name for name in names if re.fullmatch(r"lib/net10\.0/[^/]+\.dll", name)]
+            if not dlls:
+                fail(f"{path.name} has no net10.0 library assembly.")
 
 
 def validate_symbol_package(path: Path) -> None:

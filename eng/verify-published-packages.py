@@ -14,7 +14,12 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from sbom_common import get_release_package_ids, get_release_packages
+from sbom_common import (
+    ToolingPackageSpec,
+    get_release_package_ids,
+    get_release_packages,
+    validate_tooling_package as validate_tooling_release_package,
+)
 
 _VALIDATOR_PATH = Path(__file__).resolve().with_name("verify-release.py")
 _VALIDATOR_SPEC = importlib.util.spec_from_file_location("tcj_verify_release", _VALIDATOR_PATH)
@@ -71,22 +76,80 @@ def request_json(url: str) -> dict[str, object]:
 
 def load_manifest(path: Path) -> dict[str, object]:
     data = json.loads(path.read_text(encoding="utf-8"))
-    required = {"schemaVersion", "version", "tag", "releaseDate", "repository", "licenseExpression", "packages"}
+    required = {
+        "schemaVersion",
+        "version",
+        "tag",
+        "releaseDate",
+        "repository",
+        "licenseExpression",
+    }
     missing = sorted(required.difference(data))
     if missing:
         fail(f"Published release manifest is missing fields: {', '.join(missing)}")
-    if data["schemaVersion"] != 1:
-        fail("Unsupported published release manifest schemaVersion.")
+
+    schema_version = data["schemaVersion"]
+    if schema_version == 1:
+        if "packages" not in data:
+            fail("Published release schemaVersion 1 manifest must contain packages.")
+    elif schema_version == 2:
+        if "releasePackages" not in data:
+            fail("Published release schemaVersion 2 manifest must contain releasePackages.")
+    else:
+        fail("Unsupported published release manifest schemaVersion; expected 1 or 2.")
+
     version = str(data["version"])
     if not SEMVER_PATTERN.fullmatch(version):
         fail(f"Published version is not valid semantic versioning: {version}")
     if data["tag"] != f"v{version}":
         fail("Published release tag must be the version prefixed with 'v'.")
     try:
-        get_release_package_ids(data, "runtime")
+        get_release_packages(data)
     except ValueError as error:
         fail(str(error))
     return data
+
+
+def load_release_manifest(path: Path) -> dict[str, object]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("schemaVersion") != 2:
+        fail("eng/release-manifest.json must use schemaVersion 2.")
+
+    required = {
+        "version",
+        "repository",
+        "licenseExpression",
+        "releasePackages",
+    }
+    missing = sorted(required.difference(data))
+    if missing:
+        fail(f"Release manifest is missing fields: {', '.join(missing)}")
+
+    try:
+        get_release_packages(data)
+    except ValueError as error:
+        fail(str(error))
+    return data
+
+
+def resolve_package_manifest(
+    version: str,
+    published_manifest: dict[str, object],
+    release_manifest_path: Path,
+) -> dict[str, object]:
+    if version.casefold() == str(published_manifest["version"]).casefold():
+        return published_manifest
+
+    release_manifest = load_release_manifest(release_manifest_path)
+    if version.casefold() == str(release_manifest["version"]).casefold():
+        if release_manifest["repository"] != published_manifest["repository"]:
+            fail("Published and current release manifests must use the same repository.")
+        return release_manifest
+
+    fail(
+        f"No release package set is recorded for {version}. "
+        "Pass --manifest pointing to metadata for that exact historical release."
+    )
 
 
 def registration_entries(index: dict[str, object]) -> list[dict[str, object]]:
@@ -178,8 +241,8 @@ def verify_once(
     failures: list[str] = []
     repository = str(manifest["repository"])
 
-    for package_id_value in get_release_package_ids(manifest, "runtime"):
-        package_id = str(package_id_value)
+    for package in get_release_packages(manifest):
+        package_id = package.package_id
         if not version_in_flat_container(package_id, version, flat_container_base_url):
             failures.append(f"{package_id} {version} is absent from the flat container")
             continue
@@ -210,7 +273,24 @@ def verify_once(
                 expected_license_expression,
                 expected_readme=(expected_readmes or {}).get(package_id),
                 enforce_readme_policy=enforce_readme_policy,
+                require_runtime_assembly=package.package_type == "runtime",
             )
+
+            if package.package_type == "tooling":
+                assert package.asset_path is not None
+                tooling_spec = ToolingPackageSpec(
+                    package_id=package.package_id,
+                    asset_path=package.asset_path.rstrip("/") + "/",
+                    forbid_assets=tuple(
+                        prefix.rstrip("/") + "/"
+                        for prefix in package.forbid_assets
+                    ),
+                )
+                validate_tooling_release_package(
+                    package_path,
+                    tooling_spec,
+                    version,
+                )
         except (ValueError, OSError, zipfile.BadZipFile) as error:
             failures.append(f"{package_id} {version} content validation failed: {error}")
             continue
@@ -313,6 +393,11 @@ def main() -> int:
         release_manifest_path,
         args.license_expression,
     )
+    package_manifest = resolve_package_manifest(
+        version,
+        manifest,
+        release_manifest_path,
+    )
     expected_readmes = expected_readmes_for_current_release(
         version,
         release_manifest_path,
@@ -322,7 +407,7 @@ def main() -> int:
     deadline = time.monotonic() + args.wait_seconds
     while True:
         failures = verify_once(
-            manifest,
+            package_manifest,
             version,
             expected_license_expression,
             args.output_directory.resolve(),
