@@ -2066,6 +2066,105 @@ public sealed class StrongTypeGeneratorTests
     }
 
     [Fact]
+    public void ValueObjectConversionExpressions_AreGeneratedForAllSupportedBackingTypesAndPreserveValidation()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            namespace Sales;
+
+            [ValueObject<string>]
+            public readonly partial record struct NormalizedCode
+            {
+                private static string Normalize(string value) => value.Trim().ToUpperInvariant();
+
+                private static Result Validate(string value)
+                    => value.Length == 3
+                        ? Result.Success()
+                        : Result.Failure(new ResultError("code.length", "Sensitive validation detail."));
+            }
+
+            [ValueObject<Guid>]
+            public readonly partial record struct GuidValue
+            {
+                private static Result Validate(Guid value) => Result.Success();
+            }
+
+            [ValueObject<int>]
+            public readonly partial record struct IntValue
+            {
+                private static Result Validate(int value) => Result.Success();
+            }
+
+            [ValueObject<long>]
+            public readonly partial record struct LongValue
+            {
+                private static Result Validate(long value) => Result.Success();
+            }
+
+            [ValueObject<decimal>]
+            public readonly partial record struct DecimalValue
+            {
+                private static Result Validate(decimal value) => Result.Success();
+            }
+
+            public static class ValueObjectConversionProbe
+            {
+                public static bool Verify()
+                {
+                    var materialize = NormalizedCode.ValueObjectConversion.FromBackingValue.Compile();
+                    var normalized = materialize(" abc ");
+                    if (normalized.Value != "ABC")
+                    {
+                        return false;
+                    }
+
+                    try
+                    {
+                        _ = materialize("sensitive-invalid-value");
+                        return false;
+                    }
+                    catch (InvalidOperationException exception)
+                    {
+                        return exception.Message.Contains("Sales.NormalizedCode", StringComparison.Ordinal)
+                            && !exception.Message.Contains("sensitive-invalid-value", StringComparison.Ordinal)
+                            && !exception.Message.Contains("Sensitive validation detail", StringComparison.Ordinal);
+                    }
+                }
+            }
+            """);
+
+        var result = RunGenerator(compilation);
+
+        Assert.Equal(5, result.GeneratedSources.Count);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.Empty(result.OutputCompilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+        foreach (var generated in result.GeneratedSources)
+        {
+            Assert.Contains("public static class ValueObjectConversion", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("global::System.Linq.Expressions.Expression<global::System.Func<", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("ToBackingValue { get; } = static value => value.Value;", generated.Source, StringComparison.Ordinal);
+            Assert.Contains("FromBackingValue { get; } = static value => Materialize(value);", generated.Source, StringComparison.Ordinal);
+            Assert.Contains(".Create(value);", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Microsoft.EntityFrameworkCore", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("MakeGenericType", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("System.Reflection", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Activator", generated.Source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Assembly.", generated.Source, StringComparison.Ordinal);
+        }
+
+        var assembly = EmitAndLoad(result.OutputCompilation);
+        var probeType = Assert.IsAssignableFrom<Type>(assembly.GetType("Sales.ValueObjectConversionProbe"));
+        var verify = Assert.IsAssignableFrom<MethodInfo>(probeType.GetMethod("Verify", BindingFlags.Public | BindingFlags.Static));
+        Assert.True(Assert.IsType<bool>(verify.Invoke(null, null)));
+    }
+
+    [Fact]
     public void ValueObjectJsonConverters_AreDedicatedValidatedAndDoNotUseReflectionFactoriesOrRuntimeCodeGeneration()
     {
         var compilation = CreateCompilation(
@@ -2514,6 +2613,7 @@ public sealed class StrongTypeGeneratorTests
     [InlineData("public static EmailAddress Create(int value) => default;")]
     [InlineData("public static EmailAddress Parse(string value) => default;")]
     [InlineData("public static bool TryParse(string value, out EmailAddress result) { result = default; return false; }")]
+    [InlineData("public static class ValueObjectConversion { }")]
     [InlineData("public sealed class ValueObjectJsonConverter { }")]
     [InlineData("public EmailAddress() { }")]
     [InlineData("public EmailAddress(string value) { }")]

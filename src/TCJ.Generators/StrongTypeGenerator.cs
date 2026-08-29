@@ -300,7 +300,7 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
             .OrderBy(static member => member.Locations.First(static location => location.IsInSource).SourceSpan.Start)
             .ThenBy(static member => member.Name, StringComparer.Ordinal))
         {
-            var conflicts = member.Name is "Value" or "IsDefault" or "Create" or "Parse" or "TryParse" or "ValueObjectJsonConverter"
+            var conflicts = member.Name is "Value" or "IsDefault" or "Create" or "Parse" or "TryParse" or "ValueObjectConversion" or "ValueObjectJsonConverter"
                 || member is IMethodSymbol { MethodKind: MethodKind.Constructor };
 
             if (!conflicts)
@@ -402,6 +402,8 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source);
 
         AppendValueObjectParsing(source, model, bodyIndent);
+        AppendLine(source);
+        AppendValueObjectConversion(source, model, bodyIndent);
         AppendLine(source);
         AppendValueObjectJsonConverter(source, model, bodyIndent);
 
@@ -601,6 +603,56 @@ public sealed class StrongTypeGenerator : IIncrementalGenerator
         AppendLine(source);
         AppendLine(source, indent + "result = creation.Value;");
         AppendLine(source, indent + "return true;");
+    }
+
+    private static void AppendValueObjectConversion(StringBuilder source, ValueObjectModel model, string memberIndent)
+    {
+        var bodyIndent = memberIndent + "    ";
+
+        AppendLine(source, memberIndent + "/// <summary>");
+        AppendLine(source, memberIndent + "/// Provides provider-neutral conversion expressions between this value object and its primitive backing value.");
+        AppendLine(source, memberIndent + "/// </summary>");
+        AppendLine(source, memberIndent + "public static class ValueObjectConversion");
+        AppendLine(source, memberIndent + "{");
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Gets the conversion expression from the value object to its primitive backing value.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        source.Append(bodyIndent)
+            .Append("public static global::System.Linq.Expressions.Expression<global::System.Func<")
+            .Append(model.TypeName)
+            .Append(", ")
+            .Append(model.BackingType)
+            .Append(">> ToBackingValue { get; } = static value => value.Value;");
+        AppendLine(source);
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "/// <summary>");
+        AppendLine(source, bodyIndent + "/// Gets the conversion expression that materializes and validates the value object from its primitive backing value.");
+        AppendLine(source, bodyIndent + "/// </summary>");
+        source.Append(bodyIndent)
+            .Append("public static global::System.Linq.Expressions.Expression<global::System.Func<")
+            .Append(model.BackingType)
+            .Append(", ")
+            .Append(model.TypeName)
+            .Append(">> FromBackingValue { get; } = static value => Materialize(value);");
+        AppendLine(source);
+        AppendLine(source);
+        source.Append(bodyIndent).Append("private static ").Append(model.TypeName).Append(" Materialize(").Append(model.BackingType).Append(" value)");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "{");
+        source.Append(bodyIndent).Append("    var creation = ").Append(model.TypeName).Append(".Create(value);");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "    if (creation.IsFailure)");
+        AppendLine(source, bodyIndent + "    {");
+        source.Append(bodyIndent)
+            .Append("        throw new global::System.InvalidOperationException(\"Persisted value could not be materialized as Value Object '")
+            .Append(model.NamespaceName is null ? model.TypeName : model.NamespaceName + "." + model.TypeName)
+            .Append("' because it does not satisfy the current validation rules. Review or migrate the stored database value before retrying.\");");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "    }");
+        AppendLine(source);
+        AppendLine(source, bodyIndent + "    return creation.Value;");
+        AppendLine(source, bodyIndent + "}");
+        AppendLine(source, memberIndent + "}");
     }
 
     private static void AppendValueObjectJsonConverter(StringBuilder source, ValueObjectModel model, string memberIndent)

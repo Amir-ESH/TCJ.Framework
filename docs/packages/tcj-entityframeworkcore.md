@@ -74,6 +74,24 @@ modelBuilder.ApplyStrongIdConversions(strongIds);
 
 The registry supports generated `Guid`, `int`, and `long` IDs and applies their primitive conversions consistently to matching keys, foreign keys, nullable wrappers, and ordinary properties. Duplicate use of the same generated registration is idempotent; conflicting registrations or an already-configured different property converter fail explicitly. The registry is provider-neutral and does not add SQL Server behavior.
 
+## Value Object conversions
+
+Primitive-backed Value Objects use the same explicit registration model and do not require runtime assembly scanning:
+
+```csharp
+var valueObjects = new ValueObjectConversionRegistry()
+    .Register<EmailAddress, string>(
+        EmailAddress.ValueObjectConversion.ToBackingValue,
+        EmailAddress.ValueObjectConversion.FromBackingValue)
+    .Register<MoneyAmount, decimal>(
+        MoneyAmount.ValueObjectConversion.ToBackingValue,
+        MoneyAmount.ValueObjectConversion.FromBackingValue);
+
+modelBuilder.ApplyValueObjectConversions(valueObjects);
+```
+
+Supported backing types are `string`, `Guid`, `int`, `long`, and `decimal`, and each Value Object is persisted as that primitive provider value. Materialization goes back through the generated `Create` path, including optional normalization and validation. Invalid legacy database values fail with an actionable `InvalidOperationException` that names the Value Object type without echoing the rejected value or application validation messages. TCJ does not bypass validation, rewrite invalid stored values, or add provider-specific domain behavior. Immutable record-struct equality is sufficient for EF change tracking, so no custom comparer is required.
+
 ## Repository behavior
 
 Read operations are no-tracking by default. `TrackedQuery` and specifications using `AsTracking` are intended for update workflows.

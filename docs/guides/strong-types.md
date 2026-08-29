@@ -298,7 +298,50 @@ Every supported Value Object also receives a dedicated generated `ValueObjectJso
 
 The generated converter is closed over the concrete Value Object type and does not use `JsonConverterFactory`, runtime type scanning, `MakeGenericType`, `Activator`, or reflection. Native AOT consumers should include generated Value Object types in a source-generated `JsonSerializerContext`. When TCJ and System.Text.Json generators run in the same compilation, explicitly register each concrete `ValueObjectJsonConverter` before constructing the context, exactly as with generated Strong ID converters.
 
-Composite multi-field value objects are not generated; consumers should use normal records for those cases. EF Core integration remains a separate concern.
+### Explicit EF Core conversion registration
+
+Generated Value Objects also expose a nested `ValueObjectConversion` class with provider-neutral `ToBackingValue` and `FromBackingValue` expression trees. The generated expressions reference only the BCL and the generated Value Object itself; domain projects do not need an EF Core reference. Register each Value Object explicitly in the persistence project and apply the registry after configuring the EF model:
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using TCJ.EntityFrameworkCore.Extensions;
+using TCJ.EntityFrameworkCore.StrongTypes;
+
+public sealed class Customer
+{
+    public int Id { get; set; }
+
+    public EmailAddress Email { get; set; }
+
+    public MoneyAmount CreditLimit { get; set; }
+}
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity<Customer>(entity =>
+    {
+        entity.HasKey(static customer => customer.Id);
+        entity.Property(static customer => customer.Email).HasMaxLength(320);
+        entity.Property(static customer => customer.CreditLimit).HasPrecision(18, 2);
+    });
+
+    var valueObjects = new ValueObjectConversionRegistry()
+        .Register<EmailAddress, string>(
+            EmailAddress.ValueObjectConversion.ToBackingValue,
+            EmailAddress.ValueObjectConversion.FromBackingValue)
+        .Register<MoneyAmount, decimal>(
+            MoneyAmount.ValueObjectConversion.ToBackingValue,
+            MoneyAmount.ValueObjectConversion.FromBackingValue);
+
+    modelBuilder.ApplyValueObjectConversions(valueObjects);
+}
+```
+
+The supported backing types are `string`, `Guid`, `int`, `long`, and `decimal`. EF stores those primitive provider values directly, so a string Value Object remains a string column, a decimal Value Object remains a decimal column, and so on. `ApplyValueObjectConversions` walks only EF model metadata that is already being built; it does not scan assemblies or discover Value Objects at runtime. Duplicate registration using the same generated expression instances is idempotent, while a conflicting backing type, different conversion expressions, or an already-configured different property converter fails explicitly.
+
+Database materialization always executes the same generated `Create(TValue)` path used by application code. Normalization therefore runs before validation, and persisted data that no longer satisfies current validation is not silently accepted. Such legacy data throws an `InvalidOperationException` identifying the Value Object type and instructing the operator to review or migrate the stored value; the rejected scalar and application validation messages are intentionally omitted. TCJ does not rewrite or migrate invalid rows automatically. Generated Value Objects are immutable record structs, so EF's normal value comparison and snapshot semantics are sufficient and no custom mutable-value comparer is registered.
+
+Composite multi-field value objects are not generated; consumers should use normal records for those cases.
 
 ## Examples
 
