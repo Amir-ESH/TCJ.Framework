@@ -24,13 +24,12 @@ class RepositoryGovernanceTests(unittest.TestCase):
         self.assertIn("[Project governance](GOVERNANCE.md)", readme)
         self.assertIn("[Contributor License Agreement](CLA.md)", readme)
         self.assertIn("[`TRADEMARKS.md`](TRADEMARKS.md)", readme)
-        self.assertIn("[`LICENSE`](LICENSE)", readme)
+        self.assertIn("[`LICENSE.txt`](LICENSE.txt)", readme)
 
     def test_codeowners_keeps_official_repository_under_owner_review(self) -> None:
         codeowners = self.read(".github/CODEOWNERS")
         self.assertIn("* @Amir-ESH", codeowners)
         for path in (
-            "/LICENSE @Amir-ESH",
             "/LICENSE.txt @Amir-ESH",
             "/CLA.md @Amir-ESH",
             "/GOVERNANCE.md @Amir-ESH",
@@ -40,8 +39,9 @@ class RepositoryGovernanceTests(unittest.TestCase):
             self.assertIn(path, codeowners)
 
 
-    def test_canonical_and_package_license_copies_match(self) -> None:
-        self.assertEqual(self.read("LICENSE"), self.read("LICENSE.txt"))
+    def test_repository_uses_single_canonical_license_file(self) -> None:
+        self.assertTrue((ROOT / "LICENSE.txt").is_file())
+        self.assertFalse((ROOT / "LICENSE").exists())
 
     def test_governance_preserves_fork_freedom_and_owner_authority(self) -> None:
         governance = self.read("GOVERNANCE.md")

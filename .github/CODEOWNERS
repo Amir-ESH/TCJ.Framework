@@ -9,7 +9,6 @@
 # Governance, legal, identity, and release-sensitive files are listed
 # explicitly even though the repository-wide rule above already applies.
 /.github/CODEOWNERS @Amir-ESH
-/LICENSE @Amir-ESH
 /LICENSE.txt @Amir-ESH
 /CLA.md @Amir-ESH
 /GOVERNANCE.md @Amir-ESH
