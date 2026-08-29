@@ -3,12 +3,12 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using TCJ.AspNetCore.Extensions;
 using TCJ.Core.Results;
 using TCJ.Core.StrongTypes;
 using TCJ.EntityFrameworkCore.Extensions;
 using TCJ.EntityFrameworkCore.StrongTypes;
+using TCJ.StrongTypes.PackageConsumer;
 
 var orderId = new OrderId(Guid.Parse("7a29be31-268d-4f2b-babc-fce0ce1cb46c"));
 Result<EmailAddress> emailResult = EmailAddress.Create("  Customer@Example.com  ");
@@ -86,56 +86,60 @@ Console.WriteLine("TCJ strong-types packed consumer passed");
 static IResult ParseStrongTypes(OrderId id, EmailAddress email)
     => Results.Text($"{id}|{email.Value}");
 
-[StronglyTypedId<Guid>]
-public readonly partial record struct OrderId;
-
-[ValueObject<string>]
-public readonly partial record struct EmailAddress
+namespace TCJ.StrongTypes.PackageConsumer
 {
-    private static string Normalize(string value) => value.Trim().ToLowerInvariant();
+    [StronglyTypedId<Guid>]
+    public readonly partial record struct OrderId;
 
-    private static Result Validate(string value)
-        => !string.IsNullOrWhiteSpace(value) && value.Contains('@')
-            ? Result.Success()
-            : Result.Failure(new ResultError("email.invalid", "Email must contain an '@' character."));
-}
-
-public sealed class StrongTypesRecord
-{
-    public OrderId Id { get; set; }
-
-    public EmailAddress Email { get; set; }
-}
-
-public sealed class StrongTypesDbContext(DbContextOptions<StrongTypesDbContext> options) : DbContext(options)
-{
-    public DbSet<StrongTypesRecord> Records => Set<StrongTypesRecord>();
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    [ValueObject<string>]
+    public readonly partial record struct EmailAddress
     {
-        modelBuilder.Entity<StrongTypesRecord>(entity =>
-        {
-            entity.HasKey(static record => record.Id);
-            entity.Property(static record => record.Email).HasMaxLength(320);
-        });
+        private static string Normalize(string value) => value.Trim().ToLowerInvariant();
 
-        var strongIds = new StrongIdConversionRegistry()
-            .Register<OrderId, Guid>(
-                OrderId.StrongIdConversion.ToBackingValue,
-                OrderId.StrongIdConversion.FromBackingValue);
-        var valueObjects = new ValueObjectConversionRegistry()
-            .Register<EmailAddress, string>(
-                EmailAddress.ValueObjectConversion.ToBackingValue,
-                EmailAddress.ValueObjectConversion.FromBackingValue);
-
-        modelBuilder.ApplyStrongIdConversions(strongIds);
-        modelBuilder.ApplyValueObjectConversions(valueObjects);
+        private static Result Validate(string value)
+            => !string.IsNullOrWhiteSpace(value) && value.Contains('@')
+                ? Result.Success()
+                : Result.Failure(new ResultError("email.invalid", "Email must contain an '@' character."));
     }
-}
 
-[System.Text.Json.Serialization.JsonSourceGenerationOptions(JsonSerializerDefaults.Web, GenerationMode = System.Text.Json.Serialization.JsonSourceGenerationMode.Metadata)]
-[System.Text.Json.Serialization.JsonSerializable(typeof(OrderId))]
-[System.Text.Json.Serialization.JsonSerializable(typeof(EmailAddress))]
-internal sealed partial class StrongTypesPackageJsonContext : System.Text.Json.Serialization.JsonSerializerContext
-{
+    public sealed class StrongTypesRecord
+    {
+        public OrderId Id { get; set; }
+
+        public EmailAddress Email { get; set; }
+    }
+
+    public sealed class StrongTypesDbContext(DbContextOptions<StrongTypesDbContext> options) : DbContext(options)
+    {
+        public DbSet<StrongTypesRecord> Records => Set<StrongTypesRecord>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<StrongTypesRecord>(entity =>
+            {
+                entity.HasKey(static record => record.Id);
+                entity.Property(static record => record.Email).HasMaxLength(320);
+            });
+
+            var strongIds = new StrongIdConversionRegistry()
+                .Register<OrderId, Guid>(
+                    OrderId.StrongIdConversion.ToBackingValue,
+                    OrderId.StrongIdConversion.FromBackingValue);
+            var valueObjects = new ValueObjectConversionRegistry()
+                .Register<EmailAddress, string>(
+                    EmailAddress.ValueObjectConversion.ToBackingValue,
+                    EmailAddress.ValueObjectConversion.FromBackingValue);
+
+            modelBuilder.ApplyStrongIdConversions(strongIds);
+            modelBuilder.ApplyValueObjectConversions(valueObjects);
+        }
+    }
+
+    [System.Text.Json.Serialization.JsonSourceGenerationOptions(JsonSerializerDefaults.Web, GenerationMode = System.Text.Json.Serialization.JsonSourceGenerationMode.Metadata)]
+    [System.Text.Json.Serialization.JsonSerializable(typeof(OrderId))]
+    [System.Text.Json.Serialization.JsonSerializable(typeof(EmailAddress))]
+    internal sealed partial class StrongTypesPackageJsonContext : System.Text.Json.Serialization.JsonSerializerContext
+    {
+    }
+
 }
