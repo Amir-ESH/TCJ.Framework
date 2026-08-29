@@ -53,5 +53,56 @@
   "examples": {
     "strongId": "OrderId",
     "valueObject": "EmailAddress"
+  },
+  "packageConsumer": {
+    "project": "smoke/TCJ.StrongTypes.PackageConsumer/TCJ.StrongTypes.PackageConsumer.csproj",
+    "program": "smoke/TCJ.StrongTypes.PackageConsumer/Program.cs",
+    "requiredPackages": [
+      "TCJ.Core",
+      "TCJ.Generators",
+      "TCJ.EntityFrameworkCore",
+      "TCJ.AspNetCore"
+    ],
+    "expectedOutput": "TCJ strong-types packed consumer passed"
+  },
+  "generatorPackage": {
+    "id": "TCJ.Generators",
+    "asset": "analyzers/dotnet/cs/TCJ.Generators.dll",
+    "forbiddenRuntimePrefixes": [
+      "lib/",
+      "runtime/"
+    ]
+  },
+  "determinism": {
+    "strongIdCount": 64,
+    "valueObjectCount": 64,
+    "expectedGeneratedFileCount": 128
+  },
+  "performance": {
+    "strongIdCount": 250,
+    "valueObjectCount": 250,
+    "warmupRuns": 1,
+    "measurementRuns": 3,
+    "maxMedianMilliseconds": 30000
+  },
+  "incrementalTrackingNames": [
+    "TCJ.StrongTypes.StrongIdModels",
+    "TCJ.StrongTypes.ValueObjectModels"
+  ],
+  "diagnostics": {
+    "releaseTrackingFiles": [
+      "src/TCJ.Generators/AnalyzerReleases.Shipped.md",
+      "src/TCJ.Generators/AnalyzerReleases.Unshipped.md"
+    ],
+    "diagnosticIds": [
+      "TCJ4000",
+      "TCJ4001",
+      "TCJ4002",
+      "TCJ4003",
+      "TCJ4004",
+      "TCJ4005",
+      "TCJ4006",
+      "TCJ4007"
+    ]
   }
 }

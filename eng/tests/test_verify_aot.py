@@ -520,27 +520,22 @@ class AotVerifierTests(unittest.TestCase):
             self.assertIn("id: native-aot-smoke", text)
             self.assertIn("steps.native-aot-smoke.outcome != 'skipped'", text)
 
-    def test_native_aot_smoke_uses_normalized_runtime_packages_and_excludes_tooling(self) -> None:
+    def test_native_aot_smoke_consumes_full_runtime_packages_plus_generator_tooling(self) -> None:
         manifest = json.loads((MODULE.ROOT / "eng/release-manifest.json").read_text(encoding="utf-8"))
         runtime_packages = set(RUNNER.runtime_package_ids())
         tooling_packages = {item["id"] for item in manifest["releasePackages"]["tooling"]}
         smoke_packages = set(RUNNER.smoke_package_ids())
 
-        self.assertTrue(tooling_packages)
-        self.assertTrue(smoke_packages.issubset(runtime_packages))
-        self.assertTrue(smoke_packages.isdisjoint(tooling_packages))
+        self.assertEqual({"TCJ.Generators"}, tooling_packages)
         policy = json.loads((MODULE.ROOT / "eng/aot-policy.json").read_text(encoding="utf-8"))
         full_packages = {item["packageId"] for item in policy["packages"] if item["tier"] == "Full"}
-        self.assertEqual(full_packages, smoke_packages)
+        self.assertTrue(full_packages.issubset(runtime_packages))
+        self.assertEqual(full_packages | tooling_packages, smoke_packages)
+        self.assertEqual(tooling_packages, smoke_packages - runtime_packages)
 
-    def test_packed_native_aot_smoke_rejects_tooling_package_reference(self) -> None:
-        manifest = json.loads((self.root / "eng/release-manifest.json").read_text(encoding="utf-8"))
-        tooling_package = manifest["releasePackages"]["tooling"][0]["id"]
+    def test_packed_native_aot_smoke_requires_generator_private_assets_all(self) -> None:
         fixture = self.root / MODULE.PACKED_AOT_FIXTURE
-        text = fixture.read_text(encoding="utf-8").replace(
-            "</Project>",
-            f'<ItemGroup><PackageReference Include="{tooling_package}" Version="$(TCJNativeAotPackageVersion)" /></ItemGroup></Project>',
-        )
+        text = fixture.read_text(encoding="utf-8").replace(' PrivateAssets="all"', "")
         fixture.write_text(text, encoding="utf-8")
 
         payload, success = MODULE.verify_repository(self.root, output_path=self.output)
@@ -548,9 +543,9 @@ class AotVerifierTests(unittest.TestCase):
         self.assertFalse(success)
         finding = next(
             item for item in payload["findings"]
-            if item["rule"] == "AOT008" and item["property"] == "RuntimePackageReference"
+            if item["rule"] == "AOT008" and item["property"] == "PackageReference:TCJ.Generators:PrivateAssets"
         )
-        self.assertEqual(tooling_package, finding["value"])
+        self.assertEqual("<missing>", finding["value"])
 
     def test_runtime_result_empty_version_reports_version_flow_error_without_fake_package_names(self) -> None:
         result_path = self.root / MODULE.PACKED_AOT_RESULT
@@ -668,7 +663,9 @@ class AotVerifierTests(unittest.TestCase):
     def _write_runtime_result_fixture(self, *, version: str) -> tuple[Path, Path]:
         package_directory = self.root / "artifacts/packages"
         package_directory.mkdir(parents=True, exist_ok=True)
-        packages = self._full_package_ids()
+        runtime_packages = self._full_package_ids()
+        tooling_packages = ["TCJ.Generators"]
+        packages = sorted(runtime_packages + tooling_packages)
         for package_id in packages:
             (package_directory / f"{package_id}.{version}.nupkg").write_bytes(b"fixture")
 
@@ -686,10 +683,14 @@ class AotVerifierTests(unittest.TestCase):
             "packageSourceStatus": "pass",
             "restoreStatus": "pass",
             "publishStatus": "pass",
+            "publishOutputToolingStatus": "pass",
             "executionStatus": "pass",
             "expectedPackages": packages,
+            "expectedRuntimePackages": runtime_packages,
+            "expectedToolingPackages": tooling_packages,
             "resolvedPackages": {package_id: version for package_id in packages},
-            "loadedPackageVersions": {package_id: version for package_id in packages},
+            "loadedPackageVersions": {package_id: version for package_id in runtime_packages},
+            "forbiddenPublishAssemblies": [],
             "trimWarnings": [],
             "aotWarnings": [],
             "tcjWarnings": [],

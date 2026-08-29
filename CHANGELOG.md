@@ -6,6 +6,10 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+### Added
+
+- Completed the Strong Types release contract with package-only Strong ID/Value Object consumption, Native AOT JSON/Minimal API execution, byte-for-byte generator determinism checks, incremental reuse coverage, a coarse many-type performance budget, analyzer-only runtime-output enforcement, and blocking CI/release verification.
+
 ### Changed
 
 - Advanced the immutable published-package and PackageValidation baseline to `0.1.0-preview.3` and opened the `0.1.0-preview.4` development line.

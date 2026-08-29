@@ -343,6 +343,24 @@ Database materialization always executes the same generated `Create(TValue)` pat
 
 Composite multi-field value objects are not generated; consumers should use normal records for those cases.
 
+## Diagnostics and generated API versioning
+
+Strong-type diagnostics are part of the public developer contract. `TCJ4000` through `TCJ4007` are tracked through the standard analyzer release files and each diagnostic has dedicated documentation under `docs/analyzers/`. Do not renumber or reuse a released diagnostic ID to make an incompatible declaration compile.
+
+Generated members are public API when the annotated type is public. Changes to constructors, parsing/formatting members, JSON converters, persistence conversion expressions, or their signatures therefore require the same compatibility review and package validation as handwritten public API. The scalar JSON representation and EF provider value are compatibility surfaces as well: changing either can break stored data or wire clients even when source compilation still succeeds.
+
+## Packed packages, determinism, and release verification
+
+The release contract is verified from local `.nupkg` files rather than repository `ProjectReference` edges. The packed Strong Types consumer combines `TCJ.Core`, analyzer-only `TCJ.Generators`, `TCJ.EntityFrameworkCore`, and `TCJ.AspNetCore`; it exercises generated construction, validation, scalar JSON, Minimal API parsing, and explicit EF conversion registration against the candidate package set.
+
+`TCJ.Generators` is compile-time tooling. Its implementation assembly must exist only at `analyzers/dotnet/cs/TCJ.Generators.dll` inside the package and must never appear under `lib/`, `runtime/`, normal application output, or Native AOT publish output.
+
+For identical inputs, TCJ Strong Type generated source is required to be byte-for-byte deterministic across clean rebuilds. The incremental generator also tracks its Strong ID and Value Object model stages so tests can prove an unrelated syntax-tree edit reuses unchanged strong-type models instead of regenerating every type.
+
+A release benchmark builds a package-only fixture containing hundreds of Strong IDs and Value Objects after restore. The policy uses a coarse median rebuild budget across multiple measured runs, with a warmup, so CI catches material generator regressions without relying on unrealistic microsecond precision. The budget and fixture sizes live in `eng/strong-types-policy.json` and changes to them require review.
+
+`eng/verify-strong-types.py verify-packed` is a blocking CI/release gate. It verifies the generator package layout, executes the package-only consumer, compares generated sources from two clean rebuilds, and enforces the generator performance budget. Native AOT verification separately publishes and executes the package-only AOT consumer and fails if `TCJ.Generators.dll` is present in publish output.
+
 ## Examples
 
 Implemented strong-type examples include:

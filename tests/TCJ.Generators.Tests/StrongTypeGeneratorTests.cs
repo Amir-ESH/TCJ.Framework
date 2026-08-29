@@ -731,6 +731,63 @@ public sealed class StrongTypeGeneratorTests
         Assert.Equal(first.GeneratedSources, second.GeneratedSources);
     }
 
+    [Fact]
+    public void Generator_UnrelatedSyntaxChange_ReusesStrongTypeModels()
+    {
+        var compilation = CreateCompilation(
+            AttributeSource,
+            """
+            using System;
+            using TCJ.Core.Results;
+            using TCJ.Core.StrongTypes;
+
+            [StronglyTypedId<Guid>]
+            public readonly partial record struct OrderId;
+
+            [StronglyTypedId<long>]
+            public readonly partial record struct CustomerId;
+
+            [ValueObject<string>]
+            public readonly partial record struct EmailAddress
+            {
+                private static Result Validate(string value) => Result.Success();
+            }
+            """,
+            """
+            internal static class UnrelatedMarker
+            {
+                internal const int Value = 1;
+            }
+            """);
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            generators: new[] { new StrongTypeGenerator().AsSourceGenerator() },
+            driverOptions: new GeneratorDriverOptions(
+                IncrementalGeneratorOutputKind.None,
+                trackIncrementalGeneratorSteps: true));
+
+        driver = driver.RunGenerators(compilation);
+
+        SyntaxTree unrelatedTree = compilation.SyntaxTrees.Single(static tree =>
+            tree.GetText().ToString().Contains("UnrelatedMarker", StringComparison.Ordinal));
+        SyntaxTree changedTree = CSharpSyntaxTree.ParseText(
+            """
+            internal static class UnrelatedMarker
+            {
+                internal const int Value = 2;
+                internal const string Text = "changed";
+            }
+            """,
+            (CSharpParseOptions)unrelatedTree.Options);
+        CSharpCompilation updatedCompilation = compilation.ReplaceSyntaxTree(unrelatedTree, changedTree);
+
+        driver = driver.RunGenerators(updatedCompilation);
+        GeneratorRunResult result = Assert.Single(driver.GetRunResult().Results);
+
+        AssertIncrementalStepReused(result, "TCJ.StrongTypes.StrongIdModels", expectedOutputCount: 2);
+        AssertIncrementalStepReused(result, "TCJ.StrongTypes.ValueObjectModels", expectedOutputCount: 1);
+    }
+
     [Theory]
     [InlineData("int", "IntId", "global::System.Int32", "32-bit integer")]
     [InlineData("long", "LongId", "global::System.Int64", "64-bit integer")]
@@ -2640,6 +2697,22 @@ public sealed class StrongTypeGeneratorTests
         Assert.Equal("TCJ4007", diagnostic.Id);
         Assert.Empty(result.GeneratedSources);
         Assert.Null(result.GeneratorException);
+    }
+
+    private static void AssertIncrementalStepReused(
+        GeneratorRunResult result,
+        string trackingName,
+        int expectedOutputCount)
+    {
+        Assert.True(result.TrackedSteps.TryGetValue(trackingName, out var steps));
+        var outputs = steps.SelectMany(static step => step.Outputs).ToArray();
+        Assert.Equal(expectedOutputCount, outputs.Length);
+        Assert.All(outputs, static output =>
+            Assert.Contains(output.Reason, new[]
+            {
+                IncrementalStepRunReason.Cached,
+                IncrementalStepRunReason.Unchanged,
+            }));
     }
 
     private static string GetDiagnosticLocationText(Diagnostic diagnostic)

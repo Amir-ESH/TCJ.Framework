@@ -2,6 +2,10 @@
 
 TCJ.Generators contains incremental Roslyn source generators used by TCJ strong-type features.
 
+The package is compile-time tooling only. `TCJ.Generators.dll` is shipped under `analyzers/dotnet/cs`, with no `lib/` or `runtime/` implementation asset, so it must not be present in application or Native AOT publish output. Keep the package reference private when it is referenced directly by an application or library.
+
+TCJ release verification consumes the candidate `TCJ.Core` and `TCJ.Generators` packages from local `.nupkg` files, compares generated Strong ID/Value Object sources byte-for-byte across clean rebuilds, and enforces a stable many-type generator performance budget before release.
+
 The package generates Strongly Typed IDs as `readonly partial record struct` declarations for these backing types:
 
 | Backing type | Default text/wire representation | JSON representation | Default value |

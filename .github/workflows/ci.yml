@@ -91,6 +91,9 @@ jobs:
       - name: Validate package consumer compatibility configuration
         run: python3 eng/verify-consumer-compatibility.py validate-config
 
+      - name: Validate Strong Types release configuration
+        run: python3 eng/verify-strong-types.py validate-config
+
       - name: Validate package upgrade compatibility configuration
         run: python3 eng/verify-upgrade-compatibility.py validate-config
 
@@ -401,6 +404,33 @@ jobs:
         run: >
           python3 eng/verify-release.py
           --package-directory artifacts/packages
+
+      - name: Verify packed Strong Types contracts
+        run: >
+          python3 eng/verify-strong-types.py verify-packed
+          --version "${{ steps.package-version.outputs.value }}"
+          --packages artifacts/packages
+          --output artifacts/strong-types
+
+      - name: Publish Strong Types verification summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/strong-types/STRONG_TYPES_SUMMARY.md ]]; then
+            cat artifacts/strong-types/STRONG_TYPES_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Strong Types release evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: strong-types-ci-${{ github.run_id }}
+          path: |
+            artifacts/strong-types/STRONG_TYPES_SUMMARY.md
+            artifacts/strong-types/strong-types-result.json
+            artifacts/strong-types/logs/**
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Install packaged Native AOT prerequisites
         shell: bash

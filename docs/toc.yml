@@ -119,6 +119,8 @@
     href: migrations/0.1.0-preview.1-to-0.1.0-preview.2.md
 - name: Release Notes
   items:
+  - name: 0.1.0-preview.4 (development)
+    href: release-notes/0.1.0-preview.4.md
   - name: 0.1.0-preview.3
     href: release-notes/0.1.0-preview.3.md
   - name: 0.1.0-preview.2
