@@ -10,16 +10,20 @@ The `Published package smoke tests` workflow performs independent publication, p
 
 `eng/verify-published-packages.py`:
 
-- reads the package IDs, default version, and expected SPDX license expression from `eng/published-release.json`;
+- uses `eng/published-release.json` as the immutable package inventory for the recorded published baseline;
+- when the explicitly requested version matches `eng/release-manifest.json`, uses that current release inventory so newly introduced packages are included in the immediate post-publication verification;
+- keeps the published-manifest reader backward compatible with the legacy `packages` schema while the tooling-aware schema records separate `runtime` and `tooling` package sets;
 - confirms the exact version exists in the NuGet V3 flat container;
 - confirms registration metadata reports the version as listed;
 - rejects the NuGet.org unlisted timestamp convention;
 - downloads every `.nupkg` from NuGet.org;
-- validates ID, version, repository metadata, the release-specific license expression, README, license file, and `net10.0` assembly contents;
+- validates ID, version, repository metadata, the release-specific license expression, README, and license file for every release package;
+- requires runtime packages to contain their expected `net10.0` assembly content;
+- validates tooling packages against the manifest-declared analyzer asset path and rejects forbidden runtime asset prefixes such as `lib/` and `runtime/`;
 - for package versions from `0.1.0-preview.3` onward, validates the package README Markdown policy;
 - when verifying the current release target after publication, confirms the packed README bytes match the package-specific source under `docs/nuget/`.
 
-The immutable `0.1.0-preview.2` packages predate the package-specific README policy, so the verifier continues to accept their already-published README bytes while enforcing the corrected policy for `0.1.0-preview.3` and later versions.
+The immutable `0.1.0-preview.2` packages predate the package-specific README policy, so the verifier continues to accept their already-published README bytes while enforcing the corrected policy for `0.1.0-preview.3` and later versions. The `0.1.0-preview.3` published metadata remains truthful when represented by the tooling-aware schema: its runtime package set is unchanged and its tooling package set is empty because `TCJ.Generators` was not part of that release.
 
 ### Published feature smoke
 
