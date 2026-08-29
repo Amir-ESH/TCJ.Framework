@@ -97,8 +97,16 @@ if (dispatchProbe.Count != 1 || dispatchProbe.LastSequence != 42)
 await app.StopAsync();
 Console.WriteLine("TCJ Native AOT packed-package smoke passed");
 
-static Microsoft.AspNetCore.Http.IResult ParseStrongTypes(NativeOrderId orderId, NativeEmailAddress email)
-    => Results.Text($"{orderId}|{email.Value}");
+static Microsoft.AspNetCore.Http.IResult ParseStrongTypes(string orderId, string email)
+{
+    if (!NativeOrderId.TryParse(orderId, out NativeOrderId parsedOrderId)
+        || !NativeEmailAddress.TryParse(email, out NativeEmailAddress parsedEmail))
+    {
+        return Results.BadRequest();
+    }
+
+    return Results.Text($"{parsedOrderId}|{parsedEmail.Value}");
+}
 
 static Microsoft.AspNetCore.Http.IResult ThrowUnhandled() =>
     throw new InvalidOperationException("native-aot-sensitive-detail");

@@ -193,7 +193,9 @@ Repeated registration with the same generated expression instances is idempotent
 
 ### Minimal API friendliness
 
-The generated `TryParse`/parsing contracts make supported Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. Model binders and OpenAPI schema integration remain separate integrations.
+The generated `TryParse`/parsing contracts make supported Strong IDs friendly to ASP.NET Core Minimal API route, query, and header binding without adding ASP.NET-specific binder types to the domain model. In ordinary JIT-hosted Minimal APIs, runtime request-delegate creation observes the completed generated type, so typed Strong ID and Value Object parameters can use those parsing contracts directly. Model binders and OpenAPI schema integration remain separate integrations.
+
+Native AOT uses the ASP.NET Core Request Delegate Generator (RDG) at compile time. Roslyn source generators run independently against the same input compilation, so RDG cannot observe `TryParse` members emitted by `TCJ.Generators` later in that same compilation. For Native AOT endpoints, bind the route/query/header value as `string` and call the generated `TryParse` method inside the handler. This remains reflection-free, preserves the generated normalization/validation path, and is the pattern exercised by the packaged Native AOT release smoke.
 
 ## Primitive-backed Value Objects
 

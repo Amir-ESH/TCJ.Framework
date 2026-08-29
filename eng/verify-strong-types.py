@@ -126,7 +126,7 @@ def validate_config(root: Path = ROOT) -> dict[str, Any]:
 
     require_text(project, [
         "Microsoft.NET.Sdk.Web",
-        "EnableRequestDelegateGenerator>true",
+        "EnableRequestDelegateGenerator>false",
         "JsonSerializerIsReflectionEnabledByDefault>false",
         "TreatWarningsAsErrors>true",
         "ManagePackageVersionsCentrally>false",
