@@ -1,0 +1,57 @@
+# TCJ.Generators
+
+TCJ.Generators contains incremental Roslyn source generators used by TCJ strong-type features.
+
+The package is compile-time tooling only. `TCJ.Generators.dll` is shipped under `analyzers/dotnet/cs`, with no `lib/` or `runtime/` implementation asset, so it must not be present in application or Native AOT publish output. Keep the package reference private when it is referenced directly by an application or library.
+
+TCJ release verification consumes the candidate `TCJ.Core` and `TCJ.Generators` packages from local `.nupkg` files, compares generated Strong ID/Value Object sources byte-for-byte across clean rebuilds, and enforces a stable many-type generator performance budget before release.
+
+The package generates Strongly Typed IDs as `readonly partial record struct` declarations for these backing types:
+
+| Backing type | Default text/wire representation | JSON representation | Default value |
+| --- | --- | --- | --- |
+| `Guid` | Canonical invariant `D` format | JSON string in canonical `D` format | `Guid.Empty` |
+| `int` | Invariant base-10 integer text | JSON number | `0` |
+| `long` | Invariant base-10 integer text | JSON number | `0` |
+
+Generated members include an explicit value constructor, immutable `Value`, deterministic `IsDefault`, string and span `Parse`/`TryParse`, `IParsable<TSelf>`/`ISpanParsable<TSelf>`, `IFormattable`/`ISpanFormattable`, allocation-friendly `TryFormat`, explicit conversions to and from the backing primitive, a nested provider-neutral `StrongIdConversion` expression pair for persistence integrations, and a dedicated `System.Text.Json` converter. Implicit conversions remain disabled.
+
+Guid-backed IDs also expose explicit `New(IGuidGenerator)` and `NewVersion7(IGuidGenerator)` helpers. `New` delegates to `IGuidGenerator.Create()` for a version 4 GUID, while `NewVersion7` delegates to `IGuidGenerator.CreateVersion7()` for a version 7 GUID; each Strong ID preserves the exact value returned by the injected generator and rejects a null generator. These helpers are not generated for `int` or `long` IDs, and generated code does not call `Guid.NewGuid()` or resolve a generator through a service locator. GUID v7 is an explicit application choice rather than a hidden default; prefer it only when the persistence strategy benefits from roughly time-ordered GUIDs.
+
+Numeric parsing uses `NumberStyles.Integer` with `CultureInfo.InvariantCulture`; provider arguments are ignored so current culture cannot change wire behavior. Boundary values, zero, and negative values round-trip exactly; overflow fails according to the underlying BCL integer parsing contract.
+
+## Primitive Value Objects
+
+`[ValueObject<TValue>]` supports `string`, `Guid`, `int`, `long`, and `decimal` on top-level public/internal `readonly partial record struct` declarations. The application must provide exactly one static `TCJ.Core.Results.Result Validate(TValue value)` method. Generated members are an immutable `Value` property, deterministic `IsDefault`, and `Create(TValue)` returning `Result<TValueObject>`. The backing-value constructor is private so the normal non-default construction path validates first. Failed validation preserves all original `ResultError` instances and ordering.
+
+Value Object generation does not add domain rules, implicit primitive conversions, reflection-based equality, or composite multi-property behavior.
+
+## System.Text.Json contract
+
+Strong IDs serialize as their backing scalar rather than as an object containing `Value`:
+
+```json
+"7a29be31-268d-4f2b-babc-fce0ce1cb46c"
+```
+
+```json
+-42
+```
+
+Each generated ID has its own public nested `StrongIdJsonConverter : JsonConverter<TStrongId>` and is annotated to use that converter. The generator does not emit `JsonConverterFactory`, `MakeGenericType`, runtime type scanning, or reflection-based converter discovery code.
+
+Deserialization accepts only the backing scalar token kind: a JSON string for `Guid` IDs and a JSON number for `int`/`long` IDs. Wrong token kinds, invalid GUID text, non-integral or overflowing numeric values, and `null` for a non-nullable Strong ID throw `JsonException`. Generated converter error messages describe the invalid contract without embedding the raw malformed scalar value.
+
+Native AOT consumers should use System.Text.Json source-generated metadata and include their Strong ID types in a `JsonSerializerContext`. Metadata generation is required for converter-backed IDs; do not rely on reflection-based serialization defaults. When the context and Strong IDs are generated in the same compilation, register each generated converter explicitly before constructing the context, for example:
+
+```csharp
+var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+options.Converters.Add(new OrderId.StrongIdJsonConverter());
+var context = new AppJsonContext(options);
+```
+
+This explicit registration is closed over the concrete Strong ID type and does not use runtime type scanning, reflection, `MakeGenericType`, or a converter factory.
+
+## Persistence conversion expressions
+
+Each supported Strong ID also exposes `StrongIdConversion.ToBackingValue` and `StrongIdConversion.FromBackingValue` as closed `Expression<Func<...>>` instances. They depend only on BCL expression APIs and the generated value constructor/property; they do not reference EF Core or a database provider. `TCJ.EntityFrameworkCore` consumes these expressions through its explicit Strong ID conversion registry.

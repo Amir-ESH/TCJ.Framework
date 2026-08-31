@@ -7,7 +7,7 @@
   <a href="https://www.nuget.org/packages/TCJ.Core"><img alt="NuGet" src="https://img.shields.io/nuget/v/TCJ.Core.svg?style=flat-square&label=NuGet"></a>
   <a href="https://www.nuget.org/packages/TCJ.Core"><img alt="NuGet downloads" src="https://img.shields.io/nuget/dt/TCJ.Core.svg?style=flat-square&label=downloads"></a>
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square">
-  <a href="LICENSE"><img alt="License: LGPL-3.0-only" src="https://img.shields.io/badge/license-LGPL--3.0--only-blue.svg?style=flat-square"></a>
+  <a href="LICENSE.txt"><img alt="License: LGPL-3.0-only" src="https://img.shields.io/badge/license-LGPL--3.0--only-blue.svg?style=flat-square"></a>
 </p>
 
 <p align="center">
@@ -193,7 +193,7 @@ Contributions are accepted under the [TCJ Contributor License Agreement](CLA.md)
 
 ## License and brand
 
-The TCJ Framework code in this development line is licensed under the **GNU Lesser General Public License v3.0 only (`LGPL-3.0-only`)**. See [`LICENSE`](LICENSE).
+The TCJ Framework code in this development line is licensed under the **GNU Lesser General Public License v3.0 only (`LGPL-3.0-only`)**. See [`LICENSE.txt`](LICENSE.txt).
 
 The LGPL is intended for libraries and permits use in applications licensed under different terms, including proprietary applications, subject to the LGPL's conditions. If you distribute a Combined Work using a static-link-like model—including Native AOT—review the LGPL's Combined Work and relinking/recombination requirements for your distribution model.
 

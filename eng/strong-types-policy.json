@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "documentation": "docs/guides/strong-types.md",
+  "generationContract": {
+    "status": "guid-strong-id-generation",
+    "generatedTypes": "readonly partial record struct",
+    "immutability": true,
+    "runtimeReflectionRequired": false
+  },
+  "stronglyTypedIds": {
+    "declaration": "immutable readonly partial record struct generated from attributes",
+    "supportedBackingTypes": [
+      "Guid",
+      "int",
+      "long"
+    ],
+    "equality": "generated record-struct value equality",
+    "defaultValue": "Possible. Generated APIs expose deterministic IsDefault semantics.",
+    "implicitConversions": false
+  },
+  "valueObjects": {
+    "declaration": "immutable primitive-backed generated record structs with explicit validation",
+    "supportedBackingTypes": [
+      "string",
+      "Guid",
+      "int",
+      "long",
+      "decimal"
+    ],
+    "compositeObjects": false,
+    "implicitConversions": false
+  },
+  "packageOwnership": {
+    "TCJ.Core": "domain contracts and runtime-safe abstractions only",
+    "TCJ.Generators": "compile-time source generation APIs and generated code production",
+    "TCJ.EntityFrameworkCore": "EF Core persistence integration only",
+    "TCJ.AspNetCore": "HTTP serialization and API integration only"
+  },
+  "rules": {
+    "serialization": "Explicit stable wire formats; no reflection based serialization contract",
+    "parsing": "Culture-stable parsing rules",
+    "conversion": "No implicit primitive conversion; explicit conversion APIs only",
+    "efCore": "Persistence support must not force domain projects to depend on EF Core",
+    "aot": "Generated code must compile without runtime reflection",
+    "memberReservation": "Generated public member names must be reserved and collision checked"
+  },
+  "nonGoals": [
+    "arbitrary composite Value Objects",
+    "reflection-based equality",
+    "EF Core dependency from domain projects for declaring IDs or Value Objects",
+    "generator implementation before architecture contract review"
+  ],
+  "examples": {
+    "strongId": "OrderId",
+    "valueObject": "EmailAddress"
+  },
+  "packageConsumer": {
+    "project": "smoke/TCJ.StrongTypes.PackageConsumer/TCJ.StrongTypes.PackageConsumer.csproj",
+    "program": "smoke/TCJ.StrongTypes.PackageConsumer/Program.cs",
+    "requiredPackages": [
+      "TCJ.Core",
+      "TCJ.Generators",
+      "TCJ.EntityFrameworkCore",
+      "TCJ.AspNetCore"
+    ],
+    "expectedOutput": "TCJ strong-types packed consumer passed"
+  },
+  "generatorPackage": {
+    "id": "TCJ.Generators",
+    "asset": "analyzers/dotnet/cs/TCJ.Generators.dll",
+    "forbiddenRuntimePrefixes": [
+      "lib/",
+      "runtime/"
+    ]
+  },
+  "determinism": {
+    "strongIdCount": 64,
+    "valueObjectCount": 64,
+    "expectedGeneratedFileCount": 128
+  },
+  "performance": {
+    "strongIdCount": 250,
+    "valueObjectCount": 250,
+    "warmupRuns": 1,
+    "measurementRuns": 3,
+    "maxMedianMilliseconds": 30000
+  },
+  "incrementalTrackingNames": [
+    "TCJ.StrongTypes.StrongIdModels",
+    "TCJ.StrongTypes.ValueObjectModels"
+  ],
+  "diagnostics": {
+    "releaseTrackingFiles": [
+      "src/TCJ.Generators/AnalyzerReleases.Shipped.md",
+      "src/TCJ.Generators/AnalyzerReleases.Unshipped.md"
+    ],
+    "diagnosticIds": [
+      "TCJ4000",
+      "TCJ4001",
+      "TCJ4002",
+      "TCJ4003",
+      "TCJ4004",
+      "TCJ4005",
+      "TCJ4006",
+      "TCJ4007"
+    ]
+  }
+}

@@ -259,12 +259,13 @@ def validate_git_tracking(policy: dict) -> None:
         required_sources.update(releases_dir.glob("*.md"))
 
     for path in sorted(required_sources):
+        relative_path = path.relative_to(ROOT).as_posix()
         if not path.is_file():
-            fail(f"Required documentation source does not exist: {path.relative_to(ROOT)}")
+            fail(f"Required documentation source does not exist: {relative_path}")
         if git_ignored(path):
-            fail(f"Required documentation source is ignored by Git: {path.relative_to(ROOT)}")
+            fail(f"Required documentation source is ignored by Git: {relative_path}")
         if not git_tracked(path):
-            fail(f"Required documentation source is not tracked by Git: {path.relative_to(ROOT)}")
+            fail(f"Required documentation source is not tracked by Git: {relative_path}")
     if BASELINE_PATH.exists():
         if git_ignored(BASELINE_PATH) or not git_tracked(BASELINE_PATH):
             fail("eng/documentation-baseline.json must remain tracked and not ignored.")

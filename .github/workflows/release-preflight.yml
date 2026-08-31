@@ -7,10 +7,11 @@ on:
         description: Expected NuGet.org state for the package IDs
         required: true
         type: choice
-        default: existing
+        default: transition
         options:
           - available
           - existing
+          - transition
           - report-only
 
 permissions:
@@ -122,6 +123,9 @@ jobs:
 
       - name: Validate package consumer compatibility configuration
         run: python3 eng/verify-consumer-compatibility.py validate-config
+
+      - name: Validate Strong Types release configuration
+        run: python3 eng/verify-strong-types.py validate-config
 
       - name: Validate package upgrade compatibility configuration
         run: python3 eng/verify-upgrade-compatibility.py validate-config
@@ -477,6 +481,33 @@ jobs:
           python3 eng/verify-release.py
           --package-directory artifacts/packages
 
+      - name: Verify packed Strong Types contracts
+        run: >
+          python3 eng/verify-strong-types.py verify-packed
+          --version "${{ steps.release-version.outputs.value }}"
+          --packages artifacts/packages
+          --output artifacts/strong-types
+
+      - name: Publish Strong Types verification summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/strong-types/STRONG_TYPES_SUMMARY.md ]]; then
+            cat artifacts/strong-types/STRONG_TYPES_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Strong Types release evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: strong-types-release-preflight-${{ github.run_id }}
+          path: |
+            artifacts/strong-types/STRONG_TYPES_SUMMARY.md
+            artifacts/strong-types/strong-types-result.json
+            artifacts/strong-types/logs/**
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Install packaged Native AOT prerequisites
         shell: bash
         run: |
@@ -485,6 +516,7 @@ jobs:
           sudo apt-get install -y clang zlib1g-dev
 
       - name: Run packed Native AOT release-candidate smoke
+        id: native-aot-smoke
         run: >
           python3 eng/run-native-aot-smoke.py
           --version "${{ steps.release-version.outputs.value }}"
@@ -493,7 +525,7 @@ jobs:
           --output artifacts/aot/native-aot-smoke
 
       - name: Verify packed Native AOT release-candidate evidence
-        if: always()
+        if: ${{ always() && steps.native-aot-smoke.outcome != 'skipped' }}
         run: >
           python3 eng/verify-aot.py verify-result
           --version "${{ steps.release-version.outputs.value }}"

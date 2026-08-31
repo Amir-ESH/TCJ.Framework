@@ -50,7 +50,6 @@ PACKED_AOT_NUGET_CONFIG = "smoke/NuGet.Config"
 PACKED_AOT_RUNNER = "eng/run-native-aot-smoke.py"
 PACKED_AOT_RID = "linux-x64"
 PACKED_AOT_RESULT = "artifacts/aot/native-aot-smoke/native-aot-result.json"
-PACKED_AOT_PACKAGES = ("TCJ.Core", "TCJ.DependencyInjection", "TCJ.AspNetCore")
 BLOCKING_AOT_WORKFLOWS = (
     ".github/workflows/ci.yml",
     ".github/workflows/release-preflight.yml",
@@ -188,7 +187,12 @@ def _package_projects(root: Path, policy: Any) -> dict[str, Path]:
             for node in xml_root.iter()
             if _tag_name(node) == "PackageId" and (node.text or "").strip()
         ]
-        if len(package_ids) == 1:
+        if len(package_ids) == 1 and any(
+            package.package_id == package_ids[0] for package in policy.packages
+        ):
+            # Only runtime production packages participate in Native AOT policy validation.
+            # Analyzer/source-generator packages (for example TCJ.Generators) are shipped
+            # through analyzers/dotnet/cs and are not runtime dependencies of AOT consumers.
             result[package_ids[0]] = project
 
     for package in policy.packages:
@@ -197,6 +201,28 @@ def _package_projects(root: Path, policy: Any) -> dict[str, Path]:
                 f"Production package '{package.package_id}' has no uniquely identifiable project file."
             )
     return result
+
+
+
+
+def _runtime_package_ids(root: Path) -> tuple[str, ...]:
+    """Return the normalized runtime release package IDs from the release manifest."""
+    return tuple(sorted(POLICY.release_packages(root)))
+
+
+def _tooling_package_ids(root: Path) -> tuple[str, ...]:
+    """Return normalized tooling release package IDs from the release manifest."""
+    manifest_path = root / "eng/release-manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        tooling = manifest.get("releasePackages", {}).get("tooling", [])
+        package_ids = sorted(
+            item.get("id") for item in tooling
+            if isinstance(item, dict) and isinstance(item.get("id"), str) and item.get("id")
+        )
+    except (OSError, json.JSONDecodeError, AttributeError) as error:
+        raise POLICY.AotPolicyError(f"Unable to read tooling release package inventory: {error}") from error
+    return tuple(package_ids)
 
 
 def _allowed_suppressions(policy: Any) -> set[tuple[str, str, str, str]]:
@@ -547,6 +573,14 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
     source = program.read_text(encoding="utf-8")
     required_fragments = (
         "UseSqlServer(",
+        "StrongIdConversionRegistry",
+        "ExperimentalRecordId.StrongIdConversion.ToBackingValue",
+        "ExperimentalRecordId.StrongIdConversion.FromBackingValue",
+        "ApplyStrongIdConversions(",
+        "public readonly record struct ExperimentalRecordId(Guid Value)",
+        "public static class StrongIdConversion",
+        "static value => value.Value;",
+        "static value => new ExperimentalRecordId(value);",
         "ApplyTcjSqlServerConventions()",
         "ToListAsync()",
         'args.Contains("--execute-query", StringComparer.Ordinal)',
@@ -556,7 +590,7 @@ def _validate_ef_nativeaot_fixture(root: Path) -> list[Finding]:
             add(
                 "Program.cs",
                 fragment,
-                f"The experimental EF NativeAOT fixture must include '{fragment}' so provider setup, TCJ SQL Server conventions, and a statically analyzable EF query are exercised.",
+                f"The experimental EF NativeAOT fixture must include '{fragment}' so provider setup, explicit Strong ID conversion, TCJ SQL Server conventions, and a statically analyzable EF query are exercised.",
             )
 
     if "LoadNamesAsync(ExperimentalNativeAotDbContext" in source:
@@ -633,6 +667,7 @@ def _validate_packed_native_aot_smoke(root: Path, policy: Any) -> list[Finding]:
             )
 
     package_references: dict[str, str] = {}
+    private_assets: dict[str, str] = {}
     project_references: list[str] = []
     for element in xml_root.iter():
         tag = _tag_name(element)
@@ -645,27 +680,65 @@ def _validate_packed_native_aot_smoke(root: Path, policy: Any) -> list[Finding]:
                 version_node = next((child for child in element if _tag_name(child) == "Version"), None)
                 version = ((version_node.text if version_node is not None else "") or "").strip()
             package_references[include] = version
+            private_value = (element.attrib.get("PrivateAssets") or "").strip()
+            if not private_value:
+                private_node = next((child for child in element if _tag_name(child) == "PrivateAssets"), None)
+                private_value = ((private_node.text if private_node is not None else "") or "").strip()
+            private_assets[include] = private_value
         elif tag == "ProjectReference":
             project_references.append((element.attrib.get("Include") or "").strip())
 
+    runtime_packages = sorted(_runtime_package_ids(root))
+    runtime_package_set = set(runtime_packages)
     full_packages = sorted(package.package_id for package in policy.packages if package.tier == "Full")
-    expected_packages = sorted(PACKED_AOT_PACKAGES)
-    if full_packages != expected_packages:
+    non_runtime_full_packages = sorted(set(full_packages) - runtime_package_set)
+    if non_runtime_full_packages:
         add(
             "AOT009",
             "eng/aot-policy.json",
             "FullPackages",
-            ", ".join(full_packages) or "<none>",
-            "The current Full support package set must match the packed Native AOT smoke closure. Add executable evidence before changing a support tier.",
+            ", ".join(non_runtime_full_packages),
+            "Every Full Native AOT support package must be a normalized runtime release package.",
         )
 
+    tooling_packages = sorted(_tooling_package_ids(root))
+    expected_tooling_packages = ["TCJ.Generators"]
+    if tooling_packages != expected_tooling_packages:
+        add(
+            "AOT008",
+            "eng/release-manifest.json",
+            "ToolingPackages",
+            ", ".join(tooling_packages) or "<missing>",
+            "The Strong Types Native AOT contract expects TCJ.Generators to be the normalized tooling release package.",
+        )
+
+    supported_references = runtime_package_set | set(tooling_packages)
+    unsupported_references = sorted(set(package_references) - supported_references)
+    if unsupported_references:
+        add(
+            "AOT008",
+            PACKED_AOT_FIXTURE,
+            "PackageReference",
+            ", ".join(unsupported_references),
+            "The packed Native AOT smoke may reference only normalized runtime packages plus reviewed tooling packages.",
+        )
+
+    expected_packages = sorted(full_packages + expected_tooling_packages)
     if sorted(package_references) != expected_packages:
         add(
             "AOT008",
             PACKED_AOT_FIXTURE,
             "PackageReference",
             ", ".join(sorted(package_references)) or "<missing>",
-            "The smoke project must consume exactly TCJ.Core, TCJ.DependencyInjection, and TCJ.AspNetCore as packages.",
+            "The smoke project must consume exactly the current Full Native AOT runtime package set plus TCJ.Generators as compile-time tooling.",
+        )
+    if private_assets.get("TCJ.Generators", "").casefold() != "all":
+        add(
+            "AOT008",
+            PACKED_AOT_FIXTURE,
+            "PackageReference:TCJ.Generators:PrivateAssets",
+            private_assets.get("TCJ.Generators", "") or "<missing>",
+            "TCJ.Generators must be PrivateAssets=all in the Native AOT smoke so generator tooling cannot become a runtime dependency.",
         )
     for referenced_package, version in sorted(package_references.items()):
         if version != "$(TCJNativeAotPackageVersion)":
@@ -721,6 +794,14 @@ def _validate_packed_native_aot_smoke(root: Path, policy: Any) -> list[Finding]:
             '"/conflict"',
             '"/unhandled"',
             '"/domain-event"',
+            '"/strong-types/{orderId}/{email}"',
+            "[StronglyTypedId<Guid>]",
+            "[ValueObject<string>]",
+            "NativeOrderId.StrongIdJsonConverter",
+            "NativeEmailAddress.ValueObjectJsonConverter",
+            "ParseStrongTypes(string orderId, string email)",
+            "NativeOrderId.TryParse(orderId, out NativeOrderId parsedOrderId)",
+            "NativeEmailAddress.TryParse(email, out NativeEmailAddress parsedEmail)",
             'ReadAssemblyMetadata(assembly, "PackageVersion")',
             "typeof(TCJ.DependencyInjection.Extensions.ServiceCollectionExtensions).Assembly",
             "typeof(TCJ.AspNetCore.Extensions.AspNetCoreServiceCollectionExtensions).Assembly",
@@ -766,11 +847,24 @@ def _validate_packed_native_aot_smoke(root: Path, policy: Any) -> list[Finding]:
     runner = root / PACKED_AOT_RUNNER
     if not runner.is_file():
         add("AOT008", PACKED_AOT_RUNNER, "runner", "missing", "The packed Native AOT smoke runner is missing.")
+    else:
+        runner_source = runner.read_text(encoding="utf-8")
+        for fragment in ("tooling_package_ids", "TCJ.Generators.dll", "publishOutputToolingStatus", "forbiddenPublishAssemblies"):
+            if fragment not in runner_source:
+                add(
+                    "AOT008",
+                    PACKED_AOT_RUNNER,
+                    "runner",
+                    fragment,
+                    "The Native AOT runner must verify that generator tooling is consumed at compile time but absent from publish output.",
+                )
 
     required_workflow_fragments = (
         "python3 eng/verify-aot.py verify",
         "python3 eng/run-native-aot-smoke.py",
         "python3 eng/verify-aot.py verify-result",
+        "id: native-aot-smoke",
+        "steps.native-aot-smoke.outcome != 'skipped'",
         "sudo apt-get install -y clang zlib1g-dev",
         PACKED_AOT_RID,
     )
@@ -823,15 +917,33 @@ def verify_runtime_result(
     result_path = (result_path or root / PACKED_AOT_RESULT).resolve()
     package_directory = (package_directory or root / "artifacts/packages").resolve()
     output_path = (output_path or root / "artifacts/aot/aot-runtime-verification.json").resolve()
+    expected_version = expected_version.strip()
     findings: list[Finding] = []
     result: dict[str, Any] = {}
     full_packages: list[str] = []
 
     try:
         policy = POLICY.validate_configuration(root, policy_path)
+        runtime_packages = set(_runtime_package_ids(root))
         full_packages = sorted(package.package_id for package in policy.packages if package.tier == "Full")
-        if full_packages != sorted(PACKED_AOT_PACKAGES):
-            findings.append(_result_finding("FullPackages", full_packages, "Full support tiers drifted from the executable packed Native AOT smoke evidence."))
+        non_runtime_full_packages = sorted(set(full_packages) - runtime_packages)
+        if non_runtime_full_packages:
+            findings.append(
+                _result_finding(
+                    "FullPackages",
+                    non_runtime_full_packages,
+                    "Every Full Native AOT support package must be a normalized runtime release package.",
+                )
+            )
+
+        if not expected_version:
+            findings.append(
+                _result_finding(
+                    "packageVersion",
+                    expected_version,
+                    "Expected package version must be non-empty; verify the producing workflow step executed successfully.",
+                )
+            )
 
         if not result_path.is_file():
             findings.append(_result_finding("result", "missing", f"Missing Native AOT runtime result: {repo_relative(result_path, root)}"))
@@ -857,6 +969,7 @@ def verify_runtime_result(
                 "packageSourceStatus": "pass",
                 "restoreStatus": "pass",
                 "publishStatus": "pass",
+                "publishOutputToolingStatus": "pass",
                 "executionStatus": "pass",
                 "unexpectedAotWarningCount": 0,
                 "warningCount": 0,
@@ -866,28 +979,45 @@ def verify_runtime_result(
                 if result.get(key) != expected:
                     findings.append(_result_finding(key, result.get(key), f"Native AOT result {key} must be {expected!r}."))
 
-            expected_package_set = sorted(full_packages)
+            expected_runtime_package_set = sorted(full_packages)
+            expected_tooling_package_set = ["TCJ.Generators"]
+            expected_package_set = sorted(expected_runtime_package_set + expected_tooling_package_set)
             if sorted(result.get("expectedPackages") or []) != expected_package_set:
-                findings.append(_result_finding("expectedPackages", result.get("expectedPackages"), "Runtime result expectedPackages must match the current Full support tier package set."))
+                findings.append(_result_finding("expectedPackages", result.get("expectedPackages"), "Runtime result expectedPackages must match the Full runtime support set plus TCJ.Generators tooling."))
+            if sorted(result.get("expectedRuntimePackages") or []) != expected_runtime_package_set:
+                findings.append(_result_finding("expectedRuntimePackages", result.get("expectedRuntimePackages"), "Runtime result expectedRuntimePackages must match every and only Full runtime support package."))
+            if sorted(result.get("expectedToolingPackages") or []) != expected_tooling_package_set:
+                findings.append(_result_finding("expectedToolingPackages", result.get("expectedToolingPackages"), "Runtime result expectedToolingPackages must contain only TCJ.Generators."))
 
-            for key in ("resolvedPackages", "loadedPackageVersions"):
-                value = result.get(key)
-                if not isinstance(value, dict) or sorted(value) != expected_package_set:
-                    findings.append(_result_finding(key, value, f"{key} must contain every and only Full support package."))
-                    continue
-                wrong = {package_id: version for package_id, version in value.items() if version != expected_version}
+            resolved = result.get("resolvedPackages")
+            if not isinstance(resolved, dict) or sorted(resolved) != expected_package_set:
+                findings.append(_result_finding("resolvedPackages", resolved, "resolvedPackages must contain every Full runtime package plus TCJ.Generators from the packed feed."))
+            else:
+                wrong = {package_id: version for package_id, version in resolved.items() if version != expected_version}
                 if wrong:
-                    findings.append(_result_finding(key, wrong, f"{key} must report candidate version {expected_version} for every Full package."))
+                    findings.append(_result_finding("resolvedPackages", wrong, f"resolvedPackages must report candidate version {expected_version} for every consumed package."))
+
+            loaded = result.get("loadedPackageVersions")
+            if not isinstance(loaded, dict) or sorted(loaded) != expected_runtime_package_set:
+                findings.append(_result_finding("loadedPackageVersions", loaded, "loadedPackageVersions must contain every and only Full runtime support package; tooling must not load at runtime."))
+            else:
+                wrong = {package_id: version for package_id, version in loaded.items() if version != expected_version}
+                if wrong:
+                    findings.append(_result_finding("loadedPackageVersions", wrong, f"loadedPackageVersions must report candidate version {expected_version} for every Full runtime package."))
+
+            if result.get("forbiddenPublishAssemblies") != []:
+                findings.append(_result_finding("forbiddenPublishAssemblies", result.get("forbiddenPublishAssemblies"), "Native AOT publish output must not contain TCJ.Generators.dll."))
 
             for key in ("trimWarnings", "aotWarnings", "tcjWarnings", "upstreamWarnings"):
                 value = result.get(key)
                 if value != []:
                     findings.append(_result_finding(key, value, "Full Native AOT evidence must contain no IL2xxx/IL3xxx warning baseline or accepted warning list."))
 
-        for package_id in full_packages:
-            package_path = package_directory / f"{package_id}.{expected_version}.nupkg"
-            if not package_path.is_file():
-                findings.append(_result_finding("package", package_path.name, f"Full package '{package_id}' is missing from the exact packed release candidate set."))
+        if expected_version:
+            for package_id in sorted(full_packages + ["TCJ.Generators"]):
+                package_path = package_directory / f"{package_id}.{expected_version}.nupkg"
+                if not package_path.is_file():
+                    findings.append(_result_finding("package", package_path.name, f"Required Native AOT package '{package_id}' is missing from the exact packed release candidate set."))
     except POLICY.AotPolicyError as error:
         findings.append(_result_finding("policy", "invalid", str(error)))
 

@@ -51,7 +51,9 @@ builder.Services.AddTcjDependencyInjection(options =>
 });
 ```
 
-Only public, concrete types in the supplied assemblies are scanned. The assembly/options overloads are annotated with both `RequiresUnreferencedCode` and `RequiresDynamicCode` because arbitrary runtime assembly discovery and the scanner-compatible runtime-generic dispatch fallback are not reliable trimming/Native AOT contracts. Those overloads remain available for regular JIT/non-trimmed applications.
+Only effectively public, concrete types in the supplied assemblies are scanned. A top-level dependency must be declared `public`; a nested dependency and every one of its containing types must also be `public`. A nested `public` class inside an `internal`, `private`, or otherwise non-public container is not part of the convention-scan surface. `TCJ0003` reports convention-marked concrete types that violate this accessibility rule and offers an automatic fix only when making the marked type itself `public` is sufficient.
+
+The assembly/options overloads are annotated with both `RequiresUnreferencedCode` and `RequiresDynamicCode` because arbitrary runtime assembly discovery and the scanner-compatible runtime-generic dispatch fallback are not reliable trimming/Native AOT contracts. Those overloads remain available for regular JIT/non-trimmed applications.
 
 ## Lifetime markers
 
@@ -97,7 +99,7 @@ builder.Services.AddTcjDependencyInjection(options =>
 
 ## Domain-event handlers
 
-Public implementations of `IDomainEventHandler<TEvent>` are registered as transient services when convention scanning is used and `RegisterDomainEventHandlers` is enabled.
+Effectively public implementations of `IDomainEventHandler<TEvent>` are registered as transient services when convention scanning is used and `RegisterDomainEventHandlers` is enabled. Domain-event handlers are registered by this dedicated handler pipeline before marked dependencies are processed, and the marked-dependency pass skips handler types. As a result, TCJ lifetime markers such as `IScopedDependency` or `ISelfSingletonDependency` do not change a convention-scanned handler's transient lifetime. `TCJ0004` reports these misleading marker declarations and can remove directly declared TCJ lifetime markers without changing handler interfaces.
 
 ```csharp
 public sealed class ProductCreatedHandler

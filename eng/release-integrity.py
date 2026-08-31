@@ -10,6 +10,8 @@ import re
 import sys
 from pathlib import Path
 
+from sbom_common import get_release_package_ids, get_release_packages, read_json
+
 CHECKSUM_PATTERN = re.compile(r"^(?P<digest>[0-9a-f]{64}) [ *](?P<name>[^/\\]+)$")
 PACKAGE_SUFFIXES = (".nupkg", ".snupkg")
 SBOM_SUFFIX = ".cdx.json"
@@ -27,13 +29,12 @@ def read_text(path: Path) -> str:
 
 def load_release_manifest(root: Path) -> dict[str, object]:
     path = root / "eng" / "release-manifest.json"
-    data = json.loads(read_text(path))
-    packages = data.get("packages")
+    data = read_json(path)
+    try:
+        get_release_packages(data)
+    except ValueError as error:
+        fail(str(error))
     version = data.get("version")
-    if not isinstance(packages, list) or not packages:
-        fail("eng/release-manifest.json must contain a non-empty packages array.")
-    if not all(isinstance(item, str) and item.strip() for item in packages):
-        fail("Release package IDs must be non-empty strings.")
     if not isinstance(version, str) or not version.strip():
         fail("eng/release-manifest.json must contain a version.")
     return data
@@ -43,12 +44,16 @@ def expected_package_names(
     manifest: dict[str, object],
     version: str,
 ) -> list[str]:
-    names: list[str] = []
-    for package_id_value in manifest["packages"]:
-        package_id = str(package_id_value)
-        names.append(f"{package_id}.{version}.nupkg")
-        names.append(f"{package_id}.{version}.snupkg")
-    return sorted(names, key=str.casefold)
+    # Every release package must have its primary NuGet artifact. Symbol
+    # packages are optional: runtime packages may publish .snupkg artifacts,
+    # while tooling/analyzer packages are not required to do so.
+    return sorted(
+        (
+            f"{package_id}.{version}.nupkg"
+            for package_id in get_release_package_ids(manifest)
+        ),
+        key=str.casefold,
+    )
 
 
 def expected_sbom_name(version: str) -> str:
@@ -71,9 +76,16 @@ def release_package_files(
         key=lambda item: item.name.casefold(),
     )
     actual_names = [path.name for path in actual]
-    if actual_names != expected_names:
+    accepted_names = set(expected_names)
+    accepted_names.update(
+        path.name
+        for path in actual
+        if path.name.endswith(".snupkg")
+        and any(path.name.startswith(name.removesuffix(".nupkg")) for name in expected_names)
+    )
+    if sorted(accepted_names, key=str.casefold) != actual_names:
         missing = sorted(set(expected_names).difference(actual_names), key=str.casefold)
-        unexpected = sorted(set(actual_names).difference(expected_names), key=str.casefold)
+        unexpected = sorted(set(actual_names).difference(accepted_names), key=str.casefold)
         details: list[str] = []
         if missing:
             details.append(f"missing: {', '.join(missing)}")

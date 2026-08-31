@@ -141,6 +141,7 @@
       "workflow": ".github/workflows/aspnetcore-integration.yml",
       "paths": [
         "src/TCJ.Core/**",
+        "src/TCJ.Generators/**",
         "compatibility/Consumers/AspNetCore.MinimalApi/**",
         "compatibility/Consumers/FullStack.MinimalApi/**",
         "compatibility/Directory.Build.props",

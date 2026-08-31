@@ -9,7 +9,7 @@ dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.3
 ```
 
 - **Target framework:** `net10.0`
-- **Main namespaces:** `TCJ.EntityFrameworkCore.Repositories`, `TCJ.EntityFrameworkCore.Specifications`, `TCJ.EntityFrameworkCore.UnitOfWork`, `TCJ.EntityFrameworkCore.Extensions`
+- **Main namespaces:** `TCJ.EntityFrameworkCore.Repositories`, `TCJ.EntityFrameworkCore.Specifications`, `TCJ.EntityFrameworkCore.UnitOfWork`, `TCJ.EntityFrameworkCore.Extensions`, `TCJ.EntityFrameworkCore.StrongTypes`
 - **Primary entry points:** `AddTcjEntityFrameworkCore`, `IRepository<TEntity>`, `Specification<TEntity>`, and `IUnitOfWork`
 
 ```csharp
@@ -52,6 +52,45 @@ When the context is registered separately, calling `AddTcjPersistenceInterceptor
 - `IDataSeeder`
 - `IEntitySearcher`
 - `TimeProvider.System` when no replacement exists
+
+## Strongly Typed ID conversions
+
+Generated Strong IDs are registered explicitly; this package does not scan assemblies to discover them. Configure the model first, build a `StrongIdConversionRegistry`, and apply it:
+
+```csharp
+using TCJ.EntityFrameworkCore.Extensions;
+using TCJ.EntityFrameworkCore.StrongTypes;
+
+var strongIds = new StrongIdConversionRegistry()
+    .Register<OrderId, Guid>(
+        OrderId.StrongIdConversion.ToBackingValue,
+        OrderId.StrongIdConversion.FromBackingValue)
+    .Register<CustomerNumber, int>(
+        CustomerNumber.StrongIdConversion.ToBackingValue,
+        CustomerNumber.StrongIdConversion.FromBackingValue);
+
+modelBuilder.ApplyStrongIdConversions(strongIds);
+```
+
+The registry supports generated `Guid`, `int`, and `long` IDs and applies their primitive conversions consistently to matching keys, foreign keys, nullable wrappers, and ordinary properties. Duplicate use of the same generated registration is idempotent; conflicting registrations or an already-configured different property converter fail explicitly. The registry is provider-neutral and does not add SQL Server behavior.
+
+## Value Object conversions
+
+Primitive-backed Value Objects use the same explicit registration model and do not require runtime assembly scanning:
+
+```csharp
+var valueObjects = new ValueObjectConversionRegistry()
+    .Register<EmailAddress, string>(
+        EmailAddress.ValueObjectConversion.ToBackingValue,
+        EmailAddress.ValueObjectConversion.FromBackingValue)
+    .Register<MoneyAmount, decimal>(
+        MoneyAmount.ValueObjectConversion.ToBackingValue,
+        MoneyAmount.ValueObjectConversion.FromBackingValue);
+
+modelBuilder.ApplyValueObjectConversions(valueObjects);
+```
+
+Supported backing types are `string`, `Guid`, `int`, `long`, and `decimal`, and each Value Object is persisted as that primitive provider value. Materialization goes back through the generated `Create` path, including optional normalization and validation. Invalid legacy database values fail with an actionable `InvalidOperationException` that names the Value Object type without echoing the rejected value or application validation messages. TCJ does not bypass validation, rewrite invalid stored values, or add provider-specific domain behavior. Immutable record-struct equality is sufficient for EF change tracking, so no custom comparer is required.
 
 ## Repository behavior
 

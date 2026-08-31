@@ -37,8 +37,25 @@ for package_id in "${package_ids[@]}"; do
   fi
 done
 
+is_tooling_package() {
+  local package="$1"
+  unzip -Z1 "$package" 2>/dev/null | grep -q '^analyzers/dotnet/cs/'
+}
+
 mapfile -t primary_packages < <(
-  find "$package_directory" -maxdepth 1 -type f -name '*.nupkg' -print | sort
+  find "$package_directory" -maxdepth 1 -type f -name '*.nupkg' -print | while read -r package; do
+    if ! is_tooling_package "$package"; then
+      printf '%s\n' "$package"
+    fi
+  done | sort
+)
+
+mapfile -t tooling_packages < <(
+  find "$package_directory" -maxdepth 1 -type f -name '*.nupkg' -print | while read -r package; do
+    if is_tooling_package "$package"; then
+      printf '%s\n' "$package"
+    fi
+  done | sort
 )
 
 mapfile -t symbol_packages < <(
@@ -58,4 +75,6 @@ if (( ${#symbol_packages[@]} != ${#package_ids[@]} )); then
 fi
 
 printf 'Verified package version %s:\n' "$version"
-printf '  %s\n' "${primary_packages[@]}" "${symbol_packages[@]}"
+printf '  Runtime: %s\n' "${primary_packages[@]}"
+printf '  Tooling: %s\n' "${tooling_packages[@]:-none}"
+printf '  Symbols: %s\n' "${symbol_packages[@]}"

@@ -19,6 +19,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
+from sbom_common import get_release_package_ids, read_json as read_release_json
+
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY = ROOT / "eng/reproducibility-policy.json"
 DEFAULT_BUILD_A = ROOT / "artifacts/reproducibility/build-a/packages"
@@ -360,13 +362,21 @@ def validate_configuration(root: Path = ROOT, *, check_git: bool = True) -> Poli
         if f"<{property_name}>" in packaging:
             fail(f"eng/Packaging.props must inherit central {property_name} configuration instead of repeating it.")
 
-    manifest = read_json(root / "eng/release-manifest.json")
-    if not isinstance(manifest, dict) or tuple(manifest.get("packages", [])) != policy.required_packages:
-        fail("Reproducibility policy requiredPackages must exactly match eng/release-manifest.json.")
+    manifest = read_release_json(root / "eng/release-manifest.json")
+    try:
+        manifest_packages = get_release_package_ids(manifest, "runtime")
+    except ValueError as error:
+        fail(str(error))
+    if manifest_packages != policy.required_packages:
+        fail("Reproducibility policy requiredPackages must exactly match the runtime packages in eng/release-manifest.json.")
 
-    project_files = sorted((root / "src").glob("*/*.csproj"))
-    if len(project_files) != len(policy.required_packages):
-        fail("The production project count does not match the reproducibility package policy.")
+    project_files: list[Path] = []
+    for package_id in policy.required_packages:
+        project = root / "src" / package_id / f"{package_id}.csproj"
+        if not project.is_file():
+            fail(f"Production package project is missing: {project.relative_to(root)}")
+        project_files.append(project)
+
     found_package_ids: set[str] = set()
     for project in project_files:
         text = read_text(project)
@@ -706,10 +716,25 @@ def load_package(path: Path, policy: Policy, expected_version: str) -> PackageAr
     package_id, version = parse_identity(entries, path)
     if version != expected_version:
         fail(f"{path.name} version {version!r} does not match expected version {expected_version!r}.")
-    if package_id not in policy.required_packages:
+    if package_id not in policy.required_packages and not any(
+        entry.casefold().startswith("analyzers/dotnet/cs/") for entry in entries
+    ):
         fail(f"Unexpected TCJ package {package_id!r} in {path.parent}.")
 
-    patterns = policy.required_content_patterns[package_type]
+    is_tooling_package = any(
+        entry.casefold().startswith("analyzers/dotnet/cs/")
+        for entry in entries
+    )
+    if package_type == "nupkg" and is_tooling_package:
+        patterns = (
+            "_rels/.rels",
+            "[Content_Types].xml",
+            "*.nuspec",
+            "analyzers/dotnet/cs/**",
+            "package/services/metadata/core-properties/*.psmdcp",
+        )
+    else:
+        patterns = policy.required_content_patterns[package_type]
     for pattern in patterns:
         if not any(package_pattern_matches(entry, pattern) for entry in entries):
             fail(f"{path.name} is missing required package content matching {pattern!r}.")
@@ -819,8 +844,13 @@ def discover_packages(directory: Path, policy: Policy, expected_version: str) ->
         for package_type in ("nupkg", "snupkg")
     }
     actual = set(result)
+    tooling = {
+        key for key, package in result.items()
+        if key[0] not in {item.casefold() for item in policy.required_packages}
+        and any(entry.casefold().startswith("analyzers/dotnet/cs/") for entry in package.entries)
+    }
     missing = sorted(expected.difference(actual))
-    unexpected = sorted(actual.difference(expected))
+    unexpected = sorted(actual.difference(expected).difference(tooling))
     if missing:
         fail("Missing expected packages: " + ", ".join(f"{package_id}.{kind}" for package_id, kind in missing))
     if unexpected:

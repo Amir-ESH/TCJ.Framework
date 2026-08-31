@@ -4,6 +4,8 @@ Contributions should begin from `develop`, keep package boundaries explicit, add
 
 Read the repository contribution guide (repository path: `CONTRIBUTING.md`) before opening a pull request. Documentation-specific conventions, validated examples, baseline rules, and local preview commands are covered in [Documentation authoring](documentation-authoring.md).
 
+Analyzer and code-fix contributors must also follow [Analyzer development](analyzer-development.md), which defines the build-time/runtime boundary, Roslyn dependency rules, package layout, and test harness.
+
 For Native AOT/trimming policy, production project-setting, packed smoke, or AOT workflow changes, run the repository verifier:
 
 ```bash

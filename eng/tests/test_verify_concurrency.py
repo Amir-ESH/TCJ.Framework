@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "verify-concurrency.py"
 spec = importlib.util.spec_from_file_location("verify_concurrency", MODULE_PATH)
@@ -55,9 +56,52 @@ class ConcurrencyVerifierTests(unittest.TestCase):
             }
         }
 
+    def valid_project(self):
+        return ET.fromstring("""
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Testcontainers.MsSql" />
+  </ItemGroup>
+</Project>
+""")
+
     def test_repository_policy_is_valid(self):
         scenarios = module.validate_policy_data(self.policy())
         self.assertGreaterEqual(len(scenarios), 20)
+
+    def test_project_dependencies_accept_aspnetcore_framework_reference(self):
+        module.validate_project_dependencies(self.valid_project())
+
+    def test_project_dependencies_reject_missing_aspnetcore_framework_reference(self):
+        project = self.valid_project()
+        item_group = project.find("./ItemGroup")
+        framework = project.find(".//FrameworkReference")
+        self.assertIsNotNone(item_group)
+        self.assertIsNotNone(framework)
+        item_group.remove(framework)
+        with self.assertRaisesRegex(
+            module.VerificationError,
+            "must reference Microsoft.AspNetCore.App",
+        ):
+            module.validate_project_dependencies(project)
+
+    def test_project_dependencies_reject_redundant_dependency_injection_package(self):
+        project = self.valid_project()
+        item_group = project.find("./ItemGroup")
+        self.assertIsNotNone(item_group)
+        ET.SubElement(
+            item_group,
+            "PackageReference",
+            {"Include": "Microsoft.Extensions.DependencyInjection"},
+        )
+        with self.assertRaisesRegex(
+            module.VerificationError,
+            "must not directly reference Microsoft.Extensions.DependencyInjection",
+        ):
+            module.validate_project_dependencies(project)
 
     def test_policy_rejects_too_few_scenarios(self):
         policy = self.policy()

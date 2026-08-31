@@ -342,7 +342,7 @@ public static class ServiceCollectionExtensions
             return assembly
                 .GetTypes()
                 .Where(type => type.IsClass && !type.IsAbstract)
-                .Where(type => type.IsPublic || type.IsNestedPublic)
+                .Where(type => type.IsVisible)
                 .Where(type => !type.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false));
         }
         catch (ReflectionTypeLoadException exception)

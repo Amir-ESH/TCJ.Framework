@@ -51,7 +51,7 @@ Pack locally:
 dotnet pack TCJ.slnx -c Release --no-build
 ```
 
-Packages are written to `artifacts/packages`. The Pack target also runs SDK package validation against the version in `eng/PackageValidation.props`. CI generates and validates a CycloneDX SBOM under `artifacts/sbom/`, then generates and verifies `artifacts/release/SHA256SUMS` for the ten package files and SBOM. Local contributors can run the same checks with `eng/generate-sbom.py`, `eng/verify-sbom.py`, and `eng/release-integrity.py`.
+Packages are written to `artifacts/packages`. The Pack target also runs SDK package validation against the version in `eng/PackageValidation.props`. CI generates and validates a CycloneDX SBOM under `artifacts/sbom/`, then generates and verifies `artifacts/release/SHA256SUMS` for the eleven package files and SBOM. Local contributors can run the same checks with `eng/generate-sbom.py`, `eng/verify-sbom.py`, and `eng/release-integrity.py`.
 
 ## Continuous integration
 
@@ -203,7 +203,7 @@ The initial Stryker.NET baseline, exclusions, local commands, and threshold-upda
 
 ## Reproducible package builds
 
-Run `python3 eng/verify-reproducible-build.py validate-config` before changing packaging, SDK, Source Link, deterministic build properties, or release workflows. The dedicated workflow creates isolated Build A and Build B trees under `artifacts/reproducibility/`, packs all five `.nupkg` and `.snupkg` files twice, and compares the extracted payload plus assemblies, PDBs, Source Link, XML documentation, sources, and NuGet metadata. Use [Reproducible NuGet package builds](reproducible-builds.md) for the full local command sequence, normalization policy, and difference-report investigation process.
+Run `python3 eng/verify-reproducible-build.py validate-config` before changing packaging, SDK, Source Link, deterministic build properties, or release workflows. The dedicated workflow creates isolated Build A and Build B trees under `artifacts/reproducibility/`, packs all six primary release packages and the five runtime symbol packages twice, and compares the extracted payload plus assemblies, PDBs, Source Link, XML documentation, sources, and NuGet metadata. Use [Reproducible NuGet package builds](reproducible-builds.md) for the full local command sequence, normalization policy, and difference-report investigation process.
 
 ## Documentation validation
 

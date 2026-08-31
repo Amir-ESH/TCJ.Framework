@@ -1,5 +1,6 @@
 using TCJ.Core.DomainEvents;
 using TCJ.Core.Entities;
+using TCJ.Core.StrongTypes;
 
 namespace TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.Infrastructure;
 
@@ -65,3 +66,40 @@ internal sealed class SqlServerChild : Entity<int>
 
     public SqlServerParent Parent { get; private set; } = null!;
 }
+
+[StronglyTypedId<Guid>]
+internal readonly partial record struct SqlServerStrongGuidId;
+
+[StronglyTypedId<int>]
+internal readonly partial record struct SqlServerStrongIntId;
+
+[StronglyTypedId<long>]
+internal readonly partial record struct SqlServerStrongLongId;
+
+internal sealed class SqlServerStrongIdRecord
+{
+    private SqlServerStrongIdRecord()
+    {
+    }
+
+    public SqlServerStrongIdRecord(
+        SqlServerStrongGuidId id,
+        SqlServerStrongIntId intId,
+        SqlServerStrongLongId longId,
+        SqlServerStrongGuidId? optionalGuidId = null)
+    {
+        Id = id;
+        IntId = intId;
+        LongId = longId;
+        OptionalGuidId = optionalGuidId;
+    }
+
+    public SqlServerStrongGuidId Id { get; private set; }
+
+    public SqlServerStrongIntId IntId { get; private set; }
+
+    public SqlServerStrongLongId LongId { get; private set; }
+
+    public SqlServerStrongGuidId? OptionalGuidId { get; private set; }
+}
+

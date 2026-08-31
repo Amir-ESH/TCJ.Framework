@@ -92,6 +92,7 @@ Use prefixes such as `feature/`, `fix/`, `docs/`, `test/`, `build/`, and `chore/
 - Treat `eng/aot-policy.json` as executable compatibility documentation. Run `python3 eng/verify-aot.py verify` after AOT-policy, production project-property, or warning-suppression changes; broad trim/AOT suppressions are prohibited and generated `artifacts/aot/` output must not be committed.
 - Do not weaken, suppress, or broadly exclude architecture rules merely to make CI green.
 - Update relevant pages under `docs/`.
+- Analyzer and code-fix changes must preserve the build-time/runtime boundary documented in [`docs/analyzer-development.md`](docs/analyzer-development.md).
 
 ## Commit messages
 

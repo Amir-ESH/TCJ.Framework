@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\Packaging.props" />
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <PackageId>TCJ.Analyzers</PackageId>
+    <Title>TCJ Analyzers</Title>
+    <Description>Compile-time diagnostics and code fixes for TCJ Framework applications.</Description>
+    <PackageTags>tcj;dotnet;roslyn;analyzers;code-fix;diagnostics</PackageTags>
+
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- This packaging-only project manually places analyzer assemblies under analyzers/dotnet/cs.
+         It has no lib build output for NuGet to mirror into an automatic symbol/source package. -->
+    <IncludeSymbols>false</IncludeSymbols>
+    <IncludeSource>false</IncludeSource>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+
+    <!-- TCJ.Analyzers has no published package baseline yet. Runtime package validation remains unchanged. -->
+    <EnablePackageValidation>false</EnablePackageValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="$(MSBuildThisFileDirectory)..\..\..\docs\nuget\$(MSBuildProjectName).md" />
+    <None
+      Include="$(MSBuildThisFileDirectory)..\..\..\docs\nuget\TCJ.Analyzers.md"
+      Pack="true"
+      PackagePath="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference
+      Include="..\..\..\src\TCJ.Analyzers\TCJ.Analyzers.csproj"
+      ReferenceOutputAssembly="false"
+      PrivateAssets="all" />
+    <ProjectReference
+      Include="..\..\..\src\TCJ.Analyzers.CodeFixes\TCJ.Analyzers.CodeFixes.csproj"
+      ReferenceOutputAssembly="false"
+      PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None
+      Include="..\..\..\src\TCJ.Analyzers\bin\$(Configuration)\netstandard2.0\TCJ.Analyzers.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false" />
+    <None
+      Include="..\..\..\src\TCJ.Analyzers.CodeFixes\bin\$(Configuration)\netstandard2.0\TCJ.Analyzers.CodeFixes.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false" />
+  </ItemGroup>
+</Project>

@@ -89,6 +89,30 @@ public sealed class DependencyInjectionBehaviorTests
     }
 
     [Fact]
+    public void Convention_scanning_skips_nested_public_dependencies_inside_non_public_containers()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTcjDependencyInjection(typeof(DependencyInjectionBehaviorTests).Assembly);
+
+        Assert.DoesNotContain(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IInaccessibleNestedProbe));
+    }
+
+    [Fact]
+    public void Convention_scanning_skips_abstract_marked_dependencies()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTcjDependencyInjection(typeof(DependencyInjectionBehaviorTests).Assembly);
+
+        Assert.DoesNotContain(
+            services,
+            descriptor => descriptor.ServiceType == typeof(AbstractConventionProbe));
+    }
+
+    [Fact]
     public void Repeated_scanning_does_not_duplicate_framework_or_marked_services()
     {
         var services = new ServiceCollection();
@@ -118,6 +142,21 @@ public sealed class DependencyInjectionBehaviorTests
         Assert.All(descriptors, descriptor => Assert.Equal(ServiceLifetime.Transient, descriptor.Lifetime));
         Assert.Equal(typeof(FirstOrderedDomainEventHandler), descriptors[0].ImplementationType);
         Assert.Equal(typeof(SecondOrderedDomainEventHandler), descriptors[1].ImplementationType);
+    }
+
+    [Fact]
+    public void Domain_event_handler_lifetime_markers_do_not_override_handler_pipeline_lifetime()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTcjDependencyInjection(typeof(DependencyInjectionBehaviorTests).Assembly);
+
+        ServiceDescriptor descriptor = Assert.Single(services.Where(
+            item => item.ServiceType == typeof(IDomainEventHandler<LifetimeMarkedDomainEvent>)
+                && item.ImplementationType == typeof(LifetimeMarkedDomainEventHandler)));
+
+        Assert.Equal(ServiceLifetime.Transient, descriptor.Lifetime);
+        Assert.DoesNotContain(services, item => item.ServiceType == typeof(LifetimeMarkedDomainEventHandler));
     }
 
     [Fact]
@@ -226,6 +265,13 @@ public sealed class DependencyInjectionBehaviorTests
     }
 }
 
+public interface IInaccessibleNestedProbe;
+
+internal static class InaccessibleDependencyContainer
+{
+    public sealed class NestedProbe : IInaccessibleNestedProbe, ITransientDependency;
+}
+
 public interface ITransientProbe;
 public sealed class TransientProbe : ITransientProbe, ITransientDependency;
 
@@ -239,9 +285,21 @@ public sealed class SelfTransientProbe : ISelfTransientDependency;
 public sealed class SelfScopedProbe : ISelfScopedDependency;
 public sealed class SelfSingletonProbe : ISelfSingletonDependency;
 
+public abstract class AbstractConventionProbe : ISelfScopedDependency;
+
 public sealed record OrderedDomainEvent(int Sequence, DateTimeOffset OccurredOn) : IDomainEvent;
 public sealed record UnhandledDomainEvent(DateTimeOffset OccurredOn) : IDomainEvent;
 public sealed record FailingDomainEvent(DateTimeOffset OccurredOn) : IDomainEvent;
+public sealed record LifetimeMarkedDomainEvent(DateTimeOffset OccurredOn) : IDomainEvent;
+
+public sealed class LifetimeMarkedDomainEventHandler
+    : IDomainEventHandler<LifetimeMarkedDomainEvent>, IScopedDependency
+{
+    public Task HandleAsync(
+        LifetimeMarkedDomainEvent domainEvent,
+        CancellationToken cancellationToken)
+        => Task.CompletedTask;
+}
 
 public sealed class OrderedHandlerLog
 {

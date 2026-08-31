@@ -18,6 +18,8 @@ TCJ Framework is currently pre-1.0. Pin the exact preview version used by your a
 - Ordered, idempotent data seeding support.
 - Provider-independent health and startup-diagnostic integration.
 - Transactional-outbox persistence and processing infrastructure.
+- Explicit provider-neutral Strong ID conversion registration for generated `Guid`, `int`, and `long` IDs.
+- Explicit provider-neutral Value Object conversion registration for generated `string`, `Guid`, `int`, `long`, and `decimal` Value Objects.
 - Experimental Native AOT support following EF Core's compiled-model/query-precompilation constraints.
 
 ## Example
@@ -30,6 +32,38 @@ services.AddTcjEntityFrameworkCore<AppDbContext>(options =>
 ```
 
 Production applications should configure the EF Core provider appropriate to their environment. SQL Server-specific registration is provided by `TCJ.EntityFrameworkCore.SqlServer`.
+
+Generated Strong IDs can be registered without assembly scanning:
+
+```csharp
+using TCJ.EntityFrameworkCore.Extensions;
+using TCJ.EntityFrameworkCore.StrongTypes;
+
+var strongIds = new StrongIdConversionRegistry()
+    .Register<OrderId, Guid>(
+        OrderId.StrongIdConversion.ToBackingValue,
+        OrderId.StrongIdConversion.FromBackingValue);
+
+modelBuilder.ApplyStrongIdConversions(strongIds);
+```
+
+The generated expressions themselves are EF-independent; only the consuming persistence project needs `TCJ.EntityFrameworkCore`.
+
+Generated Value Objects use the same explicit pattern:
+
+```csharp
+var valueObjects = new ValueObjectConversionRegistry()
+    .Register<EmailAddress, string>(
+        EmailAddress.ValueObjectConversion.ToBackingValue,
+        EmailAddress.ValueObjectConversion.FromBackingValue)
+    .Register<MoneyAmount, decimal>(
+        MoneyAmount.ValueObjectConversion.ToBackingValue,
+        MoneyAmount.ValueObjectConversion.FromBackingValue);
+
+modelBuilder.ApplyValueObjectConversions(valueObjects);
+```
+
+Value Objects persist as primitive columns and materialize through their generated validated `Create` path. Invalid legacy rows fail without exposing the rejected scalar or validation details; TCJ does not silently bypass validation or rewrite stored data.
 
 ## Documentation
 

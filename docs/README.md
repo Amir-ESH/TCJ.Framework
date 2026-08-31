@@ -23,6 +23,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [Health checks and startup diagnostics](health-checks.md)
 - [Transactional outbox](outbox.md)
 - [Observability](observability.md)
+- [Strong typed IDs and Value Objects](guides/strong-types.md)
 
 ## Compatibility and quality
 
@@ -32,6 +33,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [SQL Server integration testing](sqlserver-integration-testing.md)
 - [ASP.NET Core integration testing](aspnetcore-integration-testing.md)
 - [Architecture tests](architecture-tests.md)
+- [Analyzer diagnostic governance](analyzers/README.md)
 - [Code coverage](code-coverage.md)
 - [Mutation testing](mutation-testing.md)
 - [Property and fuzz testing](property-and-fuzz-testing.md)
@@ -61,6 +63,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [0.1.0-preview.3 to 0.1.0-preview.4 migration guide](migrations/0.1.0-preview.3-to-0.1.0-preview.4.md)
 - [0.1.0-preview.2 to 0.1.0-preview.3 migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md)
 - [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
+- [0.1.0-preview.4 release notes](release-notes/0.1.0-preview.4.md)
 - [0.1.0-preview.3 release notes](release-notes/0.1.0-preview.3.md)
 - [0.1.0-preview.2 release notes](release-notes/0.1.0-preview.2.md)
 - [0.1.0-preview.1 release notes](release-notes/0.1.0-preview.1.md)

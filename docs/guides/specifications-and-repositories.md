@@ -16,7 +16,9 @@ public sealed class ActiveProductsByNameSpecification
 }
 ```
 
-Paging is zero-based and must be paired with ordering.
+Paging is zero-based and must be paired with deterministic primary ordering. Use `ApplyOrderBy` or `ApplyOrderByDescending` to establish the primary order, then use `ApplyThenBy`/`ApplyThenByDescending` for deterministic tie-breakers when needed. Secondary ordering alone does not establish the primary order.
+
+`TCJ2000` reports clearly unordered `ApplyPaging` calls when the analyzer can prove the construction path has no primary ordering. The rule is intentionally conservative around helper-heavy or ambiguous construction paths and does not offer a code fix because TCJ cannot safely guess the domain ordering key. See [`TCJ2000`](../analyzers/TCJ2000.md).
 
 ## Define an update specification
 
@@ -72,6 +74,8 @@ await unitOfWork.SaveChangesAsync(cancellationToken);
 ```
 
 Write methods do not call `SaveChangesAsync` automatically.
+
+Repository implementations must not take ownership of the persistence boundary by calling Entity Framework Core `DbContext.SaveChanges`/`SaveChangesAsync` or TCJ `IUnitOfWork.SaveChangesAsync`. Commit after composing repository operations at the application/use-case boundary. `TCJ1000` reports repository-owned commits when the analyzer is enabled; it intentionally offers no code fix because moving a commit boundary requires application and transaction semantics that cannot be inferred safely. See [`TCJ1000`](../analyzers/TCJ1000.md).
 
 ## Explicit transaction
 

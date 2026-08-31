@@ -11,12 +11,31 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from sbom_common import get_release_package_ids, read_json
+
 
 def load_package_ids(root: Path) -> list[str]:
-    manifest = json.loads(
-        (root / "eng" / "release-manifest.json").read_text(encoding="utf-8")
-    )
-    return [str(item) for item in manifest["packages"]]
+    manifest = read_json(root / "eng" / "release-manifest.json")
+    return list(get_release_package_ids(manifest))
+
+
+def load_published_package_ids(root: Path) -> set[str]:
+    manifest = read_json(root / "eng" / "published-release.json")
+    return set(get_release_package_ids(manifest))
+
+
+def expected_exists(
+    policy: str,
+    package_id: str,
+    published_package_ids: set[str],
+) -> bool | None:
+    if policy == "available":
+        return False
+    if policy == "existing":
+        return True
+    if policy == "transition":
+        return package_id in published_package_ids
+    return None
 
 
 def package_exists(package_id: str) -> bool:
@@ -58,10 +77,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--policy",
-        choices=("available", "existing", "report-only"),
-        default="available",
+        choices=("available", "existing", "transition", "report-only"),
+        default="transition",
         help=(
             "available: fail if an ID exists; existing: fail if an ID is absent; "
+            "transition: published IDs must exist and newly introduced IDs must be available; "
             "report-only: never fail based on existence."
         ),
     )
@@ -72,16 +92,29 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    root = args.repository_root.resolve()
+    package_ids = load_package_ids(root)
+    published_package_ids = (
+        load_published_package_ids(root)
+        if args.policy == "transition"
+        else set()
+    )
+
     failures: list[str] = []
-    for package_id in load_package_ids(args.repository_root.resolve()):
+    for package_id in package_ids:
         exists = package_exists(package_id)
         status = "EXISTS" if exists else "AVAILABLE"
         print(f"{package_id}: {status}")
 
-        if args.policy == "available" and exists:
-            failures.append(f"{package_id} already exists on NuGet.org")
-        elif args.policy == "existing" and not exists:
+        expectation = expected_exists(
+            args.policy,
+            package_id,
+            published_package_ids,
+        )
+        if expectation is True and not exists:
             failures.append(f"{package_id} does not exist on NuGet.org")
+        elif expectation is False and exists:
+            failures.append(f"{package_id} already exists on NuGet.org")
 
     if failures:
         print("NuGet package ID policy failed:", file=sys.stderr)

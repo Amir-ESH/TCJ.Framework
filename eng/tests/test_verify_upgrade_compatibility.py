@@ -3,9 +3,14 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+ENG = Path(__file__).resolve().parents[1]
+if str(ENG) not in sys.path:
+    sys.path.insert(0, str(ENG))
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "verify-upgrade-compatibility.py"
 spec = importlib.util.spec_from_file_location("verify_upgrade", MODULE_PATH)
@@ -33,7 +38,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
 
     def test_all_five_packages_are_covered(self):
         covered = {p for scenario in self.policy["scenarios"] for p in scenario["packages"]}
-        self.assertEqual(verify.REQUIRED_PACKAGES, covered)
+        self.assertEqual(verify.runtime_release_packages(self.target), covered)
 
     def test_breaking_change_manifest_is_empty_for_direct_upgrade(self):
         self.assertEqual([], self.manifest["changes"])

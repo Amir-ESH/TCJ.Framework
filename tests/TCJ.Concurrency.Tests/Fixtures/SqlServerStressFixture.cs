@@ -38,9 +38,13 @@ public sealed class SqlServerStressFixture : IAsyncLifetime
     {
         string databaseName = $"TCJ_Concurrency_{Guid.NewGuid():N}";
         string master = BuildConnectionString("master");
-        await using (var context = CreateContext(master))
+        await using (var connection = new SqlConnection(master))
         {
-            await context.Database.ExecuteSqlRawAsync($"CREATE DATABASE [{databaseName}]").ConfigureAwait(false);
+            await connection.OpenAsync().ConfigureAwait(false);
+            await using SqlCommand command = connection.CreateCommand();
+            command.CommandText = "DECLARE @sql nvarchar(max) = N'CREATE DATABASE ' + QUOTENAME(@databaseName); EXEC sys.sp_executesql @sql;";
+            command.Parameters.Add(new SqlParameter("@databaseName", databaseName));
+            await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
         string connectionString = BuildConnectionString(databaseName);
@@ -107,9 +111,6 @@ public sealed class SqlServerStressFixture : IAsyncLifetime
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
     }
 
-    private DbContext CreateContext(string connectionString) =>
-        new(new DbContextOptionsBuilder<DbContext>().UseSqlServer(connectionString, options => options.CommandTimeout(20)).Options);
-
     private string BuildConnectionString(string databaseName)
     {
         string value = _container?.GetConnectionString() ?? throw new InvalidOperationException("SQL Server container is not started.");
@@ -127,9 +128,21 @@ public sealed class SqlServerStressFixture : IAsyncLifetime
         {
             return;
         }
-        await using var context = CreateContext(BuildConnectionString("master"));
-        string sql = $"IF DB_ID(N'{databaseName}') IS NOT NULL BEGIN ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{databaseName}]; END";
-        await context.Database.ExecuteSqlRawAsync(sql).ConfigureAwait(false);
+        await using var connection = new SqlConnection(BuildConnectionString("master"));
+        await connection.OpenAsync().ConfigureAwait(false);
+        await using SqlCommand command = connection.CreateCommand();
+        command.CommandText = """
+            IF DB_ID(@databaseName) IS NOT NULL
+            BEGIN
+                DECLARE @sql nvarchar(max) =
+                    N'ALTER DATABASE ' + QUOTENAME(@databaseName)
+                    + N' SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE '
+                    + QUOTENAME(@databaseName) + N';';
+                EXEC sys.sp_executesql @sql;
+            END
+            """;
+        command.Parameters.Add(new SqlParameter("@databaseName", databaseName));
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
     internal sealed class SqlStressDatabase(SqlServerStressFixture fixture, string databaseName, ServiceProvider services) : IAsyncDisposable

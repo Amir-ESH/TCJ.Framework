@@ -91,6 +91,9 @@ jobs:
       - name: Validate package consumer compatibility configuration
         run: python3 eng/verify-consumer-compatibility.py validate-config
 
+      - name: Validate Strong Types release configuration
+        run: python3 eng/verify-strong-types.py validate-config
+
       - name: Validate package upgrade compatibility configuration
         run: python3 eng/verify-upgrade-compatibility.py validate-config
 
@@ -332,7 +335,7 @@ jobs:
           --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
-          --logger "trx;LogFileName=test-results.trx"
+          --logger "trx;LogFilePrefix=test-results"
           --results-directory TestResults
 
       - name: Generate architecture-test summary
@@ -383,6 +386,15 @@ jobs:
 
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
+      - name: Validate package version output
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ steps.package-version.outputs.value }}" || {
+            echo "Package version output is empty." >&2
+            exit 1
+          }
+
       - name: Verify NuGet package set
         run: >
           bash eng/verify-packages.sh
@@ -392,6 +404,33 @@ jobs:
         run: >
           python3 eng/verify-release.py
           --package-directory artifacts/packages
+
+      - name: Verify packed Strong Types contracts
+        run: >
+          python3 eng/verify-strong-types.py verify-packed
+          --version "${{ steps.package-version.outputs.value }}"
+          --packages artifacts/packages
+          --output artifacts/strong-types
+
+      - name: Publish Strong Types verification summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/strong-types/STRONG_TYPES_SUMMARY.md ]]; then
+            cat artifacts/strong-types/STRONG_TYPES_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Strong Types release evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: strong-types-ci-${{ github.run_id }}
+          path: |
+            artifacts/strong-types/STRONG_TYPES_SUMMARY.md
+            artifacts/strong-types/strong-types-result.json
+            artifacts/strong-types/logs/**
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Install packaged Native AOT prerequisites
         shell: bash
@@ -409,8 +448,18 @@ jobs:
           --packages artifacts/packages
           --output artifacts/aot/native-aot-smoke
 
+      - name: Verify Native AOT smoke result exists
+        if: ${{ always() && steps.native-aot-smoke.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/aot/native-aot-smoke/native-aot-result.json || {
+            echo "Native AOT smoke did not produce the expected result file." >&2
+            exit 1
+          }
+
       - name: Verify packed Native AOT evidence
-        if: always()
+        if: ${{ always() && steps.native-aot-smoke.outcome != 'skipped' }}
         run: >
           python3 eng/verify-aot.py verify-result
           --version "${{ steps.package-version.outputs.value }}"
