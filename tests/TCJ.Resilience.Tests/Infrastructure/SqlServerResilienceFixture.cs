@@ -36,12 +36,13 @@ public sealed class SqlServerResilienceFixture : IAsyncLifetime
             InitialCatalog = "master",
             TrustServerCertificate = true
         };
-        var masterOptions = new DbContextOptionsBuilder<DbContext>()
-            .UseSqlServer(masterBuilder.ConnectionString)
-            .Options;
-        await using (var master = new DbContext(masterOptions))
+        await using (var connection = new Microsoft.Data.SqlClient.SqlConnection(masterBuilder.ConnectionString))
         {
-            await master.Database.ExecuteSqlRawAsync($"CREATE DATABASE [{databaseName}]").ConfigureAwait(false);
+            await connection.OpenAsync().ConfigureAwait(false);
+            await using Microsoft.Data.SqlClient.SqlCommand command = connection.CreateCommand();
+            command.CommandText = "DECLARE @sql nvarchar(max) = N'CREATE DATABASE ' + QUOTENAME(@databaseName); EXEC sys.sp_executesql @sql;";
+            command.Parameters.Add(new Microsoft.Data.SqlClient.SqlParameter("@databaseName", databaseName));
+            await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
         var services = new ServiceCollection();
