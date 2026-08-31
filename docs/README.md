@@ -1,6 +1,6 @@
 # TCJ Framework documentation
 
-These documents describe the public TCJ Framework contract and the repository's engineering guarantees. The latest published preview is `0.1.0-preview.3`; active development targets `0.1.0-preview.4`. Consumer installation examples stay pinned to the latest verified NuGet.org release unless a page is explicitly about development or migration work.
+These documents describe the public TCJ Framework contract and the repository's engineering guarantees. The latest published preview is `0.1.0-preview.3`; the current release candidate is `0.1.0-preview.4`. Consumer installation examples stay pinned to the latest verified NuGet.org release unless a page is explicitly about development or migration work.
 
 ## Start here
 
@@ -57,6 +57,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [`TCJ.EntityFrameworkCore`](packages/tcj-entityframeworkcore.md)
 - [`TCJ.EntityFrameworkCore.SqlServer`](packages/tcj-entityframeworkcore-sqlserver.md)
 - [`TCJ.AspNetCore`](packages/tcj-aspnetcore.md)
+- [`TCJ.Generators`](packages/TCJ.Generators.md) — analyzer-only compile-time tooling
 
 ## Migrations and release notes
 
@@ -70,7 +71,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 
 ## Important preview constraints
 
-- `0.1.0-preview.3` is the latest public preview; `0.1.0-preview.4` is under active development.
+- `0.1.0-preview.3` remains the latest published NuGet preview until the `0.1.0-preview.4` release workflow completes; `0.1.0-preview.4` is the current release candidate.
 - Public APIs may change before `1.0.0`; pin exact preview versions in production-like environments.
 - Domain-event dispatch is explicit by default. When the transactional outbox is enabled, `SaveChanges` persists pending events transactionally and a separate processor dispatches committed messages later.
 - Soft deletion is explicit through `ISoftDeleteRepository`; `Remove` performs physical deletion.
