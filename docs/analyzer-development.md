@@ -16,7 +16,7 @@ Roslyn compiler/workspace references are private build-time dependencies. Do not
 
 ## Package lifecycle
 
-The packaging project is intentionally not listed in `TCJ.slnx`. The current release pipeline still produces and verifies the existing five runtime packages, while analyzer packaging is validated independently by `TCJ.Analyzers.Tests`. This keeps Important 9 focused on analyzer infrastructure instead of changing release-package governance.
+The packaging project is intentionally not listed in `TCJ.slnx`. The current release pipeline produces and verifies the five runtime packages plus the analyzer-only `TCJ.Generators` tooling package, while `TCJ.Analyzers` packaging is validated independently by `TCJ.Analyzers.Tests`. This keeps Important 9 focused on analyzer infrastructure instead of changing release-package governance.
 
 Until `TCJ.Analyzers` has a published baseline, SDK package validation is disabled only for the analyzer packaging project. Existing runtime package validation remains unchanged. Once the first analyzer package is published and adopted by release governance, add an appropriate analyzer package baseline rather than keeping a permanent exception.
 

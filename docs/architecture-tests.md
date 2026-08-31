@@ -1,6 +1,6 @@
 # Architecture tests and module dependency rules
 
-TCJ Framework publishes five packages with intentionally one-way dependencies. Compiler checks prove that code builds; architecture tests prove that it still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
+TCJ Framework has five runtime packages with intentionally one-way dependencies, plus the analyzer-only `TCJ.Generators` compile-time tooling package. Compiler checks prove that code builds; architecture tests prove that runtime code still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
 
 The executable policy is stored in `eng/architecture-policy.json` (repository path: `eng/architecture-policy.json`). The test implementation lives in `tests/TCJ.Architecture.Tests` (repository path: `tests/TCJ.Architecture.Tests`).
 

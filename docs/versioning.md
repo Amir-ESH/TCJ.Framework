@@ -10,7 +10,7 @@ Latest published preview:
 0.1.0-preview.3
 ```
 
-Current development version:
+Current release candidate:
 
 ```text
 0.1.0-preview.4

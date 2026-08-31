@@ -24,7 +24,7 @@ dotnet add package TCJ.AspNetCore --version 0.1.0-preview.3
 
 The sample continues to use project references so it always exercises the current repository source.
 
-The repository development version may be newer than the latest published preview. Consumer installation examples intentionally remain pinned to the latest verified NuGet.org release.
+The repository release candidate may be newer than the latest published preview. Consumer installation examples intentionally remain pinned to the latest verified NuGet.org release. For `0.1.0-preview.4`, Strong Types are provided by `TCJ.Core` plus the analyzer-only `TCJ.Generators` package; that tooling package becomes a public NuGet dependency only after the preview.4 release workflow successfully publishes it.
 
 ## 2. Define a DbContext
 
