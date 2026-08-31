@@ -7,10 +7,11 @@ on:
         description: Expected NuGet.org state for the package IDs
         required: true
         type: choice
-        default: existing
+        default: transition
         options:
           - available
           - existing
+          - transition
           - report-only
 
 permissions:

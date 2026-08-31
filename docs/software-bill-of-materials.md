@@ -43,7 +43,7 @@ Multi-targeted NuGet packages may declare different version ranges for the same 
 `eng/sbom-policy.json` (repository path: `eng/sbom-policy.json`) defines:
 
 - the required CycloneDX format and specification version;
-- the exact five release package IDs;
+- the exact six release package IDs, including the analyzer-only tooling package;
 - the repository identity;
 - required direct and transitive dependency coverage;
 - required SHA-256 hashes and license metadata;
@@ -115,7 +115,7 @@ A missing license is a release-blocking investigation item under the current pol
 
 ## Verify checksums
 
-`eng/release-integrity.py` writes one `SHA256SUMS` entry for each of the five `.nupkg` files, five `.snupkg` files, and the versioned SBOM:
+`eng/release-integrity.py` writes one `SHA256SUMS` entry for each of the six release `.nupkg` files, the five runtime `.snupkg` files, and the versioned SBOM:
 
 ```bash
 python3 eng/release-integrity.py write \

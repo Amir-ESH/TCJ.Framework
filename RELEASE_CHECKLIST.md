@@ -11,7 +11,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.4`. Do not cr
 - [ ] Dependency review and NuGet Audit are green with the repository security policy unchanged.
 - [ ] Release-integrity, SBOM, and reproducibility configuration validation are green.
 - [ ] Deterministic compilation, portable PDBs, CI metadata, Source Link, and repository path mapping remain enabled centrally.
-- [ ] SBOM policy still requires all five release packages, dependency coverage, hashes, licenses, repository identity, commit SHA, and release version.
+- [ ] SBOM policy still requires all six release packages, dependency coverage, hashes, licenses, repository identity, commit SHA, and release version.
 - [ ] Line and branch coverage gates are green and the summary was reviewed.
 - [ ] The mutation baseline is recorded, the mutation quality gate is green, and survived mutants were reviewed.
 - [ ] The latest full performance benchmark run is green and runtime/allocation regressions were reviewed.
@@ -49,7 +49,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.4`. Do not cr
 ## Release candidate
 
 - [ ] Run **Actions → Release preflight → Run workflow** from `main`.
-- [ ] Use package-ID policy `existing`.
+- [ ] Use package-ID policy `transition`.
 - [ ] `Validate release candidate` succeeds.
 - [ ] Review the release-preflight coverage summary and Cobertura artifact.
 - [ ] Review the latest mutation summary and both HTML/JSON mutation reports.
@@ -58,12 +58,12 @@ This checklist prepares the next preview, currently `0.1.0-preview.4`. Do not cr
 - [ ] Review `SQLSERVER_INTEGRATION_SUMMARY.md`, TRX results, and sanitized SQL Server diagnostics; migrations and transaction scenarios are green.
 - [ ] Review `ASPNETCORE_INTEGRATION_SUMMARY.md`, both platform TRX files, and sanitized host/HTTP diagnostics; Production safety and current-user/request-scope isolation are green.
 - [ ] Review the packed Native AOT `native-aot-result.json` and `aot-runtime-verification.json`; `linux-x64` publish/execution passed, loaded TCJ versions equal the candidate version, and no `IL2xxx`/`IL3xxx` baseline was accepted.
-- [ ] Review `REPRODUCIBILITY_SUMMARY.md`, both five-package build sets, and any focused difference reports.
+- [ ] Review `REPRODUCIBILITY_SUMMARY.md`, both release-package build sets, and any focused difference reports.
 - [ ] Confirm assemblies, portable PDBs, Source Link metadata, XML documentation, NuSpec metadata, and extracted package contents match.
 - [ ] Confirm any raw archive-only warning is explained by an approved container normalization.
 - [ ] Confirm the release candidate under `artifacts/packages` is the promoted verified Build A set.
-- [ ] Review five `.nupkg`, five `.snupkg`, the CycloneDX SBOM, `SHA256SUMS`, release notes, and the manifest.
-- [ ] Confirm all five TCJ packages, direct/transitive dependencies, hashes, licenses, repository metadata, and the source commit appear in the SBOM.
+- [ ] Review six `.nupkg`, five `.snupkg`, the CycloneDX SBOM, `SHA256SUMS`, release notes, and the manifest.
+- [ ] Confirm all six release packages, direct/transitive dependencies, hashes, licenses, repository metadata, and the source commit appear in the SBOM.
 - [ ] Verify the release-candidate checksums include the SBOM before tagging.
 
 ## Publish
@@ -71,8 +71,8 @@ This checklist prepares the next preview, currently `0.1.0-preview.4`. Do not cr
 - [ ] Create the version tag on the reproducibility-verified `main` commit.
 - [ ] Confirm the tag workflow completes reproducibility comparison before checksums, SBOM generation, attestation, or publication.
 - [ ] Approve the `nuget-production` deployment after validation succeeds.
-- [ ] Confirm all five versions are listed on NuGet.org.
-- [ ] Confirm the GitHub pre-release contains ten package assets, one versioned CycloneDX SBOM, `SHA256SUMS`, and the retained Native AOT evidence assets.
+- [ ] Confirm all six release package versions are listed on NuGet.org.
+- [ ] Confirm the GitHub pre-release contains eleven package assets (six `.nupkg` and five `.snupkg`), one versioned CycloneDX SBOM, `SHA256SUMS`, and the retained Native AOT evidence assets.
 - [ ] Confirm GitHub shows provenance attestations for the package assets, SBOM, and checksum manifest.
 - [ ] Verify at least one release asset with `gh attestation verify`.
 - [ ] Never move the tag or republish different bits with the same version.
@@ -100,7 +100,7 @@ This checklist prepares the next preview, currently `0.1.0-preview.4`. Do not cr
 - [ ] Cross-platform compatibility verification is green and the required architecture/TFM policy is unchanged or explicitly reviewed.
 - [ ] Release preflight runs the exact promoted candidate package bytes through all six consumers.
 - [ ] Review `COMPATIBILITY_SUMMARY.md`, restore/build/runtime logs, resolved versions, and source identity.
-- [ ] All five `.nupkg` and `.snupkg` files pass XML documentation, portable PDB, repository metadata, and Source Link validation.
+- [ ] All five runtime `.nupkg` and `.snupkg` files pass XML documentation, portable PDB, repository metadata, and Source Link validation.
 - [ ] The tagged release repeats the exact-package consumer check before NuGet publication and retains compatibility reports with release metadata.
 - [ ] After publication, Core, ASP.NET Core, and full-stack consumers restore the released version from NuGet.org.
 - [ ] No generated `artifacts/compatibility/` or compatibility `bin`/`obj` output is committed.
