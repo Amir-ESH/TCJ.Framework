@@ -136,15 +136,25 @@ def read_xml(path: Path, description: str) -> ET.Element:
         fail(f"Unable to parse {description} at {path}: {error}")
 
 
+def validate_project_dependencies(project: ET.Element) -> None:
+    packages = {item.attrib.get("Include", "") for item in project.findall(".//PackageReference")}
+    for package in ("Microsoft.AspNetCore.TestHost", "Microsoft.EntityFrameworkCore.InMemory", "Testcontainers.MsSql"):
+        require(package in packages, f"Concurrency test project must reference {package}.")
+
+    frameworks = {item.attrib.get("Include", "") for item in project.findall(".//FrameworkReference")}
+    require("Microsoft.AspNetCore.App" in frameworks,
+            "Concurrency test project must reference Microsoft.AspNetCore.App.")
+    require("Microsoft.Extensions.DependencyInjection" not in packages,
+            "Concurrency test project must not directly reference Microsoft.Extensions.DependencyInjection when Microsoft.AspNetCore.App provides it.")
+
+
 def validate_project(policy: dict[str, Any]) -> None:
     project_path = ROOT / policy["testProject"]
     require(project_path.is_file(), f"Missing concurrency test project: {policy['testProject']}")
     project = read_xml(project_path, "concurrency test project")
     require(project.findtext("./PropertyGroup/TargetFramework") == "net10.0",
             "Concurrency test project must explicitly target net10.0.")
-    packages = {item.attrib.get("Include", "") for item in project.findall(".//PackageReference")}
-    for package in ("Microsoft.AspNetCore.TestHost", "Microsoft.EntityFrameworkCore.InMemory", "Microsoft.Extensions.DependencyInjection", "Testcontainers.MsSql"):
-        require(package in packages, f"Concurrency test project must reference {package}.")
+    validate_project_dependencies(project)
     refs = {item.attrib.get("Include", "").replace("\\", "/") for item in project.findall(".//ProjectReference")}
     expected_refs = {
         "../../src/TCJ.Core/TCJ.Core.csproj",

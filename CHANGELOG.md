@@ -6,6 +6,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+## [0.1.0-preview.4] - 2026-08-31
+
 ### Added
 
 - Completed the Strong Types release contract with package-only Strong ID/Value Object consumption, Native AOT JSON/Minimal API execution, byte-for-byte generator determinism checks, incremental reuse coverage, a coarse many-type performance budget, analyzer-only runtime-output enforcement, and blocking CI/release verification.
@@ -18,6 +20,9 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ### Fixed
 
+- Added a transition-aware NuGet package-ID preflight policy so previously published package IDs must exist while newly introduced release package IDs must remain available.
+- Removed duplicate `TCJ.Generators` README and license pack items so centralized package metadata is authoritative and NuGet pack no longer emits duplicate-file `NU5118` warnings.
+- Updated release documentation and checklists for the six-package release set: six primary packages and five runtime symbol packages.
 - Aligned convention dependency scanning with effective CLR visibility and added `TCJ0003` so marked concrete dependencies that are not effectively public are diagnosed before startup; nested `public` types inside non-public containers are no longer convention-scanned.
 - Corrected the domain-event guide to distinguish direct dispatch from TCJ's optional transactional-outbox path and corrected the upgrade-testing rationale now that both baseline and target releases support outbox APIs.
 - Hardened published-package maintenance so scheduled audits use the active `develop` metadata and NuGet publication verification tolerates up to 15 minutes of propagation.
@@ -134,7 +139,8 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - GitHub issue forms and pull-request template.
 - CI validation, package-content verification, release preflight, Trusted Publishing, GitHub Releases, and weekly Dependabot updates.
 
-[Unreleased]: https://github.com/Amir-ESH/TCJ.Framework/compare/v0.1.0-preview.3...develop
+[Unreleased]: https://github.com/Amir-ESH/TCJ.Framework/compare/v0.1.0-preview.4...develop
+[0.1.0-preview.4]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.4
 [0.1.0-preview.3]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.3
 [0.1.0-preview.2]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.2
 [0.1.0-preview.1]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.1

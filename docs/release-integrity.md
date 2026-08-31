@@ -12,10 +12,10 @@ Checksums answer whether bytes changed. The SBOM answers what components and rel
 
 Every official release contains:
 
-- five primary `.nupkg` packages;
-- five `.snupkg` symbol packages;
+- six primary `.nupkg` packages;
+- five runtime `.snupkg` symbol packages;
 - one `TCJ.Framework.<version>.cdx.json` CycloneDX SBOM;
-- one `SHA256SUMS` file covering all eleven preceding artifacts.
+- one `SHA256SUMS` file covering all twelve preceding artifacts.
 
 `eng/release-integrity.py` derives expected names from `eng/release-manifest.json`. It rejects missing packages, an absent or incorrectly named SBOM, an additional `.cdx.json`, unexpected artifacts, duplicate checksum entries, unsafe filenames, malformed digests, and content mismatches.
 
@@ -52,13 +52,13 @@ permissions:
   artifact-metadata: write
 ```
 
-The attestation subjects are the ten package files, the CycloneDX SBOM, and `SHA256SUMS`. Pull-request and preflight builds validate the same tooling but do not create trusted release attestations.
+The attestation subjects are the eleven package files, the CycloneDX SBOM, and `SHA256SUMS`. Pull-request and preflight builds validate the same tooling but do not create trusted release attestations.
 
 The publish job downloads packages, release metadata, and SBOM as separate workflow artifacts. It restores dependency metadata, verifies the downloaded SBOM, verifies all checksums, and only then publishes packages and creates or updates the GitHub Release.
 
 ## Verify downloaded GitHub release assets
 
-Download all eleven hashed assets and `SHA256SUMS` from the same GitHub Release into one directory, then run:
+Download all twelve hashed assets (eleven package files plus the SBOM) and `SHA256SUMS` from the same GitHub Release into one directory, then run:
 
 ```bash
 sha256sum --check SHA256SUMS

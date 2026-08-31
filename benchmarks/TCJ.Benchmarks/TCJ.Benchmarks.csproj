@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
   </ItemGroup>
 

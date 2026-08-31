@@ -115,13 +115,15 @@ Generated compiler inputs also live below those different intermediate roots. Ea
 
 ## What is compared
 
-The verifier requires exactly five `.nupkg` files and five `.snupkg` files for the configured version:
+The verifier requires the five runtime `.nupkg` files and their five `.snupkg` files for the configured version, and also compares release tooling `.nupkg` files that use the analyzer-only package layout. For `0.1.0-preview.4`, the runtime set is:
 
 - `TCJ.Core`;
 - `TCJ.DependencyInjection`;
 - `TCJ.EntityFrameworkCore`;
 - `TCJ.EntityFrameworkCore.SqlServer`;
 - `TCJ.AspNetCore`.
+
+The release tooling set additionally contains `TCJ.Generators` as a primary `.nupkg` only; it does not require a `.snupkg`.
 
 For each package it validates the NuSpec identity and version, rejects duplicate identities and unsafe ZIP paths, discovers the package layout, and compares canonical extracted file sets and contents.
 
@@ -191,7 +193,7 @@ Documentation-only changes do not trigger the expensive double build. Normal CI 
 Release preflight and the tag-based release workflow both:
 
 1. create isolated Build A and Build B outputs;
-2. pack all five primary and symbol packages from each build;
+2. pack all six primary release packages and the five runtime symbol packages from each build;
 3. fail on unexplained extracted-content differences;
 4. publish the Markdown summary to `$GITHUB_STEP_SUMMARY`;
 5. upload both package sets and focused reports;
