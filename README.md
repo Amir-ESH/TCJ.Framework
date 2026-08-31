@@ -12,11 +12,11 @@
 
 <p align="center">
   <strong>A modular, production-minded foundation for modern .NET applications.</strong><br />
-  Domain building blocks, explicit dependency injection, EF Core infrastructure, SQL Server integration, ASP.NET Core primitives, Native AOT evidence, and release-grade engineering gates.
+  Domain building blocks, compile-time Strong Types, explicit dependency injection, EF Core infrastructure, SQL Server integration, ASP.NET Core primitives, Native AOT evidence, and release-grade engineering gates.
 </p>
 
 > **Latest published preview:** `0.1.0-preview.3`  
-> **Current development version:** `0.1.0-preview.4`
+> **Current release candidate:** `0.1.0-preview.4`
 >
 > TCJ Framework is still pre-`1.0`. Public APIs may change between preview releases; pin exact preview versions in production-like environments.
 
@@ -44,12 +44,13 @@ Install only the modules your application needs.
 | [`TCJ.EntityFrameworkCore`](https://www.nuget.org/packages/TCJ.EntityFrameworkCore) | Repositories, specifications, Unit of Work, auditing, soft delete, seeding, and EF infrastructure. | **Experimental** |
 | [`TCJ.EntityFrameworkCore.SqlServer`](https://www.nuget.org/packages/TCJ.EntityFrameworkCore.SqlServer) | SQL Server provider integration and conventions. | **Experimental** |
 | [`TCJ.AspNetCore`](https://www.nuget.org/packages/TCJ.AspNetCore) | ASP.NET Core application primitives and Minimal API integration. | **Full** for the verified Minimal API path |
+| [`TCJ.Generators`](docs/packages/TCJ.Generators.md) | Incremental source generators for Strongly Typed IDs and primitive-backed Value Objects. Analyzer-only compile-time tooling under `analyzers/dotnet/cs`. | **Build-time only**; no runtime or Native AOT asset |
 
 The stable packaged Native AOT release guarantee covers `TCJ.Core`, the explicit AOT-safe `TCJ.DependencyInjection` path, and the supported `TCJ.AspNetCore` Minimal API path on `linux-x64`. EF Core Native AOT remains explicitly experimental because upstream EF Native AOT/query precompilation still has limitations. See [Native AOT and trimming](docs/guides/native-aot-and-trimming.md).
 
 ## Install
 
-Published preview packages:
+Latest currently published runtime packages:
 
 ```bash
 dotnet add package TCJ.Core --version 0.1.0-preview.3
@@ -58,6 +59,8 @@ dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.3
 dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.3
 dotnet add package TCJ.AspNetCore --version 0.1.0-preview.3
 ```
+
+`TCJ.Generators` first ships with the `0.1.0-preview.4` release candidate. Until that release is published, public NuGet installation examples intentionally remain pinned to `0.1.0-preview.3`.
 
 ## Minimal application setup
 

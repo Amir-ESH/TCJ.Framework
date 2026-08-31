@@ -353,6 +353,22 @@ def validate_development_changelog(root: Path) -> None:
         fail("CHANGELOG.md [Unreleased] must describe current development changes.")
 
 
+def validate_public_package_inventory(root: Path, package_ids: list[str]) -> None:
+    checked = [
+        root / "README.md",
+        root / "docs" / "README.md",
+        root / "docs" / "packages" / "index.md",
+    ]
+    for path in checked:
+        text = read_text(path)
+        missing = [package_id for package_id in package_ids if package_id not in text]
+        if missing:
+            fail(
+                "Public package inventory is incomplete: "
+                f"{path.relative_to(root)} does not mention {', '.join(missing)}."
+            )
+
+
 def validate_public_status_text(root: Path) -> None:
     checked = [
         root / "README.md",
@@ -622,6 +638,7 @@ def main() -> int:
     else:
         validate_development_changelog(root)
 
+    validate_public_package_inventory(root, package_ids)
     validate_public_status_text(root)
 
     if args.package_directory is not None:

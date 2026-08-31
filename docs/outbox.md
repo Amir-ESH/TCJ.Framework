@@ -10,7 +10,7 @@ A practical idempotency pattern is a `ProcessedMessageId` table with a unique ke
 
 ## Package and registration strategy
 
-the transactional-outbox feature set preserves the existing five-package graph:
+the transactional-outbox feature set preserves the existing five-runtime-package graph:
 
 - `TCJ.Core` owns provider-neutral processor/replay/cleanup contracts, delivery metadata, state, and `TcjOutboxOptions`.
 - `TCJ.EntityFrameworkCore` owns the outbox entity, EF mapping, safe JSON serialization, event-name resolution, SaveChanges/transaction interceptors, processor, startup validation, and health checks.

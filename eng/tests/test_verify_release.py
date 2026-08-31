@@ -75,6 +75,48 @@ class PublishedReleaseManifestTests(unittest.TestCase):
             )
 
 
+class PublicPackageInventoryTests(unittest.TestCase):
+    def write_public_docs(self, root: Path, contents: dict[str, str]) -> None:
+        for relative_path, text in contents.items():
+            path = root / relative_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+    def test_public_package_inventory_accepts_all_release_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            complete = "TCJ.Core\nTCJ.Generators\n"
+            self.write_public_docs(
+                root,
+                {
+                    "README.md": complete,
+                    "docs/README.md": complete,
+                    "docs/packages/index.md": complete,
+                },
+            )
+
+            MODULE.validate_public_package_inventory(
+                root, ["TCJ.Core", "TCJ.Generators"]
+            )
+
+    def test_public_package_inventory_rejects_missing_tooling_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_public_docs(
+                root,
+                {
+                    "README.md": "TCJ.Core\n",
+                    "docs/README.md": "TCJ.Core\nTCJ.Generators\n",
+                    "docs/packages/index.md": "TCJ.Core\nTCJ.Generators\n",
+                },
+            )
+
+            with self.assertRaisesRegex(ValueError, "README.md does not mention TCJ.Generators"):
+                MODULE.validate_public_package_inventory(
+                    root, ["TCJ.Core", "TCJ.Generators"]
+                )
+
+
 class ReleasePackageLicenseTests(unittest.TestCase):
     PACKAGE_ID = "TCJ.Core"
     VERSION = "0.1.0-preview.2"

@@ -10,7 +10,7 @@ The compatibility policy is tracked in `eng/compatibility-policy.json` (reposito
 - architecture: x64 on `ubuntu-latest` and `windows-latest`, arm64 on `macos-latest`;
 - operating systems: `ubuntu-latest`, `windows-latest`, and `macos-latest`;
 - configuration: Release;
-- packages: all five TCJ packages.
+- packages: all five TCJ runtime packages.
 
 The architecture claim is intentionally platform-specific: the required standard GitHub-hosted macOS runner is arm64, while the required Ubuntu and Windows runners are x64. The matrix does not imply that every operating system is validated on every architecture. A new framework, platform, or architecture combination must be added to policy and pass the matrix before documentation advertises it.
 
@@ -23,7 +23,7 @@ Seven maintained consumers cover the supported package combinations plus an expl
 3. `TCJ.Core` + `TCJ.DependencyInjection` + `TCJ.EntityFrameworkCore`;
 4. the previous set + `TCJ.EntityFrameworkCore.SqlServer`;
 5. `TCJ.Core` + `TCJ.DependencyInjection` + `TCJ.AspNetCore`;
-6. all five packages together;
+6. all five runtime packages together;
 7. `TCJ.Core` + `TCJ.DependencyInjection` + `TCJ.EntityFrameworkCore` with transactional outbox enabled through the public provider SPI.
 
 The consumer projects live under `compatibility/Consumers/` (repository path: `compatibility/Consumers`) and are intentionally not part of the main production solution. They must never reference a project below `src/`.
@@ -53,7 +53,7 @@ The runner also isolates:
 
 `AspNetCore.MinimalApi` starts Kestrel on loopback, runs `AddTcjAspNetCore`/`UseTcjAspNetCore`, resolves current-user services, and performs successful and handled-error HTTP requests.
 
-`FullStack.MinimalApi` restores all five packages together, configures DI, ASP.NET Core, EF Core, and SQL Server, and performs an HTTP request that resolves representative TCJ services. This is the ambiguity/conflict check for the complete package graph.
+`FullStack.MinimalApi` restores all five runtime packages together, configures DI, ASP.NET Core, EF Core, and SQL Server, and performs an HTTP request that resolves representative TCJ services. This is the ambiguity/conflict check for the complete package graph.
 
 `Outbox.Console` is the the transactional-outbox feature set clean-room consumer. It enables `AddTcjOutbox`, registers a stable versioned event name, maps `TCJ_OutboxMessages`, persists a domain event through the package interceptors, and invokes `IOutboxProcessor.ProcessBatchAsync`. The fixture supplies a tiny InMemory `IOutboxStorage` implementation so the package-only scenario executes identically on all three compatibility operating systems without pretending that EF InMemory validates SQL Server locking. SQL Server claiming, leases, crash recovery, and transaction semantics remain covered by the Testcontainers outbox suite and the published SQL Server smoke test.
 
