@@ -1,9 +1,10 @@
 # Packages
 
-TCJ Framework is published as five focused packages. Each package page describes installation, target framework, namespaces, primary entry points, and related guides.
+The `0.1.0-preview.4` release candidate contains five runtime packages plus the analyzer-only `TCJ.Generators` compile-time tooling package. Each package page describes its installation or consumption model, target framework or tooling boundary, namespaces, primary entry points, and related guides.
 
 - [TCJ.Core](tcj-core.md)
 - [TCJ.DependencyInjection](tcj-dependencyinjection.md)
 - [TCJ.EntityFrameworkCore](tcj-entityframeworkcore.md)
 - [TCJ.EntityFrameworkCore.SqlServer](tcj-entityframeworkcore-sqlserver.md)
 - [TCJ.AspNetCore](tcj-aspnetcore.md)
+- [TCJ.Generators](TCJ.Generators.md) — compile-time tooling only
