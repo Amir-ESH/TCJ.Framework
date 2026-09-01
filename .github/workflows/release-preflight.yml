@@ -546,16 +546,11 @@ jobs:
           retention-days: 30
 
       - name: Prepare exact release-candidate compatibility feed
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf artifacts/compatibility
-          mkdir -p artifacts/compatibility/packages
-          cp artifacts/packages/* artifacts/compatibility/packages/
-          for package in artifacts/compatibility/packages/*; do
-            source="artifacts/packages/$(basename "$package")"
-            cmp --silent "$source" "$package" || { echo "Compatibility feed package differs from promoted release candidate: $package" >&2; exit 1; }
-          done
+        run: >
+          python3 eng/stage-compatibility-packages.py
+          --version "${{ steps.release-version.outputs.value }}"
+          --source artifacts/packages
+          --destination artifacts/compatibility/packages
 
       - name: Run exact release-candidate consumers
         shell: bash
