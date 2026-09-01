@@ -11,20 +11,22 @@ Use only the modules required by the application:
 | EF Core repositories and persistence conventions | `TCJ.EntityFrameworkCore` |
 | SQL Server provider defaults | `TCJ.EntityFrameworkCore.SqlServer` |
 | Problem Details and Result-to-HTTP mapping | `TCJ.AspNetCore` |
+| Strongly Typed IDs and primitive-backed Value Objects | `TCJ.Core` + `TCJ.Generators` |
 
 Install the exact preview versions required by the application:
 
 ```bash
-dotnet add package TCJ.Core --version 0.1.0-preview.3
-dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.3
-dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.3
-dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.3
-dotnet add package TCJ.AspNetCore --version 0.1.0-preview.3
+dotnet add package TCJ.Core --version 0.1.0-preview.4
+dotnet add package TCJ.DependencyInjection --version 0.1.0-preview.4
+dotnet add package TCJ.EntityFrameworkCore --version 0.1.0-preview.4
+dotnet add package TCJ.EntityFrameworkCore.SqlServer --version 0.1.0-preview.4
+dotnet add package TCJ.AspNetCore --version 0.1.0-preview.4
+dotnet add package TCJ.Generators --version 0.1.0-preview.4
 ```
 
 The sample continues to use project references so it always exercises the current repository source.
 
-The repository release candidate may be newer than the latest published preview. Consumer installation examples intentionally remain pinned to the latest verified NuGet.org release. For `0.1.0-preview.4`, Strong Types are provided by `TCJ.Core` plus the analyzer-only `TCJ.Generators` package; that tooling package becomes a public NuGet dependency only after the preview.4 release workflow successfully publishes it.
+The current development source may be newer than the latest published preview. Consumer installation examples intentionally remain pinned to the latest verified NuGet.org release. Strong Types use `TCJ.Core` plus the analyzer-only `TCJ.Generators` package; keep both at the same TCJ version and use `PrivateAssets="all"` for a direct generator reference.
 
 ## 2. Define a DbContext
 

@@ -115,7 +115,7 @@ Generated compiler inputs also live below those different intermediate roots. Ea
 
 ## What is compared
 
-The verifier requires the five runtime `.nupkg` files and their five `.snupkg` files for the configured version, and also compares release tooling `.nupkg` files that use the analyzer-only package layout. For `0.1.0-preview.4`, the runtime set is:
+The verifier requires the five runtime `.nupkg` files and their five `.snupkg` files for the configured version, and also compares release tooling `.nupkg` files that use the analyzer-only package layout. For the current release model, the runtime set is:
 
 - `TCJ.Core`;
 - `TCJ.DependencyInjection`;
