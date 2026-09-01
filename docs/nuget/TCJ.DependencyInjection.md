@@ -42,10 +42,10 @@ This package builds on `TCJ.Core` and Microsoft dependency-injection abstraction
 
 ## Documentation
 
-- [TCJ.DependencyInjection package documentation](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/packages/tcj-dependencyinjection.md)
-- [Domain events guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/guides/domain-events.md)
-- [Native AOT and trimming guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/guides/native-aot-and-trimming.md)
-- [Validated examples](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/examples.md)
+- [TCJ.DependencyInjection package documentation](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/packages/tcj-dependencyinjection.md)
+- [Domain events guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/guides/domain-events.md)
+- [Native AOT and trimming guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/guides/native-aot-and-trimming.md)
+- [Validated examples](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/examples.md)
 - [Repository](https://github.com/Amir-ESH/TCJ.Framework)
 - [Issues](https://github.com/Amir-ESH/TCJ.Framework/issues)
 

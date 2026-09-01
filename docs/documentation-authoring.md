@@ -40,7 +40,7 @@ Package README rules are intentionally stricter than general conceptual document
 4. avoid embedding a mutable "current version" in the source README when the same content can remain correct across preview increments;
 5. do not replace `smoke/NuGet.Config` or otherwise couple package documentation changes to the local Native AOT candidate feed.
 
-`python3 eng/verify-release.py` validates the README source for every release package declared in `eng/release-manifest.json` (six for `0.1.0-preview.4`: five runtime packages plus `TCJ.Generators`). Package validation additionally confirms that the bytes packed as `README.md` match the corresponding file under `docs/nuget/`. Published versions from `0.1.0-preview.3` onward are also checked by `eng/verify-published-packages.py` against the package README policy.
+`python3 eng/verify-release.py` validates the README source for every release package declared in `eng/release-manifest.json` (currently six: five runtime packages plus `TCJ.Generators`). Package validation additionally confirms that the bytes packed as `README.md` match the corresponding file under `docs/nuget/`. Published versions from `0.1.0-preview.3` onward are also checked by `eng/verify-published-packages.py` against the package README policy.
 
 ## XML documentation IDs
 

@@ -7,13 +7,13 @@ TCJ Framework uses semantic versioning with pre-release identifiers during activ
 Latest published preview:
 
 ```text
-0.1.0-preview.3
+0.1.0-preview.4
 ```
 
-Current release candidate:
+Current development version:
 
 ```text
-0.1.0-preview.4
+0.1.0-preview.5
 ```
 
 The mutable next-release state is stored in `eng/release-manifest.json`. The latest immutable public release is recorded separately in `eng/published-release.json` and mirrored for MSBuild package validation in `eng/PackageValidation.props`. Both release manifests also record the SPDX `licenseExpression` that belongs to that release generation, so a license transition does not rewrite the metadata of an already-published package.
@@ -50,9 +50,10 @@ Preview releases use monotonically increasing identifiers:
 0.1.0-preview.2
 0.1.0-preview.3
 0.1.0-preview.4
+0.1.0-preview.5
 ```
 
-The corresponding Git tag includes a leading `v`, for example `v0.1.0-preview.3`. Never reuse a published package version or move a published tag.
+The corresponding Git tag includes a leading `v`, for example `v0.1.0-preview.4`. Never reuse a published package version or move a published tag.
 
 ## Compatibility expectations
 

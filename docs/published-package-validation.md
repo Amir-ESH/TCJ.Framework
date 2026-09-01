@@ -59,7 +59,7 @@ Actions → Published package smoke tests → Run workflow
 Leave `version` empty to use `eng/published-release.json`, or enter an exact published version such as:
 
 ```text
-0.1.0-preview.3
+0.1.0-preview.4
 ```
 
 The workflow also runs weekly. It is not a required pull-request check because it depends on the external NuGet.org service and validates immutable published artifacts.
@@ -70,7 +70,7 @@ Verify publication metadata and download the packages:
 
 ```bash
 python3 eng/verify-published-packages.py \
-  --version 0.1.0-preview.3
+  --version 0.1.0-preview.4
 ```
 
 Restore the published-package consumer explicitly from NuGet.org:
@@ -81,7 +81,7 @@ dotnet restore \
   --configfile smoke/NuGet.Published.Config \
   --force \
   --no-cache \
-  -p:TCJPackageVersion=0.1.0-preview.3
+  -p:TCJPackageVersion=0.1.0-preview.4
 ```
 
 Then run without another implicit restore:
@@ -91,7 +91,7 @@ dotnet run \
   --project smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj \
   --configuration Release \
   --no-restore \
-  -p:TCJPackageVersion=0.1.0-preview.3
+  -p:TCJPackageVersion=0.1.0-preview.4
 ```
 
 Do not replace `smoke/NuGet.Config` with the published configuration. The local configuration is part of the Native AOT release contract and must continue to source `TCJ.*` from the exact packed candidate.

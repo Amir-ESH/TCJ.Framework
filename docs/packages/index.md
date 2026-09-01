@@ -1,6 +1,6 @@
 # Packages
 
-The `0.1.0-preview.4` release candidate contains five runtime packages plus the analyzer-only `TCJ.Generators` compile-time tooling package. Each package page describes its installation or consumption model, target framework or tooling boundary, namespaces, primary entry points, and related guides.
+The `0.1.0-preview.5` development line contains five runtime packages plus the analyzer-only `TCJ.Generators` compile-time tooling package. Each package page describes its installation or consumption model, target framework or tooling boundary, namespaces, primary entry points, and related guides.
 
 - [TCJ.Core](tcj-core.md)
 - [TCJ.DependencyInjection](tcj-dependencyinjection.md)
