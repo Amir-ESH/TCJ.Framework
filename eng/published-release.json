@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
-  "version": "0.1.0-preview.3",
-  "tag": "v0.1.0-preview.3",
-  "releaseDate": "2026-08-16",
+  "version": "0.1.0-preview.4",
+  "tag": "v0.1.0-preview.4",
+  "releaseDate": "2026-08-31",
   "repository": "Amir-ESH/TCJ.Framework",
   "licenseExpression": "LGPL-3.0-only",
   "releasePackages": {
@@ -23,6 +23,15 @@
         "id": "TCJ.AspNetCore"
       }
     ],
-    "tooling": []
+    "tooling": [
+      {
+        "id": "TCJ.Generators",
+        "assetPath": "analyzers/dotnet/cs",
+        "forbidAssets": [
+          "lib/",
+          "runtime/"
+        ]
+      }
+    ]
   }
 }

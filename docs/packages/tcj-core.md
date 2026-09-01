@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-dotnet add package TCJ.Core --version 0.1.0-preview.3
+dotnet add package TCJ.Core --version 0.1.0-preview.4
 ```
 
 - **Target framework:** `net10.0`
