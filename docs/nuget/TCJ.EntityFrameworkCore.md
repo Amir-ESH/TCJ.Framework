@@ -67,12 +67,12 @@ Value Objects persist as primitive columns and materialize through their generat
 
 ## Documentation
 
-- [TCJ.EntityFrameworkCore package documentation](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/packages/tcj-entityframeworkcore.md)
-- [Specifications and repositories guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/guides/specifications-and-repositories.md)
-- [Auditing, soft delete, and rowversion guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/guides/auditing-soft-delete-rowversion.md)
-- [Data seeding guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/guides/data-seeding.md)
-- [Transactional outbox](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/outbox.md)
-- [Native AOT and trimming guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.4/docs/guides/native-aot-and-trimming.md)
+- [TCJ.EntityFrameworkCore package documentation](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/packages/tcj-entityframeworkcore.md)
+- [Specifications and repositories guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/guides/specifications-and-repositories.md)
+- [Auditing, soft delete, and rowversion guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/guides/auditing-soft-delete-rowversion.md)
+- [Data seeding guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/guides/data-seeding.md)
+- [Transactional outbox](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/outbox.md)
+- [Native AOT and trimming guide](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/guides/native-aot-and-trimming.md)
 - [Repository](https://github.com/Amir-ESH/TCJ.Framework)
 - [Issues](https://github.com/Amir-ESH/TCJ.Framework/issues)
 

@@ -23,7 +23,7 @@ from sbom_common import (
     package_ref,
     property_map,
     read_json,
-    get_release_package_ids,
+    get_release_packages,
     release_package_policy,
     sha256,
     symbol_ref,
@@ -107,12 +107,32 @@ def validate_configuration(root: Path) -> dict[str, Any]:
     policy = load_policy(root)
     manifest = read_json(root / "eng" / "release-manifest.json")
     try:
-        manifest_packages = list(get_release_package_ids(manifest, "runtime"))
+        manifest_release_packages = get_release_packages(manifest)
     except ValueError as error:
         fail(str(error))
-    runtime_packages, _ = release_package_policy(policy)
-    if manifest_packages != list(runtime_packages):
+    manifest_runtime = [
+        package.package_id
+        for package in manifest_release_packages
+        if package.package_type == "runtime"
+    ]
+    manifest_tooling = [
+        (
+            package.package_id,
+            (package.asset_path or "").rstrip("/") + "/",
+            tuple(value.rstrip("/") + "/" for value in package.forbid_assets),
+        )
+        for package in manifest_release_packages
+        if package.package_type == "tooling"
+    ]
+    runtime_packages, tooling_packages = release_package_policy(policy)
+    if manifest_runtime != list(runtime_packages):
         fail("SBOM policy releasePackages.runtime must exactly match the runtime packages in release-manifest.")
+    policy_tooling = [
+        (spec.package_id, spec.asset_path, spec.forbid_assets)
+        for spec in tooling_packages
+    ]
+    if manifest_tooling != policy_tooling:
+        fail("SBOM policy releasePackages.tooling must exactly match the tooling packages in release-manifest.")
     if manifest.get("repository") != policy["repository"]:
         fail("SBOM policy repository must match release-manifest repository.")
 
@@ -283,6 +303,9 @@ def verify_document(
         fail("SBOM metadata does not contain the required GitHub repository reference.")
 
     required_packages, tooling_packages = release_package_policy(policy)
+    tooling_package_ids = tuple(spec.package_id for spec in tooling_packages)
+    release_package_ids = (*required_packages, *tooling_package_ids)
+    release_package_id_set = set(release_package_ids)
     package_set = discover_release_packages(
         package_directory, required_packages, version, tooling_packages
     )
@@ -320,7 +343,7 @@ def verify_document(
         name = component.get("name")
         if not isinstance(name, str) or not name.startswith("TCJ."):
             continue
-        if name not in required_packages:
+        if name not in release_package_id_set:
             unexpected_tcj.append(name)
         elif name in tcj_components:
             fail(f"Duplicate TCJ component: {name}.")
@@ -328,7 +351,7 @@ def verify_document(
             tcj_components[name] = component
     if unexpected_tcj:
         fail("Unexpected TCJ components: " + ", ".join(sorted(set(unexpected_tcj))))
-    missing_tcj = [item for item in required_packages if item not in tcj_components]
+    missing_tcj = [item for item in release_package_ids if item not in tcj_components]
     if missing_tcj:
         fail("SBOM is missing required TCJ packages: " + ", ".join(missing_tcj))
 
@@ -336,6 +359,10 @@ def verify_document(
     for package_id in required_packages:
         expected_artifacts[package_set.primary[package_id].name] = package_set.primary[package_id]
         expected_artifacts[package_set.symbols[package_id].name] = package_set.symbols[package_id]
+    for package_id in tooling_package_ids:
+        expected_artifacts[package_set.tooling[package_id].name] = package_set.tooling[package_id]
+
+    for package_id in release_package_ids:
         component = tcj_components[package_id]
         if component.get("version") != version:
             fail(
@@ -408,11 +435,11 @@ def verify_document(
 
     expected_edges: dict[str, set[str]] = {}
     direct_external: set[tuple[str, str]] = set()
-    for package_id in required_packages:
+    for package_id in release_package_ids:
         ref = package_ref(package_id, version)
         expected_edges[ref] = set()
         for dependency_id in package_set.metadata[package_id].dependencies:
-            if dependency_id in package_set.primary:
+            if dependency_id in release_package_id_set:
                 expected_edges[ref].add(package_ref(dependency_id, version))
             else:
                 pair = dependency_lookup(assets, dependency_id)
@@ -424,6 +451,15 @@ def verify_document(
         expected_edges[symbol_ref(package_set.symbols[package_id].name)] = {
             package_ref(package_id, version)
         }
+
+    metadata_component = metadata.get("component")
+    root_ref = metadata_component.get("bom-ref") if isinstance(metadata_component, dict) else None
+    if not isinstance(root_ref, str) or not root_ref:
+        fail("SBOM metadata component must contain a non-empty bom-ref.")
+    expected_edges[root_ref] = {
+        *(package_ref(package_id, version) for package_id in release_package_ids),
+        *(symbol_ref(package_set.symbols[package_id].name) for package_id in required_packages),
+    }
 
     for ref, expected_children in expected_edges.items():
         actual_children = dependencies.get(ref)
@@ -491,8 +527,10 @@ def main() -> int:
 
     if args.command == "validate-config":
         policy = validate_configuration(root)
+        runtime_packages, tooling_packages = release_package_policy(policy)
         print(
-            f"SBOM configuration is valid for {len(release_package_policy(policy)[0])} runtime release packages."
+            "SBOM configuration is valid for "
+            f"{len(runtime_packages)} runtime and {len(tooling_packages)} tooling release packages."
         )
         return 0
 

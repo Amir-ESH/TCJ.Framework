@@ -1,6 +1,6 @@
 # TCJ Framework documentation
 
-These documents describe the public TCJ Framework contract and the repository's engineering guarantees. The latest published preview is `0.1.0-preview.3`; the current release candidate is `0.1.0-preview.4`. Consumer installation examples stay pinned to the latest verified NuGet.org release unless a page is explicitly about development or migration work.
+These documents describe the public TCJ Framework contract and the repository's engineering guarantees. The latest published preview is `0.1.0-preview.4`; the current development version is `0.1.0-preview.5`. Consumer installation examples stay pinned to the latest verified NuGet.org release unless a page is explicitly about development or migration work.
 
 ## Start here
 
@@ -61,6 +61,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 
 ## Migrations and release notes
 
+- [0.1.0-preview.4 to 0.1.0-preview.5 migration guide](migrations/0.1.0-preview.4-to-0.1.0-preview.5.md)
 - [0.1.0-preview.3 to 0.1.0-preview.4 migration guide](migrations/0.1.0-preview.3-to-0.1.0-preview.4.md)
 - [0.1.0-preview.2 to 0.1.0-preview.3 migration guide](migrations/0.1.0-preview.2-to-0.1.0-preview.3.md)
 - [0.1.0-preview.1 to 0.1.0-preview.2 migration guide](migrations/0.1.0-preview.1-to-0.1.0-preview.2.md)
@@ -71,7 +72,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 
 ## Important preview constraints
 
-- `0.1.0-preview.3` remains the latest published NuGet preview until the `0.1.0-preview.4` release workflow completes; `0.1.0-preview.4` is the current release candidate.
+- `0.1.0-preview.4` is the latest published NuGet preview; the repository is developing `0.1.0-preview.5`.
 - Public APIs may change before `1.0.0`; pin exact preview versions in production-like environments.
 - Domain-event dispatch is explicit by default. When the transactional outbox is enabled, `SaveChanges` persists pending events transactionally and a separate processor dispatches committed messages later.
 - Soft deletion is explicit through `ISoftDeleteRepository`; `Remove` performs physical deletion.

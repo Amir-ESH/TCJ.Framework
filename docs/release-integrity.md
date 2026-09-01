@@ -67,7 +67,7 @@ sha256sum --check SHA256SUMS
 Set the exact release version, then verify provenance for a package:
 
 ```bash
-VERSION=0.1.0-preview.3
+VERSION=0.1.0-preview.4
 gh attestation verify "TCJ.Core.${VERSION}.nupkg" \
   --repo Amir-ESH/TCJ.Framework \
   --signer-workflow Amir-ESH/TCJ.Framework/.github/workflows/release.yml

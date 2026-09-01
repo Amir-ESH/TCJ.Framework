@@ -46,7 +46,7 @@ class NuGetPackageIdPolicyTests(unittest.TestCase):
             True,
         )
 
-    def test_repository_manifests_produce_preview4_transition(self) -> None:
+    def test_repository_manifests_produce_preview5_transition(self) -> None:
         root = Path(__file__).resolve().parents[2]
         current = MODULE.load_package_ids(root)
         published = MODULE.load_published_package_ids(root)
@@ -62,11 +62,10 @@ class NuGetPackageIdPolicyTests(unittest.TestCase):
                 "TCJ.Generators",
             ],
         )
-        self.assertNotIn("TCJ.Generators", published)
+        self.assertEqual(set(current), published)
         self.assertTrue(
             all(
-                MODULE.expected_exists("transition", package_id, published)
-                is (package_id != "TCJ.Generators")
+                MODULE.expected_exists("transition", package_id, published) is True
                 for package_id in current
             )
         )
