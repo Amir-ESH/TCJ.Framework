@@ -501,7 +501,7 @@ def discover_release_packages(
         if not primary_path.is_file():
             fail(f"Required tooling package is missing: {primary_path}")
         tooling_paths[spec.package_id] = primary_path
-        validate_tooling_package(primary_path, spec, version)
+        metadata[spec.package_id] = validate_tooling_package(primary_path, spec, version)
 
     actual_names = {
         path.name
@@ -724,6 +724,46 @@ def build_sbom(
             }
         )
 
+    release_package_ids = {
+        *required_packages,
+        *(spec.package_id for spec in tooling_packages),
+    }
+    for spec in tooling_packages:
+        package_id = spec.package_id
+        package_path = package_set.tooling[package_id]
+        metadata = package_set.metadata[package_id]
+        ref = package_ref(package_id, version)
+        direct_refs: set[str] = set()
+        for dependency_id in metadata.dependencies:
+            if dependency_id in release_package_ids:
+                direct_refs.add(package_ref(dependency_id, version))
+            else:
+                pair = dependency_lookup(assets, dependency_id)
+                direct_external.add(pair)
+                direct_refs.add(package_ref(*pair))
+        dependency_edges[ref] = direct_refs
+        components.append(
+            {
+                "type": "library",
+                "bom-ref": ref,
+                "group": "TCJ",
+                "name": package_id,
+                "version": version,
+                "author": metadata.authors or "TCJ Contributors",
+                "supplier": {"name": "TCJ Contributors"},
+                "hashes": [{"alg": HASH_ALGORITHM, "content": sha256(package_path)}],
+                "licenses": license_entries(metadata),
+                "purl": ref,
+                "externalReferences": external_references(metadata),
+                "properties": properties(
+                    tcj__artifactFile=package_path.name,
+                    tcj__artifactType="nuget-tooling-package",
+                    tcj__dependencyScope="release-package",
+                    tcj__repository=repository,
+                ),
+            }
+        )
+
     external_metadata: dict[tuple[str, str], NuspecMetadata] = {}
     for pair in sorted(assets.dependencies, key=lambda item: (item[0].casefold(), item[1])):
         nupkg_path, nuspec_path = assets.package_files[pair]
@@ -755,6 +795,7 @@ def build_sbom(
     root_ref = f"urn:tcj:framework:{quote(version, safe='.-')}"
     dependency_edges[root_ref] = {
         *(package_ref(package_id, version) for package_id in required_packages),
+        *(package_ref(spec.package_id, version) for spec in tooling_packages),
         *(symbol_ref(package_set.symbols[package_id].name) for package_id in required_packages),
     }
 
