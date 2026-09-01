@@ -34,6 +34,7 @@ PACKAGES = [
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
 ]
+TOOLING_PACKAGE = "TCJ.Generators"
 VERSION = "1.2.3-preview.1"
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
@@ -258,6 +259,96 @@ class Fixture:
         )
 
 
+class ToolingFixture(Fixture):
+    def __init__(self, root: Path):
+        super().__init__(root)
+        self.policy.pop("requiredPackages")
+        self.policy["releasePackages"] = {
+            "runtime": [{"id": package_id} for package_id in PACKAGES],
+            "tooling": [
+                {
+                    "id": TOOLING_PACKAGE,
+                    "assetPath": "analyzers/dotnet/cs",
+                    "forbidAssets": ["lib/", "runtime/"],
+                }
+            ],
+        }
+        tooling_path = self.package_directory / f"{TOOLING_PACKAGE}.{VERSION}.nupkg"
+        with zipfile.ZipFile(tooling_path, "w") as archive:
+            archive.writestr(
+                f"{TOOLING_PACKAGE}.nuspec",
+                self.nuspec(TOOLING_PACKAGE, VERSION, {}),
+            )
+            archive.writestr(
+                f"analyzers/dotnet/cs/{TOOLING_PACKAGE}.dll",
+                b"fixture",
+            )
+        write_json(
+            self.root / "eng" / "release-manifest.json",
+            {
+                "repository": "Amir-ESH/TCJ.Framework",
+                "version": VERSION,
+                "releasePackages": {
+                    "runtime": [{"id": package_id} for package_id in PACKAGES],
+                    "tooling": [
+                        {
+                            "id": TOOLING_PACKAGE,
+                            "assetPath": "analyzers/dotnet/cs",
+                            "forbidAssets": ["lib/", "runtime/"],
+                        }
+                    ],
+                },
+            },
+        )
+        self.sbom = build_sbom(
+            root=root,
+            policy=self.policy,
+            version=VERSION,
+            package_directory=self.package_directory,
+            commit_sha=COMMIT,
+            release_tag=f"v{VERSION}",
+        )
+        write_json(self.sbom_path, self.sbom)
+
+
+class VerifyToolingSbomTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.fixture = ToolingFixture(Path(self.temp.name))
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_tooling_package_is_included_in_sbom(self):
+        summary = self.fixture.verify()
+        self.assertEqual("PASS", summary["status"])
+        self.assertEqual(6, summary["tcjPackageCount"])
+        component = next(
+            item for item in self.fixture.sbom["components"] if item.get("name") == TOOLING_PACKAGE
+        )
+        self.assertEqual(VERSION, component["version"])
+        self.assertEqual(nuget_purl(TOOLING_PACKAGE, VERSION), component["purl"])
+        properties = {item["name"]: item["value"] for item in component["properties"]}
+        self.assertEqual(f"{TOOLING_PACKAGE}.{VERSION}.nupkg", properties["tcj:artifactFile"])
+        self.assertEqual("nuget-tooling-package", properties["tcj:artifactType"])
+
+    def test_missing_tooling_package_component_fails(self):
+        sbom = copy.deepcopy(self.fixture.sbom)
+        sbom["components"] = [
+            item for item in sbom["components"] if item.get("name") != TOOLING_PACKAGE
+        ]
+        with self.assertRaisesRegex(ValueError, "missing required TCJ packages"):
+            self.fixture.verify(sbom)
+
+    def test_root_dependency_graph_requires_tooling_package(self):
+        sbom = copy.deepcopy(self.fixture.sbom)
+        root_ref = sbom["metadata"]["component"]["bom-ref"]
+        root_dependency = next(item for item in sbom["dependencies"] if item["ref"] == root_ref)
+        root_dependency["dependsOn"].remove(nuget_purl(TOOLING_PACKAGE, VERSION))
+        with self.assertRaisesRegex(ValueError, "dependency relationship mismatch"):
+            self.fixture.verify(sbom)
+
+
 class VerifySbomTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -450,6 +541,34 @@ class ValidateSbomConfigurationTests(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_tooling_policy_must_match_release_manifest(self):
+        root = self.make_root()
+        policy_path = root / "eng" / "sbom-policy.json"
+        manifest_path = root / "eng" / "release-manifest.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        policy.pop("requiredPackages")
+        policy["releasePackages"] = {
+            "runtime": [{"id": package_id} for package_id in PACKAGES],
+            "tooling": [
+                {
+                    "id": TOOLING_PACKAGE,
+                    "assetPath": "analyzers/dotnet/cs",
+                    "forbidAssets": ["lib/", "runtime/"],
+                }
+            ],
+        }
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest.pop("packages")
+        manifest["releasePackages"] = copy.deepcopy(policy["releasePackages"])
+        write_json(policy_path, policy)
+        write_json(manifest_path, manifest)
+        VERIFY.validate_configuration(root)
+
+        policy["releasePackages"]["tooling"][0]["id"] = "TCJ.OtherGenerator"
+        write_json(policy_path, policy)
+        with self.assertRaisesRegex(ValueError, "releasePackages.tooling must exactly match"):
+            VERIFY.validate_configuration(root)
 
     def test_missing_policy_fails(self):
         root = self.make_root()
