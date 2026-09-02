@@ -6,9 +6,16 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 
 ## [Unreleased]
 
+### Added
+
+- Added transport-neutral transactional Inbox contracts, stable message identity/version registration, EF Core persistence, and SQL Server consumer-scoped uniqueness.
+- Added inline and deferred Inbox processing, concurrent duplicate protection, bounded retry/dead-letter handling, explicit replay, batched cleanup, telemetry, health checks, startup validation, and dedicated CI/release verification.
+- Added Inbox-Outbox correlation and causation propagation plus SQL Server integration and concurrency coverage for idempotent inbound processing.
+
 ### Changed
 
 - Advanced the immutable published-package and PackageValidation baseline to `0.1.0-preview.4` and opened the `0.1.0-preview.5` development line.
+- `TCJ_OutboxMessages` now maps nullable `CorrelationId` and `CausationId` columns when Outbox is enabled so outbound messages created by an Inbox handler preserve causal metadata; consumers adopting the updated mapping require a consumer-controlled migration.
 
 ## [0.1.0-preview.4] - 2026-08-31
 
@@ -148,3 +155,4 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 [0.1.0-preview.3]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.3
 [0.1.0-preview.2]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.2
 [0.1.0-preview.1]: https://github.com/Amir-ESH/TCJ.Framework/releases/tag/v0.1.0-preview.1
+

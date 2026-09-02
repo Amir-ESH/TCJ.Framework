@@ -24,6 +24,8 @@ public static class OutboxModelBuilderExtensions
         builder.Property(message => message.OccurredAtUtc).IsRequired();
         builder.Property(message => message.EventType).HasMaxLength(128).IsRequired();
         builder.Property(message => message.Payload).IsRequired();
+        builder.Property(message => message.CorrelationId).HasMaxLength(256);
+        builder.Property(message => message.CausationId).HasMaxLength(256);
         builder.Property(message => message.AttemptCount).IsRequired();
         builder.Property(message => message.NextAttemptAtUtc).IsRequired();
         builder.Property(message => message.LockedAtUtc);

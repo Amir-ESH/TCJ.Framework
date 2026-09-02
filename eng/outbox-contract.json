@@ -23,7 +23,9 @@
     "LastError",
     "UpdatedAtUtc",
     "ReplayCount",
-    "LastReplayedAtUtc"
+    "LastReplayedAtUtc",
+    "CorrelationId",
+    "CausationId"
   ],
   "requiredIndexes": [
     "PK_TCJ_OutboxMessages",
@@ -102,5 +104,12 @@
   "migrationStrategy": "consumer-controlled",
   "automaticMigrations": false,
   "replayRequiresExplicitMessageId": true,
-  "publicReplayEndpointProvided": false
+  "publicReplayEndpointProvided": false,
+  "deliveryContextMetadata": [
+    "MessageId",
+    "EventType",
+    "Attempt",
+    "CorrelationId",
+    "CausationId"
+  ]
 }

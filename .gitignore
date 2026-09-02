@@ -556,3 +556,13 @@ tests/TCJ.Outbox.Tests/obj/
 !eng/verify-outbox.py
 !tests/TCJ.Outbox.Tests/**/*.cs
 !tests/TCJ.Outbox.Tests/**/*.csproj
+
+# Transactional Inbox generated evidence
+artifacts/inbox/
+TestResults/Inbox/
+tests/TCJ.Inbox.Tests/bin/
+tests/TCJ.Inbox.Tests/obj/
+!eng/inbox-policy.json
+!eng/inbox-contract.json
+!tests/TCJ.Inbox.Tests/**/*.cs
+!tests/TCJ.Inbox.Tests/**/*.csproj

@@ -115,6 +115,9 @@ jobs:
       - name: Validate transactional-outbox configuration
         run: python3 eng/verify-outbox.py validate-config
 
+      - name: Validate transactional-Inbox configuration
+        run: python3 eng/verify-inbox.py validate-config
+
       - name: Verify Native AOT policy and release wiring
         run: python3 eng/verify-aot.py verify
 
@@ -127,6 +130,15 @@ jobs:
           --configuration Release
           --no-restore
 
+
+
+      - name: Run fast provider-independent Inbox tests
+        run: >
+          dotnet test tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj
+          --configuration Release --no-build
+          --filter "FullyQualifiedName~InboxFastTests"
+          --logger "trx;LogFileName=inbox-fast.trx"
+          --results-directory TestResults/Inbox/Fast
 
       - name: Run fast provider-independent outbox tests
         run: >

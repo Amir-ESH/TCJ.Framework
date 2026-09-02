@@ -1,0 +1,144 @@
+name: Transactional inbox
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 4 * * 4"
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.EntityFrameworkCore/**"
+      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "src/TCJ.AspNetCore/**"
+      - "tests/TCJ.Inbox.Tests/**"
+      - "eng/inbox-*.json"
+      - "eng/verify-inbox.py"
+      - "docs/inbox.md"
+      - ".github/workflows/inbox.yml"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release-preflight.yml"
+      - ".github/workflows/release.yml"
+      - "TCJ.slnx"
+  pull_request:
+    paths:
+      - "src/TCJ.Core/**"
+      - "src/TCJ.EntityFrameworkCore/**"
+      - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "src/TCJ.AspNetCore/**"
+      - "tests/TCJ.Inbox.Tests/**"
+      - "eng/inbox-*.json"
+      - "eng/verify-inbox.py"
+      - "docs/inbox.md"
+      - ".github/workflows/inbox.yml"
+      - "TCJ.slnx"
+permissions:
+  contents: read
+concurrency:
+  group: inbox-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+jobs:
+  idempotent-processing:
+    name: Validate idempotent processing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Validate automation scripts
+        run: |
+          python3 -m py_compile eng/*.py
+          python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
+      - name: Validate Inbox policy and contract
+        run: python3 eng/verify-inbox.py validate-config
+      - name: Restore and audit dependencies
+        run: dotnet restore tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj --force-evaluate
+      - name: Build Inbox tests
+        run: dotnet build tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj -c Release --no-restore
+      - name: Start SQL Server Testcontainer and run Inbox suite
+        run: >
+          dotnet test tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj
+          -c Release --no-build
+          --logger "trx;LogFileName=inbox-full.trx"
+          --results-directory TestResults/Inbox/full
+      - name: Verify retries, dead letters, replay, cleanup, telemetry, health and sensitive-data evidence
+        run: python3 eng/verify-inbox.py verify --results TestResults/Inbox/full --output artifacts/inbox
+      - name: Publish Inbox summary
+        if: always()
+        run: |
+          if [[ -f artifacts/inbox/INBOX_SUMMARY.md ]]; then cat artifacts/inbox/INBOX_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Upload test results and sanitized diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: inbox-full-${{ github.run_id }}
+          path: |
+            TestResults/Inbox/**
+            artifacts/inbox/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  concurrent-duplicates:
+    name: Validate concurrent duplicates
+    needs: idempotent-processing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - run: python3 eng/verify-inbox.py validate-config
+      - run: dotnet restore tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj --force-evaluate
+      - run: dotnet build tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj -c Release --no-restore
+      - name: Run concurrent duplicate and lease recovery tests
+        run: >
+          dotnet test tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj
+          -c Release --no-build
+          --filter "FullyQualifiedName~Concurrent_duplicate_delivery|FullyQualifiedName~Expired_deferred_lease|FullyQualifiedName~Cancellation_during_handler"
+          --logger "trx;LogFileName=inbox-concurrency.trx"
+          --results-directory TestResults/Inbox/concurrency
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: inbox-concurrency-${{ github.run_id }}
+          path: TestResults/Inbox/concurrency/**
+          if-no-files-found: error
+          retention-days: 30
+
+  inbox-outbox-transaction:
+    name: Validate Inbox and Outbox transaction
+    needs: idempotent-processing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - run: python3 eng/verify-inbox.py validate-config
+      - run: dotnet restore tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj --force-evaluate
+      - run: dotnet build tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj -c Release --no-restore
+      - name: Run atomic Inbox, business-data and Outbox tests
+        run: >
+          dotnet test tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj
+          -c Release --no-build
+          --filter "FullyQualifiedName~First_inline_delivery|FullyQualifiedName~Failure_after_save_changes|FullyQualifiedName~Correlation_and_inbound_identity|FullyQualifiedName~Redelivery_after_uncertain"
+          --logger "trx;LogFileName=inbox-outbox.trx"
+          --results-directory TestResults/Inbox/outbox
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: inbox-outbox-${{ github.run_id }}
+          path: TestResults/Inbox/outbox/**
+          if-no-files-found: error
+          retention-days: 30

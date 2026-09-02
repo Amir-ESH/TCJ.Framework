@@ -163,3 +163,7 @@ Do not put credentials, raw provider error messages, connection strings, SQL, us
 ## Transactional outbox readiness
 
 When the outbox is registered, `tcj.outbox.processor`, `tcj.outbox.backlog`, and `tcj.outbox.dead_letters` participate in readiness. They expose processor state and aggregate counts/ages only—never payloads, exception messages, server/database identifiers, or connection strings. Backlog and dead-letter thresholds are configurable. Liveness remains independent of temporary handler/external-system availability.
+
+## Transactional Inbox readiness
+
+When transactional Inbox is registered, readiness also includes `tcj.inbox.configuration`, `tcj.inbox.processor`, `tcj.inbox.backlog`, and `tcj.inbox.dead_letters`. The checks use the bounded `inbox` tag and report only processor state, counts, ages, and configuration status. They never expose message payloads, raw transport headers, message IDs, exception messages, connection strings, server names, or database names. Inbox backlog or dead letters can make readiness unhealthy according to configured thresholds, but liveness remains dependency-independent.

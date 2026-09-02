@@ -70,3 +70,7 @@ Public TCJ health responses intentionally omit exception messages, stack traces,
 ## Transactional outbox data
 
 Outbox payloads are durable application data and can contain sensitive fields. TCJ never emits payloads through default logs, traces, metric tags, health responses, or workflow summaries, and it stores only bounded generic failure diagnostics rather than exception messages/stack traces. Applications own database encryption at rest, key management, access control, backup protection, retention, and any custom serializer/redaction policy. Do not put access tokens, passwords, connection strings, or credentials into domain-event payloads.
+
+## Transactional Inbox data
+
+Inbox payloads and transport metadata can contain sensitive data. The default implementation stores only allowlisted headers, never emits payload/raw headers in logs or telemetry, bounds stored errors, and supports metadata-only retention for inline processing. Hosts remain responsible for database encryption at rest, access controls, backups, retention, replay authorization, and idempotency of non-transactional external effects. A duplicate `ConsumerName`/`MessageId` with a different payload hash is treated as a contract/security conflict, not a normal duplicate.

@@ -135,3 +135,6 @@
   href: contributing.md
 - name: API Reference
   href: api/index.md
+
+- name: Transactional Inbox
+  href: inbox.md

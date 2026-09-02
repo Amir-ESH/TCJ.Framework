@@ -2,9 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using TCJ.AspNetCore.Extensions;
 using TCJ.AspNetCore.Options;
 using TCJ.Core.Entities;
-#if TCJ_OUTBOX_SMOKE
+#if TCJ_OUTBOX_SMOKE || TCJ_INBOX_SMOKE
 using TCJ.Core.DomainEvents;
 using TCJ.Core.Outbox;
+#endif
+#if TCJ_INBOX_SMOKE
+using System.Text.Json;
+using TCJ.Core.Inbox;
 #endif
 using TCJ.Core.Identifiers;
 using TCJ.Core.Results;
@@ -20,10 +24,15 @@ using TCJ.DependencyInjection.HealthChecks;
 using TCJ.DependencyInjection.Registration;
 using TCJ.EntityFrameworkCore.Abstractions;
 using TCJ.EntityFrameworkCore.Extensions;
-#if TCJ_OUTBOX_SMOKE
+#if TCJ_OUTBOX_SMOKE || TCJ_INBOX_SMOKE
 using TCJ.EntityFrameworkCore.Outbox;
 using TCJ.EntityFrameworkCore.Outbox.Extensions;
 using TCJ.EntityFrameworkCore.SqlServer.Outbox.Extensions;
+#endif
+#if TCJ_INBOX_SMOKE
+using TCJ.EntityFrameworkCore.Inbox;
+using TCJ.EntityFrameworkCore.Inbox.Extensions;
+using TCJ.EntityFrameworkCore.SqlServer.Inbox.Extensions;
 #endif
 using TCJ.EntityFrameworkCore.Repositories;
 using TCJ.EntityFrameworkCore.SqlServer.Extensions;
@@ -61,13 +70,23 @@ internal static class Program
             sqlServerConnection,
             configureTcjSqlServer: options =>
                 options.EnableRetryOnFailure = false);
-#if TCJ_OUTBOX_SMOKE
+#if TCJ_OUTBOX_SMOKE || TCJ_INBOX_SMOKE
         builder.Services.AddTcjOutboxEvent<SmokeChanged>("smoke.changed.v1");
         builder.Services.AddTcjSqlServerOutbox<SmokeDbContext>(options =>
         {
             options.BatchSize = 10;
             options.PollingInterval = TimeSpan.FromMilliseconds(50);
             options.LockDuration = TimeSpan.FromSeconds(10);
+            options.MaxRetryAttempts = 1;
+        });
+#endif
+#if TCJ_INBOX_SMOKE
+        builder.Services.AddTcjInboxMessage<SmokeInboundCommand>("smoke.inbound", version: 1);
+        builder.Services.AddTcjInboxHandler<SmokeInboundCommand, SmokeInboundHandler>();
+        builder.Services.AddTcjSqlServerInbox<SmokeDbContext>(options =>
+        {
+            options.ConsumerName = "published-package-smoke";
+            options.ProcessingMode = InboxProcessingMode.Inline;
             options.MaxRetryAttempts = 1;
         });
 #endif
@@ -150,6 +169,10 @@ internal static class Program
         await VerifyPublishedOutboxAsync(services);
 #endif
 
+#if TCJ_INBOX_SMOKE
+        await VerifyPublishedInboxAsync(services);
+#endif
+
 #if TCJ_HEALTH_CHECK_SMOKE
         await VerifyPublishedHealthChecksAsync(app);
 #endif
@@ -186,6 +209,47 @@ internal static class Program
         }
 
         Console.WriteLine("TCJ_OUTBOX_SMOKE succeeded for TCJ_OutboxMessages.");
+    }
+#endif
+
+#if TCJ_INBOX_SMOKE
+    private static async Task VerifyPublishedInboxAsync(IServiceProvider services)
+    {
+        SmokeDbContext dbContext = services.GetRequiredService<SmokeDbContext>();
+        await dbContext.Database.EnsureCreatedAsync().ConfigureAwait(false);
+
+        const string messageId = "published-inbox-message-1";
+        string payload = JsonSerializer.Serialize(new SmokeInboundCommand("inbox-smoke"));
+        var envelope = new IncomingMessageEnvelope(
+            messageId,
+            "smoke.inbound",
+            1,
+            "published-package-smoke",
+            payload,
+            DateTimeOffset.UtcNow,
+            correlationId: "published-inbox-correlation");
+
+        IInboxPipeline pipeline = services.GetRequiredService<IInboxPipeline>();
+        InboxHandlingResult first = await pipeline.ProcessAsync(envelope).ConfigureAwait(false);
+        InboxHandlingResult duplicate = await pipeline.ProcessAsync(envelope).ConfigureAwait(false);
+
+        dbContext.ChangeTracker.Clear();
+        int businessRows = await dbContext.SmokeEntities.AsNoTracking().CountAsync(entity => entity.Name == "inbox-smoke").ConfigureAwait(false);
+        InboxMessage inbox = await dbContext.Set<InboxMessage>().AsNoTracking().SingleAsync(message =>
+            message.ConsumerName == "published-package-smoke" && message.MessageId == messageId).ConfigureAwait(false);
+        OutboxMessage outbound = await dbContext.Set<OutboxMessage>().AsNoTracking().SingleAsync(message => message.CausationId == messageId).ConfigureAwait(false);
+
+        if (first.Outcome != InboxHandlingOutcome.Acknowledge
+            || duplicate.Outcome != InboxHandlingOutcome.IgnoreDuplicate
+            || businessRows != 1
+            || inbox.ProcessedAtUtc is null
+            || outbound.CorrelationId != "published-inbox-correlation"
+            || outbound.CausationId != messageId)
+        {
+            throw new InvalidOperationException("Published transactional Inbox/Outbox idempotency smoke failed.");
+        }
+
+        Console.WriteLine("TCJ_INBOX_SMOKE succeeded for TCJ_InboxMessages with one business effect and one causal Outbox row.");
     }
 #endif
 
@@ -272,8 +336,11 @@ public sealed class SmokeDbContext(
 
         modelBuilder.ApplySoftDeleteQueryFilters();
         modelBuilder.ApplyTcjSqlServerConventions();
-#if TCJ_OUTBOX_SMOKE
+#if TCJ_OUTBOX_SMOKE || TCJ_INBOX_SMOKE
         modelBuilder.AddTcjOutbox();
+#endif
+#if TCJ_INBOX_SMOKE
+        modelBuilder.AddTcjInbox();
 #endif
     }
 }
@@ -294,15 +361,16 @@ public sealed class SmokeEntity
     public string Name { get; private set; } =
         string.Empty;
 
-#if TCJ_OUTBOX_SMOKE
+#if TCJ_OUTBOX_SMOKE || TCJ_INBOX_SMOKE
     public void RaiseChanged(string marker, DateTimeOffset occurredOn)
         => AddDomainEvent(new SmokeChanged(Id, marker, occurredOn));
 #endif
 }
 
-#if TCJ_OUTBOX_SMOKE
+#if TCJ_OUTBOX_SMOKE || TCJ_INBOX_SMOKE
 public sealed record SmokeChanged(Guid EntityId, string Marker, DateTimeOffset OccurredOn) : IDomainEvent;
 
+#if TCJ_OUTBOX_SMOKE
 public sealed class SmokeDeliveryProbe
 {
     private int _count;
@@ -319,4 +387,21 @@ public sealed class SmokeChangedHandler(SmokeDeliveryProbe probe) : IDomainEvent
         return Task.CompletedTask;
     }
 }
+#endif
+
+#if TCJ_INBOX_SMOKE
+public sealed record SmokeInboundCommand(string Name);
+
+public sealed class SmokeInboundHandler(SmokeDbContext dbContext) : IInboxMessageHandler<SmokeInboundCommand>
+{
+    public Task HandleAsync(SmokeInboundCommand message, InboxMessageContext context, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var entity = new SmokeEntity(Guid.CreateVersion7(), message.Name);
+        entity.RaiseChanged("inbox", DateTimeOffset.UtcNow);
+        dbContext.SmokeEntities.Add(entity);
+        return Task.CompletedTask;
+    }
+}
+#endif
 #endif

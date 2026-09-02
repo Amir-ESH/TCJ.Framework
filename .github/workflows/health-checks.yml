@@ -14,8 +14,11 @@ on:
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.AspNetCore/**"
       - "tests/TCJ.HealthChecks.Tests/**"
+      - "tests/TCJ.Inbox.Tests/**"
       - "eng/health-check-*.json"
       - "eng/verify-health-checks.py"
+      - "eng/inbox-*.json"
+      - "eng/verify-inbox.py"
       - ".github/workflows/health-checks.yml"
       - "Directory.Packages.props"
       - "TCJ.slnx"
@@ -99,16 +102,32 @@ jobs:
           global-json-file: global.json
       - name: Validate health-check policy
         run: python3 eng/verify-health-checks.py validate-config
+      - name: Validate Inbox policy and contract
+        run: python3 eng/verify-inbox.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj --force-evaluate
       - name: Build health-check tests
         run: dotnet build tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj -c Release --no-restore
+      - name: Restore and build Inbox health tests
+        run: |
+          dotnet restore tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj --force-evaluate
+          dotnet build tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj -c Release --no-restore
+
       - name: Start SQL Server Testcontainer and run readiness and migration tests
         run: >
           dotnet test tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj
           -c Release --no-build
           --logger "trx;LogFileName=health-checks-full.trx"
           --results-directory TestResults/HealthChecks/full
+      - name: Run transactional Inbox aggregate-health and sensitive-data scenario
+        run: >
+          dotnet test tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj
+          -c Release --no-build
+          --filter "FullyQualifiedName~Inbox_health_checks|FullyQualifiedName~Sensitive_headers"
+          --logger "trx;LogFileName=inbox-health-crossgate.trx"
+          --results-directory TestResults/Inbox/HealthCrossGate
+
       - name: Run SQL connectivity, migration, cancellation, timeout, cache, concurrency, and sensitive-data scan
         run: >
           python3 eng/verify-health-checks.py verify
@@ -130,6 +149,7 @@ jobs:
           name: health-checks-full-${{ github.run_id }}
           path: |
             TestResults/HealthChecks/**
+            TestResults/Inbox/HealthCrossGate/**
             artifacts/health-checks/**
           if-no-files-found: warn
           retention-days: 30

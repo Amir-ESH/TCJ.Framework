@@ -14,12 +14,16 @@ public sealed class OutboxMessage : IOutboxMessage
         DateTimeOffset occurredAtUtc,
         string eventType,
         string payload,
-        DateTimeOffset createdAtUtc)
+        DateTimeOffset createdAtUtc,
+        string? correlationId = null,
+        string? causationId = null)
     {
         Id = id;
         OccurredAtUtc = occurredAtUtc;
         EventType = eventType;
         Payload = payload;
+        CorrelationId = correlationId;
+        CausationId = causationId;
         AttemptCount = 0;
         NextAttemptAtUtc = createdAtUtc;
         CreatedAtUtc = createdAtUtc;
@@ -37,6 +41,13 @@ public sealed class OutboxMessage : IOutboxMessage
 
     /// <inheritdoc />
     public string Payload { get; private set; } = string.Empty;
+
+
+    /// <summary>Gets the optional correlation identifier propagated from an inbound Inbox context.</summary>
+    public string? CorrelationId { get; private set; }
+
+    /// <summary>Gets the optional causation identifier; Inbox-originated events use the inbound message ID.</summary>
+    public string? CausationId { get; private set; }
 
     /// <inheritdoc />
     public int AttemptCount { get; private set; }

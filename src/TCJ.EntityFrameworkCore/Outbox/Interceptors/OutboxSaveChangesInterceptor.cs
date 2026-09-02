@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using TCJ.Core.DomainEvents;
 using TCJ.Core.Identifiers;
+using TCJ.Core.Inbox;
 using TCJ.EntityFrameworkCore.Outbox.Diagnostics;
 
 namespace TCJ.EntityFrameworkCore.Outbox.Interceptors;
@@ -14,19 +15,22 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
     private readonly IOutboxEventTypeResolver _eventTypeResolver;
     private readonly OutboxCaptureTracker _captureTracker;
     private readonly TimeProvider _timeProvider;
+    private readonly IInboxMessageContextAccessor? _inboxContextAccessor;
 
     public OutboxSaveChangesInterceptor(
         IGuidGenerator guidGenerator,
         IOutboxSerializer serializer,
         IOutboxEventTypeResolver eventTypeResolver,
         OutboxCaptureTracker captureTracker,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IInboxMessageContextAccessor? inboxContextAccessor = null)
     {
         _guidGenerator = guidGenerator ?? throw new ArgumentNullException(nameof(guidGenerator));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _eventTypeResolver = eventTypeResolver ?? throw new ArgumentNullException(nameof(eventTypeResolver));
         _captureTracker = captureTracker ?? throw new ArgumentNullException(nameof(captureTracker));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _inboxContextAccessor = inboxContextAccessor;
     }
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
@@ -144,7 +148,15 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
                 {
                     string payload = _serializer.Serialize(domainEvent);
                     Guid messageId = _guidGenerator.CreateVersion7();
-                    var message = new OutboxMessage(messageId, domainEvent.OccurredOn.ToUniversalTime(), eventType, payload, now);
+                    InboxMessageContext? inboxContext = _inboxContextAccessor?.Current;
+                    var message = new OutboxMessage(
+                        messageId,
+                        domainEvent.OccurredOn.ToUniversalTime(),
+                        eventType,
+                        payload,
+                        now,
+                        inboxContext?.CorrelationId,
+                        inboxContext?.MessageId);
 
                     context.Set<OutboxMessage>().Add(message);
                     state.Captured.Add(domainEvent, new CapturedOutboxEvent(domainEvent, message));

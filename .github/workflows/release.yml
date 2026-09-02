@@ -58,8 +58,13 @@ jobs:
     name: Transactional outbox contract gate
     uses: ./.github/workflows/outbox.yml
 
+
+  inbox:
+    name: Transactional Inbox contract gate
+    uses: ./.github/workflows/inbox.yml
+
   build-and-pack:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -138,6 +143,9 @@ jobs:
 
       - name: Validate transactional-outbox configuration
         run: python3 eng/verify-outbox.py validate-config
+
+      - name: Validate transactional-Inbox configuration
+        run: python3 eng/verify-inbox.py validate-config
 
       - name: Verify Native AOT policy and release wiring
         run: python3 eng/verify-aot.py verify
@@ -220,6 +228,21 @@ jobs:
           test -d artifacts/outbox-release
           find artifacts/outbox-release -type f -name 'OUTBOX_SUMMARY.md' -print -quit | grep -q .
           zip -qr "artifacts/release/TCJ.Framework.Outbox.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/outbox-release
+
+      - name: Download exact tagged-source Inbox evidence
+        uses: actions/download-artifact@v8
+        with:
+          pattern: inbox-*-${{ github.run_id }}
+          path: artifacts/inbox-release
+
+      - name: Preserve transactional-Inbox evidence with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          test -d artifacts/inbox-release
+          find artifacts/inbox-release -type f -name 'INBOX_SUMMARY.md' -print -quit | grep -q .
+          zip -qr "artifacts/release/TCJ.Framework.Inbox.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/inbox-release
 
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
@@ -802,6 +825,7 @@ jobs:
             artifacts/release/upgrade-compatibility-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
+            artifacts/release/TCJ.Framework.Inbox.Evidence.*.zip
             artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
             artifacts/release/native-aot-result.json
             artifacts/release/aot-runtime-verification.json
@@ -862,6 +886,7 @@ jobs:
             artifacts/release/observability-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
+            artifacts/release/TCJ.Framework.Inbox.Evidence.*.zip
             artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
             artifacts/release/native-aot-result.json
             artifacts/release/aot-runtime-verification.json
@@ -1044,6 +1069,7 @@ jobs:
             artifacts/release/observability-summary.json
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
+            artifacts/release/TCJ.Framework.Inbox.Evidence.*.zip
             artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
             artifacts/release/native-aot-result.json
             artifacts/release/aot-runtime-verification.json

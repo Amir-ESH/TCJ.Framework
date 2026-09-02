@@ -188,6 +188,24 @@ Describe the problem and the approach taken.
 - [ ] Outbox schema and contract changes are documented
 - [ ] Generated outbox artifacts are not committed
 
+
+## Transactional inbox
+
+- [ ] Stable message IDs are preserved
+- [ ] Consumer-scoped uniqueness is enforced
+- [ ] Duplicate payload conflicts are detected
+- [ ] Concurrent duplicates invoke one active handler
+- [ ] Business changes and Inbox status commit together
+- [ ] Outbound Outbox messages commit in the same transaction
+- [ ] Failed transactions leave no committed business or Outbox effect
+- [ ] Retries remain bounded and cancellation is respected
+- [ ] Dead-letter behavior is tested and poison messages do not block later work
+- [ ] Replay is explicit and preserves message identity
+- [ ] Cleanup preserves active and retryable records
+- [ ] Payloads and sensitive headers are not logged or emitted to telemetry
+- [ ] Inbox schema and contract changes are documented
+- [ ] Generated Inbox artifacts are not committed
+
 ## Related issue
 
 Refs #

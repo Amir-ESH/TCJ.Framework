@@ -85,3 +85,5 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [Validated consumer examples](examples.md)
 
 The generated `artifacts/documentation/api/` and `artifacts/documentation/site/` directories are workflow outputs and must not be committed.
+
+- [Transactional Inbox](inbox.md) — consumer-scoped idempotent inbound message processing, retries, replay, cleanup, and Inbox/Outbox transaction semantics.

@@ -6,7 +6,7 @@ TCJ's transactional outbox closes the consistency gap between an Entity Framewor
 
 The supported guarantee is **at-least-once delivery**. TCJ does **not** promise exactly-once delivery. A worker can successfully execute a handler and fail before it records `ProcessedAtUtc`; after the bounded lease expires, another worker can deliver the same message again. Handlers whose side effects cannot tolerate duplication must therefore be idempotent.
 
-A practical idempotency pattern is a `ProcessedMessageId` table with a unique key on the outbox message ID. The handler writes that ID and its business side effect in the same local transaction. `IOutboxMessageContextAccessor.Current` exposes the stable message ID, stable logical event type, and one-based attempt number while an outbox handler is running. TCJ intentionally does not mandate one idempotency store because the correct side-effect boundary belongs to the consuming application.
+A practical idempotency pattern is a `ProcessedMessageId` table with a unique key on the outbox message ID. The handler writes that ID and its business side effect in the same local transaction. `IOutboxMessageContextAccessor.Current` exposes the stable message ID, stable logical event type, one-based attempt number, and optional persisted `CorrelationId`/`CausationId` while an outbox handler is running. TCJ intentionally does not mandate one idempotency store because the correct side-effect boundary belongs to the consuming application.
 
 ## Package and registration strategy
 
@@ -222,3 +222,7 @@ The verifier rejects missing/ignored policy and contract files, schema/index dri
 7. Review `eng/outbox-contract.json` when changing schema, defaults, telemetry names, health names, or delivery semantics.
 
 Adding outbox support is opt-in. Consumers that do not register it retain the previous SaveChanges behavior and do not acquire an outbox schema requirement.
+
+### Inbox correlation and causation metadata
+
+When an Outbox event is persisted while an Inbox handler is active, the optional Inbox `CorrelationId` is copied to the Outbox row and the stable inbound `MessageId` becomes the Outbox `CausationId`. These nullable metadata columns are not part of duplicate identity and are never emitted as metric dimensions. Existing Outbox-enabled consumers adopting the preview.5 mapping require a consumer-controlled migration that adds nullable `CorrelationId` and `CausationId` columns to `TCJ_OutboxMessages`.

@@ -184,3 +184,7 @@ Changes to public health-check names, tags, endpoint defaults, response fields, 
 ## Transactional-outbox changes
 
 Outbox schema, delivery semantics, event naming, option defaults, telemetry, or health-check changes require an intentional update to `eng/outbox-contract.json` and `eng/outbox-policy.json`. Keep the guarantee at at-least-once unless an independently reviewed design can prove stronger semantics end to end; do not describe duplicate-prone delivery as exactly-once. Run `python3 eng/verify-outbox.py validate-config` and `tests/TCJ.Outbox.Tests` before opening a PR. Schema changes require consumer migration guidance. Never add payloads, aggregate identifiers, exception messages, credentials, or connection strings to outbox logs/telemetry/health responses.
+
+## Transactional Inbox changes
+
+Changes to Inbox identity, schema, retry, replay, cleanup, telemetry, health, or transaction behavior must update `eng/inbox-policy.json`, `eng/inbox-contract.json`, tests, and `docs/inbox.md` as applicable. Do not weaken database uniqueness, leak payload/header data, or claim global exactly-once delivery. Run `python3 eng/verify-inbox.py validate-config` before opening the pull request.

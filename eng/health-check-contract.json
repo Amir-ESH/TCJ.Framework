@@ -2,26 +2,197 @@
   "schemaVersion": 1,
   "packageStrategy": "existing-packages",
   "checks": [
-    {"name":"tcj.core","category":"Liveness","tags":["tcj","live"],"defaultFailureStatus":"Unhealthy"},
-    {"name":"tcj.startup","category":"Startup","tags":["tcj","ready","startup","configuration"],"defaultFailureStatus":"Unhealthy"},
-    {"name":"tcj.dependency_injection","category":"Configuration","tags":["tcj","ready","dependency","configuration"],"defaultFailureStatus":"Unhealthy"},
-    {"name":"tcj.domain_events","category":"Dependency","tags":["tcj","ready","dependency"],"defaultFailureStatus":"Unhealthy"},
-    {"name":"tcj.entity_framework_core","category":"Database","tags":["tcj","ready","dependency","database","configuration"],"defaultFailureStatus":"Unhealthy"},
-    {"name":"tcj.sqlserver","category":"SqlServer","tags":["tcj","ready","dependency","database","sqlserver"],"defaultFailureStatus":"Unhealthy"},
-    {"name":"tcj.sqlserver.migrations","category":"Configuration","tags":["tcj","ready","dependency","database","sqlserver","configuration"],"defaultFailureStatus":"Unhealthy","pendingMigrationsDefaultStatus":"Degraded"}
+    {
+      "name": "tcj.core",
+      "category": "Liveness",
+      "tags": [
+        "tcj",
+        "live"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    },
+    {
+      "name": "tcj.startup",
+      "category": "Startup",
+      "tags": [
+        "tcj",
+        "ready",
+        "startup",
+        "configuration"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    },
+    {
+      "name": "tcj.dependency_injection",
+      "category": "Configuration",
+      "tags": [
+        "tcj",
+        "ready",
+        "dependency",
+        "configuration"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    },
+    {
+      "name": "tcj.domain_events",
+      "category": "Dependency",
+      "tags": [
+        "tcj",
+        "ready",
+        "dependency"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    },
+    {
+      "name": "tcj.entity_framework_core",
+      "category": "Database",
+      "tags": [
+        "tcj",
+        "ready",
+        "dependency",
+        "database",
+        "configuration"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    },
+    {
+      "name": "tcj.sqlserver",
+      "category": "SqlServer",
+      "tags": [
+        "tcj",
+        "ready",
+        "dependency",
+        "database",
+        "sqlserver"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    },
+    {
+      "name": "tcj.sqlserver.migrations",
+      "category": "Configuration",
+      "tags": [
+        "tcj",
+        "ready",
+        "dependency",
+        "database",
+        "sqlserver",
+        "configuration"
+      ],
+      "defaultFailureStatus": "Unhealthy",
+      "pendingMigrationsDefaultStatus": "Degraded"
+    },
+    {
+      "name": "tcj.inbox.configuration",
+      "category": "Configuration",
+      "tags": [
+        "tcj",
+        "ready",
+        "inbox",
+        "configuration"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    },
+    {
+      "name": "tcj.inbox.processor",
+      "category": "Inbox",
+      "tags": [
+        "tcj",
+        "ready",
+        "inbox"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    },
+    {
+      "name": "tcj.inbox.backlog",
+      "category": "Inbox",
+      "tags": [
+        "tcj",
+        "ready",
+        "inbox"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    },
+    {
+      "name": "tcj.inbox.dead_letters",
+      "category": "Inbox",
+      "tags": [
+        "tcj",
+        "ready",
+        "inbox"
+      ],
+      "defaultFailureStatus": "Unhealthy"
+    }
   ],
   "endpoints": [
-    {"name":"liveness","path":"/health/live","tag":"live","healthyStatusCode":200,"degradedStatusCode":200,"unhealthyStatusCode":503,"details":false},
-    {"name":"readiness","path":"/health/ready","tag":"ready","healthyStatusCode":200,"degradedStatusCode":200,"unhealthyStatusCode":503,"details":false},
-    {"name":"details","path":"/health/details","tag":"tcj","protectedByDefault":true,"details":true}
+    {
+      "name": "liveness",
+      "path": "/health/live",
+      "tag": "live",
+      "healthyStatusCode": 200,
+      "degradedStatusCode": 200,
+      "unhealthyStatusCode": 503,
+      "details": false
+    },
+    {
+      "name": "readiness",
+      "path": "/health/ready",
+      "tag": "ready",
+      "healthyStatusCode": 200,
+      "degradedStatusCode": 200,
+      "unhealthyStatusCode": 503,
+      "details": false
+    },
+    {
+      "name": "details",
+      "path": "/health/details",
+      "tag": "tcj",
+      "protectedByDefault": true,
+      "details": true
+    }
   ],
-  "publicResponseFields": ["status","duration","version"],
-  "detailedResponseFields": ["status","duration","version","checks","name","tags"],
-  "forbiddenPublicResponseFields": ["exception","stackTrace","message","server","database","connectionString","sql","credentials","environment","path"],
-  "defaults": {"databaseTimeoutSeconds":5,"cacheDurationSeconds":10,"pendingMigrationsStatus":"Degraded"},
+  "publicResponseFields": [
+    "status",
+    "duration",
+    "version"
+  ],
+  "detailedResponseFields": [
+    "status",
+    "duration",
+    "version",
+    "checks",
+    "name",
+    "tags"
+  ],
+  "forbiddenPublicResponseFields": [
+    "exception",
+    "stackTrace",
+    "message",
+    "server",
+    "database",
+    "connectionString",
+    "sql",
+    "credentials",
+    "environment",
+    "path"
+  ],
+  "defaults": {
+    "databaseTimeoutSeconds": 5,
+    "cacheDurationSeconds": 10,
+    "pendingMigrationsStatus": "Degraded"
+  },
   "telemetry": {
-    "activity":"tcj.health_check.execute",
-    "metrics":["tcj.health_checks.executed","tcj.health_checks.duration","tcj.health_checks.failures","tcj.health_checks.status"],
-    "tags":["tcj.health_check.name","tcj.health_check.category","tcj.health_check.status","tcj.operation.outcome"]
+    "activity": "tcj.health_check.execute",
+    "metrics": [
+      "tcj.health_checks.executed",
+      "tcj.health_checks.duration",
+      "tcj.health_checks.failures",
+      "tcj.health_checks.status"
+    ],
+    "tags": [
+      "tcj.health_check.name",
+      "tcj.health_check.category",
+      "tcj.health_check.status",
+      "tcj.operation.outcome"
+    ]
   }
 }
