@@ -32,9 +32,12 @@ on:
       - "eng/verify-aot.py"
       - "eng/tests/test_verify_aot.py"
       - "tests/TCJ.Resilience.Tests/**"
+      - "tests/TCJ.Inbox.Tests/**"
       - "eng/resilience-policy.json"
       - "eng/resilience-contract.json"
       - "eng/verify-resilience.py"
+      - "eng/inbox-*.json"
+      - "eng/verify-inbox.py"
       - "eng/sqlserver-integration-policy.json"
       - "eng/verify-sqlserver-integration.py"
       - "Directory.Build.props"
@@ -111,6 +114,9 @@ jobs:
       - name: Validate SQL Server integration policy
         run: python3 eng/verify-sqlserver-integration.py validate-config
 
+      - name: Validate Inbox policy and contract
+        run: python3 eng/verify-inbox.py validate-config
+
       - name: Validate health-check configuration
         run: python3 eng/verify-health-checks.py validate-config
 
@@ -135,6 +141,11 @@ jobs:
           dotnet restore tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj --force-evaluate
           dotnet build tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj --configuration Release --no-restore
 
+      - name: Restore and build transactional Inbox SQL Server tests
+        run: |
+          dotnet restore tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj --force-evaluate
+          dotnet build tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj --configuration Release --no-restore
+
       - name: Run SQL Server integration tests
         id: integration-tests
         continue-on-error: true
@@ -150,6 +161,14 @@ jobs:
             --results-directory TestResults/SqlServerIntegration \
             2>&1 | sed -E 's/(Password|Pwd)[[:space:]]*=[^;[:space:]]+/\1=<redacted>/Ig; s/Tcj!aA1_[A-F0-9]{20,}/<redacted>/g' \
             | tee TestResults/SqlServerIntegration/diagnostics/test-host.log
+
+      - name: Run transactional Inbox SQL Server integration scenarios
+        run: >
+          dotnet test tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj
+          --configuration Release --no-build
+          --filter "FullyQualifiedName~First_inline_delivery|FullyQualifiedName~Concurrent_duplicate_delivery|FullyQualifiedName~Failure_after_save_changes|FullyQualifiedName~Redelivery_after_uncertain_acknowledgement"
+          --logger "trx;LogFileName=inbox-sqlserver-crossgate.trx"
+          --results-directory TestResults/Inbox/SqlServerCrossGate
 
       - name: Run SQL Server resilience fault-injection scenarios
         env:
@@ -194,6 +213,7 @@ jobs:
             artifacts/sqlserver-integration/sqlserver-integration-summary.json
             artifacts/sqlserver-integration/logs/**
             TestResults/ResilienceSqlServer/**
+            TestResults/Inbox/SqlServerCrossGate/**
             artifacts/resilience/sqlserver-traces/**
           if-no-files-found: warn
           retention-days: 14

@@ -96,7 +96,7 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
                 {
                     Type eventType = _eventTypeResolver.Resolve(message.EventType);
                     IDomainEvent domainEvent = _serializer.Deserialize(eventType, message.Payload);
-                    using IDisposable scope = _contextAccessor.Push(new OutboxMessageContext(message.Id, message.EventType, attempt));
+                    using IDisposable scope = _contextAccessor.Push(new OutboxMessageContext(message.Id, message.EventType, attempt, message.CorrelationId, message.CausationId));
                     await _dispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
                     DateTimeOffset completedAt = _timeProvider.GetUtcNow();
                     await _storage.MarkProcessedAsync(message.Id, lockId, attempt, completedAt, cancellationToken).ConfigureAwait(false);

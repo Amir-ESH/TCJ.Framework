@@ -190,3 +190,11 @@ This checklist prepares the next preview, currently `0.1.0-preview.5`. Do not cr
 - [ ] `artifacts/outbox/OUTBOX_SUMMARY.md` reports no lost-message, duplicate-active-claim, duplicate-side-effect, or sensitive-data violations.
 - [ ] `eng/outbox-contract.json` matches the release candidate schema/defaults/telemetry/health names.
 - [ ] Published-package smoke coverage can configure the mapping, persist one event, process it, and shut down safely.
+
+## Transactional Inbox
+
+- [ ] `python3 eng/verify-inbox.py validate-config` passes.
+- [ ] Dedicated Inbox SQL Server/concurrency/Inbox-Outbox tests pass for the release commit.
+- [ ] Retry, dead-letter, replay, cleanup, telemetry, health, and sensitive-data scenarios pass.
+- [ ] `INBOX_SUMMARY.md` evidence belongs to the exact release source and is retained with release artifacts.
+- [ ] Consumer migration guidance covers Inbox schema and any Outbox correlation/causation columns.

@@ -26,6 +26,14 @@ public static class TcjHealthCheckNames
         public const string OutboxBacklog = "tcj.outbox.backlog";
         /// <summary>The outbox dead-letter readiness check.</summary>
         public const string OutboxDeadLetters = "tcj.outbox.dead_letters";
+        /// <summary>The Inbox configuration readiness check.</summary>
+        public const string InboxConfiguration = "tcj.inbox.configuration";
+        /// <summary>The Inbox processor-state readiness check.</summary>
+        public const string InboxProcessor = "tcj.inbox.processor";
+        /// <summary>The Inbox pending-backlog readiness check.</summary>
+        public const string InboxBacklog = "tcj.inbox.backlog";
+        /// <summary>The Inbox dead-letter readiness check.</summary>
+        public const string InboxDeadLetters = "tcj.inbox.dead_letters";
     }
 
     /// <summary>Stable tags used to select TCJ health checks.</summary>
@@ -49,6 +57,8 @@ public static class TcjHealthCheckNames
         public const string Configuration = "configuration";
         /// <summary>Identifies transactional-outbox checks.</summary>
         public const string Outbox = "outbox";
+        /// <summary>Identifies transactional-Inbox checks.</summary>
+        public const string Inbox = "inbox";
     }
 
     /// <summary>Bounded category values used by health-check telemetry.</summary>
@@ -70,5 +80,7 @@ public static class TcjHealthCheckNames
         public const string Configuration = "configuration";
         /// <summary>The transactional-outbox category.</summary>
         public const string Outbox = "outbox";
+        /// <summary>The transactional-Inbox category.</summary>
+        public const string Inbox = "inbox";
     }
 }

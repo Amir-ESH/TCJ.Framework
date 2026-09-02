@@ -212,3 +212,7 @@ Independent forks may be developed and distributed commercially under the applic
 <p align="center">
   <strong>TCJ Framework</strong> — Modular · Reliable · Extensible
 </p>
+
+## Transactional Inbox
+
+The development line includes an opt-in SQL Server-backed Transactional Inbox for stable-ID, consumer-scoped idempotent inbound processing. It supports duplicate/concurrency protection, bounded retry/dead-letter, replay/cleanup, telemetry/health, and atomic integration with the Transactional Outbox. See [`docs/inbox.md`](docs/inbox.md). The guarantee is effectively-once committed database side effects within a consumer boundary, not global exactly-once delivery.

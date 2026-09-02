@@ -293,3 +293,31 @@ Health probes emit `tcj.health_check.execute` plus `tcj.health_checks.executed`,
 the transactional-outbox feature set adds `tcj.outbox.persist`, `tcj.outbox.claim`, `tcj.outbox.process`, `tcj.outbox.retry`, `tcj.outbox.dead_letter`, `tcj.outbox.replay`, and `tcj.outbox.cleanup` activities.
 
 Outbox metrics are `tcj.outbox.messages.persisted`, `tcj.outbox.messages.processed`, `tcj.outbox.messages.failed`, `tcj.outbox.messages.retried`, `tcj.outbox.messages.dead_lettered`, `tcj.outbox.processing.duration`, `tcj.outbox.pending.count`, and `tcj.outbox.oldest_pending.age`. Tags are limited to stable event type, attempt, provider, outcome, and cancellation. Payloads and aggregate identifiers are forbidden from default telemetry; exception messages are also excluded because they can echo sensitive payload data. The stable names are versioned in both `eng/observability-contract.json` and `eng/outbox-contract.json`.
+
+## Transactional Inbox observability
+
+Transactional Inbox uses the existing `TCJ.EntityFrameworkCore` `ActivitySource` and `Meter`. Its stable activity names are:
+
+- `tcj.inbox.receive`
+- `tcj.inbox.deduplicate`
+- `tcj.inbox.process`
+- `tcj.inbox.retry`
+- `tcj.inbox.dead_letter`
+- `tcj.inbox.replay`
+- `tcj.inbox.cleanup`
+
+The stable Inbox metrics are:
+
+- `tcj.inbox.messages.received`
+- `tcj.inbox.messages.processed`
+- `tcj.inbox.messages.duplicates`
+- `tcj.inbox.messages.failed`
+- `tcj.inbox.messages.retried`
+- `tcj.inbox.messages.dead_lettered`
+- `tcj.inbox.processing.duration`
+- `tcj.inbox.pending.count`
+- `tcj.inbox.oldest_pending.age`
+
+Inbox telemetry uses only bounded contract dimensions: `tcj.inbox.consumer`, `tcj.inbox.message_type`, `tcj.inbox.message_version`, `tcj.inbox.attempt`, `tcj.inbox.outcome`, `tcj.inbox.failure_type`, `tcj.inbox.provider`, and the existing `tcj.canceled` tag. Consumer and message-type values therefore need stable, bounded registrations. Unknown wire types are normalized to `unknown` before telemetry is emitted. Message IDs, payloads, raw headers, authorization values, user IDs, aggregate IDs, and exception messages are excluded by default.
+
+For inbound transport spans, a valid W3C `traceparent` plus optional `tracestate` header is parsed as a remote parent for the Inbox consumer activity. Malformed trace context is ignored safely. TCJ does not propagate or persist arbitrary baggage by default. Deferred processing stores only the configured header allowlist, then restores the allowlisted trace context for the later processing span.

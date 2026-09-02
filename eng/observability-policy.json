@@ -42,7 +42,14 @@
     "tcj.outbox.retry",
     "tcj.outbox.dead_letter",
     "tcj.outbox.replay",
-    "tcj.outbox.cleanup"
+    "tcj.outbox.cleanup",
+    "tcj.inbox.receive",
+    "tcj.inbox.deduplicate",
+    "tcj.inbox.process",
+    "tcj.inbox.retry",
+    "tcj.inbox.dead_letter",
+    "tcj.inbox.replay",
+    "tcj.inbox.cleanup"
   ],
   "requiredMetrics": [
     "tcj.domain_events.dispatched",
@@ -73,7 +80,16 @@
     "tcj.outbox.messages.dead_lettered",
     "tcj.outbox.processing.duration",
     "tcj.outbox.pending.count",
-    "tcj.outbox.oldest_pending.age"
+    "tcj.outbox.oldest_pending.age",
+    "tcj.inbox.messages.received",
+    "tcj.inbox.messages.processed",
+    "tcj.inbox.messages.duplicates",
+    "tcj.inbox.messages.failed",
+    "tcj.inbox.messages.retried",
+    "tcj.inbox.messages.dead_lettered",
+    "tcj.inbox.processing.duration",
+    "tcj.inbox.pending.count",
+    "tcj.inbox.oldest_pending.age"
   ],
   "allowedMetricDimensions": [
     "tcj.operation.name",
@@ -92,7 +108,14 @@
     "tcj.outbox.event_type",
     "tcj.outbox.attempt",
     "tcj.outbox.outcome",
-    "tcj.outbox.provider"
+    "tcj.outbox.provider",
+    "tcj.inbox.consumer",
+    "tcj.inbox.message_type",
+    "tcj.inbox.message_version",
+    "tcj.inbox.attempt",
+    "tcj.inbox.outcome",
+    "tcj.inbox.failure_type",
+    "tcj.inbox.provider"
   ],
   "forbiddenTagPatterns": [
     "password",

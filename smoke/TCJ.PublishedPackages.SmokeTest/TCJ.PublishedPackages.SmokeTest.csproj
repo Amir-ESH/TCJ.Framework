@@ -10,9 +10,11 @@
     <EnableResilienceSmoke Condition="'$(EnableResilienceSmoke)' == ''">false</EnableResilienceSmoke>
     <EnableHealthCheckSmoke Condition="'$(EnableHealthCheckSmoke)' == ''">false</EnableHealthCheckSmoke>
     <EnableOutboxSmoke Condition="'$(EnableOutboxSmoke)' == ''">false</EnableOutboxSmoke>
+    <EnableInboxSmoke Condition="'$(EnableInboxSmoke)' == ''">false</EnableInboxSmoke>
     <DefineConstants Condition="'$(EnableResilienceSmoke)' == 'true'">$(DefineConstants);TCJ_RESILIENCE_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableHealthCheckSmoke)' == 'true'">$(DefineConstants);TCJ_HEALTH_CHECK_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableOutboxSmoke)' == 'true'">$(DefineConstants);TCJ_OUTBOX_SMOKE</DefineConstants>
+    <DefineConstants Condition="'$(EnableInboxSmoke)' == 'true'">$(DefineConstants);TCJ_INBOX_SMOKE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

@@ -111,3 +111,6 @@ The dedicated GitHub Actions workflow runs the same suite on Linux and Windows a
 ## Transactional outbox tests
 
 `TCJ.Outbox.Tests` is the Step 44 SQL Server Testcontainers suite. It covers transactional persistence/rollback, stable message IDs across SaveChanges retry, synchronous/asynchronous capture, manual processing, bounded retry, poison isolation, concurrent workers, lease expiration, cancellation recovery, idempotent duplicate delivery, replay, cleanup, sensitive payload handling, schema/indexes, serialization, and health checks. Use `TestResults/Outbox/` for TRX output and `eng/verify-outbox.py` to generate sanitized evidence.
+
+
+`TCJ.Inbox.Tests` is the Step 45 SQL Server Testcontainers suite for transactional Inbox idempotency. It covers stable IDs, consumer-scoped uniqueness, concurrent duplicates, payload conflicts, rollback, acknowledgement uncertainty, retry/dead-letter, deferred leases, replay, cleanup, sensitive headers, health/telemetry, and Inbox/Outbox atomicity. Use `TestResults/Inbox/` and `eng/verify-inbox.py` for sanitized evidence.

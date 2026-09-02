@@ -83,6 +83,20 @@ public static class TcjDiagnosticNames
         public const string OutboxReplay = "tcj.outbox.replay";
         /// <summary>Transactional-outbox retention cleanup operation.</summary>
         public const string OutboxCleanup = "tcj.outbox.cleanup";
+        /// <summary>Transactional Inbox receive/deduplication operation.</summary>
+        public const string InboxReceive = "tcj.inbox.receive";
+        /// <summary>Transactional Inbox deduplication operation.</summary>
+        public const string InboxDeduplicate = "tcj.inbox.deduplicate";
+        /// <summary>Transactional Inbox handler operation.</summary>
+        public const string InboxProcess = "tcj.inbox.process";
+        /// <summary>Transactional Inbox retry scheduling operation.</summary>
+        public const string InboxRetry = "tcj.inbox.retry";
+        /// <summary>Transactional Inbox dead-letter operation.</summary>
+        public const string InboxDeadLetter = "tcj.inbox.dead_letter";
+        /// <summary>Transactional Inbox explicit replay operation.</summary>
+        public const string InboxReplay = "tcj.inbox.replay";
+        /// <summary>Transactional Inbox retention cleanup operation.</summary>
+        public const string InboxCleanup = "tcj.inbox.cleanup";
     }
 
     /// <summary>Stable metric instrument names.</summary>
@@ -146,6 +160,24 @@ public static class TcjDiagnosticNames
         public const string OutboxPendingCount = "tcj.outbox.pending.count";
         /// <summary>Observed age of the oldest pending outbox message.</summary>
         public const string OutboxOldestPendingAge = "tcj.outbox.oldest_pending.age";
+        /// <summary>Inbox messages received durably.</summary>
+        public const string InboxMessagesReceived = "tcj.inbox.messages.received";
+        /// <summary>Inbox messages processed successfully.</summary>
+        public const string InboxMessagesProcessed = "tcj.inbox.messages.processed";
+        /// <summary>Inbox duplicate deliveries detected.</summary>
+        public const string InboxMessagesDuplicates = "tcj.inbox.messages.duplicates";
+        /// <summary>Inbox processing failures.</summary>
+        public const string InboxMessagesFailed = "tcj.inbox.messages.failed";
+        /// <summary>Inbox messages scheduled for retry.</summary>
+        public const string InboxMessagesRetried = "tcj.inbox.messages.retried";
+        /// <summary>Inbox messages moved to dead-letter state.</summary>
+        public const string InboxMessagesDeadLettered = "tcj.inbox.messages.dead_lettered";
+        /// <summary>Inbox handler processing duration.</summary>
+        public const string InboxProcessingDuration = "tcj.inbox.processing.duration";
+        /// <summary>Observed Inbox pending-message count.</summary>
+        public const string InboxPendingCount = "tcj.inbox.pending.count";
+        /// <summary>Observed age of the oldest pending Inbox message.</summary>
+        public const string InboxOldestPendingAge = "tcj.inbox.oldest_pending.age";
     }
 
     /// <summary>Stable activity-tag and metric-dimension names.</summary>
@@ -217,6 +249,20 @@ public static class TcjDiagnosticNames
         public const string OutboxOutcome = "tcj.outbox.outcome";
         /// <summary>Normalized outbox storage provider.</summary>
         public const string OutboxProvider = "tcj.outbox.provider";
+        /// <summary>Stable bounded Inbox consumer name.</summary>
+        public const string InboxConsumer = "tcj.inbox.consumer";
+        /// <summary>Stable registered Inbox message type.</summary>
+        public const string InboxMessageType = "tcj.inbox.message_type";
+        /// <summary>Registered Inbox message schema version.</summary>
+        public const string InboxMessageVersion = "tcj.inbox.message_version";
+        /// <summary>One-based Inbox processing attempt.</summary>
+        public const string InboxAttempt = "tcj.inbox.attempt";
+        /// <summary>Bounded Inbox processing outcome.</summary>
+        public const string InboxOutcome = "tcj.inbox.outcome";
+        /// <summary>Bounded Inbox failure category.</summary>
+        public const string InboxFailureType = "tcj.inbox.failure_type";
+        /// <summary>Normalized Inbox storage provider.</summary>
+        public const string InboxProvider = "tcj.inbox.provider";
     }
 
     /// <summary>Bounded operation outcome values.</summary>

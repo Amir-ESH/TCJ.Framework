@@ -8,7 +8,11 @@
     "tcj.domain_events",
     "tcj.entity_framework_core",
     "tcj.sqlserver",
-    "tcj.sqlserver.migrations"
+    "tcj.sqlserver.migrations",
+    "tcj.inbox.configuration",
+    "tcj.inbox.processor",
+    "tcj.inbox.backlog",
+    "tcj.inbox.dead_letters"
   ],
   "requiredTags": [
     "tcj",
@@ -18,9 +22,13 @@
     "startup",
     "database",
     "sqlserver",
-    "configuration"
+    "configuration",
+    "inbox"
   ],
-  "requiredEndpoints": ["/health/live", "/health/ready"],
+  "requiredEndpoints": [
+    "/health/live",
+    "/health/ready"
+  ],
   "maximumDatabaseTimeoutSeconds": 10,
   "maximumCacheDurationSeconds": 60,
   "defaultDatabaseTimeoutSeconds": 5,

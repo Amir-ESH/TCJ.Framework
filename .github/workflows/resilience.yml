@@ -25,9 +25,12 @@ on:
       - "src/TCJ.DependencyInjection/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "tests/TCJ.Resilience.Tests/**"
+      - "tests/TCJ.Inbox.Tests/**"
       - "eng/resilience-policy.json"
       - "eng/resilience-contract.json"
       - "eng/verify-resilience.py"
+      - "eng/inbox-*.json"
+      - "eng/verify-inbox.py"
       - "eng/observability-*.json"
       - "benchmarks/TCJ.Benchmarks/**"
       - "docs/resilience.md"
@@ -72,12 +75,21 @@ jobs:
       - name: Validate resilience configuration
         run: python3 eng/verify-resilience.py validate-config
 
+      - name: Validate Inbox policy and contract
+        run: python3 eng/verify-inbox.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx --force-evaluate
 
       - name: Build resilience tests
         run: >
           dotnet build tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Build Inbox resilience tests
+        run: >
+          dotnet build tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj
           --configuration Release
           --no-restore
 
@@ -105,6 +117,16 @@ jobs:
           --logger "trx;LogFileName=resilience-sqlserver.trx"
           --results-directory TestResults/Resilience
 
+      - name: Run Inbox rollback, retry, cancellation, and poison-message fault scenarios
+        if: inputs.mode != 'fast' || github.event_name == 'push' || github.event_name == 'schedule'
+        run: >
+          dotnet test tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj
+          --configuration Release
+          --no-build
+          --filter "FullyQualifiedName~Failure_after_save_changes|FullyQualifiedName~Transient_handler_failure|FullyQualifiedName~Transient_retry_eventually|FullyQualifiedName~Permanent_handler_failure|FullyQualifiedName~Cancellation_during_handler"
+          --logger "trx;LogFileName=inbox-resilience.trx"
+          --results-directory TestResults/Inbox/ResilienceCrossGate
+
       - name: Verify resilience evidence
         if: always()
         run: >
@@ -130,6 +152,7 @@ jobs:
           name: resilience-${{ github.run_id }}-${{ inputs.mode || 'full' }}
           path: |
             TestResults/Resilience/**
+            TestResults/Inbox/ResilienceCrossGate/**
             artifacts/resilience/traces/**
             artifacts/resilience/report/**
           if-no-files-found: warn

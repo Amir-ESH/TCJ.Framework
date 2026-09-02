@@ -67,8 +67,13 @@ jobs:
     name: Transactional outbox contract gate
     uses: ./.github/workflows/outbox.yml
 
+
+  inbox:
+    name: Transactional Inbox contract gate
+    uses: ./.github/workflows/inbox.yml
+
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -147,6 +152,9 @@ jobs:
 
       - name: Validate transactional-outbox configuration
         run: python3 eng/verify-outbox.py validate-config
+
+      - name: Validate transactional-Inbox configuration
+        run: python3 eng/verify-inbox.py validate-config
 
       - name: Verify Native AOT policy and release wiring
         run: python3 eng/verify-aot.py verify
