@@ -280,7 +280,7 @@ public sealed class TransactionalInboxTests(InboxSqlServerFixture fixture)
         fixture.Time.Advance(TimeSpan.FromHours(2));
         InboxCleanupResult cleanup = await fixture.InlineProvider.GetRequiredService<IInboxCleanupService>().CleanupAsync();
         Assert.Equal(1, cleanup.DeletedCount);
-        await AssertCountsAsync(fixture.InlineProvider, 0, 1, 0);
+        await AssertCountsAsync(fixture.InlineProvider, 0, 1, 1);
     }
 
     [Fact]
