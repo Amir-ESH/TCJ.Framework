@@ -80,7 +80,7 @@ This complements package compatibility validation: API compatibility detects acc
 The initial suite enforces only patterns already established by the repository:
 
 - containers with extension methods are static and end with `Extensions`; established fluent guard containers such as `TCJ.Core.Guards.Check` are explicit policy exceptions in `approvedExtensionContainers`;
-- public option types are explicitly listed in `approvedPublicOptionTypes`; `TCJ.Core.Diagnostics.TcjTelemetryOptions` is approved because the observability contract adds the cross-package, backend-neutral observability configuration contract;
+- public option types are explicitly listed in `approvedPublicOptionTypes`; `TCJ.Core.Diagnostics.TcjTelemetryOptions` is approved because the observability contract adds the cross-package, backend-neutral observability configuration contract; `TCJ.Core.Inbox.TcjInboxOptions` is approved because Step 45 adds provider-neutral transactional Inbox configuration owned by `TCJ.Core`;
 - repository interfaces use the `I` prefix;
 - SQL Server-specific types remain in `TCJ.EntityFrameworkCore.SqlServer`;
 - ASP.NET Core middleware and exception-handler types remain in `TCJ.AspNetCore`;
