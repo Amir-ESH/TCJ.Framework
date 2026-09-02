@@ -17,7 +17,7 @@ Describe the problem and the approach taken.
 - [ ] No public API change
 - [ ] Public API added or changed
 - [ ] Breaking change documented
-- [ ] Package validation passes against the published API baseline
+- [ ] Package validation passes against the published API baseline where a published baseline package exists
 - [ ] Any `CPxxxx` suppression is minimal and explained
 
 ## Validation
@@ -51,7 +51,7 @@ Describe the problem and the approach taken.
 - [ ] The official release uses the verified package set
 - [ ] Release-integrity automation remains valid and package checksums pass
 - [ ] SBOM generation and verification succeed
-- [ ] All six release packages are represented and symbol packages are present for all five runtime packages
+- [ ] All seven release packages are represented and symbol packages are present for all six runtime packages
 - [ ] Package versions and dependency relationships match generated package metadata
 - [ ] Required package and dependency hashes are present
 - [ ] License metadata has been reviewed
@@ -95,7 +95,7 @@ Describe the problem and the approach taken.
 - [ ] Resolved TCJ package versions match the candidate version
 - [ ] TCJ package source identity is verified
 - [ ] Linux, Windows, and macOS package consumers pass
-- [ ] The full five-package consumer combination passes
+- [ ] The historical full five-package consumer combination passes and Messaging package-only consumers pass separately
 - [ ] No package downgrade or dependency-conflict warning occurs
 - [ ] Source and symbol package compatibility validation passes
 - [ ] XML documentation, portable PDB, and Source Link validation passes
@@ -106,6 +106,7 @@ Describe the problem and the approach taken.
 - [ ] Target upgrade consumers restore from the release-candidate package feed
 - [ ] Baseline and target TCJ package versions and sources are verified
 - [ ] Direct package upgrades pass without source changes
+- [ ] Newly introduced target-only packages are validated without rewriting historical published metadata
 - [ ] Dependency graph changes are reviewed and no downgrade occurs
 - [ ] Normalized runtime behavior remains compatible
 - [ ] Breaking changes are declared and migration guidance is complete
@@ -188,7 +189,6 @@ Describe the problem and the approach taken.
 - [ ] Outbox schema and contract changes are documented
 - [ ] Generated outbox artifacts are not committed
 
-
 ## Transactional inbox
 
 - [ ] Stable message IDs are preserved
@@ -205,6 +205,23 @@ Describe the problem and the approach taken.
 - [ ] Payloads and sensitive headers are not logged or emitted to telemetry
 - [ ] Inbox schema and contract changes are documented
 - [ ] Generated Inbox artifacts are not committed
+
+## Transport-neutral messaging
+
+- [ ] Message IDs remain stable across publish retry, broker redelivery, Inbox processing, and replay boundaries
+- [ ] Logical message type names are used instead of assembly-qualified CLR names
+- [ ] Message schema versions are positive and preserved unchanged by adapters
+- [ ] Forbidden/sensitive headers are rejected or filtered by the allowlist policy
+- [ ] Payload and header limits are enforced before transport use where practical
+- [ ] Adapter descriptor and capabilities are declared explicitly
+- [ ] Unsupported transport features fail explicitly rather than silently degrading
+- [ ] Outbox publishing integration passes and marks records processed only after transport success
+- [ ] Inbox settlement integration passes and acknowledgement does not precede committed Inbox outcome
+- [ ] Retry ownership is explicit and no stacked unbounded retry loop is introduced
+- [ ] Graceful shutdown and bounded backpressure are tested
+- [ ] Messaging telemetry contains no payload, raw sensitive headers, credentials, or message IDs by default
+- [ ] Public messaging contract changes have compatibility and migration guidance
+- [ ] Generated messaging artifacts are not committed
 
 ## Related issue
 

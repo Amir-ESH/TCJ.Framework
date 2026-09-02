@@ -6,5 +6,6 @@
     <Project Path="Scenarios/EntityFrameworkCore.SqlServerConsumer/EntityFrameworkCore.SqlServerConsumer.csproj" />
     <Project Path="Scenarios/AspNetCoreConsumer/AspNetCoreConsumer.csproj" />
     <Project Path="Scenarios/FullStackConsumer/FullStackConsumer.csproj" />
+    <Project Path="Scenarios/MessagingConsumer/MessagingConsumer.csproj" />
   </Folder>
 </Solution>

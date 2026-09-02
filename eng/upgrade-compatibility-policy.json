@@ -7,12 +7,17 @@
   "configuration": "Release",
   "targetFramework": "net10.0",
   "minimumScenarioCount": 6,
+  "minimumTargetOnlyScenarioCount": 1,
   "requiredPackages": [
     "TCJ.Core",
     "TCJ.DependencyInjection",
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
-    "TCJ.AspNetCore"
+    "TCJ.AspNetCore",
+    "TCJ.Messaging"
+  ],
+  "targetOnlyPackages": [
+    "TCJ.Messaging"
   ],
   "requireBaselineRestore": true,
   "requireBaselineBuild": true,
@@ -38,72 +43,60 @@
     "AspNetCoreConsumer",
     "FullStackConsumer"
   ],
+  "publishedTargetOnlyScenarios": [
+    "MessagingConsumer"
+  ],
   "scenarios": [
     {
       "name": "CoreConsumer",
       "project": "upgrade-tests/Scenarios/CoreConsumer/CoreConsumer.csproj",
-      "packages": [
-        "TCJ.Core"
-      ],
+      "packages": ["TCJ.Core"],
       "expectedBehavior": "upgrade-tests/Expected/CoreConsumer.json",
       "expectedOutput": "TCJ.Core upgrade scenario passed"
     },
     {
       "name": "DependencyInjectionConsumer",
       "project": "upgrade-tests/Scenarios/DependencyInjectionConsumer/DependencyInjectionConsumer.csproj",
-      "packages": [
-        "TCJ.Core",
-        "TCJ.DependencyInjection"
-      ],
+      "packages": ["TCJ.Core", "TCJ.DependencyInjection"],
       "expectedBehavior": "upgrade-tests/Expected/DependencyInjectionConsumer.json",
       "expectedOutput": "TCJ.DependencyInjection upgrade scenario passed"
     },
     {
       "name": "EntityFrameworkCoreConsumer",
       "project": "upgrade-tests/Scenarios/EntityFrameworkCoreConsumer/EntityFrameworkCoreConsumer.csproj",
-      "packages": [
-        "TCJ.Core",
-        "TCJ.DependencyInjection",
-        "TCJ.EntityFrameworkCore"
-      ],
+      "packages": ["TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore"],
       "expectedBehavior": "upgrade-tests/Expected/EntityFrameworkCoreConsumer.json",
       "expectedOutput": "TCJ.EntityFrameworkCore upgrade scenario passed"
     },
     {
       "name": "EntityFrameworkCore.SqlServerConsumer",
       "project": "upgrade-tests/Scenarios/EntityFrameworkCore.SqlServerConsumer/EntityFrameworkCore.SqlServerConsumer.csproj",
-      "packages": [
-        "TCJ.Core",
-        "TCJ.DependencyInjection",
-        "TCJ.EntityFrameworkCore",
-        "TCJ.EntityFrameworkCore.SqlServer"
-      ],
+      "packages": ["TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore", "TCJ.EntityFrameworkCore.SqlServer"],
       "expectedBehavior": "upgrade-tests/Expected/EntityFrameworkCore.SqlServerConsumer.json",
       "expectedOutput": "TCJ.EntityFrameworkCore.SqlServer upgrade scenario passed"
     },
     {
       "name": "AspNetCoreConsumer",
       "project": "upgrade-tests/Scenarios/AspNetCoreConsumer/AspNetCoreConsumer.csproj",
-      "packages": [
-        "TCJ.Core",
-        "TCJ.DependencyInjection",
-        "TCJ.AspNetCore"
-      ],
+      "packages": ["TCJ.Core", "TCJ.DependencyInjection", "TCJ.AspNetCore"],
       "expectedBehavior": "upgrade-tests/Expected/AspNetCoreConsumer.json",
       "expectedOutput": "TCJ.AspNetCore upgrade scenario passed"
     },
     {
       "name": "FullStackConsumer",
       "project": "upgrade-tests/Scenarios/FullStackConsumer/FullStackConsumer.csproj",
-      "packages": [
-        "TCJ.Core",
-        "TCJ.DependencyInjection",
-        "TCJ.EntityFrameworkCore",
-        "TCJ.EntityFrameworkCore.SqlServer",
-        "TCJ.AspNetCore"
-      ],
+      "packages": ["TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore", "TCJ.EntityFrameworkCore.SqlServer", "TCJ.AspNetCore"],
       "expectedBehavior": "upgrade-tests/Expected/FullStackConsumer.json",
       "expectedOutput": "TCJ full-stack upgrade scenario passed"
+    }
+  ],
+  "targetOnlyScenarios": [
+    {
+      "name": "MessagingConsumer",
+      "project": "upgrade-tests/Scenarios/MessagingConsumer/MessagingConsumer.csproj",
+      "packages": ["TCJ.Core", "TCJ.Messaging"],
+      "expectedBehavior": "upgrade-tests/Expected/MessagingConsumer.json",
+      "expectedOutput": "TCJ.Messaging target-only upgrade scenario passed"
     }
   ]
 }

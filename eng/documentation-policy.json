@@ -6,21 +6,24 @@
     "TCJ.DependencyInjection",
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
-    "TCJ.AspNetCore"
+    "TCJ.AspNetCore",
+    "TCJ.Messaging"
   ],
   "projects": {
     "TCJ.Core": "src/TCJ.Core/TCJ.Core.csproj",
     "TCJ.DependencyInjection": "src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj",
     "TCJ.EntityFrameworkCore": "src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
     "TCJ.EntityFrameworkCore.SqlServer": "src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
-    "TCJ.AspNetCore": "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj"
+    "TCJ.AspNetCore": "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj",
+    "TCJ.Messaging": "src/TCJ.Messaging/TCJ.Messaging.csproj"
   },
   "packagePages": {
     "TCJ.Core": "docs/packages/tcj-core.md",
     "TCJ.DependencyInjection": "docs/packages/tcj-dependencyinjection.md",
     "TCJ.EntityFrameworkCore": "docs/packages/tcj-entityframeworkcore.md",
     "TCJ.EntityFrameworkCore.SqlServer": "docs/packages/tcj-entityframeworkcore-sqlserver.md",
-    "TCJ.AspNetCore": "docs/packages/tcj-aspnetcore.md"
+    "TCJ.AspNetCore": "docs/packages/tcj-aspnetcore.md",
+    "TCJ.Messaging": "docs/packages/tcj-messaging.md"
   },
   "minimumPublicApiDocumentationPercent": 100.0,
   "requireTypeSummaries": true,
@@ -76,7 +79,7 @@
       "path": "docs/examples.md"
     }
   ],
-  "baselineRecordedDate": "2026-08-16",
-  "measuredPublicApiCount": 780,
-  "measuredFullyDocumentedApiCount": 780
+  "baselineRecordedDate": "2026-09-03",
+  "measuredPublicApiCount": 1161,
+  "measuredFullyDocumentedApiCount": 1161
 }

@@ -59,13 +59,16 @@ class NuGetPackageIdPolicyTests(unittest.TestCase):
                 "TCJ.EntityFrameworkCore",
                 "TCJ.EntityFrameworkCore.SqlServer",
                 "TCJ.AspNetCore",
+                "TCJ.Messaging",
                 "TCJ.Generators",
             ],
         )
-        self.assertEqual(set(current), published)
+        self.assertEqual(set(current) - published, {"TCJ.Messaging"})
+        self.assertEqual(published, set(current) - {"TCJ.Messaging"})
         self.assertTrue(
             all(
-                MODULE.expected_exists("transition", package_id, published) is True
+                MODULE.expected_exists("transition", package_id, published)
+                is (package_id != "TCJ.Messaging")
                 for package_id in current
             )
         )

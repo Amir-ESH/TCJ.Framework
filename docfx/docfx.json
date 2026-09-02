@@ -8,7 +8,8 @@
             "src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj",
             "src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
             "src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
-            "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj"
+            "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj",
+            "src/TCJ.Messaging/TCJ.Messaging.csproj"
           ],
           "src": ".."
         }
@@ -27,23 +28,33 @@
   "build": {
     "content": [
       {
-        "files": ["**/*.yml"],
+        "files": [
+          "**/*.yml"
+        ],
         "src": "../artifacts/documentation/api",
         "dest": "api"
       },
       {
-        "files": ["**/*.md", "toc.yml"],
+        "files": [
+          "**/*.md",
+          "toc.yml"
+        ],
         "src": "../docs"
       }
     ],
     "resource": [
       {
-        "files": ["**/images/**"],
+        "files": [
+          "**/images/**"
+        ],
         "src": "../docs"
       }
     ],
     "output": "../artifacts/documentation/site",
-    "template": ["default", "modern"],
+    "template": [
+      "default",
+      "modern"
+    ],
     "globalMetadata": {
       "_appName": "TCJ Framework",
       "_appTitle": "TCJ Framework API Reference",

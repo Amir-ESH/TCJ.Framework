@@ -94,7 +94,8 @@ jobs:
             src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj \
             src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
-            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj; do
+            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
+            src/TCJ.Messaging/TCJ.Messaging.csproj; do
             dotnet build "$project" --configuration Release --no-restore \
               -p:Version="${{ steps.versions.outputs.target }}" \
               -p:RepositoryCommit="$GITHUB_SHA"
@@ -112,7 +113,8 @@ jobs:
             src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj \
             src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
-            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj; do
+            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
+            src/TCJ.Messaging/TCJ.Messaging.csproj; do
             dotnet pack "$project" --configuration Release --no-build --no-restore \
               -p:PackageOutputPath="$packages" \
               -p:Version="${{ steps.versions.outputs.target }}" \
@@ -123,11 +125,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for id in TCJ.Core TCJ.DependencyInjection TCJ.EntityFrameworkCore TCJ.EntityFrameworkCore.SqlServer TCJ.AspNetCore; do
+          for id in TCJ.Core TCJ.DependencyInjection TCJ.EntityFrameworkCore TCJ.EntityFrameworkCore.SqlServer TCJ.AspNetCore TCJ.Messaging; do
             test -f "artifacts/upgrade-compatibility/target/packages/$id.${{ steps.versions.outputs.target }}.nupkg" || { echo "Missing target package: $id" >&2; exit 1; }
           done
 
-      - name: Run baseline-to-target upgrade scenarios
+      - name: Run baseline-to-target and target-only upgrade scenarios
         run: >
           python3 upgrade-tests/scripts/run-upgrade-tests.py
           --baseline-version "${{ steps.versions.outputs.baseline }}"

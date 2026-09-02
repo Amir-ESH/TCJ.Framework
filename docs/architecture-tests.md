@@ -1,6 +1,6 @@
 # Architecture tests and module dependency rules
 
-TCJ Framework has five runtime packages with intentionally one-way dependencies, plus the analyzer-only `TCJ.Generators` compile-time tooling package. Compiler checks prove that code builds; architecture tests prove that runtime code still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
+TCJ Framework has six runtime packages with intentionally one-way dependencies, plus the analyzer-only `TCJ.Generators` compile-time tooling package. Compiler checks prove that code builds; architecture tests prove that runtime code still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
 
 The executable policy is stored in `eng/architecture-policy.json` (repository path: `eng/architecture-policy.json`). The test implementation lives in `tests/TCJ.Architecture.Tests` (repository path: `tests/TCJ.Architecture.Tests`).
 
@@ -13,6 +13,7 @@ The executable policy is stored in `eng/architecture-policy.json` (repository pa
 | `TCJ.EntityFrameworkCore` | Provider-independent EF Core repositories, specifications, unit of work, auditing, soft delete, seeding, and searching. |
 | `TCJ.EntityFrameworkCore.SqlServer` | SQL Server provider registration, retry options, and SQL Server model conventions. |
 | `TCJ.AspNetCore` | HTTP result mapping, Problem Details, exception handling, current-user resolution, middleware/application integration, and ASP.NET Core options. |
+| `TCJ.Messaging` | Broker-neutral message envelopes, serialization, publishing/receiving contracts, Inbox/Outbox bridges, adapter capabilities, topology naming, telemetry, health checks, and the non-durable in-memory test transport. |
 
 ## Approved dependency graph
 
@@ -32,6 +33,10 @@ TCJ.Core
 TCJ.DependencyInjection
     ↑
 TCJ.AspNetCore
+
+TCJ.Core
+    ↑
+TCJ.Messaging
 ```
 
 A project may use a subset of its approved lower-level dependencies. It may not reference a higher-level package. The current direct project references are checked from the production `csproj` files, while compiled assembly references are checked from the built outputs.
@@ -39,13 +44,14 @@ A project may use a subset of its approved lower-level dependencies. It may not 
 The following directions are forbidden:
 
 - `TCJ.Core` to any other TCJ production package;
-- `TCJ.DependencyInjection` to EF Core, SQL Server, or ASP.NET Core modules;
-- `TCJ.EntityFrameworkCore` to SQL Server or ASP.NET Core modules;
-- `TCJ.EntityFrameworkCore.SqlServer` to `TCJ.AspNetCore`;
-- `TCJ.AspNetCore` to SQL Server-specific modules;
+- `TCJ.DependencyInjection` to EF Core, SQL Server, ASP.NET Core, or Messaging modules;
+- `TCJ.EntityFrameworkCore` to SQL Server, ASP.NET Core, or Messaging modules;
+- `TCJ.EntityFrameworkCore.SqlServer` to `TCJ.AspNetCore` or `TCJ.Messaging`;
+- `TCJ.AspNetCore` to SQL Server-specific or Messaging modules;
+- `TCJ.Messaging` to dependency-injection, EF Core, SQL Server, or ASP.NET Core TCJ modules;
 - any dependency cycle between production modules.
 
-Provider-independent projects also reject SQL Server package references. Core and dependency-injection modules reject EF Core and ASP.NET Core infrastructure references.
+Provider-independent projects also reject SQL Server package references. Core and dependency-injection modules reject EF Core and ASP.NET Core infrastructure references. `TCJ.Messaging` additionally rejects broker SDK dependencies and infrastructure types from its public API.
 
 ## Namespace ownership
 
@@ -57,6 +63,7 @@ TCJ.DependencyInjection.*
 TCJ.EntityFrameworkCore.*
 TCJ.EntityFrameworkCore.SqlServer.*
 TCJ.AspNetCore.*
+TCJ.Messaging.*
 ```
 
 A type compiled into one package cannot be declared under another package root. Compiler-generated implementation types, including generated regular-expression runners and collection-expression helpers, are excluded because they do not represent source-owned package namespaces. Types under an `Internal` namespace cannot be public. Test-only namespaces and test-fixture naming are rejected in production assemblies.
@@ -71,6 +78,7 @@ The tests reject public contracts that expose infrastructure forbidden for their
 - EF Core or ASP.NET Core types leaking from `TCJ.DependencyInjection`;
 - SQL Server or ASP.NET Core types leaking from provider-independent EF Core contracts;
 - EF Core or SQL Server types leaking from `TCJ.AspNetCore`;
+- broker SDK, EF Core, SQL Server, or ASP.NET Core types leaking from `TCJ.Messaging`;
 - public interfaces exposing concrete TCJ implementation classes.
 
 This complements package compatibility validation: API compatibility detects accidental binary breaks, while architecture tests detect an API that is technically compatible but placed in the wrong layer.
@@ -79,11 +87,12 @@ This complements package compatibility validation: API compatibility detects acc
 
 The initial suite enforces only patterns already established by the repository:
 
-- containers with extension methods are static and end with `Extensions`; established fluent guard containers such as `TCJ.Core.Guards.Check` are explicit policy exceptions in `approvedExtensionContainers`;
-- public option types are explicitly listed in `approvedPublicOptionTypes`; `TCJ.Core.Diagnostics.TcjTelemetryOptions` is approved because the observability contract adds the cross-package, backend-neutral observability configuration contract; `TCJ.Core.Inbox.TcjInboxOptions` is approved because Step 45 adds provider-neutral transactional Inbox configuration owned by `TCJ.Core`;
+- containers with extension methods are static and end with `Extensions`; established fluent guard containers such as `TCJ.Core.Guards.Check` and the explicit messaging registration container are policy-approved exceptions/containers;
+- public option types are explicitly listed in `approvedPublicOptionTypes`; `TCJ.Core.Diagnostics.TcjTelemetryOptions` is approved because the observability contract adds the cross-package, backend-neutral observability configuration contract; `TCJ.Core.Inbox.TcjInboxOptions` is approved because Step 45 adds provider-neutral transactional Inbox configuration owned by `TCJ.Core`; `TCJ.Messaging.Configuration.TcjMessagingOptions` owns bounded broker-neutral messaging configuration;
 - repository interfaces use the `I` prefix;
 - SQL Server-specific types remain in `TCJ.EntityFrameworkCore.SqlServer`;
 - ASP.NET Core middleware and exception-handler types remain in `TCJ.AspNetCore`;
+- broker-specific adapter types do not enter `TCJ.Messaging`;
 - implementation helpers under `Internal` namespaces are not public.
 
 These rules are intentionally narrow. A naming preference should not become an architecture rule unless it is stable, useful, and already established across the codebase.

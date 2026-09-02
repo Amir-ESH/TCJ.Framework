@@ -135,6 +135,7 @@ class ArchitecturePolicyVerifierTests(unittest.TestCase):
                 "TCJ.EntityFrameworkCore",
             ],
             "TCJ.AspNetCore": ["TCJ.Core", "TCJ.DependencyInjection"],
+            "TCJ.Messaging": ["TCJ.Core"],
         }
         project_paths = {
             assembly: f"src/{assembly}/{assembly}.csproj"

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
-import sys
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / ".." / "upgrade-tests" / "scripts" / "run-upgrade-tests.py"
 spec = importlib.util.spec_from_file_location("run_upgrade_tests", MODULE_PATH.resolve())
@@ -22,7 +22,8 @@ class RunUpgradeTestsUnitTests(unittest.TestCase):
         self.assertLess(runner.semver_key("0.1.0-preview.10"), runner.semver_key("0.1.0"))
 
     def test_semver_rejects_invalid_version(self):
-        with self.assertRaises(runner.UpgradeError): runner.semver_key("preview")
+        with self.assertRaises(runner.UpgradeError):
+            runner.semver_key("preview")
 
     def test_warning_count_ignores_zero_warning_summary(self):
         self.assertEqual(0, runner.warning_count("Build succeeded.\n    0 Warning(s)\n"))
@@ -30,10 +31,13 @@ class RunUpgradeTestsUnitTests(unittest.TestCase):
 
     def test_source_tree_hash_ignores_bin_and_obj(self):
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); (root / "Program.cs").write_text("one")
+            root = Path(td)
+            (root / "Program.cs").write_text("one")
             first = runner.source_tree_hash(root)
-            (root / "bin").mkdir(); (root / "bin/out.dll").write_text("generated")
-            (root / "obj").mkdir(); (root / "obj/assets.json").write_text("generated")
+            (root / "bin").mkdir()
+            (root / "bin/out.dll").write_text("generated")
+            (root / "obj").mkdir()
+            (root / "obj/assets.json").write_text("generated")
             self.assertEqual(first, runner.source_tree_hash(root))
             (root / "Program.cs").write_text("two")
             self.assertNotEqual(first, runner.source_tree_hash(root))
@@ -66,8 +70,7 @@ class RunUpgradeTestsUnitTests(unittest.TestCase):
         self.assertEqual("Unexpected regression", runner.behavior_classification({"checks": {"ok": True}}, {"checks": {"ok": False}}, []))
 
     def test_behavior_classification_documented_with_manifest(self):
-        change = {"breaking": False}
-        self.assertEqual("Documented change", runner.behavior_classification({"a": 1}, {"a": 2}, [change]))
+        self.assertEqual("Documented change", runner.behavior_classification({"a": 1}, {"a": 2}, [{"breaking": False}]))
 
     def test_behavior_classification_intentional_breaking(self):
         self.assertEqual("Intentional breaking change", runner.behavior_classification({"a": 1}, {"a": 2}, [{"breaking": True}]))
@@ -76,13 +79,29 @@ class RunUpgradeTestsUnitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "project.assets.json"
             path.write_text(json.dumps({"libraries": {"TCJ.Core/0.1.0-preview.1": {}}, "targets": {"net10.0": {"TCJ.Core/0.1.0-preview.1": {}}}}))
-            with self.assertRaises(runner.UpgradeError): runner.parse_assets(path, ["TCJ.Core"], "0.1.0-preview.2")
+            with self.assertRaises(runner.UpgradeError):
+                runner.parse_assets(path, ["TCJ.Core"], "0.1.0-preview.2")
 
     def test_parse_assets_rejects_unexpected_tcj_closure(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "project.assets.json"
             path.write_text(json.dumps({"libraries": {"TCJ.Core/1.0.0": {}, "TCJ.AspNetCore/1.0.0": {}}, "targets": {"net10.0": {}}}))
-            with self.assertRaises(runner.UpgradeError): runner.parse_assets(path, ["TCJ.Core"], "1.0.0")
+            with self.assertRaises(runner.UpgradeError):
+                runner.parse_assets(path, ["TCJ.Core"], "1.0.0")
+
+    def test_select_scenarios_supports_target_only_package_introduction(self):
+        policy = {
+            "scenarios": [{"name": "CoreConsumer"}],
+            "targetOnlyScenarios": [{"name": "MessagingConsumer"}],
+        }
+        direct, target_only = runner.select_scenarios(policy, ["MessagingConsumer"])
+        self.assertEqual([], direct)
+        self.assertEqual(["MessagingConsumer"], [item["name"] for item in target_only])
+
+    def test_select_scenarios_rejects_unknown_name(self):
+        policy = {"scenarios": [{"name": "CoreConsumer"}], "targetOnlyScenarios": []}
+        with self.assertRaises(runner.UpgradeError):
+            runner.select_scenarios(policy, ["missing"])
 
     def test_guided_migration_applies_declared_patch(self):
         with tempfile.TemporaryDirectory() as td:
@@ -95,13 +114,7 @@ class RunUpgradeTestsUnitTests(unittest.TestCase):
             (scenario_dir / "Program.cs").write_text("old\n")
             patch = upgrade_root / "Scenarios" / "Sample" / "Migrations" / "2.0.0.patch"
             patch.parent.mkdir()
-            patch.write_text(
-                "--- a/Program.cs\n"
-                "+++ b/Program.cs\n"
-                "@@ -1 +1 @@\n"
-                "-old\n"
-                "+new\n"
-            )
+            patch.write_text("--- a/Program.cs\n+++ b/Program.cs\n@@ -1 +1 @@\n-old\n+new\n")
             scenario = {"name": "Sample", "project": "upgrade-tests/Scenarios/Sample/Sample.csproj", "packages": [], "expectedOutput": "ok", "expectedBehavior": "unused.json"}
             changes = [{"id": "TCJ-BREAK-001", "requiresSourceChange": True, "migrationPatches": {"2.0.0": "upgrade-tests/Scenarios/Sample/Migrations/2.0.0.patch"}}]
             phase = runner.PhaseResult(restore="pass", build="pass", runtime="pass")
@@ -109,9 +122,7 @@ class RunUpgradeTestsUnitTests(unittest.TestCase):
             runner.ROOT, runner.UPGRADE_ROOT = root, upgrade_root
             try:
                 with mock.patch.object(runner, "run_phase", return_value=(phase, {}, {})):
-                    result = runner.run_guided_migration(
-                        scenario, changes, "2.0.0", root / "target.config", {}, root / "cache", root / "artifacts", root / "packages", False
-                    )
+                    result = runner.run_guided_migration(scenario, changes, "2.0.0", root / "target.config", {}, root / "cache", root / "artifacts", root / "packages", False)
             finally:
                 runner.ROOT, runner.UPGRADE_ROOT = old_root, old_upgrade_root
             self.assertEqual("pass", result["status"])
@@ -120,4 +131,5 @@ class RunUpgradeTestsUnitTests(unittest.TestCase):
             self.assertEqual("new\n", migrated.read_text())
 
 
-if __name__ == "__main__": unittest.main()
+if __name__ == "__main__":
+    unittest.main()

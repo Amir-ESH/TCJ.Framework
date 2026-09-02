@@ -7,10 +7,11 @@ TCJ.Core
 ├── TCJ.DependencyInjection
 ├── TCJ.EntityFrameworkCore
 │   └── TCJ.EntityFrameworkCore.SqlServer
-└── TCJ.AspNetCore
+├── TCJ.AspNetCore
+└── TCJ.Messaging
 ```
 
-`TCJ.EntityFrameworkCore.SqlServer` depends on both `TCJ.Core` and `TCJ.EntityFrameworkCore`. `TCJ.DependencyInjection` and `TCJ.AspNetCore` depend on `TCJ.Core`. `TCJ.Core` does not reference ASP.NET Core or Entity Framework Core.
+`TCJ.EntityFrameworkCore.SqlServer` depends on `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.EntityFrameworkCore`. `TCJ.DependencyInjection`, `TCJ.AspNetCore`, and `TCJ.Messaging` depend on `TCJ.Core`. `TCJ.Core` does not reference ASP.NET Core, Entity Framework Core, messaging, or broker SDKs. `TCJ.Messaging` does not reference EF Core, ASP.NET Core, or a broker-specific SDK.
 
 ## Design principles
 
@@ -34,9 +35,13 @@ Dependency registration scans only assemblies supplied to `AddTcjDependencyInjec
 
 Entities can collect pending domain events and `IDomainEventDispatcher` invokes registered handlers sequentially. The default persistence path remains explicit. When `AddTcjOutbox` / `AddTcjSqlServerOutbox` is enabled, EF interceptors persist pending events in the same transaction as business state and clear them only after successful persistence/commit; dispatch still occurs separately after commit through `IOutboxProcessor`. The guarantee is at-least-once, not exactly-once.
 
+### Explicit transport-neutral messaging
+
+`TCJ.Messaging` owns broker-neutral envelopes, publishing/receiving contracts, settlement outcomes, capability declarations, topology naming, safe headers, observability, health checks, and adapter conformance rules. Broker SDKs belong in future adapter packages. Outbox-to-transport publishing is explicit through `AddTcjMessagingOutboxBridge`; transport-to-Inbox processing settles only after the Inbox pipeline returns its committed outcome. The non-durable in-memory adapter exists for tests and local development and is not a production broker.
+
 ### Host-owned configuration
 
-The host application owns connection strings, authentication, authorization, migrations, logging, and deployment policy. TCJ supplies integrations without hiding the underlying .NET abstractions.
+The host application owns connection strings, authentication, authorization, migrations, logging, broker credentials, transport selection, and deployment policy. TCJ supplies integrations without hiding the underlying .NET abstractions.
 
 ## Typical request flow
 
@@ -57,18 +62,20 @@ HTTP endpoint
 - Framework defaults such as `IGuidGenerator` and `TimeProvider` are singletons.
 - `IDomainEventDispatcher`, EF repositories, `IUnitOfWork`, current-user resolution, and EF interceptors are scoped.
 - Domain-event handlers are transient.
+- Transport-neutral messaging services follow their documented registration lifetimes; consumer execution remains bounded by `TcjMessagingOptions`.
 - Application services use explicit TCJ lifetime marker interfaces.
 
 ## What the framework does not currently provide
 
-- Exactly-once domain-event delivery
+- Global exactly-once message delivery
+- Production broker adapters in the neutral `TCJ.Messaging` package
 - Automatic public replay/admin endpoints for the transactional outbox
 - Authentication or authorization setup
 - Database migrations for consumer applications
 - Provider packages other than SQL Server
 - A distributed transaction abstraction
 
-Repository restore is restricted to the configured NuGet.org source and audits direct and transitive dependencies. Packable TCJ projects use SDK package validation to detect accidental binary-breaking API changes against the latest published baseline. The remaining boundaries are intentional for the preview and should be considered when designing applications on top of TCJ.
+Repository restore is restricted to the configured NuGet.org source and audits direct and transitive dependencies. Packable TCJ projects use SDK package validation to detect accidental binary-breaking API changes against the latest published baseline where a published baseline package exists. The remaining boundaries are intentional for the preview and should be considered when designing applications on top of TCJ.
 
 ## Executable architecture policy
 
@@ -87,17 +94,20 @@ See [Architecture tests and module dependency rules](architecture-tests.md) for 
 
 ## Observability boundary
 
-TCJ production modules publish logical framework telemetry through BCL `ActivitySource` and `Meter` primitives only. Exporters, collectors, and vendor SDKs stay at the application edge. Repository and Unit of Work activities complement rather than duplicate EF Core/database command telemetry, and ASP.NET Core exception activities remain children of the ambient request activity. Stable names and bounded tags are tracked in `eng/observability-contract.json`; see [Diagnostics and OpenTelemetry observability](observability.md).
+TCJ production modules publish logical framework telemetry through BCL `ActivitySource` and `Meter` primitives only. Exporters, collectors, and vendor SDKs stay at the application edge. Repository and Unit of Work activities complement rather than duplicate EF Core/database command telemetry, ASP.NET Core exception activities remain children of the ambient request activity, and messaging telemetry uses bounded transport/destination/type/outcome dimensions without payloads, raw headers, credentials, or message IDs by default. Stable names and bounded tags are tracked in the applicable contract files; see [Diagnostics and OpenTelemetry observability](observability.md) and [Transport-neutral messaging](messaging.md).
 
 ### Resilience boundaries
 
-Resilience primitives live in existing packages rather than a vendor-specific resilience package. `TCJ.Core` owns provider-neutral retry/timeout/circuit contracts, `TCJ.DependencyInjection` owns explicit domain-event handler retry registration, and `TCJ.EntityFrameworkCore.SqlServer` owns the transaction-level bridge to EF Core execution strategies. Operation, handler, transaction, command-timeout, request-timeout, and circuit boundaries are deliberately separate; see [Resilience policies and fault injection](resilience.md).
+Resilience primitives live in existing packages rather than a vendor-specific resilience package. `TCJ.Core` owns provider-neutral retry/timeout/circuit contracts, `TCJ.DependencyInjection` owns explicit domain-event handler retry registration, and `TCJ.EntityFrameworkCore.SqlServer` owns the transaction-level bridge to EF Core execution strategies. Messaging adapters classify transport outcomes but do not introduce hidden unbounded retry loops; retry ownership remains explicit at the Outbox/Inbox/adapter boundary. See [Resilience policies and fault injection](resilience.md).
 
 ## Health-check boundaries
 
-the health-check feature set keeps health support inside existing packages: contract/options/startup diagnostics live in `TCJ.Core`; standard health registrations live alongside dependency injection and EF integrations; SQL Server connectivity/migration checks remain provider-specific; ASP.NET Core owns endpoint mapping and JSON formatting. `TCJ.Core` does not acquire an ASP.NET Core dependency and no circular package edge is introduced.
-
+The health-check feature set keeps health support inside existing packages: contract/options/startup diagnostics live in `TCJ.Core`; standard health registrations live alongside dependency injection and EF integrations; SQL Server connectivity/migration checks remain provider-specific; ASP.NET Core owns endpoint mapping and JSON formatting. `TCJ.Messaging` contributes transport/publisher/consumer/topology readiness checks without making liveness depend on broker connectivity. `TCJ.Core` does not acquire an ASP.NET Core or messaging dependency and no circular package edge is introduced.
 
 ## Transactional-outbox boundary
 
-the transactional-outbox feature set keeps provider-neutral outbox contracts in `TCJ.Core`, EF persistence/serialization/processing in `TCJ.EntityFrameworkCore`, SQL Server claim SQL in `TCJ.EntityFrameworkCore.SqlServer`, and the optional hosted polling loop in `TCJ.AspNetCore`. `TCJ.AspNetCore` never references EF Core. Consumer-controlled migrations own the schema. See [Transactional outbox](outbox.md).
+The transactional-outbox feature set keeps provider-neutral outbox contracts in `TCJ.Core`, EF persistence/serialization/processing in `TCJ.EntityFrameworkCore`, SQL Server claim SQL in `TCJ.EntityFrameworkCore.SqlServer`, and the optional hosted polling loop in `TCJ.AspNetCore`. `TCJ.AspNetCore` never references EF Core. Consumer-controlled migrations own the schema. The optional `TCJ.Messaging` bridge is downstream of committed Outbox persistence and publishes only through broker-neutral `IMessagePublisher`. See [Transactional outbox](outbox.md) and [Transport-neutral messaging](messaging.md).
+
+## Transactional-Inbox boundary
+
+The transactional Inbox keeps message identity/idempotency contracts in `TCJ.Core` and persistence/processing in the EF packages. `TCJ.Messaging` does not own Inbox persistence. Its receive bridge maps a transport delivery into the existing Inbox pipeline and performs transport settlement only after the Inbox result is available, preserving the commit-before-acknowledgement boundary. See [Transactional Inbox](inbox.md) and [Transport-neutral messaging](messaging.md).

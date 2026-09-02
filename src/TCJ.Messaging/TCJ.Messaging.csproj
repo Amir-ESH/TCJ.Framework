@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../eng/Packaging.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TCJ.Messaging</RootNamespace>
+    <AssemblyName>TCJ.Messaging</AssemblyName>
+
+    <PackageId>TCJ.Messaging</PackageId>
+    <Title>TCJ Messaging</Title>
+    <Description>Transport-neutral messaging abstractions, envelopes, publishing, receiving, and adapter contracts for TCJ Framework.</Description>
+    <PackageTags>tcj;messaging;outbox;inbox;transport;contracts</PackageTags>
+
+    <PublishTrimmed>false</PublishTrimmed>
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <!-- TCJ.Messaging is introduced in preview.5, so there is no preview.4 package baseline to resolve. -->
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TCJ.Core/TCJ.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+  </ItemGroup>
+</Project>

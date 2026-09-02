@@ -15,17 +15,17 @@ public static class OutboxModelBuilderExtensions
     public static ModelBuilder AddTcjOutbox(this ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
-
         EntityTypeBuilder<OutboxMessage> builder = modelBuilder.Entity<OutboxMessage>();
         builder.ToTable("TCJ_OutboxMessages");
         builder.HasKey(message => message.Id).HasName("PK_TCJ_OutboxMessages");
-
         builder.Property(message => message.Id).ValueGeneratedNever();
         builder.Property(message => message.OccurredAtUtc).IsRequired();
         builder.Property(message => message.EventType).HasMaxLength(128).IsRequired();
         builder.Property(message => message.Payload).IsRequired();
         builder.Property(message => message.CorrelationId).HasMaxLength(256);
         builder.Property(message => message.CausationId).HasMaxLength(256);
+        builder.Property(message => message.TraceParent).HasMaxLength(55);
+        builder.Property(message => message.TraceState).HasMaxLength(512);
         builder.Property(message => message.AttemptCount).IsRequired();
         builder.Property(message => message.NextAttemptAtUtc).IsRequired();
         builder.Property(message => message.LockedAtUtc);
@@ -39,16 +39,11 @@ public static class OutboxModelBuilderExtensions
         builder.Property(message => message.UpdatedAtUtc).IsRequired();
         builder.Property(message => message.ReplayCount).IsRequired();
         builder.Property(message => message.LastReplayedAtUtc);
-
         builder.HasIndex(message => new { message.ProcessedAtUtc, message.NextAttemptAtUtc })
             .HasDatabaseName("IX_TCJ_OutboxMessages_ProcessedAtUtc_NextAttemptAtUtc");
-        builder.HasIndex(message => message.LockExpiresAtUtc)
-            .HasDatabaseName("IX_TCJ_OutboxMessages_LockExpiresAtUtc");
-        builder.HasIndex(message => message.OccurredAtUtc)
-            .HasDatabaseName("IX_TCJ_OutboxMessages_OccurredAtUtc");
-        builder.HasIndex(message => message.EventType)
-            .HasDatabaseName("IX_TCJ_OutboxMessages_EventType");
-
+        builder.HasIndex(message => message.LockExpiresAtUtc).HasDatabaseName("IX_TCJ_OutboxMessages_LockExpiresAtUtc");
+        builder.HasIndex(message => message.OccurredAtUtc).HasDatabaseName("IX_TCJ_OutboxMessages_OccurredAtUtc");
+        builder.HasIndex(message => message.EventType).HasDatabaseName("IX_TCJ_OutboxMessages_EventType");
         return modelBuilder;
     }
 }

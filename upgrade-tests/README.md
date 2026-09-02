@@ -12,12 +12,13 @@ The baseline version is read from `eng/published-release.json`; the target versi
 - `EntityFrameworkCore.SqlServerConsumer`
 - `AspNetCoreConsumer`
 - `FullStackConsumer`
+- `MessagingConsumer` (target-only package introduction for Step 46)
 
-Every scenario uses `$(TCJUpgradeVersion)` for TCJ PackageReferences. The runner hashes the scenario source tree before and after the direct upgrade, records the package source from NuGet's `.nupkg.metadata`, captures `project.assets.json` as a normalized dependency graph, and compares deterministic `behavior.json` output.
+Every direct-upgrade scenario uses `$(TCJUpgradeVersion)` for TCJ PackageReferences. The target-only Messaging scenario has no fabricated baseline phase because `TCJ.Messaging` did not exist in `0.1.0-preview.4`.
 
-`EntityFrameworkCoreConsumer` uses a SQLite file persisted between the baseline and target phases so the target package must read data written while the baseline package was active. The SQL Server scenario validates provider registration and options without opening a database connection; real SQL Server behavior remains covered by the SQL Server integration suite.
+The runner hashes the scenario source tree before and after direct upgrades, records the package source from NuGet's `.nupkg.metadata`, captures `project.assets.json` as a normalized dependency graph, and compares deterministic `behavior.json` output.
 
-All direct-upgrade scenarios intentionally remain transactional-outbox disabled. This proves the Step 44 feature is explicit opt-in and that existing consumer behavior remains compatible. Outbox-enabled package usage is exercised by `compatibility/Consumers/Outbox.Console`; SQL Server schema, claims, leases, retries, and recovery are exercised by the dedicated outbox integration workflow.
+All direct-upgrade scenarios intentionally remain transactional-outbox and messaging disabled unless a scenario exists specifically to validate the opt-in feature. This proves existing consumers are unaffected when `TCJ.Messaging` is not referenced. Messaging package introduction is validated by the target-only `MessagingConsumer` scenario and by the dedicated package-consumer and published-package smoke paths.
 
 ## Local run
 
@@ -49,8 +50,8 @@ python3 eng/verify-upgrade-compatibility.py verify \
   --output artifacts/upgrade-compatibility/report
 ```
 
-Run one scenario by adding `--scenario CoreConsumer` to the runner. Generated restore caches, build output, behavior files, dependency diffs, and reports are ignored by Git.
+Run one scenario by adding `--scenario CoreConsumer` or `--scenario MessagingConsumer` to the runner. Generated restore caches, build output, behavior files, dependency diffs, and reports are ignored by Git.
 
 ## Intentional breaking changes
 
-Do not change a scenario during the direct-upgrade phase. If a deliberate breaking change requires consumer edits, declare it in `eng/breaking-changes.json`, record explicit maintainer approval, link it to an approved issue or PR and a migration-guide heading, and store an explicit patch under the affected scenario's `Migrations/` directory. The harness applies only the declared target-version patch and requires the guided migration to restore, build, and run successfully.
+Do not change a direct-upgrade scenario during the direct-upgrade phase. If a deliberate breaking change requires consumer edits, declare it in `eng/breaking-changes.json`, record explicit maintainer approval, link it to an approved issue or PR and a migration-guide heading, and store an explicit patch under the affected scenario's `Migrations/` directory. The harness applies only the declared target-version patch and requires the guided migration to restore, build, and run successfully.

@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "deliveryGuarantee": "at-least-once",
+  "globalExactlyOnceGuaranteed": false,
+  "messageIdentity": {
+    "stableBeforeOutboxPersistence": true,
+    "preservedAcrossRetry": true,
+    "preservedAcrossRedelivery": true,
+    "preservedThroughInbox": true,
+    "newIdPerPublishAttemptAllowed": false
+  },
+  "envelopeFields": [
+    "MessageId", "MessageType", "MessageVersion", "CreatedAtUtc", "CorrelationId",
+    "CausationId", "PartitionKey", "OrderingKey", "ContentType", "Headers"
+  ],
+  "rawEnvelopeFields": [
+    "MessageId", "MessageType", "MessageVersion", "Body", "ContentType", "CreatedAtUtc",
+    "CorrelationId", "CausationId", "PartitionKey", "OrderingKey", "Headers"
+  ],
+  "publishOutcomes": [
+    "Published", "Accepted", "TransientFailure", "PermanentFailure", "Canceled", "TimedOut", "UnsupportedCapability"
+  ],
+  "failureCategories": [
+    "TransientConnection", "TransientThrottle", "TransientTimeout", "PermanentAuthentication",
+    "PermanentAuthorization", "PermanentTopology", "PermanentSerialization", "PayloadTooLarge",
+    "Canceled", "UnsupportedCapability", "Unknown"
+  ],
+  "settlements": ["Complete", "Retry", "DeadLetter", "Abandon", "Defer"],
+  "standardHeaders": [
+    "tcj-message-id", "tcj-message-type", "tcj-message-version", "tcj-correlation-id",
+    "tcj-causation-id", "tcj-created-at", "traceparent", "tracestate", "content-type"
+  ],
+  "forbiddenHeaders": [
+    "authorization", "proxy-authorization", "cookie", "set-cookie", "api-key", "x-api-key",
+    "access-token", "refresh-token", "password", "connection-string"
+  ],
+  "defaultLimits": {
+    "maximumPayloadBytes": 1048576,
+    "maximumHeaderBytes": 16384,
+    "maximumHeaderCount": 64,
+    "maximumMessageIdLength": 256,
+    "maximumMessageTypeLength": 128,
+    "maximumDestinationNameLength": 128,
+    "maximumHeaderNameLength": 128,
+    "maximumHeaderValueLength": 2048,
+    "maximumConcurrentMessages": 8,
+    "maximumBufferedMessages": 32,
+    "publishTimeoutSeconds": 30,
+    "shutdownTimeoutSeconds": 30
+  },
+  "capabilities": [
+    "BatchPublish", "Scheduling", "TimeToLive", "DeadLetter", "Defer", "OrderedDelivery",
+    "Partitioning", "Transactions", "PeekLock"
+  ],
+  "activities": [
+    "tcj.messaging.publish", "tcj.messaging.receive", "tcj.messaging.settle",
+    "tcj.messaging.deserialize", "tcj.messaging.consumer.execute"
+  ],
+  "metrics": [
+    "tcj.messaging.messages.published", "tcj.messaging.messages.received",
+    "tcj.messaging.messages.completed", "tcj.messaging.messages.retried",
+    "tcj.messaging.messages.dead_lettered", "tcj.messaging.publish.duration",
+    "tcj.messaging.processing.duration", "tcj.messaging.active_consumers"
+  ],
+  "healthChecks": [
+    "tcj.messaging.transport", "tcj.messaging.publisher", "tcj.messaging.consumer", "tcj.messaging.topology"
+  ],
+  "traceHeaders": ["traceparent", "tracestate"],
+  "serializer": {
+    "default": "System.Text.Json",
+    "explicitJsonTypeInfoRequired": true,
+    "wireDrivenClrTypeActivationAllowed": false,
+    "upcastersSupported": true
+  },
+  "outbox": {
+    "optIn": true,
+    "markProcessedOnlyAfterPublishSuccess": true,
+    "transientPublishFailureUsesDurableOutboxRetry": true,
+    "outsideOutboxPreservesExistingDomainEventDispatcher": true
+  },
+  "inbox": {
+    "settlementAfterPipelineReturns": true,
+    "duplicatesComplete": true,
+    "retryMapsToRetrySettlement": true,
+    "permanentFailureDeadLettersWhenSupported": true,
+    "forbiddenHeadersFilteredBeforePersistence": true
+  }
+}

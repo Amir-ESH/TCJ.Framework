@@ -5,7 +5,8 @@
     "TCJ.DependencyInjection",
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
-    "TCJ.AspNetCore"
+    "TCJ.AspNetCore",
+    "TCJ.Messaging"
   ],
   "requiredOperatingSystems": [
     "ubuntu-latest",
@@ -113,6 +114,30 @@
         "TCJ.EntityFrameworkCore"
       ],
       "expectedOutput": "TCJ transactional outbox consumer passed"
+    },
+    {
+      "name": "MessagingPublisher.Console",
+      "project": "compatibility/Consumers/MessagingPublisher.Console/MessagingPublisher.Console.csproj",
+      "packages": [
+        "TCJ.Messaging"
+      ],
+      "expectedOutput": "TCJ.Messaging publisher consumer passed"
+    },
+    {
+      "name": "MessagingConsumer.Worker",
+      "project": "compatibility/Consumers/MessagingConsumer.Worker/MessagingConsumer.Worker.csproj",
+      "packages": [
+        "TCJ.Messaging"
+      ],
+      "expectedOutput": "TCJ.Messaging consumer worker passed"
+    },
+    {
+      "name": "MessagingInboxOutbox.Worker",
+      "project": "compatibility/Consumers/MessagingInboxOutbox.Worker/MessagingInboxOutbox.Worker.csproj",
+      "packages": [
+        "TCJ.Messaging"
+      ],
+      "expectedOutput": "TCJ.Messaging Inbox/Outbox consumer passed"
     }
   ],
   "publishedConsumers": [
@@ -133,6 +158,9 @@
       "TCJ.EntityFrameworkCore"
     ],
     "TCJ.AspNetCore": [
+      "TCJ.Core"
+    ],
+    "TCJ.Messaging": [
       "TCJ.Core"
     ]
   }

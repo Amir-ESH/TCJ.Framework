@@ -24,6 +24,7 @@ on:
       - "src/TCJ.Core/**"
       - "src/TCJ.DependencyInjection/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
+      - "src/TCJ.Messaging/**"
       - "tests/TCJ.Resilience.Tests/**"
       - "tests/TCJ.Inbox.Tests/**"
       - "eng/resilience-policy.json"
@@ -31,9 +32,12 @@ on:
       - "eng/verify-resilience.py"
       - "eng/inbox-*.json"
       - "eng/verify-inbox.py"
+      - "eng/messaging-*.json"
+      - "eng/verify-messaging.py"
       - "eng/observability-*.json"
       - "benchmarks/TCJ.Benchmarks/**"
       - "docs/resilience.md"
+      - "docs/messaging.md"
       - ".github/workflows/resilience.yml"
       - ".github/workflows/release-preflight.yml"
       - ".github/workflows/release.yml"
@@ -78,6 +82,9 @@ jobs:
       - name: Validate Inbox policy and contract
         run: python3 eng/verify-inbox.py validate-config
 
+      - name: Validate messaging policy and contract
+        run: python3 eng/verify-messaging.py validate-config
+
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx --force-evaluate
 
@@ -98,7 +105,7 @@ jobs:
           rm -rf TestResults/Resilience artifacts/resilience
           mkdir -p TestResults/Resilience artifacts/resilience/traces
 
-      - name: Run fast resilience scenarios
+      - name: Run fast resilience scenarios, including messaging failure classification and retry ownership
         run: >
           dotnet test tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj
           --configuration Release

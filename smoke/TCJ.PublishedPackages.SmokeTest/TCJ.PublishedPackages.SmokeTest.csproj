@@ -11,10 +11,14 @@
     <EnableHealthCheckSmoke Condition="'$(EnableHealthCheckSmoke)' == ''">false</EnableHealthCheckSmoke>
     <EnableOutboxSmoke Condition="'$(EnableOutboxSmoke)' == ''">false</EnableOutboxSmoke>
     <EnableInboxSmoke Condition="'$(EnableInboxSmoke)' == ''">false</EnableInboxSmoke>
+    <EnableMessagingSmoke Condition="'$(EnableMessagingSmoke)' == ''">false</EnableMessagingSmoke>
+    <EnableOutboxSmoke Condition="'$(EnableMessagingSmoke)' == 'true'">true</EnableOutboxSmoke>
+    <EnableInboxSmoke Condition="'$(EnableMessagingSmoke)' == 'true'">true</EnableInboxSmoke>
     <DefineConstants Condition="'$(EnableResilienceSmoke)' == 'true'">$(DefineConstants);TCJ_RESILIENCE_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableHealthCheckSmoke)' == 'true'">$(DefineConstants);TCJ_HEALTH_CHECK_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableOutboxSmoke)' == 'true'">$(DefineConstants);TCJ_OUTBOX_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableInboxSmoke)' == 'true'">$(DefineConstants);TCJ_INBOX_SMOKE</DefineConstants>
+    <DefineConstants Condition="'$(EnableMessagingSmoke)' == 'true'">$(DefineConstants);TCJ_MESSAGING_SMOKE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,5 +27,6 @@
     <PackageReference Include="TCJ.EntityFrameworkCore" Version="$(TCJPackageVersion)" />
     <PackageReference Include="TCJ.EntityFrameworkCore.SqlServer" Version="$(TCJPackageVersion)" />
     <PackageReference Include="TCJ.AspNetCore" Version="$(TCJPackageVersion)" />
+    <PackageReference Include="TCJ.Messaging" Version="$(TCJPackageVersion)" Condition="'$(EnableMessagingSmoke)' == 'true'" />
   </ItemGroup>
 </Project>

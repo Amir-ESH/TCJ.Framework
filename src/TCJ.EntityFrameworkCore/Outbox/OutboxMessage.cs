@@ -16,7 +16,9 @@ public sealed class OutboxMessage : IOutboxMessage
         string payload,
         DateTimeOffset createdAtUtc,
         string? correlationId = null,
-        string? causationId = null)
+        string? causationId = null,
+        string? traceParent = null,
+        string? traceState = null)
     {
         Id = id;
         OccurredAtUtc = occurredAtUtc;
@@ -24,6 +26,8 @@ public sealed class OutboxMessage : IOutboxMessage
         Payload = payload;
         CorrelationId = correlationId;
         CausationId = causationId;
+        TraceParent = traceParent;
+        TraceState = traceState;
         AttemptCount = 0;
         NextAttemptAtUtc = createdAtUtc;
         CreatedAtUtc = createdAtUtc;
@@ -32,59 +36,44 @@ public sealed class OutboxMessage : IOutboxMessage
 
     /// <inheritdoc />
     public Guid Id { get; private set; }
-
     /// <inheritdoc />
     public DateTimeOffset OccurredAtUtc { get; private set; }
-
     /// <inheritdoc />
     public string EventType { get; private set; } = string.Empty;
-
     /// <inheritdoc />
     public string Payload { get; private set; } = string.Empty;
-
-
     /// <summary>Gets the optional correlation identifier propagated from an inbound Inbox context.</summary>
     public string? CorrelationId { get; private set; }
-
     /// <summary>Gets the optional causation identifier; Inbox-originated events use the inbound message ID.</summary>
     public string? CausationId { get; private set; }
-
+    /// <summary>Gets the optional W3C traceparent captured when the message was persisted.</summary>
+    public string? TraceParent { get; private set; }
+    /// <summary>Gets the optional W3C tracestate captured when the message was persisted.</summary>
+    public string? TraceState { get; private set; }
     /// <inheritdoc />
     public int AttemptCount { get; private set; }
-
     /// <summary>Gets the earliest UTC instant at which the message is eligible for another attempt.</summary>
     public DateTimeOffset NextAttemptAtUtc { get; private set; }
-
     /// <summary>Gets the UTC instant at which the current claim was acquired.</summary>
     public DateTimeOffset? LockedAtUtc { get; private set; }
-
     /// <summary>Gets the UTC instant at which the current claim expires.</summary>
     public DateTimeOffset? LockExpiresAtUtc { get; private set; }
-
     /// <summary>Gets the unique identifier of the current processing claim.</summary>
     public Guid? LockId { get; private set; }
-
     /// <summary>Gets the UTC instant at which processing completed successfully.</summary>
     public DateTimeOffset? ProcessedAtUtc { get; private set; }
-
     /// <summary>Gets the UTC instant at which automatic retry stopped permanently.</summary>
     public DateTimeOffset? DeadLetteredAtUtc { get; private set; }
-
     /// <summary>Gets the bounded exception type recorded for the most recent failure.</summary>
     public string? LastErrorType { get; private set; }
-
     /// <summary>Gets the bounded safe failure summary recorded for the most recent failure; raw exception messages are not stored by default.</summary>
     public string? LastError { get; private set; }
-
     /// <summary>Gets the UTC instant at which the record was created.</summary>
     public DateTimeOffset CreatedAtUtc { get; private set; }
-
     /// <summary>Gets the UTC instant at which operational metadata last changed.</summary>
     public DateTimeOffset UpdatedAtUtc { get; private set; }
-
     /// <summary>Gets the number of explicit replay requests accepted for this message.</summary>
     public int ReplayCount { get; private set; }
-
     /// <summary>Gets the most recent UTC replay instant.</summary>
     public DateTimeOffset? LastReplayedAtUtc { get; private set; }
 }
