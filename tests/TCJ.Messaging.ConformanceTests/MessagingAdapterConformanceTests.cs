@@ -248,7 +248,7 @@ public abstract class MessagingAdapterConformanceTests
         var activities = new List<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == TcjMessagingDiagnosticNames.ActivitySourceName,
+            ShouldListenTo = source => source.Name == TcjMessagingDiagnosticNames.Source,
             Sample = static (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = activity => activities.Add(activity)
         };
@@ -258,7 +258,7 @@ public abstract class MessagingAdapterConformanceTests
         using var meterListener = new MeterListener();
         meterListener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Meter.Name == TcjMessagingDiagnosticNames.MeterName)
+            if (instrument.Meter.Name == TcjMessagingDiagnosticNames.Source)
                 listener.EnableMeasurementEvents(instrument);
         };
         meterListener.SetMeasurementEventCallback<long>((instrument, _, _, _) => metricNames.Add(instrument.Name));
@@ -282,7 +282,7 @@ public abstract class MessagingAdapterConformanceTests
         using var meterListener = new MeterListener();
         meterListener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Meter.Name == TcjMessagingDiagnosticNames.MeterName)
+            if (instrument.Meter.Name == TcjMessagingDiagnosticNames.Source)
                 listener.EnableMeasurementEvents(instrument);
         };
         meterListener.SetMeasurementEventCallback<long>((_, _, tags, _) =>
