@@ -40,8 +40,11 @@ public static class MessagingServiceCollectionExtensions
         services.TryAddSingleton<IMessagePublisher>(static sp => sp.GetRequiredService<MessagePublisher>());
         services.TryAddSingleton<IMessageBatchPublisher, MessageBatchPublisher>();
         services.TryAddSingleton(typeof(IMessagePublisher<>), typeof(TypedMessagePublisher<>));
-        services.TryAddTransient<InboxTransportBridge>();
-        services.TryAddTransient<IMessageConsumerRunner, MessageConsumerRunner>();
+        if (options.EnableConsumer)
+        {
+            services.TryAddTransient<InboxTransportBridge>();
+            services.TryAddTransient<IMessageConsumerRunner, MessageConsumerRunner>();
+        }
         services.TryAddSingleton<MessagingTransportHealthCheck>();
         services.TryAddSingleton<MessagingPublisherHealthCheck>();
         services.TryAddSingleton<MessagingConsumerHealthCheck>();

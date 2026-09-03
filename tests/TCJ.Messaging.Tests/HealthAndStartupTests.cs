@@ -13,6 +13,7 @@ public sealed class HealthAndStartupTests
     public async Task Messaging_health_checks_register_stable_names_and_report_healthy_in_memory_transport()
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddTcjMessaging();
         services.AddTcjInMemoryMessaging();
         services.AddHealthChecks().AddTcjMessagingHealthChecks();
@@ -31,6 +32,7 @@ public sealed class HealthAndStartupTests
     public async Task Messaging_transport_health_check_becomes_unhealthy_when_probe_is_unavailable()
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddTcjMessaging();
         services.AddTcjInMemoryMessaging();
         services.AddHealthChecks().AddTcjMessagingHealthChecks();
@@ -40,6 +42,19 @@ public sealed class HealthAndStartupTests
         HealthReport report = await provider.GetRequiredService<HealthCheckService>().CheckHealthAsync();
 
         Assert.Equal(HealthStatus.Unhealthy, report.Entries[TcjMessagingHealthCheckNames.Transport].Status);
+    }
+
+    [Fact]
+    public void Messaging_registration_validates_without_inbox_when_consumer_is_disabled()
+    {
+        var services = new ServiceCollection();
+        services.AddTcjMessaging();
+        services.AddTcjInMemoryMessaging();
+
+        using ServiceProvider provider = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        Assert.NotNull(provider.GetRequiredService<IMessagingStartupValidator>());
     }
 
     [Fact]
