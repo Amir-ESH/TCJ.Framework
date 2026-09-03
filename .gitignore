@@ -566,3 +566,17 @@ tests/TCJ.Inbox.Tests/obj/
 !eng/inbox-contract.json
 !tests/TCJ.Inbox.Tests/**/*.cs
 !tests/TCJ.Inbox.Tests/**/*.csproj
+
+# Transport-neutral messaging generated evidence
+artifacts/messaging/
+TestResults/Messaging/
+tests/TCJ.Messaging.Tests/bin/
+tests/TCJ.Messaging.Tests/obj/
+tests/TCJ.Messaging.ConformanceTests/bin/
+tests/TCJ.Messaging.ConformanceTests/obj/
+!eng/messaging-policy.json
+!eng/messaging-contract.json
+!eng/verify-messaging.py
+!src/TCJ.Messaging/**
+!tests/TCJ.Messaging.Tests/**
+!tests/TCJ.Messaging.ConformanceTests/**

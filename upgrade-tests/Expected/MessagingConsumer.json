@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "scenario": "MessagingConsumer",
+  "checks": {
+    "stableMessageId": true,
+    "logicalMessageType": true,
+    "positiveSchemaVersion": true,
+    "correlationPreserved": true,
+    "causationPreserved": true,
+    "partitionHintPreserved": true,
+    "orderingHintPreserved": true,
+    "immutableHeaders": true,
+    "jsonContentType": true
+  }
+}

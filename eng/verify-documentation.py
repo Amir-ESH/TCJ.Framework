@@ -157,8 +157,8 @@ def validate_policy(policy: dict) -> None:
     if policy["schemaVersion"] != 1:
         fail("documentation-policy.json schemaVersion must be 1.")
     packages = policy["requiredPackages"]
-    if not isinstance(packages, list) or len(packages) != 5 or len(set(packages)) != 5:
-        fail("requiredPackages must contain the five unique TCJ package IDs.")
+    if not isinstance(packages, list) or len(packages) != 6 or len(set(packages)) != 6:
+        fail("requiredPackages must contain the six unique TCJ runtime package IDs.")
     for package in packages:
         project = policy["projects"].get(package)
         page = policy["packagePages"].get(package)
@@ -905,12 +905,13 @@ def verify_xml_docs(policy: dict, build_root: Path | None) -> tuple[int, list[st
     if missing:
         fail("Missing XML documentation files for: " + ", ".join(missing))
     unresolved: list[str] = []
-    seen_ids: set[str] = set()
+    member_count = 0
     for package, path in paths.items():
         try:
             tree = ET.parse(path)
         except ET.ParseError as exc:
             fail(f"Malformed XML documentation file {path}: {exc}")
+        seen_ids: set[str] = set()
         for member in tree.getroot().findall("./members/member"):
             doc_id = member.get("name")
             if not doc_id:
@@ -918,13 +919,14 @@ def verify_xml_docs(policy: dict, build_root: Path | None) -> tuple[int, list[st
             if doc_id in seen_ids:
                 fail(f"Duplicate XML documentation ID: {doc_id}")
             seen_ids.add(doc_id)
+            member_count += 1
             for node in member.iter():
                 cref = node.get("cref")
                 if cref and cref.startswith("!:"):
                     unresolved.append(f"{package}:{doc_id}:{cref}")
     if unresolved and policy["failOnUnresolvedCrefs"]:
         fail("Unresolved XML documentation cref references: " + ", ".join(unresolved[:20]))
-    return len(seen_ids), unresolved
+    return member_count, unresolved
 
 
 def verify_markdown_links(policy: dict, output: Path | None = None) -> list[dict]:

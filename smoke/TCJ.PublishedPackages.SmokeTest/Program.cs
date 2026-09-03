@@ -10,6 +10,14 @@ using TCJ.Core.Outbox;
 using System.Text.Json;
 using TCJ.Core.Inbox;
 #endif
+#if TCJ_MESSAGING_SMOKE
+using System.Text.Json.Serialization;
+using TCJ.Messaging.Envelopes;
+using TCJ.Messaging.Extensions;
+using TCJ.Messaging.Integration;
+using TCJ.Messaging.Publishing;
+using TCJ.Messaging.Receiving;
+#endif
 using TCJ.Core.Identifiers;
 using TCJ.Core.Results;
 #if TCJ_RESILIENCE_SMOKE
@@ -58,7 +66,7 @@ internal static class Program
         builder.Services.AddSingleton<SmokeDeliveryProbe>();
 #endif
 #if TCJ_HEALTH_CHECK_SMOKE
-        builder.Services.AddTcjHealthChecks()
+        IHealthChecksBuilder healthChecks = builder.Services.AddTcjHealthChecks()
             .AddTcjDependencyInjection()
             .AddTcjDomainEvents();
 #endif
@@ -90,6 +98,16 @@ internal static class Program
             options.MaxRetryAttempts = 1;
         });
 #endif
+#if TCJ_MESSAGING_SMOKE
+        builder.Services.AddTcjMessaging(options => options.EnableConsumer = true);
+        builder.Services.AddTcjMessage("smoke.inbound", 1, SmokeMessagingJsonContext.Default.SmokeInboundCommand);
+        builder.Services.AddTcjMessage("smoke.changed", 1, SmokeMessagingJsonContext.Default.SmokeChanged);
+        builder.Services.AddTcjInMemoryMessaging();
+        builder.Services.AddTcjMessagingOutboxBridge();
+#if TCJ_HEALTH_CHECK_SMOKE
+        healthChecks.AddTcjMessagingHealthChecks();
+#endif
+#endif
 
         await using WebApplication app = builder.Build();
 
@@ -99,9 +117,7 @@ internal static class Program
         app.MapTcjReadinessChecks();
 #endif
 
-        await using AsyncServiceScope scope =
-            app.Services.CreateAsyncScope();
-
+        await using AsyncServiceScope scope = app.Services.CreateAsyncScope();
         IServiceProvider services = scope.ServiceProvider;
 
 #if TCJ_OUTBOX_SMOKE
@@ -115,30 +131,22 @@ internal static class Program
         }
 #endif
 
-        IGuidGenerator guidGenerator =
-            services.GetRequiredService<IGuidGenerator>();
-
+        IGuidGenerator guidGenerator = services.GetRequiredService<IGuidGenerator>();
         Guid id = guidGenerator.CreateVersion7();
         Result<Guid> result = Result.Success(id);
 
         if (result.IsFailure || result.Value == Guid.Empty)
         {
-            throw new InvalidOperationException(
-                "TCJ.Core Result or GUID generation smoke check failed.");
+            throw new InvalidOperationException("TCJ.Core Result or GUID generation smoke check failed.");
         }
 
-        _ = services.GetRequiredService<
-            IReadRepository<SmokeEntity, Guid>>();
-
+        _ = services.GetRequiredService<IReadRepository<SmokeEntity, Guid>>();
         _ = services.GetRequiredService<IUnitOfWork>();
 
-        SmokeDbContext dbContext =
-            services.GetRequiredService<SmokeDbContext>();
-
+        SmokeDbContext dbContext = services.GetRequiredService<SmokeDbContext>();
         if (dbContext.Model.FindEntityType(typeof(SmokeEntity)) is null)
         {
-            throw new InvalidOperationException(
-                "TCJ Entity Framework Core model smoke check failed.");
+            throw new InvalidOperationException("TCJ Entity Framework Core model smoke check failed.");
         }
 
         Type[] packageMarkerTypes =
@@ -148,18 +156,17 @@ internal static class Program
             typeof(IUnitOfWork),
             typeof(TcjSqlServerOptions),
             typeof(TcjAspNetCoreOptions)
+#if TCJ_MESSAGING_SMOKE
+            , typeof(TCJ.Messaging.Configuration.TcjMessagingOptions)
+#endif
         ];
 
         foreach (Type markerType in packageMarkerTypes)
         {
-            string assemblyName =
-                markerType.Assembly.GetName().Name
-                ?? throw new InvalidOperationException(
-                    "A package assembly has no name.");
-
+            string assemblyName = markerType.Assembly.GetName().Name
+                ?? throw new InvalidOperationException("A package assembly has no name.");
             Console.WriteLine($"Loaded {assemblyName}");
         }
-
 
 #if TCJ_RESILIENCE_SMOKE
         await VerifyPublishedResilienceAsync();
@@ -173,12 +180,15 @@ internal static class Program
         await VerifyPublishedInboxAsync(services);
 #endif
 
+#if TCJ_MESSAGING_SMOKE
+        await VerifyPublishedMessagingAsync(services);
+#endif
+
 #if TCJ_HEALTH_CHECK_SMOKE
         await VerifyPublishedHealthChecksAsync(app);
 #endif
 
-        Console.WriteLine(
-            $"Published package smoke test succeeded. Generated UUID: {id}");
+        Console.WriteLine($"Published package smoke test succeeded. Generated UUID: {id}");
     }
 
 #if TCJ_OUTBOX_SMOKE
@@ -199,14 +209,36 @@ internal static class Program
         }
 
         IOutboxProcessor processor = services.GetRequiredService<IOutboxProcessor>();
-        OutboxProcessingResult result = await processor.ProcessBatchAsync().ConfigureAwait(false);
+        OutboxProcessingResult processing = await processor.ProcessBatchAsync().ConfigureAwait(false);
         dbContext.ChangeTracker.Clear();
         OutboxMessage processed = await dbContext.Set<OutboxMessage>().AsNoTracking().SingleAsync(message => message.Id == persisted.Id).ConfigureAwait(false);
+#if TCJ_MESSAGING_SMOKE
+        IMessageReceiver receiver = services.GetRequiredService<IMessageReceiver>();
+        using var receiveTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await using IAsyncEnumerator<ReceivedMessage> enumerator = receiver
+            .ReceiveAsync(new ReceiveContext { Source = "smoke.changed.v1" }, receiveTimeout.Token)
+            .GetAsyncEnumerator(receiveTimeout.Token);
+        if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
+        {
+            throw new InvalidOperationException("Published TCJ.Messaging Outbox bridge produced no transport delivery.");
+        }
+        ReceivedMessage received = enumerator.Current;
+        await received.Settlement.CompleteAsync(receiveTimeout.Token).ConfigureAwait(false);
+        if (processing.ProcessedCount != 1 || processed.ProcessedAtUtc is null
+            || received.Envelope.MessageId != persisted.Id.ToString("D")
+            || received.Envelope.MessageType != "smoke.changed"
+            || received.Envelope.MessageVersion != 1)
+        {
+            throw new InvalidOperationException("Published TCJ.Messaging Outbox publishing smoke failed.");
+        }
+        Console.WriteLine("TCJ_MESSAGING_SMOKE published a persisted Outbox message through the neutral transport contract.");
+#else
         SmokeDeliveryProbe probe = services.GetRequiredService<SmokeDeliveryProbe>();
-        if (result.ProcessedCount != 1 || processed.ProcessedAtUtc is null || probe.Count != 1)
+        if (processing.ProcessedCount != 1 || processed.ProcessedAtUtc is null || probe.Count != 1)
         {
             throw new InvalidOperationException("Published transactional outbox processing smoke failed.");
         }
+#endif
 
         Console.WriteLine("TCJ_OUTBOX_SMOKE succeeded for TCJ_OutboxMessages.");
     }
@@ -250,6 +282,114 @@ internal static class Program
         }
 
         Console.WriteLine("TCJ_INBOX_SMOKE succeeded for TCJ_InboxMessages with one business effect and one causal Outbox row.");
+    }
+#endif
+
+#if TCJ_MESSAGING_SMOKE
+    private static async Task VerifyPublishedMessagingAsync(IServiceProvider services)
+    {
+        const string transportSource = "published-messaging-inbox";
+        const string messageId = "published-messaging-inbox-1";
+        const string correlationId = "published-messaging-correlation";
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(
+            new SmokeInboundCommand("messaging-inbox-smoke"),
+            SmokeMessagingJsonContext.Default.SmokeInboundCommand);
+        var envelope = new TransportMessageEnvelope(
+            messageId,
+            "smoke.inbound",
+            1,
+            payload,
+            "application/json",
+            DateTimeOffset.UtcNow,
+            correlationId: correlationId,
+            headers: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["traceparent"] = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+                ["authorization"] = "must-not-propagate"
+            });
+
+        IMessagePublisher publisher = services.GetRequiredService<IMessagePublisher>();
+        PublishResult firstPublish = await publisher.PublishAsync(envelope, new PublishContext { Destination = transportSource }).ConfigureAwait(false);
+        PublishResult duplicatePublish = await publisher.PublishAsync(envelope, new PublishContext { Destination = transportSource }).ConfigureAwait(false);
+        if (!firstPublish.IsSuccess || !duplicatePublish.IsSuccess)
+        {
+            throw new InvalidOperationException("Published TCJ.Messaging in-memory publish smoke failed.");
+        }
+
+        IMessageReceiver receiver = services.GetRequiredService<IMessageReceiver>();
+        InboxTransportBridge bridge = services.GetRequiredService<InboxTransportBridge>();
+        using var receiveTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await using IAsyncEnumerator<ReceivedMessage> enumerator = receiver
+            .ReceiveAsync(new ReceiveContext { Source = transportSource }, receiveTimeout.Token)
+            .GetAsyncEnumerator(receiveTimeout.Token);
+
+        if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
+            throw new InvalidOperationException("Published TCJ.Messaging first Inbox delivery was not received.");
+        InboxTransportBridgeResult first = await bridge.ProcessAsync(enumerator.Current, receiveTimeout.Token).ConfigureAwait(false);
+
+        if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
+            throw new InvalidOperationException("Published TCJ.Messaging duplicate Inbox delivery was not received.");
+        InboxTransportBridgeResult duplicate = await bridge.ProcessAsync(enumerator.Current, receiveTimeout.Token).ConfigureAwait(false);
+
+        SmokeDbContext dbContext = services.GetRequiredService<SmokeDbContext>();
+        dbContext.ChangeTracker.Clear();
+        int businessRows = await dbContext.SmokeEntities.AsNoTracking()
+            .CountAsync(entity => entity.Name == "messaging-inbox-smoke")
+            .ConfigureAwait(false);
+        InboxMessage inbox = await dbContext.Set<InboxMessage>().AsNoTracking().SingleAsync(message =>
+            message.ConsumerName == "published-package-smoke" && message.MessageId == messageId).ConfigureAwait(false);
+        OutboxMessage outbound = await dbContext.Set<OutboxMessage>().AsNoTracking().SingleAsync(message => message.CausationId == messageId).ConfigureAwait(false);
+
+        if (first.InboxResult.Outcome != InboxHandlingOutcome.Acknowledge
+            || first.Settlement != MessageSettlement.Complete
+            || duplicate.InboxResult.Outcome != InboxHandlingOutcome.IgnoreDuplicate
+            || duplicate.Settlement != MessageSettlement.Complete
+            || businessRows != 1
+            || inbox.ProcessedAtUtc is null
+            || outbound.CorrelationId != correlationId)
+        {
+            throw new InvalidOperationException("Published TCJ.Messaging transport-to-Inbox duplicate smoke failed.");
+        }
+
+        IOutboxProcessor processor = services.GetRequiredService<IOutboxProcessor>();
+        OutboxProcessingResult outboxResult = await processor.ProcessBatchAsync().ConfigureAwait(false);
+        dbContext.ChangeTracker.Clear();
+        OutboxMessage processed = await dbContext.Set<OutboxMessage>().AsNoTracking()
+            .SingleAsync(message => message.Id == outbound.Id)
+            .ConfigureAwait(false);
+        if (outboxResult.ProcessedCount < 1 || processed.ProcessedAtUtc is null)
+        {
+            throw new InvalidOperationException("Published TCJ.Messaging Inbox-to-Outbox publishing smoke did not mark the persisted message processed.");
+        }
+
+        bool foundOutbound = false;
+        using var outboxReceiveTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await using IAsyncEnumerator<ReceivedMessage> outboxEnumerator = receiver
+            .ReceiveAsync(new ReceiveContext { Source = "smoke.changed.v1" }, outboxReceiveTimeout.Token)
+            .GetAsyncEnumerator(outboxReceiveTimeout.Token);
+        for (int attempt = 0; attempt < outboxResult.ProcessedCount; attempt++)
+        {
+            if (!await outboxEnumerator.MoveNextAsync().ConfigureAwait(false))
+                break;
+            ReceivedMessage received = outboxEnumerator.Current;
+            await received.Settlement.CompleteAsync(outboxReceiveTimeout.Token).ConfigureAwait(false);
+            if (received.Envelope.MessageId == outbound.Id.ToString("D"))
+            {
+                foundOutbound = received.Envelope.CorrelationId == correlationId
+                    && received.Envelope.CausationId == messageId
+                    && !received.Envelope.Headers.ContainsKey("authorization");
+            }
+        }
+        if (!foundOutbound)
+        {
+            throw new InvalidOperationException("Published TCJ.Messaging Inbox-to-Outbox transport envelope did not preserve safe identity/correlation metadata.");
+        }
+
+        IMessageConsumerRunner runner = services.GetRequiredService<IMessageConsumerRunner>();
+        using var shutdown = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        await runner.RunAsync(new ReceiveContext { Source = "published-messaging-graceful-shutdown" }, shutdown.Token).ConfigureAwait(false);
+
+        Console.WriteLine("TCJ_MESSAGING_SMOKE succeeded for package restore, in-memory publish/receive, Inbox duplicate settlement, Outbox publishing, safe headers, and graceful shutdown.");
     }
 #endif
 
@@ -298,17 +438,12 @@ internal static class Program
         int result = await policy.ExecuteAsync(_ =>
         {
             if (Interlocked.Increment(ref attempts) == 1)
-            {
                 throw new PublishedSmokeTransientException();
-            }
-
             return Task.FromResult(42);
         }, "operation");
 
         if (result != 42 || attempts != 2 || detector.IsTransient(new ArgumentException("permanent")))
-        {
             throw new InvalidOperationException("Published resilience retry/classification smoke check failed.");
-        }
 
         Console.WriteLine("TCJ_RESILIENCE_SMOKE succeeded.");
     }
@@ -326,14 +461,11 @@ public sealed class SmokeDbContext(
     DbContextOptions<SmokeDbContext> options)
     : DbContext(options), IReadDbContext, IWriteDbContext
 {
-    public DbSet<SmokeEntity> SmokeEntities =>
-        Set<SmokeEntity>();
+    public DbSet<SmokeEntity> SmokeEntities => Set<SmokeEntity>();
 
-    protected override void OnModelCreating(
-        ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
         modelBuilder.ApplySoftDeleteQueryFilters();
         modelBuilder.ApplyTcjSqlServerConventions();
 #if TCJ_OUTBOX_SMOKE || TCJ_INBOX_SMOKE
@@ -345,12 +477,9 @@ public sealed class SmokeDbContext(
     }
 }
 
-public sealed class SmokeEntity
-    : RowVersionFullAuditedEntity<Guid>
+public sealed class SmokeEntity : RowVersionFullAuditedEntity<Guid>
 {
-    private SmokeEntity()
-    {
-    }
+    private SmokeEntity() { }
 
     public SmokeEntity(Guid id, string name)
     {
@@ -358,8 +487,7 @@ public sealed class SmokeEntity
         Name = name;
     }
 
-    public string Name { get; private set; } =
-        string.Empty;
+    public string Name { get; private set; } = string.Empty;
 
 #if TCJ_OUTBOX_SMOKE || TCJ_INBOX_SMOKE
     public void RaiseChanged(string marker, DateTimeOffset occurredOn)
@@ -404,4 +532,10 @@ public sealed class SmokeInboundHandler(SmokeDbContext dbContext) : IInboxMessag
     }
 }
 #endif
+#endif
+
+#if TCJ_MESSAGING_SMOKE
+[JsonSerializable(typeof(SmokeInboundCommand))]
+[JsonSerializable(typeof(SmokeChanged))]
+internal sealed partial class SmokeMessagingJsonContext : JsonSerializerContext;
 #endif

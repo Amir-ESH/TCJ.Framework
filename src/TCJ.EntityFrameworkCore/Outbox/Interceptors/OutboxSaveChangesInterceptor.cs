@@ -71,9 +71,7 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
         base.SaveChangesFailed(eventData);
     }
 
-    public override Task SaveChangesFailedAsync(
-        DbContextErrorEventData eventData,
-        CancellationToken cancellationToken = default)
+    public override Task SaveChangesFailedAsync(DbContextErrorEventData eventData, CancellationToken cancellationToken = default)
     {
         MarkFailure(eventData.Context);
         return base.SaveChangesFailedAsync(eventData, cancellationToken);
@@ -85,9 +83,7 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
         base.SaveChangesCanceled(eventData);
     }
 
-    public override Task SaveChangesCanceledAsync(
-        DbContextEventData eventData,
-        CancellationToken cancellationToken = default)
+    public override Task SaveChangesCanceledAsync(DbContextEventData eventData, CancellationToken cancellationToken = default)
     {
         MarkFailure(eventData.Context);
         return base.SaveChangesCanceledAsync(eventData, cancellationToken);
@@ -95,10 +91,7 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
 
     private void Capture(DbContext? context)
     {
-        if (context is null)
-        {
-            return;
-        }
+        if (context is null) return;
 
         IReadOnlyList<IHasDomainEvents> aggregates = context.ChangeTracker
             .Entries()
@@ -106,16 +99,11 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
             .OfType<IHasDomainEvents>()
             .Where(aggregate => aggregate.DomainEvents.Count > 0)
             .ToArray();
-
-        if (aggregates.Count == 0)
-        {
-            return;
-        }
+        if (aggregates.Count == 0) return;
 
         OutboxCaptureState state = _captureTracker.GetOrCreate(context);
         bool hasExplicitTransaction = context.Database.CurrentTransaction is not null;
         state.AwaitingExplicitCommit |= hasExplicitTransaction;
-
         if (hasExplicitTransaction)
         {
             foreach (var entry in context.ChangeTracker.Entries()
@@ -127,19 +115,17 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
         }
 
         DateTimeOffset now = _timeProvider.GetUtcNow();
-
         foreach (IHasDomainEvents aggregate in aggregates)
         {
             state.Aggregates.Add(aggregate);
-
             foreach (IDomainEvent domainEvent in aggregate.DomainEvents)
             {
-                if (state.Captured.ContainsKey(domainEvent))
-                {
-                    continue;
-                }
+                if (state.Captured.ContainsKey(domainEvent)) continue;
 
                 string eventType = _eventTypeResolver.GetName(domainEvent.GetType());
+                Activity? ambientActivity = Activity.Current;
+                string? traceParent = ambientActivity?.Id;
+                string? traceState = ambientActivity?.TraceStateString;
                 using Activity? activity = OutboxTelemetryDiagnostics.Start(
                     TCJ.Core.Diagnostics.TcjDiagnosticNames.Activities.OutboxPersist,
                     "persist",
@@ -156,7 +142,9 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
                         payload,
                         now,
                         inboxContext?.CorrelationId,
-                        inboxContext?.MessageId);
+                        inboxContext?.MessageId,
+                        traceParent,
+                        traceState);
 
                     context.Set<OutboxMessage>().Add(message);
                     state.Captured.Add(domainEvent, new CapturedOutboxEvent(domainEvent, message));
@@ -173,24 +161,9 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
 
     private void CompleteSave(DbContext? context)
     {
-        if (context is null || !_captureTracker.TryGet(context, out OutboxCaptureState state))
-        {
-            return;
-        }
-
-        foreach (CapturedOutboxEvent captured in state.Captured.Values)
-        {
-            // Reaching SavedChanges/SavedChangesAsync means this SaveChanges operation succeeded.
-            // Persistence must not depend on EF tracking-state transitions (including callers that
-            // disable AcceptAllChanges), because explicit transactions are finalized separately.
-            captured.Persisted = true;
-        }
-
-        if (state.AwaitingExplicitCommit)
-        {
-            return;
-        }
-
+        if (context is null || !_captureTracker.TryGet(context, out OutboxCaptureState state)) return;
+        foreach (CapturedOutboxEvent captured in state.Captured.Values) captured.Persisted = true;
+        if (state.AwaitingExplicitCommit) return;
         RecordCommittedPersistence(state);
         ClearCompletedDomainEvents(state);
         _captureTracker.Remove(context);
@@ -198,15 +171,8 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
 
     private void MarkFailure(DbContext? context)
     {
-        if (context is null || !_captureTracker.TryGet(context, out OutboxCaptureState state))
-        {
-            return;
-        }
-
-        if (state.AwaitingExplicitCommit)
-        {
-            state.HadSaveFailure = true;
-        }
+        if (context is null || !_captureTracker.TryGet(context, out OutboxCaptureState state)) return;
+        if (state.AwaitingExplicitCommit) state.HadSaveFailure = true;
     }
 
     internal static void RecordCommittedPersistence(OutboxCaptureState state)
@@ -220,7 +186,6 @@ internal sealed class OutboxSaveChangesInterceptor : SaveChangesInterceptor
                 committed++;
             }
         }
-
         OutboxTelemetryDiagnostics.RecordPersisted(committed);
     }
 

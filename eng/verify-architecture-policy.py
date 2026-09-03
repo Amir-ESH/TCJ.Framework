@@ -23,6 +23,7 @@ REQUIRED_ASSEMBLIES = (
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
+    "TCJ.Messaging",
 )
 REQUIRED_WORKFLOWS = (
     ".github/workflows/ci.yml",
@@ -147,7 +148,10 @@ def require_exact_keys(mapping: dict[str, Any], description: str) -> None:
             details.append("missing: " + ", ".join(missing))
         if unknown:
             details.append("unknown: " + ", ".join(unknown))
-        fail(f"{description} must represent all five production assemblies ({'; '.join(details)}).")
+        fail(
+            f"{description} must represent all {len(REQUIRED_ASSEMBLIES)} production assemblies "
+            f"({'; '.join(details)})."
+        )
 
 
 def find_cycles(graph: dict[str, tuple[str, ...]]) -> tuple[str, ...]:

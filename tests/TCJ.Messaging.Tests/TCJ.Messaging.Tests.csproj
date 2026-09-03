@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\TestProject.props" />
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>TCJ.Messaging.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TCJ.Core\TCJ.Core.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging\TCJ.Messaging.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\eng\messaging-policy.json" Link="messaging-policy.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\eng\messaging-contract.json" Link="messaging-contract.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

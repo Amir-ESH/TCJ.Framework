@@ -10,11 +10,11 @@ The baseline phase uses an isolated NuGet environment and `upgrade-tests/NuGet.B
 
 ## Direct upgrade contract
 
-Each scenario has one source tree and TCJ PackageReferences use `$(TCJUpgradeVersion)`. The runner supplies the baseline version for the first restore/build/run and the target version for the second. It hashes source files before the baseline phase and again after the direct target phase. A changed hash is a failure.
+Each direct-upgrade scenario has one source tree and TCJ PackageReferences use `$(TCJUpgradeVersion)`. The runner supplies the baseline version for the first restore/build/run and the target version for the second. It hashes source files before the baseline phase and again after the direct target phase. A changed hash is a failure.
 
-The six scenarios cover Core, Dependency Injection, provider-independent EF Core, SQL Server registration, ASP.NET Core, and all five packages together. `EntityFrameworkCoreConsumer` persists a deterministic record to SQLite during the baseline run and reads that same database during the target run. SQL Server connectivity itself remains the responsibility of the container-backed integration suite.
+The six historical scenarios cover Core, Dependency Injection, provider-independent EF Core, SQL Server registration, ASP.NET Core, and all pre-Step-46 runtime packages together. They deliberately keep messaging disabled, proving existing consumers remain unaffected when `TCJ.Messaging` is not referenced.
 
-The six direct-upgrade scenarios deliberately remain **outbox-disabled**. The published baseline and the development target both support the optional transactional outbox, so the purpose of these scenarios is not to prove that the API is newly introduced. Instead, they prove that an application which has **not opted into** outbox registration keeps the same `SaveChanges`, hosting, dependency-resolution, and runtime behavior across the upgrade. Outbox-enabled compatibility is validated separately by the package-consumer fixture, published-package smoke path, and SQL Server outbox suites. The version-specific migration guide continues to document consumer ownership of the `TCJ_OutboxMessages` migration and the compatibility treatment of stable event type names.
+`TCJ.Messaging` is a new target-only runtime package in `0.1.0-preview.5`; it has no valid `0.1.0-preview.4` baseline. The `MessagingConsumer` scenario therefore validates package introduction only on the target side. The verifier rejects fabricated baseline results for target-only packages, validates source identity and dependency closure, and reports target-only success independently from direct-upgrade success.
 
 ## Runtime behavior
 
@@ -28,7 +28,7 @@ The runner reads `obj/project.assets.json` for each phase and records package ve
 
 `eng/breaking-changes.json` is the only approval surface for intentional breaking changes. An entry must set `approved: true`, record the approving maintainer in `approvedBy`, identify affected scenarios, link to a repository issue or pull request, and reference an existing heading in the version-specific migration guide. A source-changing migration additionally declares an explicit target-version patch stored in the repository. The direct result remains visible; the harness applies only that patch to a copied scenario and requires the guided build and runtime to pass.
 
-An empty manifest is meaningful: it says the supported upgrade path is expected to work without consumer source changes. It must never be populated merely to make an unexpected regression green.
+An empty manifest is meaningful: it says the supported direct-upgrade path is expected to work without consumer source changes. It must never be populated merely to make an unexpected regression green.
 
 ## Running locally
 
@@ -60,8 +60,8 @@ Use `--scenario <name>` on the runner for one scenario. The full suite is the re
 
 ## Release and post-publication use
 
-Normal CI validates the policy and fixture wiring. The dedicated workflow runs the full before/after suite. Release preflight and the tag workflow run it against the exact release-candidate packages and block readiness/publication on failure. After publication, the published-package workflow reruns Core, ASP.NET Core, and FullStack upgrades with both baseline and target TCJ versions sourced from NuGet.org, checking that publication did not introduce a difference hidden by the local feed.
+Normal CI validates policy and fixture wiring. The dedicated workflow runs the full before/after suite plus the target-only Messaging introduction scenario. Release preflight and the tag workflow run against the exact release-candidate packages and block readiness/publication on failure. After publication, published-package smoke validates the package from NuGet.org as well.
 
-## Adding or excluding scenarios
+## Messaging compatibility rules
 
-Add a minimal external-consumer project, expected behavior fixture, and policy entry. Do not add a production `ProjectReference`. Changes that weaken a tested upgrade guarantee, classify environment noise, exclude a framework/platform, or introduce a migration patch require explicit review and documentation; a broad normalization rule is not an acceptable workaround for flaky behavior.
+Enabling messaging is explicit. Message type names and schema versions are compatibility contracts. Changes to envelope fields, publish outcomes, settlement semantics, failure categories, framework header names, capabilities, or naming rules require compatibility review and migration guidance. Future broker adapters must run the Messaging conformance suite before release.

@@ -67,13 +67,16 @@ jobs:
     name: Transactional outbox contract gate
     uses: ./.github/workflows/outbox.yml
 
-
   inbox:
     name: Transactional Inbox contract gate
     uses: ./.github/workflows/inbox.yml
 
+  messaging:
+    name: Transport-neutral messaging contract gate
+    uses: ./.github/workflows/messaging.yml
+
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -156,6 +159,9 @@ jobs:
       - name: Validate transactional-Inbox configuration
         run: python3 eng/verify-inbox.py validate-config
 
+      - name: Validate transport-neutral messaging configuration
+        run: python3 eng/verify-messaging.py validate-config
+
       - name: Verify Native AOT policy and release wiring
         run: python3 eng/verify-aot.py verify
 
@@ -180,6 +186,45 @@ jobs:
           dotnet build TCJ.slnx
           --configuration Release
           --no-restore
+
+      - name: Run release-candidate messaging contract tests
+        run: >
+          dotnet test tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=messaging-preflight.trx"
+          --results-directory TestResults/Messaging/contracts
+
+      - name: Run release-candidate adapter conformance suite
+        run: >
+          dotnet test tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=messaging-conformance-preflight.trx"
+          --results-directory TestResults/Messaging/conformance
+
+      - name: Verify release-candidate messaging evidence
+        run: >
+          python3 eng/verify-messaging.py verify
+          --results TestResults/Messaging
+          --output artifacts/messaging
+
+      - name: Publish release-candidate messaging summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/messaging/MESSAGING_SUMMARY.md ]]; then
+            cat artifacts/messaging/MESSAGING_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload release-candidate messaging evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-preflight-messaging-${{ github.run_id }}
+          path: |
+            TestResults/Messaging/**
+            artifacts/messaging/**
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Run observability contract tests
         run: >
@@ -775,6 +820,12 @@ jobs:
             artifacts/release/SHA256SUMS
             artifacts/compatibility/report/COMPATIBILITY_SUMMARY.md
             artifacts/compatibility/report/compatibility-summary.json
+            artifacts/messaging/MESSAGING_SUMMARY.md
+            artifacts/messaging/messaging-summary.json
+            artifacts/messaging/conformance-report.json
+            artifacts/messaging/capability-report.json
+            artifacts/messaging/header-scan.json
+            artifacts/messaging/sensitive-data-scan.json
             artifacts/aot/native-aot-smoke/native-aot-result.json
             artifacts/aot/aot-runtime-verification.json
             eng/release-manifest.json

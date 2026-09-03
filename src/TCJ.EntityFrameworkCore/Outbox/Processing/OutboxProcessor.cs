@@ -48,7 +48,6 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
     {
         cancellationToken.ThrowIfCancellationRequested();
         _state.MarkStarted();
-
         try
         {
             await _startupValidator.ValidateAsync(cancellationToken).ConfigureAwait(false);
@@ -78,7 +77,6 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
             int processed = 0;
             int retried = 0;
             int deadLettered = 0;
-
             foreach (OutboxMessage message in messages)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -96,7 +94,14 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
                 {
                     Type eventType = _eventTypeResolver.Resolve(message.EventType);
                     IDomainEvent domainEvent = _serializer.Deserialize(eventType, message.Payload);
-                    using IDisposable scope = _contextAccessor.Push(new OutboxMessageContext(message.Id, message.EventType, attempt, message.CorrelationId, message.CausationId));
+                    using IDisposable scope = _contextAccessor.Push(new OutboxMessageContext(
+                        message.Id,
+                        message.EventType,
+                        attempt,
+                        message.CorrelationId,
+                        message.CausationId,
+                        message.TraceParent,
+                        message.TraceState));
                     await _dispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
                     DateTimeOffset completedAt = _timeProvider.GetUtcNow();
                     await _storage.MarkProcessedAsync(message.Id, lockId, attempt, completedAt, cancellationToken).ConfigureAwait(false);
@@ -111,7 +116,6 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
                 }
                 catch (OutboxLeaseLostException exception)
                 {
-                    // A different worker may now own the message. Do not write failure state using a stale lease.
                     OutboxTelemetryDiagnostics.CompleteFailure(activity, exception);
                 }
                 catch (Exception exception)
@@ -120,7 +124,6 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
                     string errorType = OutboxTelemetryDiagnostics.NormalizeType(exception.GetType());
                     string safeError = CreateSafeError(errorType, _options.MaximumStoredErrorLength);
                     bool canRetry = _failureDetector.IsTransient(exception) && attempt <= _options.MaxRetryAttempts;
-
                     if (canRetry)
                     {
                         using Activity? retryActivity = OutboxTelemetryDiagnostics.Start(
@@ -134,14 +137,8 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
                             TimeSpan delay = OutboxRetrySchedule.GetDelay(message.Id, attempt, _options);
                             DateTimeOffset nextAttempt = failedAt + delay;
                             await _storage.ScheduleRetryAsync(
-                                message.Id,
-                                lockId,
-                                attempt,
-                                nextAttempt,
-                                errorType,
-                                safeError,
-                                failedAt,
-                                cancellationToken).ConfigureAwait(false);
+                                message.Id, lockId, attempt, nextAttempt, errorType, safeError, failedAt, cancellationToken)
+                                .ConfigureAwait(false);
                             retried++;
                             OutboxTelemetryDiagnostics.RecordFailure(message.EventType, attempt, retryScheduled: true);
                             OutboxTelemetryDiagnostics.CompleteSuccess(retryActivity);
@@ -168,13 +165,8 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
                         try
                         {
                             await _storage.DeadLetterAsync(
-                                message.Id,
-                                lockId,
-                                attempt,
-                                errorType,
-                                safeError,
-                                failedAt,
-                                cancellationToken).ConfigureAwait(false);
+                                message.Id, lockId, attempt, errorType, safeError, failedAt, cancellationToken)
+                                .ConfigureAwait(false);
                             deadLettered++;
                             OutboxTelemetryDiagnostics.RecordFailure(message.EventType, attempt, retryScheduled: false);
                             OutboxTelemetryDiagnostics.CompleteSuccess(deadLetterActivity);
@@ -190,7 +182,6 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
                             throw;
                         }
                     }
-
                     OutboxTelemetryDiagnostics.CompleteFailure(activity, exception);
                 }
             }
@@ -241,9 +232,7 @@ internal sealed class OutboxProcessor : IOutboxProcessor, IOutboxReplayService, 
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (_options.RetentionPeriod == TimeSpan.Zero)
-        {
             return new OutboxCleanupResult(0, RetentionDisabled: true);
-        }
 
         await _startupValidator.ValidateAsync(cancellationToken).ConfigureAwait(false);
         DateTimeOffset now = _timeProvider.GetUtcNow();

@@ -42,7 +42,7 @@ def write_package(path: Path, package_id: str, symbol: bool = False, include_xml
 class ConsumerCompatibilityVerifierTests(unittest.TestCase):
     def test_real_policy_loads(self) -> None:
         policy = MODULE.load_policy(REAL_ROOT)
-        self.assertEqual(8, len(policy["consumers"]))
+        self.assertEqual(11, len(policy["consumers"]))
         aot_safe = next(item for item in policy["consumers"] if item["name"] == "DependencyInjection.AotSafe.Console")
         self.assertEqual(["TCJ.Core", "TCJ.DependencyInjection"], aot_safe["packages"])
         self.assertEqual(["ubuntu-latest", "windows-latest", "macos-latest"], policy["requiredOperatingSystems"])

@@ -1,0 +1,171 @@
+name: Messaging contracts
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 5 * * 4"
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/TCJ.Messaging/**"
+      - "src/TCJ.Core/Inbox/**"
+      - "src/TCJ.Core/Outbox/**"
+      - "tests/TCJ.Messaging.Tests/**"
+      - "tests/TCJ.Messaging.ConformanceTests/**"
+      - "compatibility/Consumers/MessagingPublisher.Console/**"
+      - "compatibility/Consumers/MessagingConsumer.Worker/**"
+      - "compatibility/Consumers/MessagingInboxOutbox.Worker/**"
+      - "eng/messaging-*.json"
+      - "eng/verify-messaging.py"
+      - "docs/messaging*.md"
+      - ".github/workflows/messaging.yml"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release-preflight.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/published-package-smoke.yml"
+      - "TCJ.slnx"
+  pull_request:
+    paths:
+      - "src/TCJ.Messaging/**"
+      - "src/TCJ.Core/Inbox/**"
+      - "src/TCJ.Core/Outbox/**"
+      - "tests/TCJ.Messaging.Tests/**"
+      - "tests/TCJ.Messaging.ConformanceTests/**"
+      - "compatibility/Consumers/MessagingPublisher.Console/**"
+      - "compatibility/Consumers/MessagingConsumer.Worker/**"
+      - "compatibility/Consumers/MessagingInboxOutbox.Worker/**"
+      - "eng/messaging-*.json"
+      - "eng/verify-messaging.py"
+      - "docs/messaging*.md"
+      - ".github/workflows/messaging.yml"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release-preflight.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/published-package-smoke.yml"
+      - "TCJ.slnx"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: messaging-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  contracts:
+    name: Validate messaging contracts and conformance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Validate automation scripts
+        run: |
+          python3 -m py_compile eng/*.py
+          python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
+
+      - name: Validate messaging policy and contract
+        run: python3 eng/verify-messaging.py validate-config
+
+      - name: Restore and audit messaging tests
+        run: |
+          dotnet restore tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj --force-evaluate
+          dotnet restore tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj --force-evaluate
+
+      - name: Build messaging contracts
+        run: |
+          dotnet build tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj -c Release --no-restore
+          dotnet build tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj -c Release --no-restore
+
+      - name: Run messaging abstraction, bridge, backpressure, shutdown, telemetry and health tests
+        run: >
+          dotnet test tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj
+          -c Release --no-build
+          --logger "trx;LogFileName=messaging-contracts.trx"
+          --results-directory TestResults/Messaging/contracts
+
+      - name: Run adapter conformance suite
+        run: >
+          dotnet test tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj
+          -c Release --no-build
+          --logger "trx;LogFileName=messaging-conformance.trx"
+          --results-directory TestResults/Messaging/conformance
+
+      - name: Pack package-only messaging consumer inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          packages="$GITHUB_WORKSPACE/artifacts/messaging/packages"
+          mkdir -p "$packages"
+          dotnet pack src/TCJ.Core/TCJ.Core.csproj -c Release -p:Version="$version" -p:PackageOutputPath="$packages"
+          dotnet pack src/TCJ.Messaging/TCJ.Messaging.csproj -c Release -p:Version="$version" -p:PackageOutputPath="$packages"
+          cat > artifacts/messaging/NuGet.Config <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="tcj-messaging-local" value="$packages" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+            </packageSources>
+            <packageSourceMapping>
+              <packageSource key="tcj-messaging-local"><package pattern="TCJ.*" /></packageSource>
+              <packageSource key="nuget.org"><package pattern="*" /></packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
+          echo "TCJ_MESSAGING_CONSUMER_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Run clean package-only messaging consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          for project in \
+            compatibility/Consumers/MessagingPublisher.Console/MessagingPublisher.Console.csproj \
+            compatibility/Consumers/MessagingConsumer.Worker/MessagingConsumer.Worker.csproj \
+            compatibility/Consumers/MessagingInboxOutbox.Worker/MessagingInboxOutbox.Worker.csproj; do
+            dotnet restore "$project" --configfile artifacts/messaging/NuGet.Config --force-evaluate \
+              -p:TCJCompatibilityVersion="$TCJ_MESSAGING_CONSUMER_VERSION"
+            dotnet build "$project" -c Release --no-restore \
+              -p:TCJCompatibilityVersion="$TCJ_MESSAGING_CONSUMER_VERSION" -p:TreatWarningsAsErrors=true
+            dotnet run --project "$project" -c Release --no-build --no-restore \
+              -p:TCJCompatibilityVersion="$TCJ_MESSAGING_CONSUMER_VERSION"
+          done
+
+      - name: Verify messaging evidence and sensitive-data policy
+        run: >
+          python3 eng/verify-messaging.py verify
+          --results TestResults/Messaging
+          --output artifacts/messaging
+
+      - name: Publish messaging summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/messaging/MESSAGING_SUMMARY.md ]]; then
+            cat artifacts/messaging/MESSAGING_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload messaging test results and sanitized diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: messaging-${{ github.run_id }}
+          path: |
+            TestResults/Messaging/**
+            artifacts/messaging/**
+          if-no-files-found: warn
+          retention-days: 30

@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\src\TCJ.DependencyInjection\TCJ.DependencyInjection.csproj" />
     <ProjectReference Include="..\..\src\TCJ.EntityFrameworkCore\TCJ.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\TCJ.EntityFrameworkCore.SqlServer\TCJ.EntityFrameworkCore.SqlServer.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging\TCJ.Messaging.csproj" />
   </ItemGroup>
 
   <ItemGroup>

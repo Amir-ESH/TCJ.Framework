@@ -22,6 +22,9 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [Resilience](resilience.md)
 - [Health checks and startup diagnostics](health-checks.md)
 - [Transactional outbox](outbox.md)
+- [Transactional Inbox](inbox.md)
+- [Transport-neutral messaging](messaging.md)
+- [Messaging adapter authoring](messaging-adapter-authoring.md)
 - [Observability](observability.md)
 - [Strong typed IDs and Value Objects](guides/strong-types.md)
 
@@ -57,6 +60,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [`TCJ.EntityFrameworkCore`](packages/tcj-entityframeworkcore.md)
 - [`TCJ.EntityFrameworkCore.SqlServer`](packages/tcj-entityframeworkcore-sqlserver.md)
 - [`TCJ.AspNetCore`](packages/tcj-aspnetcore.md)
+- [`TCJ.Messaging`](packages/tcj-messaging.md)
 - [`TCJ.Generators`](packages/TCJ.Generators.md) — analyzer-only compile-time tooling
 
 ## Migrations and release notes
@@ -75,6 +79,8 @@ These documents describe the public TCJ Framework contract and the repository's 
 - `0.1.0-preview.4` is the latest published NuGet preview; the repository is developing `0.1.0-preview.5`.
 - Public APIs may change before `1.0.0`; pin exact preview versions in production-like environments.
 - Domain-event dispatch is explicit by default. When the transactional outbox is enabled, `SaveChanges` persists pending events transactionally and a separate processor dispatches committed messages later.
+- `TCJ.Messaging` is opt-in and transport-neutral. Its in-memory adapter is non-durable and intended for tests/local development, not production broker durability.
+- Broker delivery remains at-least-once; neither the Inbox nor the messaging abstraction claims global exactly-once delivery.
 - Soft deletion is explicit through `ISoftDeleteRepository`; `Remove` performs physical deletion.
 - The sample uses `EnsureCreatedAsync` for local demonstration and is not a production migration strategy.
 
@@ -85,5 +91,3 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [Validated consumer examples](examples.md)
 
 The generated `artifacts/documentation/api/` and `artifacts/documentation/site/` directories are workflow outputs and must not be committed.
-
-- [Transactional Inbox](inbox.md) — consumer-scoped idempotent inbound message processing, retries, replay, cleanup, and Inbox/Outbox transaction semantics.

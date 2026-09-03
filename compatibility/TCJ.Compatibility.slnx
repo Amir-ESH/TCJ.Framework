@@ -8,5 +8,8 @@
     <Project Path="Consumers/AspNetCore.MinimalApi/AspNetCore.MinimalApi.csproj" />
     <Project Path="Consumers/FullStack.MinimalApi/FullStack.MinimalApi.csproj" />
     <Project Path="Consumers/Outbox.Console/Outbox.Console.csproj" />
+    <Project Path="Consumers/MessagingPublisher.Console/MessagingPublisher.Console.csproj" />
+    <Project Path="Consumers/MessagingConsumer.Worker/MessagingConsumer.Worker.csproj" />
+    <Project Path="Consumers/MessagingInboxOutbox.Worker/MessagingInboxOutbox.Worker.csproj" />
   </Folder>
 </Solution>

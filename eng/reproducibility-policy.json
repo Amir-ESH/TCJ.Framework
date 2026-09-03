@@ -5,7 +5,8 @@
     "TCJ.DependencyInjection",
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
-    "TCJ.AspNetCore"
+    "TCJ.AspNetCore",
+    "TCJ.Messaging"
   ],
   "comparePackageContents": true,
   "compareSymbolPackageContents": true,

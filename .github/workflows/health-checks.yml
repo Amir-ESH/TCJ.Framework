@@ -13,12 +13,16 @@ on:
       - "src/TCJ.EntityFrameworkCore/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.AspNetCore/**"
+      - "src/TCJ.Messaging/**"
       - "tests/TCJ.HealthChecks.Tests/**"
       - "tests/TCJ.Inbox.Tests/**"
+      - "tests/TCJ.Messaging.Tests/**"
       - "eng/health-check-*.json"
       - "eng/verify-health-checks.py"
       - "eng/inbox-*.json"
       - "eng/verify-inbox.py"
+      - "eng/messaging-*.json"
+      - "eng/verify-messaging.py"
       - ".github/workflows/health-checks.yml"
       - "Directory.Packages.props"
       - "TCJ.slnx"
@@ -52,10 +56,16 @@ jobs:
           python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
       - name: Validate health-check policy
         run: python3 eng/verify-health-checks.py validate-config
+      - name: Validate messaging policy and contract
+        run: python3 eng/verify-messaging.py validate-config
       - name: Restore and audit dependencies
         run: dotnet restore tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj --force-evaluate
       - name: Build health-check tests
         run: dotnet build tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj -c Release --no-restore
+      - name: Restore and build messaging health and startup tests
+        run: |
+          dotnet restore tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj --force-evaluate
+          dotnet build tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj -c Release --no-restore
       - name: Run in-process liveness and ASP.NET Core endpoint tests
         run: >
           dotnet test tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj
@@ -63,6 +73,13 @@ jobs:
           --filter "Category!=SqlServer"
           --logger "trx;LogFileName=health-checks-fast.trx"
           --results-directory TestResults/HealthChecks/fast
+      - name: Run messaging transport readiness and startup diagnostics
+        run: >
+          dotnet test tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj
+          -c Release --no-build
+          --filter "FullyQualifiedName~HealthAndStartupTests"
+          --logger "trx;LogFileName=messaging-health.trx"
+          --results-directory TestResults/Messaging/HealthCrossGate
       - name: Run cancellation, timeout, concurrency, caching, and sensitive-data validation
         run: >
           python3 eng/verify-health-checks.py verify
@@ -84,6 +101,7 @@ jobs:
           name: health-checks-fast-${{ github.run_id }}
           path: |
             TestResults/HealthChecks/**
+            TestResults/Messaging/HealthCrossGate/**
             artifacts/health-checks/**
           if-no-files-found: warn
           retention-days: 30

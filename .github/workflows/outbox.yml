@@ -12,13 +12,18 @@ on:
       - "src/TCJ.EntityFrameworkCore/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.AspNetCore/**"
+      - "src/TCJ.Messaging/**"
       - "tests/TCJ.Outbox.Tests/**"
       - "tests/TCJ.Inbox.Tests/**"
+      - "tests/TCJ.Messaging.Tests/**"
       - "eng/outbox-*.json"
       - "eng/verify-outbox.py"
       - "eng/inbox-*.json"
       - "eng/verify-inbox.py"
+      - "eng/messaging-*.json"
+      - "eng/verify-messaging.py"
       - "docs/outbox.md"
+      - "docs/messaging.md"
       - ".github/workflows/outbox.yml"
       - ".github/workflows/ci.yml"
       - ".github/workflows/release-preflight.yml"
@@ -55,18 +60,22 @@ jobs:
           python3 -m unittest discover --start-directory eng/tests --pattern "test_*.py"
       - name: Validate outbox policy and contract
         run: python3 eng/verify-outbox.py validate-config
-
       - name: Validate Inbox policy and contract
         run: python3 eng/verify-inbox.py validate-config
+      - name: Validate messaging policy and contract
+        run: python3 eng/verify-messaging.py validate-config
       - name: Restore and audit dependencies
         run: dotnet restore tests/TCJ.Outbox.Tests/TCJ.Outbox.Tests.csproj --force-evaluate
       - name: Build outbox tests
         run: dotnet build tests/TCJ.Outbox.Tests/TCJ.Outbox.Tests.csproj -c Release --no-restore
-
       - name: Restore and build Inbox-Outbox integration tests
         run: |
           dotnet restore tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj --force-evaluate
           dotnet build tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj -c Release --no-restore
+      - name: Restore and build messaging Outbox bridge tests
+        run: |
+          dotnet restore tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj --force-evaluate
+          dotnet build tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj -c Release --no-restore
       - name: Start SQL Server Testcontainer and run transactional persistence tests
         run: >
           dotnet test tests/TCJ.Outbox.Tests/TCJ.Outbox.Tests.csproj
@@ -80,7 +89,13 @@ jobs:
           --filter "FullyQualifiedName~First_inline_delivery|FullyQualifiedName~Duplicate_after_success|FullyQualifiedName~Failure_after_save_changes|FullyQualifiedName~Correlation_and_inbound_identity"
           --logger "trx;LogFileName=inbox-outbox-crossgate.trx"
           --results-directory TestResults/Inbox/OutboxCrossGate
-
+      - name: Run transport-neutral Outbox publishing bridge scenarios
+        run: >
+          dotnet test tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj
+          -c Release --no-build
+          --filter "FullyQualifiedName~OutboxBridgeTests"
+          --logger "trx;LogFileName=messaging-outbox-bridge.trx"
+          --results-directory TestResults/Messaging/OutboxCrossGate
       - name: Run retry, dead-letter, crash recovery, lease expiration, cleanup, telemetry, health and sensitive-data verification
         run: >
           python3 eng/verify-outbox.py verify
@@ -101,6 +116,7 @@ jobs:
           path: |
             TestResults/Outbox/**
             TestResults/Inbox/OutboxCrossGate/**
+            TestResults/Messaging/OutboxCrossGate/**
             artifacts/outbox/**
           if-no-files-found: warn
           retention-days: 30

@@ -50,7 +50,7 @@ class AotVerifierTests(unittest.TestCase):
         self.assertEqual(first_bytes, second_bytes)
         self.assertEqual("passed", first["status"])
         self.assertEqual([], first["findings"])
-        self.assertEqual(5, len(first["packages"]))
+        self.assertEqual(6, len(first["packages"]))
         self.assertEqual(
             sorted(package["packageId"] for package in first["packages"]),
             [package["packageId"] for package in first["packages"]],
@@ -144,7 +144,7 @@ class AotVerifierTests(unittest.TestCase):
 
         self.assertFalse(success)
         findings = [item for item in payload["findings"] if item["rule"] == "AOT004"]
-        self.assertEqual(5, len(findings))
+        self.assertEqual(6, len(findings))
         self.assertTrue(all(item["project"] == "Directory.Build.props" for item in findings))
         self.assertTrue(all(item["property"] == "NoWarn" for item in findings))
 

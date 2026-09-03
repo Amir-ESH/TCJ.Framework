@@ -60,7 +60,12 @@ internal static class BenchmarkCatalog
         Outbox("OutboxBenchmarks", "SaveChangesWithOneEvent"),
         Outbox("OutboxBenchmarks", "SaveChangesWithFiveEvents"),
         Outbox("OutboxBenchmarks", "SerializeOneEvent"),
-        Outbox("OutboxBenchmarks", "DeserializeOneEvent")
+        Outbox("OutboxBenchmarks", "DeserializeOneEvent"),
+
+        Messaging("MessagingBenchmarks", "CreateEnvelope", baseline: true),
+        Messaging("MessagingBenchmarks", "Serialize"),
+        Messaging("MessagingBenchmarks", "Deserialize"),
+        Messaging("MessagingBenchmarks", "FilterHeaders")
     ];
 
     internal static void WriteManifest()
@@ -126,6 +131,12 @@ internal static class BenchmarkCatalog
         string method,
         bool baseline = false)
         => new(type, method, ["TCJ.Core", "TCJ.EntityFrameworkCore", "Outbox"], null, baseline);
+
+    private static BenchmarkDefinition Messaging(
+        string type,
+        string method,
+        bool baseline = false)
+        => new(type, method, ["TCJ.Messaging", "Messaging"], null, baseline);
 
     private sealed record BenchmarkDefinition(
         string Type,

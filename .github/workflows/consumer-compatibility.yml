@@ -118,7 +118,8 @@ jobs:
             src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj \
             src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
-            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj; do
+            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
+            src/TCJ.Messaging/TCJ.Messaging.csproj; do
             dotnet build "$project" \
               --configuration Release \
               --no-restore \
@@ -137,7 +138,8 @@ jobs:
             src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj \
             src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
-            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj; do
+            src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
+            src/TCJ.Messaging/TCJ.Messaging.csproj; do
             dotnet pack "$project" \
               --configuration Release \
               --no-build \

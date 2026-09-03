@@ -3,95 +3,47 @@
   "documentation": "docs/architecture-tests.md",
   "assemblies": {
     "TCJ.Core": [],
-    "TCJ.DependencyInjection": [
-      "TCJ.Core"
-    ],
-    "TCJ.EntityFrameworkCore": [
-      "TCJ.Core",
-      "TCJ.DependencyInjection"
-    ],
-    "TCJ.EntityFrameworkCore.SqlServer": [
-      "TCJ.Core",
-      "TCJ.DependencyInjection",
-      "TCJ.EntityFrameworkCore"
-    ],
-    "TCJ.AspNetCore": [
-      "TCJ.Core",
-      "TCJ.DependencyInjection"
-    ]
+    "TCJ.DependencyInjection": ["TCJ.Core"],
+    "TCJ.EntityFrameworkCore": ["TCJ.Core", "TCJ.DependencyInjection"],
+    "TCJ.EntityFrameworkCore.SqlServer": ["TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore"],
+    "TCJ.AspNetCore": ["TCJ.Core", "TCJ.DependencyInjection"],
+    "TCJ.Messaging": ["TCJ.Core"]
   },
   "projectPaths": {
     "TCJ.Core": "src/TCJ.Core/TCJ.Core.csproj",
     "TCJ.DependencyInjection": "src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj",
     "TCJ.EntityFrameworkCore": "src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
     "TCJ.EntityFrameworkCore.SqlServer": "src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
-    "TCJ.AspNetCore": "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj"
+    "TCJ.AspNetCore": "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj",
+    "TCJ.Messaging": "src/TCJ.Messaging/TCJ.Messaging.csproj"
   },
   "namespaceRoots": {
     "TCJ.Core": "TCJ.Core",
     "TCJ.DependencyInjection": "TCJ.DependencyInjection",
     "TCJ.EntityFrameworkCore": "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer": "TCJ.EntityFrameworkCore.SqlServer",
-    "TCJ.AspNetCore": "TCJ.AspNetCore"
+    "TCJ.AspNetCore": "TCJ.AspNetCore",
+    "TCJ.Messaging": "TCJ.Messaging"
   },
   "forbiddenDependencyPrefixes": {
-    "TCJ.Core": [
-      "Microsoft.AspNetCore",
-      "Microsoft.EntityFrameworkCore",
-      "Microsoft.Data.SqlClient",
-      "System.Data.SqlClient"
-    ],
-    "TCJ.DependencyInjection": [
-      "Microsoft.AspNetCore",
-      "Microsoft.EntityFrameworkCore",
-      "Microsoft.Data.SqlClient",
-      "System.Data.SqlClient"
-    ],
-    "TCJ.EntityFrameworkCore": [
-      "Microsoft.EntityFrameworkCore.SqlServer",
-      "Microsoft.Data.SqlClient",
-      "System.Data.SqlClient",
-      "Microsoft.AspNetCore"
-    ],
-    "TCJ.EntityFrameworkCore.SqlServer": [
-      "Microsoft.AspNetCore"
-    ],
-    "TCJ.AspNetCore": [
-      "Microsoft.EntityFrameworkCore",
-      "Microsoft.Data.SqlClient",
-      "System.Data.SqlClient"
-    ]
+    "TCJ.Core": ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
+    "TCJ.DependencyInjection": ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
+    "TCJ.EntityFrameworkCore": ["Microsoft.EntityFrameworkCore.SqlServer", "Microsoft.Data.SqlClient", "System.Data.SqlClient", "Microsoft.AspNetCore", "RabbitMQ", "Azure.Messaging", "Confluent", "Amazon.SQS", "NATS", "MassTransit", "Rebus", "Wolverine", "DotNetCore.CAP"],
+    "TCJ.EntityFrameworkCore.SqlServer": ["Microsoft.AspNetCore", "RabbitMQ", "Azure.Messaging", "Confluent", "Amazon.SQS", "NATS", "MassTransit", "Rebus", "Wolverine", "DotNetCore.CAP"],
+    "TCJ.AspNetCore": ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
+    "TCJ.Messaging": ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient", "Microsoft.AspNetCore", "RabbitMQ", "Azure.Messaging.ServiceBus", "Confluent.Kafka", "Amazon.SQS", "NATS", "MassTransit", "Rebus", "Wolverine", "DotNetCore.CAP"]
   },
   "forbiddenPublicApiTypePrefixes": {
-    "TCJ.Core": [
-      "Microsoft.AspNetCore",
-      "Microsoft.EntityFrameworkCore",
-      "Microsoft.Data.SqlClient",
-      "System.Data.SqlClient"
-    ],
-    "TCJ.DependencyInjection": [
-      "Microsoft.AspNetCore",
-      "Microsoft.EntityFrameworkCore",
-      "Microsoft.Data.SqlClient",
-      "System.Data.SqlClient"
-    ],
-    "TCJ.EntityFrameworkCore": [
-      "Microsoft.EntityFrameworkCore.SqlServer",
-      "Microsoft.Data.SqlClient",
-      "System.Data.SqlClient",
-      "Microsoft.AspNetCore"
-    ],
-    "TCJ.EntityFrameworkCore.SqlServer": [
-      "Microsoft.AspNetCore"
-    ],
-    "TCJ.AspNetCore": [
-      "Microsoft.EntityFrameworkCore",
-      "Microsoft.Data.SqlClient",
-      "System.Data.SqlClient"
-    ]
+    "TCJ.Core": ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
+    "TCJ.DependencyInjection": ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
+    "TCJ.EntityFrameworkCore": ["Microsoft.EntityFrameworkCore.SqlServer", "Microsoft.Data.SqlClient", "System.Data.SqlClient", "Microsoft.AspNetCore"],
+    "TCJ.EntityFrameworkCore.SqlServer": ["Microsoft.AspNetCore"],
+    "TCJ.AspNetCore": ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
+    "TCJ.Messaging": ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient", "Microsoft.AspNetCore", "RabbitMQ", "Azure.Messaging", "Confluent", "Amazon.SQS", "NATS", "MassTransit", "Rebus", "Wolverine", "DotNetCore.CAP"]
   },
   "approvedExtensionContainers": [
-    "TCJ.Core.Guards.Check"
+    "TCJ.Core.Guards.Check",
+    "TCJ.Messaging.Extensions.MessagingServiceCollectionExtensions"
   ],
   "approvedPublicOptionTypes": [
     "TCJ.AspNetCore.Options.TcjAspNetCoreOptions",
@@ -105,6 +57,9 @@
     "TCJ.Core.Resilience.TcjTimeoutOptions",
     "TCJ.DependencyInjection.DomainEvents.TcjDomainEventResilienceOptions",
     "TCJ.DependencyInjection.Registration.TcjDependencyInjectionOptions",
-    "TCJ.EntityFrameworkCore.SqlServer.Options.TcjSqlServerOptions"
+    "TCJ.EntityFrameworkCore.SqlServer.Options.TcjSqlServerOptions",
+    "TCJ.Messaging.Configuration.TcjMessagingOptions",
+    "TCJ.Messaging.Receiving.DeadLetterOptions",
+    "TCJ.Messaging.Receiving.RetrySettlementOptions"
   ]
 }

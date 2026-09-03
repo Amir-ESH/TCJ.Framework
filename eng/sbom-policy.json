@@ -21,6 +21,9 @@
       },
       {
         "id": "TCJ.AspNetCore"
+      },
+      {
+        "id": "TCJ.Messaging"
       }
     ],
     "tooling": [

@@ -17,6 +17,7 @@
     <Project Path="src/TCJ.DependencyInjection/TCJ.DependencyInjection.csproj" />
     <Project Path="src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj" />
     <Project Path="src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj" />
+    <Project Path="src/TCJ.Messaging/TCJ.Messaging.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TCJ.Analyzers.Tests/TCJ.Analyzers.Tests.csproj" />
@@ -32,6 +33,8 @@
     <Project Path="tests/TCJ.EntityFrameworkCore.Tests/TCJ.EntityFrameworkCore.Tests.csproj" />
     <Project Path="tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj" />
     <Project Path="tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj" />
+    <Project Path="tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj" />
+    <Project Path="tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj" />
     <Project Path="tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj" />
     <Project Path="tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj" />
     <Project Path="tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj" />

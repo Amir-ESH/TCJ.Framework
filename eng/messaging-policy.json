@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "packageId": "TCJ.Messaging",
+  "project": "src/TCJ.Messaging/TCJ.Messaging.csproj",
+  "testProject": "tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj",
+  "targetFramework": "net10.0",
+  "minimumContractTestCount": 25,
+  "maximumMessageBytes": 1048576,
+  "maximumHeaderBytes": 16384,
+  "maximumHeaderCount": 64,
+  "maximumConcurrentMessages": 8,
+  "maximumBufferedMessages": 32,
+  "publishTimeoutSeconds": 30,
+  "shutdownTimeoutSeconds": 30,
+  "requiredTcjDependencies": [
+    "TCJ.Core"
+  ],
+  "forbiddenPackagePrefixes": [
+    "RabbitMQ.Client",
+    "Azure.Messaging.ServiceBus",
+    "Confluent.Kafka",
+    "AWSSDK.SQS",
+    "NATS.Client",
+    "MassTransit",
+    "Rebus",
+    "Wolverine",
+    "DotNetCore.CAP"
+  ],
+  "requiredWorkflows": [
+    ".github/workflows/messaging.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release-preflight.yml",
+    ".github/workflows/release.yml",
+    ".github/workflows/published-package-smoke.yml"
+  ],
+  "requiredConsumers": [
+    "compatibility/Consumers/MessagingPublisher.Console/MessagingPublisher.Console.csproj",
+    "compatibility/Consumers/MessagingConsumer.Worker/MessagingConsumer.Worker.csproj",
+    "compatibility/Consumers/MessagingInboxOutbox.Worker/MessagingInboxOutbox.Worker.csproj"
+  ],
+  "generatedOutputRoots": [
+    "artifacts/messaging",
+    "TestResults/Messaging"
+  ],
+  "sensitiveMarkers": [
+    "authorization",
+    "proxy-authorization",
+    "cookie",
+    "set-cookie",
+    "api-key",
+    "x-api-key",
+    "access-token",
+    "refresh-token",
+    "password",
+    "connection-string",
+    "secret"
+  ],
+  "requireOutboxOptIn": true,
+  "requireInboxCommitBeforeSettlement": true,
+  "requireBoundedBackpressure": true,
+  "requireGracefulShutdown": true,
+  "requireInMemoryAdapter": true,
+  "requireConformanceKit": true,
+  "requirePackageConsumers": true,
+  "requirePublishedPackageSmoke": true,
+  "conformanceProject": "tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj",
+  "requiredCrossCuttingFiles": [
+    "benchmarks/TCJ.Benchmarks/Benchmarks/MessagingBenchmarks.cs",
+    "tests/TCJ.Concurrency.Tests/Tests/MessagingStressTests.cs",
+    "tests/TCJ.Resilience.Tests/MessagingResilienceTests.cs"
+  ]
+}

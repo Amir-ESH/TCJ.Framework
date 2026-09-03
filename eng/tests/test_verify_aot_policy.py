@@ -31,7 +31,7 @@ class AotPolicyVerifierTests(unittest.TestCase):
 
     def test_valid_policy_parses_and_validates(self) -> None:
         policy = MODULE.validate_configuration(self.root, self.policy_path)
-        self.assertEqual(5, len(policy.packages))
+        self.assertEqual(6, len(policy.packages))
         self.assertEqual(set(MODULE.VALID_TIERS), set(policy.support_tiers))
 
     def test_invalid_support_tier_fails(self) -> None:
@@ -113,6 +113,7 @@ class AotPolicyVerifierTests(unittest.TestCase):
             "TCJ.EntityFrameworkCore",
             "TCJ.EntityFrameworkCore.SqlServer",
             "TCJ.AspNetCore",
+            "TCJ.Messaging",
         )
         (self.root / "eng/release-manifest.json").write_text(
             json.dumps({"packages": list(package_ids)}),

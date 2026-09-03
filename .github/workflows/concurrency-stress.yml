@@ -11,14 +11,19 @@ on:
       - "src/TCJ.EntityFrameworkCore/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.AspNetCore/**"
+      - "src/TCJ.Messaging/**"
       - "tests/TCJ.Concurrency.Tests/**"
       - "tests/TCJ.Resilience.Tests/**"
       - "tests/TCJ.Inbox.Tests/**"
+      - "tests/TCJ.Messaging.Tests/**"
+      - "tests/TCJ.Messaging.ConformanceTests/**"
       - "eng/resilience-policy.json"
       - "eng/resilience-contract.json"
       - "eng/verify-resilience.py"
       - "eng/inbox-*.json"
       - "eng/verify-inbox.py"
+      - "eng/messaging-*.json"
+      - "eng/verify-messaging.py"
       - "eng/concurrency-policy.json"
       - "eng/verify-concurrency.py"
       - "Directory.Build.props"
@@ -130,6 +135,9 @@ jobs:
 
       - name: Validate resilience policy for concurrent policies
         run: python3 eng/verify-resilience.py validate-config
+
+      - name: Validate transport-neutral messaging policy
+        run: python3 eng/verify-messaging.py validate-config
 
       - name: Restore and audit dependencies
         run: dotnet restore tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj --force-evaluate
@@ -325,7 +333,6 @@ jobs:
         run: python3 eng/verify-concurrency.py validate-config
       - name: Validate Inbox policy and contract
         run: python3 eng/verify-inbox.py validate-config
-
 
       - name: Restore and audit dependencies
         run: dotnet restore tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj --force-evaluate

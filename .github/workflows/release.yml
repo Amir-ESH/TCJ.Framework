@@ -58,13 +58,16 @@ jobs:
     name: Transactional outbox contract gate
     uses: ./.github/workflows/outbox.yml
 
-
   inbox:
     name: Transactional Inbox contract gate
     uses: ./.github/workflows/inbox.yml
 
+  messaging:
+    name: Transport-neutral messaging contract gate
+    uses: ./.github/workflows/messaging.yml
+
   build-and-pack:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -146,6 +149,9 @@ jobs:
 
       - name: Validate transactional-Inbox configuration
         run: python3 eng/verify-inbox.py validate-config
+
+      - name: Validate transport-neutral messaging configuration
+        run: python3 eng/verify-messaging.py validate-config
 
       - name: Verify Native AOT policy and release wiring
         run: python3 eng/verify-aot.py verify
@@ -243,6 +249,21 @@ jobs:
           test -d artifacts/inbox-release
           find artifacts/inbox-release -type f -name 'INBOX_SUMMARY.md' -print -quit | grep -q .
           zip -qr "artifacts/release/TCJ.Framework.Inbox.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/inbox-release
+
+      - name: Download exact tagged-source Messaging evidence
+        uses: actions/download-artifact@v8
+        with:
+          name: messaging-${{ github.run_id }}
+          path: artifacts/messaging-release
+
+      - name: Preserve transport-neutral Messaging evidence with release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/release
+          test -d artifacts/messaging-release
+          find artifacts/messaging-release -type f -name 'MESSAGING_SUMMARY.md' -print -quit | grep -q .
+          zip -qr "artifacts/release/TCJ.Framework.Messaging.Evidence.${{ steps.release-version.outputs.value }}.zip" artifacts/messaging-release
 
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx
@@ -810,7 +831,7 @@ jobs:
           --sbom "artifacts/sbom/TCJ.Framework.${{ steps.release-version.outputs.value }}.cdx.json"
           --checksums artifacts/release/SHA256SUMS
 
-      - name: Attest release packages, SBOM, and checksums
+      - name: Attest release packages, SBOM, checksums, and quality evidence
         uses: actions/attest@v4
         with:
           subject-path: |
@@ -826,6 +847,7 @@ jobs:
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
             artifacts/release/TCJ.Framework.Inbox.Evidence.*.zip
+            artifacts/release/TCJ.Framework.Messaging.Evidence.*.zip
             artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
             artifacts/release/native-aot-result.json
             artifacts/release/aot-runtime-verification.json
@@ -887,6 +909,7 @@ jobs:
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
             artifacts/release/TCJ.Framework.Inbox.Evidence.*.zip
+            artifacts/release/TCJ.Framework.Messaging.Evidence.*.zip
             artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
             artifacts/release/native-aot-result.json
             artifacts/release/aot-runtime-verification.json
@@ -976,6 +999,9 @@ jobs:
       - name: Verify downloaded Native AOT policy
         run: python3 eng/verify-aot.py verify
 
+      - name: Verify downloaded Messaging policy wiring
+        run: python3 eng/verify-messaging.py validate-config
+
       - name: Verify downloaded Native AOT release evidence
         run: >
           python3 eng/verify-aot.py verify-result
@@ -983,6 +1009,12 @@ jobs:
           --result artifacts/release/native-aot-result.json
           --packages artifacts/packages
           --output artifacts/release/aot-publish-verification.json
+
+      - name: Verify downloaded Messaging release evidence exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "artifacts/release/TCJ.Framework.Messaging.Evidence.${{ needs.build-and-pack.outputs.version }}.zip"
 
       - name: Verify downloaded release SBOM
         run: >
@@ -1070,6 +1102,7 @@ jobs:
             artifacts/release/TCJ.Framework.Concurrency.Evidence.*.zip
             artifacts/release/TCJ.Framework.HealthChecks.Evidence.*.zip
             artifacts/release/TCJ.Framework.Inbox.Evidence.*.zip
+            artifacts/release/TCJ.Framework.Messaging.Evidence.*.zip
             artifacts/release/TCJ.Framework.NativeAot.Evidence.*.zip
             artifacts/release/native-aot-result.json
             artifacts/release/aot-runtime-verification.json
