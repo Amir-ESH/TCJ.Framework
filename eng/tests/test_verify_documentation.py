@@ -189,6 +189,28 @@ class DocumentationVerifierTests(unittest.TestCase):
                 with self.assertRaisesRegex(MODULE.DocumentationError, "Duplicate XML documentation ID"):
                     MODULE.verify_xml_docs(self.policy(), None)
 
+    def test_duplicate_documentation_id_across_assemblies_is_allowed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            first_xml = Path(directory) / "First.xml"
+            second_xml = Path(directory) / "Second.xml"
+            member = (
+                '<doc><members><member name="T:System.Text.RegularExpressions.Generated.Utilities"/>'
+                '</members></doc>'
+            )
+            first_xml.write_text(member, encoding="utf-8")
+            second_xml.write_text(member, encoding="utf-8")
+            policy = self.policy()
+            policy["requiredPackages"] = ["First", "Second"]
+            with mock.patch.object(
+                MODULE,
+                "find_xml_docs",
+                return_value={"First": first_xml, "Second": second_xml},
+            ):
+                member_count, unresolved = MODULE.verify_xml_docs(policy, None)
+
+        self.assertEqual(2, member_count)
+        self.assertEqual([], unresolved)
+
     def test_broken_internal_link_is_blocking(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
