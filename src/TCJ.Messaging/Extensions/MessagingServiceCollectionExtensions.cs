@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -98,7 +99,7 @@ public static class MessagingServiceCollectionExtensions
     /// <typeparam name="TUpcaster">Upcaster implementation type.</typeparam>
     /// <param name="services">Application service collection.</param>
     /// <returns>The same service collection for chaining.</returns>
-    public static IServiceCollection AddTcjMessageUpcaster<TUpcaster>(this IServiceCollection services) where TUpcaster : class, IMessageUpcaster
+    public static IServiceCollection AddTcjMessageUpcaster<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TUpcaster>(this IServiceCollection services) where TUpcaster : class, IMessageUpcaster
     {
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IMessageUpcaster, TUpcaster>());

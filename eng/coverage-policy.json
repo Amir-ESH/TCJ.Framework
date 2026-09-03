@@ -3,13 +3,14 @@
   "reportPattern": "TestResults/**/coverage.cobertura.xml",
   "minimumLineCoverage": 15.0,
   "minimumBranchCoverage": 10.0,
-  "minimumReportCount": 14,
+  "minimumReportCount": 16,
   "expectedPackages": [
     "TCJ.Core",
     "TCJ.DependencyInjection",
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
-    "TCJ.AspNetCore"
+    "TCJ.AspNetCore",
+    "TCJ.Messaging"
   ],
   "excludedTestProjects": [
     "tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj",

@@ -42,7 +42,7 @@ public class MessagingBenchmarks
         _transport = _serializer.Serialize(_typed, _contract);
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public MessageEnvelope<BenchmarkMessage> CreateEnvelope() =>
         new(
             "00000000000000000000000000000001",
