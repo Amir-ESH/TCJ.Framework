@@ -119,6 +119,7 @@
       "name": "MessagingPublisher.Console",
       "project": "compatibility/Consumers/MessagingPublisher.Console/MessagingPublisher.Console.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging"
       ],
       "expectedOutput": "TCJ.Messaging publisher consumer passed"
@@ -127,6 +128,7 @@
       "name": "MessagingConsumer.Worker",
       "project": "compatibility/Consumers/MessagingConsumer.Worker/MessagingConsumer.Worker.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging"
       ],
       "expectedOutput": "TCJ.Messaging consumer worker passed"
@@ -135,6 +137,7 @@
       "name": "MessagingInboxOutbox.Worker",
       "project": "compatibility/Consumers/MessagingInboxOutbox.Worker/MessagingInboxOutbox.Worker.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging"
       ],
       "expectedOutput": "TCJ.Messaging Inbox/Outbox consumer passed"

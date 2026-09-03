@@ -58,6 +58,8 @@
     "TCJ.DependencyInjection.DomainEvents.TcjDomainEventResilienceOptions",
     "TCJ.DependencyInjection.Registration.TcjDependencyInjectionOptions",
     "TCJ.EntityFrameworkCore.SqlServer.Options.TcjSqlServerOptions",
-    "TCJ.Messaging.Configuration.TcjMessagingOptions"
+    "TCJ.Messaging.Configuration.TcjMessagingOptions",
+    "TCJ.Messaging.Receiving.DeadLetterOptions",
+    "TCJ.Messaging.Receiving.RetrySettlementOptions"
   ]
 }
