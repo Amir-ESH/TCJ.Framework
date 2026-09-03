@@ -67,7 +67,7 @@ public class MessagingBenchmarks
     public void GlobalCleanup() => _provider.Dispose();
 }
 
-internal sealed record BenchmarkMessage(string Value, int Number);
+public sealed record BenchmarkMessage(string Value, int Number);
 
 [JsonSerializable(typeof(BenchmarkMessage))]
 internal sealed partial class MessagingBenchmarkJsonContext : JsonSerializerContext;
