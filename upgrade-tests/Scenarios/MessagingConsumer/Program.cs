@@ -1,5 +1,6 @@
 using System.Text.Json;
 using TCJ.Messaging.Envelopes;
+using TCJ.Messaging.RabbitMQ.Configuration;
 
 var sourceHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 {
@@ -20,6 +21,8 @@ var envelope = new MessageEnvelope<UpgradeMessage>(
 
 sourceHeaders["x-upgrade"] = "mutated";
 
+var rabbitMqOptions = new TcjRabbitMqOptions();
+
 var behavior = new
 {
     schemaVersion = 1,
@@ -35,6 +38,9 @@ var behavior = new
         orderingHintPreserved = envelope.OrderingKey == "order-a",
         immutableHeaders = envelope.Headers["x-upgrade"] == "original",
         jsonContentType = envelope.ContentType == "application/json",
+        rabbitMqAdapterLoadsWithoutNetwork = rabbitMqOptions.HostName == "localhost"
+            && rabbitMqOptions.Port == 5672
+            && rabbitMqOptions.MandatoryPublish,
     },
 };
 

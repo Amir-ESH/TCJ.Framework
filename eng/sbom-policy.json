@@ -24,6 +24,9 @@
       },
       {
         "id": "TCJ.Messaging"
+      },
+      {
+        "id": "TCJ.Messaging.RabbitMQ"
       }
     ],
     "tooling": [

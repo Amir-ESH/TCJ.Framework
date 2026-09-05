@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\TestProject.props" />
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>TCJ.Messaging.RabbitMQ.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Testcontainers.RabbitMq" />
+    <PackageReference Include="RabbitMQ.Client" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TCJ.Core\TCJ.Core.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging\TCJ.Messaging.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging.RabbitMQ\TCJ.Messaging.RabbitMQ.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\eng\rabbitmq-policy.json" Link="rabbitmq-policy.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\eng\rabbitmq-contract.json" Link="rabbitmq-contract.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

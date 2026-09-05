@@ -3,11 +3,28 @@
   "documentation": "docs/architecture-tests.md",
   "assemblies": {
     "TCJ.Core": [],
-    "TCJ.DependencyInjection": ["TCJ.Core"],
-    "TCJ.EntityFrameworkCore": ["TCJ.Core", "TCJ.DependencyInjection"],
-    "TCJ.EntityFrameworkCore.SqlServer": ["TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore"],
-    "TCJ.AspNetCore": ["TCJ.Core", "TCJ.DependencyInjection"],
-    "TCJ.Messaging": ["TCJ.Core"]
+    "TCJ.DependencyInjection": [
+      "TCJ.Core"
+    ],
+    "TCJ.EntityFrameworkCore": [
+      "TCJ.Core",
+      "TCJ.DependencyInjection"
+    ],
+    "TCJ.EntityFrameworkCore.SqlServer": [
+      "TCJ.Core",
+      "TCJ.DependencyInjection",
+      "TCJ.EntityFrameworkCore"
+    ],
+    "TCJ.AspNetCore": [
+      "TCJ.Core",
+      "TCJ.DependencyInjection"
+    ],
+    "TCJ.Messaging": [
+      "TCJ.Core"
+    ],
+    "TCJ.Messaging.RabbitMQ": [
+      "TCJ.Messaging"
+    ]
   },
   "projectPaths": {
     "TCJ.Core": "src/TCJ.Core/TCJ.Core.csproj",
@@ -15,7 +32,8 @@
     "TCJ.EntityFrameworkCore": "src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
     "TCJ.EntityFrameworkCore.SqlServer": "src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
     "TCJ.AspNetCore": "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj",
-    "TCJ.Messaging": "src/TCJ.Messaging/TCJ.Messaging.csproj"
+    "TCJ.Messaging": "src/TCJ.Messaging/TCJ.Messaging.csproj",
+    "TCJ.Messaging.RabbitMQ": "src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj"
   },
   "namespaceRoots": {
     "TCJ.Core": "TCJ.Core",
@@ -23,27 +41,144 @@
     "TCJ.EntityFrameworkCore": "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer": "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore": "TCJ.AspNetCore",
-    "TCJ.Messaging": "TCJ.Messaging"
+    "TCJ.Messaging": "TCJ.Messaging",
+    "TCJ.Messaging.RabbitMQ": "TCJ.Messaging.RabbitMQ"
   },
   "forbiddenDependencyPrefixes": {
-    "TCJ.Core": ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
-    "TCJ.DependencyInjection": ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
-    "TCJ.EntityFrameworkCore": ["Microsoft.EntityFrameworkCore.SqlServer", "Microsoft.Data.SqlClient", "System.Data.SqlClient", "Microsoft.AspNetCore", "RabbitMQ", "Azure.Messaging", "Confluent", "Amazon.SQS", "NATS", "MassTransit", "Rebus", "Wolverine", "DotNetCore.CAP"],
-    "TCJ.EntityFrameworkCore.SqlServer": ["Microsoft.AspNetCore", "RabbitMQ", "Azure.Messaging", "Confluent", "Amazon.SQS", "NATS", "MassTransit", "Rebus", "Wolverine", "DotNetCore.CAP"],
-    "TCJ.AspNetCore": ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
-    "TCJ.Messaging": ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient", "Microsoft.AspNetCore", "RabbitMQ", "Azure.Messaging.ServiceBus", "Confluent.Kafka", "Amazon.SQS", "NATS", "MassTransit", "Rebus", "Wolverine", "DotNetCore.CAP"]
+    "TCJ.Core": [
+      "Microsoft.AspNetCore",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "RabbitMQ"
+    ],
+    "TCJ.DependencyInjection": [
+      "Microsoft.AspNetCore",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "RabbitMQ"
+    ],
+    "TCJ.EntityFrameworkCore": [
+      "Microsoft.EntityFrameworkCore.SqlServer",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "Microsoft.AspNetCore",
+      "RabbitMQ",
+      "Azure.Messaging",
+      "Confluent",
+      "Amazon.SQS",
+      "NATS",
+      "MassTransit",
+      "Rebus",
+      "Wolverine",
+      "DotNetCore.CAP"
+    ],
+    "TCJ.EntityFrameworkCore.SqlServer": [
+      "Microsoft.AspNetCore",
+      "RabbitMQ",
+      "Azure.Messaging",
+      "Confluent",
+      "Amazon.SQS",
+      "NATS",
+      "MassTransit",
+      "Rebus",
+      "Wolverine",
+      "DotNetCore.CAP"
+    ],
+    "TCJ.AspNetCore": [
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "RabbitMQ"
+    ],
+    "TCJ.Messaging": [
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "Microsoft.AspNetCore",
+      "RabbitMQ",
+      "Azure.Messaging.ServiceBus",
+      "Confluent.Kafka",
+      "Amazon.SQS",
+      "NATS",
+      "MassTransit",
+      "Rebus",
+      "Wolverine",
+      "DotNetCore.CAP"
+    ],
+    "TCJ.Messaging.RabbitMQ": [
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "Microsoft.AspNetCore",
+      "Azure.Messaging",
+      "Confluent",
+      "Amazon.SQS",
+      "NATS",
+      "MassTransit",
+      "Rebus",
+      "Wolverine",
+      "DotNetCore.CAP"
+    ]
   },
   "forbiddenPublicApiTypePrefixes": {
-    "TCJ.Core": ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
-    "TCJ.DependencyInjection": ["Microsoft.AspNetCore", "Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
-    "TCJ.EntityFrameworkCore": ["Microsoft.EntityFrameworkCore.SqlServer", "Microsoft.Data.SqlClient", "System.Data.SqlClient", "Microsoft.AspNetCore"],
-    "TCJ.EntityFrameworkCore.SqlServer": ["Microsoft.AspNetCore"],
-    "TCJ.AspNetCore": ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient"],
-    "TCJ.Messaging": ["Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient", "System.Data.SqlClient", "Microsoft.AspNetCore", "RabbitMQ", "Azure.Messaging", "Confluent", "Amazon.SQS", "NATS", "MassTransit", "Rebus", "Wolverine", "DotNetCore.CAP"]
+    "TCJ.Core": [
+      "Microsoft.AspNetCore",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "RabbitMQ"
+    ],
+    "TCJ.DependencyInjection": [
+      "Microsoft.AspNetCore",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "RabbitMQ"
+    ],
+    "TCJ.EntityFrameworkCore": [
+      "Microsoft.EntityFrameworkCore.SqlServer",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "Microsoft.AspNetCore"
+    ],
+    "TCJ.EntityFrameworkCore.SqlServer": [
+      "Microsoft.AspNetCore"
+    ],
+    "TCJ.AspNetCore": [
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "RabbitMQ"
+    ],
+    "TCJ.Messaging": [
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "Microsoft.AspNetCore",
+      "RabbitMQ",
+      "Azure.Messaging",
+      "Confluent",
+      "Amazon.SQS",
+      "NATS",
+      "MassTransit",
+      "Rebus",
+      "Wolverine",
+      "DotNetCore.CAP"
+    ],
+    "TCJ.Messaging.RabbitMQ": [
+      "RabbitMQ",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "Microsoft.AspNetCore"
+    ]
   },
   "approvedExtensionContainers": [
     "TCJ.Core.Guards.Check",
-    "TCJ.Messaging.Extensions.MessagingServiceCollectionExtensions"
+    "TCJ.Messaging.Extensions.MessagingServiceCollectionExtensions",
+    "TCJ.Messaging.RabbitMQ.Extensions.RabbitMqServiceCollectionExtensions"
   ],
   "approvedPublicOptionTypes": [
     "TCJ.AspNetCore.Options.TcjAspNetCoreOptions",
@@ -60,6 +195,12 @@
     "TCJ.EntityFrameworkCore.SqlServer.Options.TcjSqlServerOptions",
     "TCJ.Messaging.Configuration.TcjMessagingOptions",
     "TCJ.Messaging.Receiving.DeadLetterOptions",
-    "TCJ.Messaging.Receiving.RetrySettlementOptions"
+    "TCJ.Messaging.Receiving.RetrySettlementOptions",
+    "TCJ.Messaging.RabbitMQ.Configuration.TcjRabbitMqOptions",
+    "TCJ.Messaging.RabbitMQ.Topology.RabbitMqBindingOptions",
+    "TCJ.Messaging.RabbitMQ.Topology.RabbitMqExchangeOptions",
+    "TCJ.Messaging.RabbitMQ.Topology.RabbitMqQueueOptions",
+    "TCJ.Messaging.RabbitMQ.Topology.RabbitMqRetryTopologyOptions",
+    "TCJ.Messaging.RabbitMQ.Topology.RabbitMqTopologyOptions"
   ]
 }

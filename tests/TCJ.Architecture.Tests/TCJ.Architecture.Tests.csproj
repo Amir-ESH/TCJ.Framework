@@ -16,5 +16,6 @@
     <ProjectReference Include="..\..\src\TCJ.EntityFrameworkCore.SqlServer\TCJ.EntityFrameworkCore.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\TCJ.AspNetCore\TCJ.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\TCJ.Messaging\TCJ.Messaging.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging.RabbitMQ\TCJ.Messaging.RabbitMQ.csproj" />
   </ItemGroup>
 </Project>

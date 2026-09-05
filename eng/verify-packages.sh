@@ -21,6 +21,7 @@ package_ids=(
   TCJ.EntityFrameworkCore.SqlServer
   TCJ.AspNetCore
   TCJ.Messaging
+  TCJ.Messaging.RabbitMQ
 )
 
 for package_id in "${package_ids[@]}"; do

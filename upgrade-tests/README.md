@@ -12,13 +12,13 @@ The baseline version is read from `eng/published-release.json`; the target versi
 - `EntityFrameworkCore.SqlServerConsumer`
 - `AspNetCoreConsumer`
 - `FullStackConsumer`
-- `MessagingConsumer` (target-only package introduction for Step 46)
+- `MessagingConsumer` (target-only package introduction for `TCJ.Messaging` and `TCJ.Messaging.RabbitMQ`)
 
-Every direct-upgrade scenario uses `$(TCJUpgradeVersion)` for TCJ PackageReferences. The target-only Messaging scenario has no fabricated baseline phase because `TCJ.Messaging` did not exist in `0.1.0-preview.4`.
+Every direct-upgrade scenario uses `$(TCJUpgradeVersion)` for TCJ PackageReferences. The target-only Messaging scenario has no fabricated baseline phase because neither `TCJ.Messaging` nor `TCJ.Messaging.RabbitMQ` existed in `0.1.0-preview.4`.
 
 The runner hashes the scenario source tree before and after direct upgrades, records the package source from NuGet's `.nupkg.metadata`, captures `project.assets.json` as a normalized dependency graph, and compares deterministic `behavior.json` output.
 
-All direct-upgrade scenarios intentionally remain transactional-outbox and messaging disabled unless a scenario exists specifically to validate the opt-in feature. This proves existing consumers are unaffected when `TCJ.Messaging` is not referenced. Messaging package introduction is validated by the target-only `MessagingConsumer` scenario and by the dedicated package-consumer and published-package smoke paths.
+All direct-upgrade scenarios intentionally remain transactional-outbox and messaging disabled unless a scenario exists specifically to validate the opt-in feature. This proves existing consumers are unaffected when `TCJ.Messaging` is not referenced. Messaging and RabbitMQ adapter package introduction is validated by the target-only `MessagingConsumer` scenario and by the dedicated package-consumer and published-package smoke paths.
 
 ## Local run
 

@@ -31,7 +31,9 @@ PACKAGES = [
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
+    "TCJ.Messaging.RabbitMQ",
 ]
+TOOLING_PACKAGE = "TCJ.Generators"
 VERSION = "1.2.3-preview.4"
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
@@ -170,10 +172,57 @@ class Fixture:
                 archive.writestr(self.zip_info(name, zip_timestamp), data)
         return path
 
+    def create_tooling_package(
+        self,
+        directory: Path,
+        *,
+        zip_timestamp: tuple[int, int, int, int, int, int] = (2026, 1, 1, 0, 0, 0),
+        created: str | None = "2026-01-01T00:00:00Z",
+        core_name: str = "11111111-1111-1111-1111-111111111111.psmdcp",
+        use_default_content_type: bool = False,
+        relationship_id: str = "R123",
+        nuspec: bytes | None = None,
+    ) -> Path:
+        path = directory / f"{TOOLING_PACKAGE}.{VERSION}.nupkg"
+        entries: list[tuple[str, bytes]] = [
+            ("_rels/.rels", self.relationships(core_name, relationship_id)),
+            (
+                "[Content_Types].xml",
+                self.content_types(core_name, use_default=use_default_content_type),
+            ),
+            (f"{TOOLING_PACKAGE}.nuspec", nuspec or self.nuspec(TOOLING_PACKAGE)),
+            (
+                f"package/services/metadata/core-properties/{core_name}",
+                self.core_properties(created),
+            ),
+            (
+                f"analyzers/dotnet/cs/{TOOLING_PACKAGE}.dll",
+                b"deterministic-generator-assembly",
+            ),
+        ]
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, data in entries:
+                archive.writestr(self.zip_info(name, zip_timestamp), data)
+        return path
+
     def create_set(self, directory: Path, **kwargs) -> None:
         for package_id in PACKAGES:
             self.create_package(directory, package_id, "nupkg", **kwargs)
             self.create_package(directory, package_id, "snupkg", **kwargs)
+
+        tooling_kwargs = {
+            key: kwargs[key]
+            for key in (
+                "zip_timestamp",
+                "created",
+                "core_name",
+                "use_default_content_type",
+                "relationship_id",
+                "nuspec",
+            )
+            if key in kwargs
+        }
+        self.create_tooling_package(directory, **tooling_kwargs)
 
     def compare(self):
         return MODULE.compare_package_sets(
@@ -225,8 +274,8 @@ class ReproducibleBuildTests(unittest.TestCase):
         summary = self.fixture.compare()
         self.assertEqual("PASS", summary.status)
         self.assertTrue(summary.archiveByteEquality)
-        self.assertEqual(6, summary.comparedNupkgCount)
-        self.assertEqual(6, summary.comparedSnupkgCount)
+        self.assertEqual(8, summary.comparedNupkgCount)
+        self.assertEqual(7, summary.comparedSnupkgCount)
 
     def test_symbol_packages_without_physical_source_entries_pass(self) -> None:
         self.fixture.create_set(self.fixture.build_a, include_source_files=False)

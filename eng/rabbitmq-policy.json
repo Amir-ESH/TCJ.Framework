@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "packageName": "TCJ.Messaging.RabbitMQ",
+  "project": "src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj",
+  "testProject": "tests/TCJ.Messaging.RabbitMQ.Tests/TCJ.Messaging.RabbitMQ.Tests.csproj",
+  "targetFramework": "net10.0",
+  "rabbitMqClientVersion": "7.2.2",
+  "testcontainersRabbitMqVersion": "4.14.0",
+  "containerImage": "rabbitmq:4.3.5-alpine",
+  "minimumIntegrationTestCount": 25,
+  "requirePinnedImage": true,
+  "requirePublisherConfirms": true,
+  "requireMandatoryPublishTests": true,
+  "requireManualAcknowledgement": true,
+  "requireDeadLetterTests": true,
+  "requireRetryTopologyTests": true,
+  "requireConnectionRecoveryTests": true,
+  "requireGracefulShutdownTests": true,
+  "requireOutboxIntegration": true,
+  "requireInboxIntegration": true,
+  "requireConformanceSuite": true,
+  "requireSensitiveDataProtection": true,
+  "requirePackageConsumers": true,
+  "requirePublishedPackageSmoke": true,
+  "maximumPrefetchCount": 1000,
+  "maximumConcurrentMessages": 256,
+  "maximumPublishConfirmTimeoutSeconds": 120,
+  "maximumProcessingAttempts": 100,
+  "requiredWorkflows": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/rabbitmq.yml",
+    ".github/workflows/release-preflight.yml",
+    ".github/workflows/release.yml",
+    ".github/workflows/published-package-smoke.yml"
+  ],
+  "requiredConsumers": [
+    "compatibility/Consumers/RabbitMqPublisher.Console/RabbitMqPublisher.Console.csproj",
+    "compatibility/Consumers/RabbitMqConsumer.Worker/RabbitMqConsumer.Worker.csproj",
+    "compatibility/Consumers/RabbitMqInboxOutbox.Worker/RabbitMqInboxOutbox.Worker.csproj"
+  ],
+  "generatedOutputRoots": [
+    "artifacts/rabbitmq",
+    "TestResults/RabbitMQ"
+  ],
+  "sensitiveMarkers": [
+    "authorization",
+    "proxy-authorization",
+    "cookie",
+    "set-cookie",
+    "api-key",
+    "x-api-key",
+    "access-token",
+    "refresh-token",
+    "password",
+    "connection-string",
+    "secret"
+  ]
+}

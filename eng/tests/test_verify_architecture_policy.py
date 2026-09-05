@@ -136,6 +136,7 @@ class ArchitecturePolicyVerifierTests(unittest.TestCase):
             ],
             "TCJ.AspNetCore": ["TCJ.Core", "TCJ.DependencyInjection"],
             "TCJ.Messaging": ["TCJ.Core"],
+            "TCJ.Messaging.RabbitMQ": ["TCJ.Messaging"],
         }
         project_paths = {
             assembly: f"src/{assembly}/{assembly}.csproj"

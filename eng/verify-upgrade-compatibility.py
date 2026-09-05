@@ -519,6 +519,8 @@ def validate_repository_wiring(root: Path = ROOT) -> None:
             "verify-upgrade-compatibility.py verify",
             "src/TCJ.Messaging/TCJ.Messaging.csproj",
             "TCJ.Messaging",
+            "src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj",
+            "TCJ.Messaging.RabbitMQ",
         ],
         ".github/workflows/release-preflight.yml": ["run-upgrade-tests.py", "verify-upgrade-compatibility.py verify"],
         ".github/workflows/release.yml": ["run-upgrade-tests.py", "verify-upgrade-compatibility.py verify"],

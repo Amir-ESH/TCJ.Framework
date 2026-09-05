@@ -45,6 +45,7 @@ Install only the modules your application needs.
 | [`TCJ.EntityFrameworkCore.SqlServer`](https://www.nuget.org/packages/TCJ.EntityFrameworkCore.SqlServer) | SQL Server provider integration and conventions. | **Experimental** |
 | [`TCJ.AspNetCore`](https://www.nuget.org/packages/TCJ.AspNetCore) | ASP.NET Core application primitives and Minimal API integration. | **Full** for the verified Minimal API path |
 | [`TCJ.Messaging`](https://www.nuget.org/packages/TCJ.Messaging) | Transport-neutral messaging envelopes, publishing/receiving contracts, topology, settlement, health, and adapter abstractions. | **Conditional** |
+| `TCJ.Messaging.RabbitMQ` | RabbitMQ transport adapter with publisher confirms, manual settlement, topology, recovery, health, and Inbox/Outbox integration. | **Conditional** |
 | [`TCJ.Generators`](https://www.nuget.org/packages/TCJ.Generators) | Incremental source generators for Strongly Typed IDs and primitive-backed Value Objects. Analyzer-only compile-time tooling under `analyzers/dotnet/cs`. | **Build-time only**; no runtime or Native AOT asset |
 
 The stable packaged Native AOT release guarantee covers `TCJ.Core`, the explicit AOT-safe `TCJ.DependencyInjection` path, and the supported `TCJ.AspNetCore` Minimal API path on `linux-x64`. EF Core Native AOT remains explicitly experimental because upstream EF Native AOT/query precompilation still has limitations. See [Native AOT and trimming](docs/guides/native-aot-and-trimming.md).
