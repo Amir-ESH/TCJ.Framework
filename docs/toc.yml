@@ -17,6 +17,8 @@
     href: packages/tcj-aspnetcore.md
   - name: TCJ.Messaging
     href: packages/tcj-messaging.md
+  - name: TCJ.Messaging.RabbitMQ
+    href: packages/tcj-messaging-rabbitmq.md
 - name: Product Guides
   items:
   - name: Result and HTTP

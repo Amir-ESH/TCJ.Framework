@@ -61,6 +61,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [`TCJ.EntityFrameworkCore.SqlServer`](packages/tcj-entityframeworkcore-sqlserver.md)
 - [`TCJ.AspNetCore`](packages/tcj-aspnetcore.md)
 - [`TCJ.Messaging`](packages/tcj-messaging.md)
+- [`TCJ.Messaging.RabbitMQ`](packages/tcj-messaging-rabbitmq.md)
 - [`TCJ.Generators`](packages/TCJ.Generators.md) — analyzer-only compile-time tooling
 
 ## Migrations and release notes
