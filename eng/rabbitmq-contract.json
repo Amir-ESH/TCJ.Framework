@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "packageName": "TCJ.Messaging.RabbitMQ",
+  "transportDescriptor": {
+    "name": "RabbitMQ",
+    "versionSource": "adapter-package-version"
+  },
+  "deliveryGuarantees": {
+    "publisherWithOutbox": "at-least-once",
+    "consumerWithInbox": "at-least-once-with-idempotent-processing",
+    "globalExactlyOnceGuaranteed": false,
+    "strictGlobalOrderingGuaranteed": false
+  },
+  "capabilities": {
+    "SupportsBatchPublish": false,
+    "SupportsScheduling": false,
+    "SupportsTimeToLive": true,
+    "SupportsDeadLetter": true,
+    "SupportsDefer": false,
+    "SupportsOrderedDelivery": true,
+    "OrderingGuarantee": "BestEffort",
+    "SupportsPartitioning": true,
+    "SupportsTransactions": false,
+    "SupportsPeekLock": false
+  },
+  "optionDefaults": {
+    "HostName": "localhost",
+    "Port": 5672,
+    "VirtualHost": "/",
+    "UseTls": false,
+    "PrefetchCount": 16,
+    "MaximumConcurrentMessages": 8,
+    "ConnectionTimeoutSeconds": 10,
+    "PublishConfirmTimeoutSeconds": 10,
+    "ShutdownTimeoutSeconds": 30,
+    "NetworkRecoveryIntervalSeconds": 5,
+    "AutomaticRecoveryEnabled": true,
+    "TopologyRecoveryEnabled": true,
+    "MandatoryPublish": true,
+    "DefaultExchange": "tcj.events",
+    "MaximumProcessingAttempts": 5,
+    "TopologyMode": "Declare"
+  },
+  "topologyModes": ["Declare", "ValidateOnly", "Disabled"],
+  "exchangeTypes": ["direct", "topic", "fanout"],
+  "channelStrategy": {
+    "publisher": "single-confirm-channel-serialized-by-semaphore",
+    "consumer": "dedicated-channel-per-receive-loop",
+    "consumerQosGlobal": false
+  },
+  "settlementMappings": {
+    "Complete": "BasicAck",
+    "Retry": "BasicNack(requeue:false) -> TTL retry queue -> source exchange",
+    "DeadLetter": "confirmed terminal publish then BasicAck when TCJ retry topology is configured",
+    "Abandon": "BasicNack(requeue:true)",
+    "Defer": "UnsupportedCapability"
+  },
+  "failureMappings": {
+    "publisherNack": "TransientConnection",
+    "publisherConfirmTimeout": "TransientTimeout",
+    "connectionFailure": "TransientConnection",
+    "authenticationFailure": "PermanentAuthentication",
+    "mandatoryReturn": "PermanentTopology",
+    "topologyConflict": "PermanentTopology"
+  },
+  "standardHeaders": [
+    "tcj-message-id",
+    "tcj-message-type",
+    "tcj-message-version",
+    "tcj-correlation-id",
+    "tcj-causation-id",
+    "tcj-created-at",
+    "traceparent",
+    "tracestate",
+    "content-type"
+  ],
+  "tracePropagation": {
+    "format": "W3C",
+    "headers": ["traceparent", "tracestate"],
+    "baggagePropagation": false,
+    "malformedContextBehavior": "ignore"
+  },
+  "activities": [
+    "tcj.rabbitmq.connect",
+    "tcj.rabbitmq.publish",
+    "tcj.rabbitmq.confirm",
+    "tcj.rabbitmq.receive",
+    "tcj.rabbitmq.settle",
+    "tcj.rabbitmq.topology.declare",
+    "tcj.rabbitmq.recover"
+  ],
+  "metrics": [
+    "tcj.rabbitmq.connections.open",
+    "tcj.rabbitmq.channels.open",
+    "tcj.rabbitmq.messages.published",
+    "tcj.rabbitmq.messages.confirmed",
+    "tcj.rabbitmq.messages.nacked",
+    "tcj.rabbitmq.messages.returned",
+    "tcj.rabbitmq.messages.received",
+    "tcj.rabbitmq.messages.acked",
+    "tcj.rabbitmq.messages.requeued",
+    "tcj.rabbitmq.messages.dead_lettered",
+    "tcj.rabbitmq.publish.duration",
+    "tcj.rabbitmq.processing.duration",
+    "tcj.rabbitmq.reconnects"
+  ],
+  "healthChecks": [
+    "tcj.rabbitmq.connection",
+    "tcj.rabbitmq.publisher",
+    "tcj.rabbitmq.consumer",
+    "tcj.rabbitmq.topology"
+  ],
+  "unsupportedCapabilities": [
+    "Defer",
+    "NativeSchedulingWithoutPlugin",
+    "GlobalOrdering",
+    "GlobalTransactionsWithApplicationDatabase"
+  ]
+}

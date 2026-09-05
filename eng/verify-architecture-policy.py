@@ -24,6 +24,7 @@ REQUIRED_ASSEMBLIES = (
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
+    "TCJ.Messaging.RabbitMQ",
 )
 REQUIRED_WORKFLOWS = (
     ".github/workflows/ci.yml",

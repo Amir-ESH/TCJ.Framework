@@ -8,18 +8,36 @@
   "licenseExpression": "LGPL-3.0-only",
   "releasePackages": {
     "runtime": [
-      { "id": "TCJ.Core" },
-      { "id": "TCJ.DependencyInjection" },
-      { "id": "TCJ.EntityFrameworkCore" },
-      { "id": "TCJ.EntityFrameworkCore.SqlServer" },
-      { "id": "TCJ.AspNetCore" },
-      { "id": "TCJ.Messaging" }
+      {
+        "id": "TCJ.Core"
+      },
+      {
+        "id": "TCJ.DependencyInjection"
+      },
+      {
+        "id": "TCJ.EntityFrameworkCore"
+      },
+      {
+        "id": "TCJ.EntityFrameworkCore.SqlServer"
+      },
+      {
+        "id": "TCJ.AspNetCore"
+      },
+      {
+        "id": "TCJ.Messaging"
+      },
+      {
+        "id": "TCJ.Messaging.RabbitMQ"
+      }
     ],
     "tooling": [
       {
         "id": "TCJ.Generators",
         "assetPath": "analyzers/dotnet/cs",
-        "forbidAssets": ["lib/", "runtime/"]
+        "forbidAssets": [
+          "lib/",
+          "runtime/"
+        ]
       }
     ]
   }

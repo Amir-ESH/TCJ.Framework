@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../eng/Packaging.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TCJ.Messaging.RabbitMQ</RootNamespace>
+    <AssemblyName>TCJ.Messaging.RabbitMQ</AssemblyName>
+
+    <PackageId>TCJ.Messaging.RabbitMQ</PackageId>
+    <Title>TCJ Messaging RabbitMQ</Title>
+    <Description>RabbitMQ transport adapter for TCJ Messaging, including publishing, consuming, settlement, topology, observability, health checks, and Inbox/Outbox integration.</Description>
+    <PackageTags>tcj;rabbitmq;messaging;queue;broker;outbox;inbox;integration-events</PackageTags>
+
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- RabbitMQ.Client is an upstream runtime dependency; Native AOT support is tracked as Conditional until packed-consumer evidence is recorded. -->
+    <IsAotCompatible>false</IsAotCompatible>
+
+    <!-- Introduced in preview.5; there is no published preview.4 package baseline. -->
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TCJ.Messaging/TCJ.Messaging.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    <PackageReference Include="RabbitMQ.Client" />
+  </ItemGroup>
+</Project>
