@@ -31,6 +31,7 @@ PACKAGES = [
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
+    "TCJ.Messaging.RabbitMQ",
 ]
 VERSION = "1.2.3-preview.4"
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
@@ -225,8 +226,8 @@ class ReproducibleBuildTests(unittest.TestCase):
         summary = self.fixture.compare()
         self.assertEqual("PASS", summary.status)
         self.assertTrue(summary.archiveByteEquality)
-        self.assertEqual(6, summary.comparedNupkgCount)
-        self.assertEqual(6, summary.comparedSnupkgCount)
+        self.assertEqual(7, summary.comparedNupkgCount)
+        self.assertEqual(7, summary.comparedSnupkgCount)
 
     def test_symbol_packages_without_physical_source_entries_pass(self) -> None:
         self.fixture.create_set(self.fixture.build_a, include_source_files=False)
