@@ -145,7 +145,7 @@ internal sealed class RabbitMqTransportPublisher : IMessagingTransportPublisher,
                 activity?.SetStatus(ActivityStatusCode.Error, "authentication");
                 return new PublishResult(PublishOutcome.PermanentFailure, FailureCategory: MessagingFailureCategory.PermanentAuthentication, FailureType: "AuthenticationFailure");
             }
-            catch (BrokerUnreachableException or AlreadyClosedException or OperationInterruptedException)
+            catch (Exception exception) when (exception is BrokerUnreachableException or AlreadyClosedException or OperationInterruptedException)
             {
                 await ResetChannelAsync().ConfigureAwait(false);
                 activity?.SetStatus(ActivityStatusCode.Error, "connection");
