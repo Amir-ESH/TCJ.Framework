@@ -10,6 +10,7 @@
     "partitionHintPreserved": true,
     "orderingHintPreserved": true,
     "immutableHeaders": true,
-    "jsonContentType": true
+    "jsonContentType": true,
+    "rabbitMqAdapterLoadsWithoutNetwork": true
   }
 }

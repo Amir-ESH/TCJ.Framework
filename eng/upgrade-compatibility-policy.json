@@ -14,10 +14,12 @@
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
-    "TCJ.Messaging"
+    "TCJ.Messaging",
+    "TCJ.Messaging.RabbitMQ"
   ],
   "targetOnlyPackages": [
-    "TCJ.Messaging"
+    "TCJ.Messaging",
+    "TCJ.Messaging.RabbitMQ"
   ],
   "requireBaselineRestore": true,
   "requireBaselineBuild": true,
@@ -94,7 +96,7 @@
     {
       "name": "MessagingConsumer",
       "project": "upgrade-tests/Scenarios/MessagingConsumer/MessagingConsumer.csproj",
-      "packages": ["TCJ.Core", "TCJ.Messaging"],
+      "packages": ["TCJ.Core", "TCJ.Messaging", "TCJ.Messaging.RabbitMQ"],
       "expectedBehavior": "upgrade-tests/Expected/MessagingConsumer.json",
       "expectedOutput": "TCJ.Messaging target-only upgrade scenario passed"
     }

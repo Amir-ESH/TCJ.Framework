@@ -95,7 +95,8 @@ jobs:
             src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
-            src/TCJ.Messaging/TCJ.Messaging.csproj; do
+            src/TCJ.Messaging/TCJ.Messaging.csproj \
+            src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj; do
             dotnet build "$project" --configuration Release --no-restore \
               -p:Version="${{ steps.versions.outputs.target }}" \
               -p:RepositoryCommit="$GITHUB_SHA"
@@ -114,7 +115,8 @@ jobs:
             src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
-            src/TCJ.Messaging/TCJ.Messaging.csproj; do
+            src/TCJ.Messaging/TCJ.Messaging.csproj \
+            src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj; do
             dotnet pack "$project" --configuration Release --no-build --no-restore \
               -p:PackageOutputPath="$packages" \
               -p:Version="${{ steps.versions.outputs.target }}" \
@@ -125,7 +127,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for id in TCJ.Core TCJ.DependencyInjection TCJ.EntityFrameworkCore TCJ.EntityFrameworkCore.SqlServer TCJ.AspNetCore TCJ.Messaging; do
+          for id in TCJ.Core TCJ.DependencyInjection TCJ.EntityFrameworkCore TCJ.EntityFrameworkCore.SqlServer TCJ.AspNetCore TCJ.Messaging TCJ.Messaging.RabbitMQ; do
             test -f "artifacts/upgrade-compatibility/target/packages/$id.${{ steps.versions.outputs.target }}.nupkg" || { echo "Missing target package: $id" >&2; exit 1; }
           done
 

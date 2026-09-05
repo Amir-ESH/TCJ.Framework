@@ -50,7 +50,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
         target = verify.runtime_release_packages(self.target)
         target_only = set(self.policy["targetOnlyPackages"])
         self.assertEqual(target - baseline, target_only)
-        self.assertEqual({"TCJ.Messaging"}, target_only)
+        self.assertEqual({"TCJ.Messaging", "TCJ.Messaging.RabbitMQ"}, target_only)
 
     def test_all_runtime_packages_are_covered(self):
         direct = {package for scenario in self.policy["scenarios"] for package in scenario["packages"]}
