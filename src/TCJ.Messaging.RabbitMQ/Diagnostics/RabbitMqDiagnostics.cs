@@ -42,21 +42,21 @@ internal static class RabbitMqDiagnostics
         return activity;
     }
 
-    internal static void ConnectionOpened() => Connections.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void ConnectionClosed() => Connections.Add(-1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void ChannelOpened() => Channels.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void ChannelClosed() => Channels.Add(-1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void Recovered() => Reconnects.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void PublishStarted() => Published.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void PublishConfirmed() => Confirmed.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void PublishNacked() => Nacked.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void PublishReturned() => Returned.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void MessageReceived() => Received.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void MessageAcked() => Acked.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void MessageRequeued() => Requeued.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void MessageDeadLettered() => DeadLettered.Add(1, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void RecordPublishDuration(double milliseconds) => PublishDuration.Record(milliseconds, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
-    internal static void RecordProcessingDuration(double milliseconds) => ProcessingDuration.Record(milliseconds, new(TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq"));
+    internal static void ConnectionOpened() => Connections.Add(1, CreateMetricTags());
+    internal static void ConnectionClosed() => Connections.Add(-1, CreateMetricTags());
+    internal static void ChannelOpened() => Channels.Add(1, CreateMetricTags());
+    internal static void ChannelClosed() => Channels.Add(-1, CreateMetricTags());
+    internal static void Recovered() => Reconnects.Add(1, CreateMetricTags());
+    internal static void PublishStarted() => Published.Add(1, CreateMetricTags());
+    internal static void PublishConfirmed() => Confirmed.Add(1, CreateMetricTags());
+    internal static void PublishNacked() => Nacked.Add(1, CreateMetricTags());
+    internal static void PublishReturned() => Returned.Add(1, CreateMetricTags());
+    internal static void MessageReceived() => Received.Add(1, CreateMetricTags());
+    internal static void MessageAcked() => Acked.Add(1, CreateMetricTags());
+    internal static void MessageRequeued() => Requeued.Add(1, CreateMetricTags());
+    internal static void MessageDeadLettered() => DeadLettered.Add(1, CreateMetricTags());
+    internal static void RecordPublishDuration(double milliseconds) => PublishDuration.Record(milliseconds, CreateMetricTags());
+    internal static void RecordProcessingDuration(double milliseconds) => ProcessingDuration.Record(milliseconds, CreateMetricTags());
 
     internal static ActivityContext ExtractParent(TransportMessageEnvelope message)
     {
@@ -64,6 +64,11 @@ internal static class RabbitMqDiagnostics
         message.Headers.TryGetValue("tracestate", out string? traceState);
         return ActivityContext.TryParse(traceParent, traceState, isRemote: true, out ActivityContext parsed) ? parsed : default;
     }
+
+    private static TagList CreateMetricTags() => new()
+    {
+        { TcjRabbitMqDiagnosticNames.Tags.MessagingSystem, "rabbitmq" }
+    };
 
     private static string Bound(string value)
     {
