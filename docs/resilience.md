@@ -223,3 +223,7 @@ Health checks keep their own total timeout bounded and do not add broad retries.
 ## Outbox delivery retries
 
 Transactional-outbox delivery uses `ITransientFailureDetector` for transient/permanent classification but schedules retries durably in the outbox row instead of holding an in-process retry loop around external handlers. Exponential backoff is bounded by `MaxRetryDelay`, jitter is bounded, attempts are preserved, and poison messages stop after the configured budget. Database claim/status failures surface to the poll loop and are retried by later bounded polls; handler side effects still require idempotency because at-least-once delivery permits duplicates after crash or lease expiry.
+
+## Azure Service Bus retry ownership
+
+The Azure Service Bus SDK retry policy is short and bounded. TCJ Outbox owns durable publication retry; the adapter classifies broker exceptions into transport-neutral transient/permanent outcomes and does not add an unbounded second retry loop. Delayed consumer retry may use a scheduled clone only after the retry message is successfully scheduled; its transport message ID is attempt-specific while the stable logical TCJ message ID remains unchanged for Inbox deduplication. Lock loss is surfaced explicitly because settlement can no longer be assumed to succeed.

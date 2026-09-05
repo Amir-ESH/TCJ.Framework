@@ -289,3 +289,7 @@ Release preflight and official tag publication depend on the commit-matched `Hea
 ## Transactional outbox release evidence
 
 Release preflight and the official tag workflow invoke the reusable `outbox.yml` gate and validate `eng/outbox-policy.json` / `eng/outbox-contract.json` against the exact source. Publication must not proceed when transaction consistency, SQL Server claim concurrency, retry/dead-letter, replay/cleanup, sensitive-data, telemetry, health, or contract verification fails. The `OUTBOX_SUMMARY.md` and sanitized JSON reports are retained with release evidence.
+
+## Azure Service Bus release gate
+
+`TCJ.Messaging.AzureServiceBus` is release-blocking once present in the release manifest. Release preflight and tag publication validate `eng/azure-service-bus-policy.json` / `eng/azure-service-bus-contract.json`, consume commit-matched adapter conformance and integration evidence, retain the sanitized summary, and block publication on contract drift or failed settlement/session/Inbox/Outbox/security checks. Post-publication smoke restores the exact NuGet package and exercises queue send/receive/complete, duplicate Inbox handling, Outbox publication, scheduled delivery, and graceful shutdown against isolated Service Bus test infrastructure.

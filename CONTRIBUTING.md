@@ -188,3 +188,7 @@ Outbox schema, delivery semantics, event naming, option defaults, telemetry, or 
 ## Transactional Inbox changes
 
 Changes to Inbox identity, schema, retry, replay, cleanup, telemetry, health, or transaction behavior must update `eng/inbox-policy.json`, `eng/inbox-contract.json`, tests, and `docs/inbox.md` as applicable. Do not weaken database uniqueness, leak payload/header data, or claim global exactly-once delivery. Run `python3 eng/verify-inbox.py validate-config` before opening the pull request.
+
+## Azure Service Bus adapter changes
+
+Changes under `TCJ.Messaging.AzureServiceBus` must preserve the neutral `TCJ.Messaging` boundary. Keep Peek-Lock and manual completion enabled, preserve Inbox commit-before-complete and Outbox send-before-processed ordering, keep SDK retry bounded, and do not treat broker duplicate detection as a replacement for TCJ Inbox idempotency. Run `python3 eng/verify-azure-service-bus.py validate-config` for every adapter change; broker behavior is validated by `.github/workflows/azure-service-bus.yml`. Never commit live Service Bus credentials or generated `TestResults/AzureServiceBus/` / `artifacts/azure-service-bus/` evidence.

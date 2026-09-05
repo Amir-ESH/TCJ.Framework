@@ -9,10 +9,12 @@ on:
     branches: [main, develop]
     paths:
       - "src/TCJ.Messaging/**"
+      - "src/TCJ.Messaging.AzureServiceBus/**"
       - "src/TCJ.Core/Inbox/**"
       - "src/TCJ.Core/Outbox/**"
       - "tests/TCJ.Messaging.Tests/**"
       - "tests/TCJ.Messaging.ConformanceTests/**"
+      - "tests/TCJ.Messaging.AzureServiceBus.Tests/**"
       - "compatibility/Consumers/MessagingPublisher.Console/**"
       - "compatibility/Consumers/MessagingConsumer.Worker/**"
       - "compatibility/Consumers/MessagingInboxOutbox.Worker/**"
@@ -28,10 +30,12 @@ on:
   pull_request:
     paths:
       - "src/TCJ.Messaging/**"
+      - "src/TCJ.Messaging.AzureServiceBus/**"
       - "src/TCJ.Core/Inbox/**"
       - "src/TCJ.Core/Outbox/**"
       - "tests/TCJ.Messaging.Tests/**"
       - "tests/TCJ.Messaging.ConformanceTests/**"
+      - "tests/TCJ.Messaging.AzureServiceBus.Tests/**"
       - "compatibility/Consumers/MessagingPublisher.Console/**"
       - "compatibility/Consumers/MessagingConsumer.Worker/**"
       - "compatibility/Consumers/MessagingInboxOutbox.Worker/**"
@@ -79,6 +83,9 @@ jobs:
 
       - name: Validate messaging policy and contract
         run: python3 eng/verify-messaging.py validate-config
+
+      - name: Validate Azure Service Bus adapter contract
+        run: python3 eng/verify-azure-service-bus.py validate-config
 
       - name: Restore and audit messaging tests
         run: |

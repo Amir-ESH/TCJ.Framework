@@ -167,3 +167,7 @@ When the outbox is registered, `tcj.outbox.processor`, `tcj.outbox.backlog`, and
 ## Transactional Inbox readiness
 
 When transactional Inbox is registered, readiness also includes `tcj.inbox.configuration`, `tcj.inbox.processor`, `tcj.inbox.backlog`, and `tcj.inbox.dead_letters`. The checks use the bounded `inbox` tag and report only processor state, counts, ages, and configuration status. They never expose message payloads, raw transport headers, message IDs, exception messages, connection strings, server names, or database names. Inbox backlog or dead letters can make readiness unhealthy according to configured thresholds, but liveness remains dependency-independent.
+
+## Azure Service Bus readiness
+
+`AddTcjAzureServiceBusHealthChecks()` registers bounded readiness checks for the shared client, sender state, consumer processor, topology/startup contract, and session configuration. These checks are tagged `ready` and `azure-service-bus`; TCJ liveness does not depend on Azure Service Bus availability. Health output uses bounded generic descriptions and never returns connection strings, credentials, payloads, or raw broker exceptions.

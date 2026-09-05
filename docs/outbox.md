@@ -226,3 +226,7 @@ Adding outbox support is opt-in. Consumers that do not register it retain the pr
 ### Inbox correlation and causation metadata
 
 When an Outbox event is persisted while an Inbox handler is active, the optional Inbox `CorrelationId` is copied to the Outbox row and the stable inbound `MessageId` becomes the Outbox `CausationId`. These nullable metadata columns are not part of duplicate identity and are never emitted as metric dimensions. Existing Outbox-enabled consumers adopting the preview.5 mapping require a consumer-controlled migration that adds nullable `CorrelationId` and `CausationId` columns to `TCJ_OutboxMessages`.
+
+## Azure Service Bus transport integration
+
+When `TCJ.Messaging.AzureServiceBus` is the registered transport, the existing messaging Outbox bridge preserves the logical Outbox message ID, schema version, correlation/causation, and trace context. The Outbox record is marked processed only after the Azure SDK send or schedule operation succeeds. Transient broker failures leave the record retryable; permanent topology/authentication/payload failures remain explicit. Broker duplicate detection may complement but never replaces the Outbox/Inbox idempotency contract.

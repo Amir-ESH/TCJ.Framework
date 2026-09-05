@@ -40,7 +40,8 @@
       "resilience",
       "health_checks",
       "transactional_outbox",
-      "performance"
+      "performance",
+      "azure_service_bus"
     ]
   },
   "gates": {
@@ -237,6 +238,8 @@
       "workflow": ".github/workflows/concurrency-stress.yml",
       "paths": [
         "src/TCJ.Core/**",
+        "src/TCJ.Messaging.AzureServiceBus/**",
+        "src/TCJ.Messaging/**",
         "src/TCJ.DependencyInjection/**",
         "src/TCJ.EntityFrameworkCore/**",
         "src/TCJ.EntityFrameworkCore.SqlServer/**",
@@ -258,6 +261,8 @@
       "workflow": ".github/workflows/resilience.yml",
       "paths": [
         "src/TCJ.Core/**",
+        "src/TCJ.Messaging.AzureServiceBus/**",
+        "src/TCJ.Messaging/**",
         "src/TCJ.DependencyInjection/**",
         "src/TCJ.EntityFrameworkCore.SqlServer/**",
         "tests/TCJ.Resilience.Tests/**",
@@ -278,6 +283,8 @@
       "workflow": ".github/workflows/health-checks.yml",
       "paths": [
         "src/TCJ.Core/**",
+        "src/TCJ.Messaging.AzureServiceBus/**",
+        "src/TCJ.Messaging/**",
         "src/TCJ.DependencyInjection/**",
         "src/TCJ.EntityFrameworkCore/**",
         "src/TCJ.EntityFrameworkCore.SqlServer/**",
@@ -294,6 +301,8 @@
       "workflow": ".github/workflows/outbox.yml",
       "paths": [
         "src/TCJ.Core/**",
+        "src/TCJ.Messaging.AzureServiceBus/**",
+        "src/TCJ.Messaging/**",
         "src/TCJ.EntityFrameworkCore/**",
         "src/TCJ.EntityFrameworkCore.SqlServer/**",
         "src/TCJ.AspNetCore/**",
@@ -314,6 +323,8 @@
       "paths": [
         "benchmarks/**",
         "src/TCJ.Core/**",
+        "src/TCJ.Messaging.AzureServiceBus/**",
+        "src/TCJ.Messaging/**",
         "src/TCJ.DependencyInjection/**",
         "src/TCJ.EntityFrameworkCore/**",
         "src/TCJ.EntityFrameworkCore.SqlServer/**",
@@ -328,6 +339,30 @@
         "eng/tests/test_verify_performance_results.py",
         ".github/workflows/performance-benchmarks.yml",
         "Directory.Packages.props",
+        "TCJ.slnx"
+      ]
+    },
+    "azure_service_bus": {
+      "workflow": ".github/workflows/azure-service-bus.yml",
+      "paths": [
+        "src/TCJ.Core/**",
+        "src/TCJ.Messaging/**",
+        "src/TCJ.Messaging.AzureServiceBus/**",
+        "src/TCJ.EntityFrameworkCore/**",
+        "src/TCJ.AspNetCore/**",
+        "tests/TCJ.Messaging.AzureServiceBus.Tests/**",
+        "tests/TCJ.Messaging.ConformanceTests/**",
+        "eng/azure-service-bus-policy.json",
+        "eng/azure-service-bus-contract.json",
+        "eng/azure-service-bus-emulator/**",
+        "eng/verify-azure-service-bus.py",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        ".github/workflows/azure-service-bus.yml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release-preflight.yml",
+        ".github/workflows/release.yml",
         "TCJ.slnx"
       ]
     }

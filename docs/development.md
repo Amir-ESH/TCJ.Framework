@@ -282,3 +282,7 @@ python3 eng/verify-outbox.py verify --results TestResults/Outbox --output artifa
 ```
 
 Docker is required for the SQL Server Testcontainer suite. Generated results are intentionally ignored by Git.
+
+## Azure Service Bus adapter validation
+
+For Azure Service Bus changes, run `python3 eng/verify-azure-service-bus.py validate-config`, then execute `TCJ.Messaging.AzureServiceBus.Tests` against the pinned emulator or an approved isolated Azure namespace. The dedicated workflow produces `AZURE_SERVICE_BUS_SUMMARY.md` plus sanitized conformance/topology/session/lock-renewal evidence. Emulator limitations must not be reported as cloud validation; see [Azure Service Bus messaging](messaging-azure-service-bus.md).

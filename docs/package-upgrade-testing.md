@@ -14,7 +14,7 @@ Each direct-upgrade scenario has one source tree and TCJ PackageReferences use `
 
 The six historical scenarios cover Core, Dependency Injection, provider-independent EF Core, SQL Server registration, ASP.NET Core, and all pre-Step-46 runtime packages together. They deliberately keep messaging disabled, proving existing consumers remain unaffected when `TCJ.Messaging` is not referenced.
 
-`TCJ.Messaging` and `TCJ.Messaging.RabbitMQ` are new target-only runtime packages in `0.1.0-preview.5`; neither has a valid `0.1.0-preview.4` baseline. The `MessagingConsumer` scenario therefore validates both package introductions only on the target side, including loading the RabbitMQ adapter API without establishing a broker connection. The verifier rejects fabricated baseline results for target-only packages, validates source identity and dependency closure, and reports target-only success independently from direct-upgrade success.
+`TCJ.Messaging`, `TCJ.Messaging.RabbitMQ`, and `TCJ.Messaging.AzureServiceBus` are new target-only runtime packages in `0.1.0-preview.5`; none has a valid `0.1.0-preview.4` baseline. The `MessagingConsumer` scenario validates the neutral messaging and RabbitMQ package introductions on the target side without establishing a broker connection. The separate `AzureServiceBusConsumer` target-only scenario restores the Azure adapter from the candidate feed and validates explicit registration, descriptor availability, and package dependency closure without requiring cloud credentials. The verifier rejects fabricated baseline results for target-only packages, validates source identity and dependency closure, and reports target-only success independently from direct-upgrade success.
 
 ## Runtime behavior
 
@@ -64,4 +64,4 @@ Normal CI validates policy and fixture wiring. The dedicated workflow runs the f
 
 ## Messaging compatibility rules
 
-Enabling messaging is explicit. Message type names and schema versions are compatibility contracts. Changes to envelope fields, publish outcomes, settlement semantics, failure categories, framework header names, capabilities, or naming rules require compatibility review and migration guidance. Future broker adapters must run the Messaging conformance suite before release.
+Enabling messaging is explicit. Message type names and schema versions are compatibility contracts. Changes to envelope fields, publish outcomes, settlement semantics, failure categories, framework header names, capabilities, or naming rules require compatibility review and migration guidance. Both RabbitMQ and Azure Service Bus adapters must run the applicable Messaging conformance suite before release. Azure Service Bus entity-name changes and session-mode changes additionally require migration guidance because those settings are coupled to broker topology.

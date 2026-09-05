@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../eng/Packaging.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TCJ.Messaging.AzureServiceBus</RootNamespace>
+    <AssemblyName>TCJ.Messaging.AzureServiceBus</AssemblyName>
+
+    <PackageId>TCJ.Messaging.AzureServiceBus</PackageId>
+    <Title>TCJ Messaging Azure Service Bus</Title>
+    <Description>Azure Service Bus transport adapter for TCJ Messaging, including publishing, receiving, settlement, sessions, scheduling, observability, health checks, and Inbox/Outbox integration.</Description>
+    <PackageTags>tcj;azure;service-bus;messaging;queue;topic;outbox;inbox;integration-events</PackageTags>
+
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- The upstream Azure Service Bus SDK owns AMQP/reflection internals; Native AOT support remains conditional until packed-consumer evidence is recorded. -->
+    <IsAotCompatible>false</IsAotCompatible>
+
+    <!-- Introduced in preview.5; there is no published preview.4 package baseline. -->
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TCJ.Messaging/TCJ.Messaging.csproj" />
+    <PackageReference Include="Azure.Core" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+  </ItemGroup>
+</Project>

@@ -190,6 +190,20 @@ jobs:
           fi
           echo "required=$required" >> "$GITHUB_OUTPUT"
 
+      - name: Determine whether Step 48 TCJ.Messaging.AzureServiceBus published smoke is required
+        id: azure-service-bus-smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          published="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          candidate="${{ needs.verify-publication.outputs.version }}"
+          required=false
+          if [[ ( "$candidate" == "$current" || "$candidate" == "$published" ) && "${{ matrix.slug }}" == "linux" ]]; then
+            if python3 -c 'import re,sys; v=sys.argv[1]; core,sep,pre=v.partition("-"); parts=tuple(map(int,core.split("."))); match=re.fullmatch(r"preview\.(\d+)",pre); ok=parts>(0,1,0) or (parts==(0,1,0) and (not sep or (match is not None and int(match.group(1))>=5))); sys.exit(0 if ok else 1)' "$candidate"; then required=true; fi
+          fi
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+
       - name: Start disposable SQL Server for published transactional Outbox/Inbox/Messaging smoke
         if: steps.outbox-smoke.outputs.required == 'true' || steps.inbox-smoke.outputs.required == 'true' || steps.messaging-smoke.outputs.required == 'true'
         shell: bash
@@ -213,6 +227,32 @@ jobs:
           docker logs tcj-published-outbox-sql 2>&1 | tail -100
           exit 1
 
+      - name: Start pinned Azure Service Bus emulator for published-package smoke
+        if: steps.azure-service-bus-smoke.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          policy = json.load(open("eng/azure-service-bus-policy.json", encoding="utf-8"))
+          print(f"TCJ_SERVICE_BUS_EMULATOR_IMAGE={policy['emulator']['image']}")
+          print(f"TCJ_SQL_SERVER_IMAGE={policy['emulator']['sqlServerImage']}")
+          PY
+          password="Aa1!$(openssl rand -hex 16)"
+          echo "::add-mask::$password"
+          echo "SQL_PASSWORD=$password" >> "$GITHUB_ENV"
+          echo "TCJ_AZURE_SERVICE_BUS_CONNECTION_STRING=Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;" >> "$GITHUB_ENV"
+          echo "TCJ_AZURE_SERVICE_BUS_MANAGEMENT_CONNECTION_STRING=Endpoint=sb://localhost:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;" >> "$GITHUB_ENV"
+          docker compose -f eng/azure-service-bus-emulator/docker-compose.yml up -d
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent http://localhost:5300/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f eng/azure-service-bus-emulator/docker-compose.yml logs --no-color
+          exit 1
+
       - name: Restore published-package feature smoke from NuGet.org
         run: >
           dotnet restore
@@ -226,6 +266,7 @@ jobs:
           -p:EnableOutboxSmoke=${{ steps.outbox-smoke.outputs.required }}
           -p:EnableInboxSmoke=${{ steps.inbox-smoke.outputs.required }}
           -p:EnableMessagingSmoke=${{ steps.messaging-smoke.outputs.required }}
+          -p:EnableAzureServiceBusSmoke=${{ steps.azure-service-bus-smoke.outputs.required }}
 
       - name: Run selected published-package resilience, health-check, Outbox, Inbox and Messaging scenarios
         env:
@@ -234,6 +275,7 @@ jobs:
           TCJ_OUTBOX_SMOKE: ${{ steps.outbox-smoke.outputs.required }}
           TCJ_INBOX_SMOKE: ${{ steps.inbox-smoke.outputs.required }}
           TCJ_MESSAGING_SMOKE: ${{ steps.messaging-smoke.outputs.required }}
+          TCJ_AZURE_SERVICE_BUS_SMOKE: ${{ steps.azure-service-bus-smoke.outputs.required }}
         run: >
           dotnet run
           --project smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj
@@ -245,6 +287,11 @@ jobs:
           -p:EnableOutboxSmoke=${{ steps.outbox-smoke.outputs.required }}
           -p:EnableInboxSmoke=${{ steps.inbox-smoke.outputs.required }}
           -p:EnableMessagingSmoke=${{ steps.messaging-smoke.outputs.required }}
+          -p:EnableAzureServiceBusSmoke=${{ steps.azure-service-bus-smoke.outputs.required }}
+
+      - name: Stop published Azure Service Bus emulator
+        if: always() && steps.azure-service-bus-smoke.outputs.required == 'true'
+        run: docker compose -f eng/azure-service-bus-emulator/docker-compose.yml down -v --remove-orphans
 
       - name: Stop disposable transactional SQL Server
         if: always() && (steps.outbox-smoke.outputs.required == 'true' || steps.inbox-smoke.outputs.required == 'true' || steps.messaging-smoke.outputs.required == 'true')

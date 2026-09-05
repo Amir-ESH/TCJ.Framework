@@ -25,6 +25,7 @@ REQUIRED_ASSEMBLIES = (
     "TCJ.AspNetCore",
     "TCJ.Messaging",
     "TCJ.Messaging.RabbitMQ",
+    "TCJ.Messaging.AzureServiceBus",
 )
 REQUIRED_WORKFLOWS = (
     ".github/workflows/ci.yml",

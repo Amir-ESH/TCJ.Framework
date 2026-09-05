@@ -119,7 +119,8 @@ jobs:
             src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
-            src/TCJ.Messaging/TCJ.Messaging.csproj; do
+            src/TCJ.Messaging/TCJ.Messaging.csproj \
+            src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj; do
             dotnet build "$project" \
               --configuration Release \
               --no-restore \
@@ -139,7 +140,8 @@ jobs:
             src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj \
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
-            src/TCJ.Messaging/TCJ.Messaging.csproj; do
+            src/TCJ.Messaging/TCJ.Messaging.csproj \
+            src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj; do
             dotnet pack "$project" \
               --configuration Release \
               --no-build \

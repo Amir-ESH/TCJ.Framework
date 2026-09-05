@@ -18,6 +18,11 @@ using TCJ.Messaging.Integration;
 using TCJ.Messaging.Publishing;
 using TCJ.Messaging.Receiving;
 #endif
+#if TCJ_AZURE_SERVICE_BUS_SMOKE
+using TCJ.Messaging.AzureServiceBus.Configuration;
+using TCJ.Messaging.AzureServiceBus.Extensions;
+using TCJ.Messaging.AzureServiceBus.Topology;
+#endif
 using TCJ.Core.Identifiers;
 using TCJ.Core.Results;
 #if TCJ_RESILIENCE_SMOKE
@@ -102,10 +107,34 @@ internal static class Program
         builder.Services.AddTcjMessaging(options => options.EnableConsumer = true);
         builder.Services.AddTcjMessage("smoke.inbound", 1, SmokeMessagingJsonContext.Default.SmokeInboundCommand);
         builder.Services.AddTcjMessage("smoke.changed", 1, SmokeMessagingJsonContext.Default.SmokeChanged);
+#if TCJ_AZURE_SERVICE_BUS_SMOKE
+        string azureServiceBusConnection = Environment.GetEnvironmentVariable("TCJ_AZURE_SERVICE_BUS_CONNECTION_STRING")
+            ?? throw new InvalidOperationException("TCJ_AZURE_SERVICE_BUS_CONNECTION_STRING is required for published Azure Service Bus smoke.");
+        string azureServiceBusManagementConnection = Environment.GetEnvironmentVariable("TCJ_AZURE_SERVICE_BUS_MANAGEMENT_CONNECTION_STRING")
+            ?? throw new InvalidOperationException("TCJ_AZURE_SERVICE_BUS_MANAGEMENT_CONNECTION_STRING is required for published Azure Service Bus smoke.");
+        builder.Services.AddTcjAzureServiceBus(azureServiceBusConnection, options =>
+        {
+            options.ManagementConnectionString = azureServiceBusManagementConnection;
+            options.ReadinessDestination = "published-messaging-inbox";
+            options.TopologyMode = AzureServiceBusTopologyMode.Declare;
+            options.DefaultRetryDelay = TimeSpan.FromSeconds(1);
+        });
+        builder.Services.AddTcjAzureServiceBusTopology(topology =>
+        {
+            topology.Queue(new AzureServiceBusQueueOptions { Name = "published-messaging-inbox" });
+            topology.Queue(new AzureServiceBusQueueOptions { Name = "smoke.changed.v1" });
+            topology.Queue(new AzureServiceBusQueueOptions { Name = "published-messaging-graceful-shutdown" });
+            topology.Queue(new AzureServiceBusQueueOptions { Name = "published-azure-scheduled" });
+        });
+#else
         builder.Services.AddTcjInMemoryMessaging();
+#endif
         builder.Services.AddTcjMessagingOutboxBridge();
 #if TCJ_HEALTH_CHECK_SMOKE
         healthChecks.AddTcjMessagingHealthChecks();
+#if TCJ_AZURE_SERVICE_BUS_SMOKE
+        healthChecks.AddTcjAzureServiceBusHealthChecks();
+#endif
 #endif
 #endif
 
@@ -158,6 +187,9 @@ internal static class Program
             typeof(TcjAspNetCoreOptions)
 #if TCJ_MESSAGING_SMOKE
             , typeof(TCJ.Messaging.Configuration.TcjMessagingOptions)
+#endif
+#if TCJ_AZURE_SERVICE_BUS_SMOKE
+            , typeof(TcjAzureServiceBusOptions)
 #endif
         ];
 
@@ -385,11 +417,63 @@ internal static class Program
             throw new InvalidOperationException("Published TCJ.Messaging Inbox-to-Outbox transport envelope did not preserve safe identity/correlation metadata.");
         }
 
+#if TCJ_AZURE_SERVICE_BUS_SMOKE
+        var scheduledEnvelope = new TransportMessageEnvelope(
+            "published-azure-scheduled-1",
+            "smoke.inbound",
+            1,
+            payload,
+            "application/json",
+            DateTimeOffset.UtcNow,
+            correlationId: correlationId);
+        DateTimeOffset scheduledAt = DateTimeOffset.UtcNow.AddSeconds(2);
+        PublishResult scheduledResult = await publisher.PublishAsync(
+            scheduledEnvelope,
+            new PublishContext { Destination = "published-azure-scheduled", ScheduledAtUtc = scheduledAt }).ConfigureAwait(false);
+        if (!scheduledResult.IsSuccess)
+            throw new InvalidOperationException("Published Azure Service Bus scheduled-delivery smoke could not schedule the message.");
+
+        using (var early = new CancellationTokenSource(TimeSpan.FromMilliseconds(600)))
+        {
+            await using IAsyncEnumerator<ReceivedMessage> earlyEnumerator = receiver
+                .ReceiveAsync(new ReceiveContext { Source = "published-azure-scheduled" }, early.Token)
+                .GetAsyncEnumerator(early.Token);
+            try
+            {
+                if (await earlyEnumerator.MoveNextAsync().ConfigureAwait(false))
+                {
+                    await earlyEnumerator.Current.Settlement.CompleteAsync().ConfigureAwait(false);
+                    throw new InvalidOperationException("Published Azure Service Bus scheduled message was delivered before its scheduled time.");
+                }
+            }
+            catch (OperationCanceledException) when (early.IsCancellationRequested)
+            {
+            }
+        }
+
+        using (var scheduledTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+        {
+            await using IAsyncEnumerator<ReceivedMessage> scheduledEnumerator = receiver
+                .ReceiveAsync(new ReceiveContext { Source = "published-azure-scheduled" }, scheduledTimeout.Token)
+                .GetAsyncEnumerator(scheduledTimeout.Token);
+            if (!await scheduledEnumerator.MoveNextAsync().ConfigureAwait(false)
+                || scheduledEnumerator.Current.Envelope.MessageId != scheduledEnvelope.MessageId)
+            {
+                throw new InvalidOperationException("Published Azure Service Bus scheduled message was not delivered after its scheduled time.");
+            }
+            await scheduledEnumerator.Current.Settlement.CompleteAsync(scheduledTimeout.Token).ConfigureAwait(false);
+        }
+#endif
+
         IMessageConsumerRunner runner = services.GetRequiredService<IMessageConsumerRunner>();
         using var shutdown = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
         await runner.RunAsync(new ReceiveContext { Source = "published-messaging-graceful-shutdown" }, shutdown.Token).ConfigureAwait(false);
 
+#if TCJ_AZURE_SERVICE_BUS_SMOKE
+        Console.WriteLine("TCJ_AZURE_SERVICE_BUS_SMOKE succeeded for published package restore, queue publish/receive, Inbox duplicate settlement, Outbox publishing, scheduled delivery, safe headers, and graceful shutdown.");
+#else
         Console.WriteLine("TCJ_MESSAGING_SMOKE succeeded for package restore, in-memory publish/receive, Inbox duplicate settlement, Outbox publishing, safe headers, and graceful shutdown.");
+#endif
     }
 #endif
 

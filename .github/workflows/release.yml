@@ -66,8 +66,12 @@ jobs:
     name: Transport-neutral messaging contract gate
     uses: ./.github/workflows/messaging.yml
 
+  azure-service-bus:
+    name: Azure Service Bus transport gate
+    uses: ./.github/workflows/azure-service-bus.yml
+
   build-and-pack:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -119,6 +123,9 @@ jobs:
 
       - name: Validate documentation policy
         run: python3 eng/verify-documentation.py validate-config
+
+      - name: Validate Azure Service Bus release contract
+        run: python3 eng/verify-azure-service-bus.py validate-config
 
       - name: Validate package consumer compatibility configuration
         run: python3 eng/verify-consumer-compatibility.py validate-config

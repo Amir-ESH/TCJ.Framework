@@ -23,5 +23,6 @@
     <ProjectReference Include="../../src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj" />
     <ProjectReference Include="../../src/TCJ.AspNetCore/TCJ.AspNetCore.csproj" />
     <ProjectReference Include="../../src/TCJ.Messaging/TCJ.Messaging.csproj" />
+    <ProjectReference Include="../../src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj" />
   </ItemGroup>
 </Project>

@@ -11,6 +11,7 @@ The project follows semantic versioning. Until `1.0.0`, preview releases may inc
 - Added transport-neutral transactional Inbox contracts, stable message identity/version registration, EF Core persistence, and SQL Server consumer-scoped uniqueness.
 - Added inline and deferred Inbox processing, concurrent duplicate protection, bounded retry/dead-letter handling, explicit replay, batched cleanup, telemetry, health checks, startup validation, and dedicated CI/release verification.
 - Added Inbox-Outbox correlation and causation propagation plus SQL Server integration and concurrency coverage for idempotent inbound processing.
+- Added `TCJ.Messaging.AzureServiceBus`, a production Azure Service Bus adapter with Peek-Lock/manual settlement, queue/topic/subscription topology, scheduling and TTL, broker-aware batching, sessions, bounded lock renewal, duplicate-detection guidance, Inbox/Outbox integration, observability, health/startup diagnostics, compatibility consumers, verifier policy/contract, emulator-backed integration coverage, and release enforcement.
 
 ### Changed
 

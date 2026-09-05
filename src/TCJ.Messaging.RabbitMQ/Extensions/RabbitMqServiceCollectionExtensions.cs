@@ -39,7 +39,7 @@ public static class RabbitMqServiceCollectionExtensions
         if (topologyRegistration?.ImplementationType == typeof(DefaultMessageTopologyNamingStrategy))
         {
             services.Remove(topologyRegistration);
-            services.AddSingleton<IMessageTopologyNamingStrategy>(static sp => new RabbitMqMessageTopologyNamingStrategy(sp.GetRequiredService<TcjRabbitMqOptions>()));
+            services.AddSingleton<IMessageTopologyNamingStrategy, RabbitMqMessageTopologyNamingStrategy>();
         }
 
         services.TryAddSingleton<IRabbitMqRoutingKeyStrategy, DefaultRabbitMqRoutingKeyStrategy>();

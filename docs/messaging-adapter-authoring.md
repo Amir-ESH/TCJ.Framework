@@ -113,3 +113,7 @@ Before publishing an adapter:
 7. run package consumer and upgrade compatibility tests;
 8. run trimming/Native AOT validation when the adapter claims compatibility;
 9. include package metadata, SBOM/provenance, and release evidence in the normal TCJ release gates.
+
+## Reference production adapters
+
+`TCJ.Messaging.RabbitMQ` and `TCJ.Messaging.AzureServiceBus` are production reference implementations of the neutral adapter contract. The Azure adapter demonstrates Peek-Lock/manual settlement, scheduling, deferral, session-scoped ordering, broker-aware batching, bounded sender/client reuse, and a broker-specific policy/contract verifier without exposing Azure SDK types through `TCJ.Messaging`.

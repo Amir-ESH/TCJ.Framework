@@ -13,6 +13,7 @@ on:
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.AspNetCore/**"
       - "src/TCJ.Messaging/**"
+      - "src/TCJ.Messaging.AzureServiceBus/**"
       - "tests/TCJ.Inbox.Tests/**"
       - "tests/TCJ.Messaging.Tests/**"
       - "eng/inbox-*.json"
@@ -33,6 +34,7 @@ on:
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.AspNetCore/**"
       - "src/TCJ.Messaging/**"
+      - "src/TCJ.Messaging.AzureServiceBus/**"
       - "tests/TCJ.Inbox.Tests/**"
       - "tests/TCJ.Messaging.Tests/**"
       - "eng/inbox-*.json"
@@ -72,6 +74,9 @@ jobs:
         run: python3 eng/verify-inbox.py validate-config
       - name: Validate messaging policy and contract
         run: python3 eng/verify-messaging.py validate-config
+
+      - name: Validate Azure Service Bus adapter contract
+        run: python3 eng/verify-azure-service-bus.py validate-config
       - name: Restore and audit dependencies
         run: dotnet restore tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj --force-evaluate
       - name: Build Inbox tests

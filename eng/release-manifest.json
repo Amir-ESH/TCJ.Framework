@@ -28,6 +28,9 @@
       },
       {
         "id": "TCJ.Messaging.RabbitMQ"
+      },
+      {
+        "id": "TCJ.Messaging.AzureServiceBus"
       }
     ],
     "tooling": [

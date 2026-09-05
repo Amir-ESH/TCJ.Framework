@@ -237,6 +237,20 @@
         }
       ],
       "fullSupportEvidence": []
+    },
+    {
+      "packageId": "TCJ.Messaging.AzureServiceBus",
+      "tier": "Conditional",
+      "rationale": "TCJ.Messaging.AzureServiceBus keeps TCJ message contracts trimming-safe, but the adapter depends on Azure.Messaging.ServiceBus and its AMQP/runtime implementation. Full packed-package Native AOT evidence is not established for this transport, so support remains conditional on upstream SDK compatibility.",
+      "restrictions": [
+        {
+          "kind": "Upstream",
+          "symbol": "Azure.Messaging.ServiceBus",
+          "status": "Restricted",
+          "reason": "Native AOT support is limited by the Azure Service Bus SDK/runtime dependency chain. TCJ does not claim Full support until a packed-package consumer can publish and execute with zero TCJ-caused trimming/AOT warnings."
+        }
+      ],
+      "fullSupportEvidence": []
     }
   ],
   "supportedCiRuntimeIdentifiers": [

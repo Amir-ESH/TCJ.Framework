@@ -121,6 +121,9 @@ jobs:
       - name: Validate transport-neutral messaging configuration
         run: python3 eng/verify-messaging.py validate-config
 
+      - name: Validate Azure Service Bus adapter configuration
+        run: python3 eng/verify-azure-service-bus.py validate-config
+
       - name: Verify Native AOT policy and release wiring
         run: python3 eng/verify-aot.py verify
 

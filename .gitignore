@@ -580,3 +580,15 @@ tests/TCJ.Messaging.ConformanceTests/obj/
 !src/TCJ.Messaging/**
 !tests/TCJ.Messaging.Tests/**
 !tests/TCJ.Messaging.ConformanceTests/**
+
+# Azure Service Bus transport generated evidence
+artifacts/azure-service-bus/
+TestResults/AzureServiceBus/
+tests/TCJ.Messaging.AzureServiceBus.Tests/bin/
+tests/TCJ.Messaging.AzureServiceBus.Tests/obj/
+!eng/azure-service-bus-policy.json
+!eng/azure-service-bus-contract.json
+!eng/verify-azure-service-bus.py
+!eng/azure-service-bus-emulator/**
+!src/TCJ.Messaging.AzureServiceBus/**
+!tests/TCJ.Messaging.AzureServiceBus.Tests/**

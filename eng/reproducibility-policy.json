@@ -7,7 +7,8 @@
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
-    "TCJ.Messaging.RabbitMQ"
+    "TCJ.Messaging.RabbitMQ",
+    "TCJ.Messaging.AzureServiceBus"
   ],
   "comparePackageContents": true,
   "compareSymbolPackageContents": true,

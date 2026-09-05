@@ -34,6 +34,8 @@ on:
       - "src/TCJ.EntityFrameworkCore/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.AspNetCore/**"
+      - "src/TCJ.Messaging/**"
+      - "src/TCJ.Messaging.AzureServiceBus/**"
       - "eng/observability-policy.json"
       - "eng/observability-contract.json"
       - "eng/verify-resilience.py"

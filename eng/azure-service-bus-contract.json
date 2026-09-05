@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "packageName": "TCJ.Messaging.AzureServiceBus",
+  "transportDescriptor": {
+    "name": "AzureServiceBus",
+    "capabilities": {
+      "supportsBatchPublish": true,
+      "supportsScheduling": true,
+      "supportsTimeToLive": true,
+      "supportsDeadLetter": true,
+      "supportsDefer": true,
+      "supportsOrderedDelivery": true,
+      "supportsPartitioning": true,
+      "supportsTransactions": false,
+      "supportsPeekLock": true,
+      "orderingGuarantee": "PerSession"
+    }
+  },
+  "authentication": [
+    "TokenCredential",
+    "ConnectionString"
+  ],
+  "defaults": {
+    "PrefetchCount": 32,
+    "MaximumConcurrentMessages": 8,
+    "MaximumConcurrentSessions": 4,
+    "MaximumConcurrentCallsPerSession": 1,
+    "MaximumRetries": 3,
+    "TryTimeoutSeconds": 30,
+    "MaxAutoLockRenewalMinutes": 5,
+    "ShutdownTimeoutSeconds": 30,
+    "MaximumSenderCacheSize": 128,
+    "AutoCompleteMessages": false,
+    "RetrySettlementStrategy": "ScheduledClone",
+    "TopologyMode": "Disabled"
+  },
+  "topologyModes": [
+    "Declare",
+    "ValidateOnly",
+    "Disabled"
+  ],
+  "settlementMappings": {
+    "Complete": "CompleteMessageAsync",
+    "Retry": "ScheduledCloneThenCompleteOriginal",
+    "DeadLetter": "DeadLetterMessageAsync",
+    "Abandon": "AbandonMessageAsync",
+    "Defer": "DeferMessageAsync"
+  },
+  "retryOwnership": {
+    "sdk": "short-bounded-operation-retry",
+    "durable": "TCJ Outbox",
+    "scheduledRetryIdentity": "transport MessageId receives :retry:<attempt> suffix while tcj-message-id remains stable"
+  },
+  "sessionMapping": {
+    "orderingKey": "SessionId",
+    "maximumConcurrentCallsPerSession": 1,
+    "claim": "ordered processing within one session only"
+  },
+  "messagePropertyMappings": {
+    "MessageId": "ServiceBusMessage.MessageId",
+    "MessageType": "ServiceBusMessage.Subject",
+    "ContentType": "ServiceBusMessage.ContentType",
+    "CorrelationId": "ServiceBusMessage.CorrelationId",
+    "OrderingKey": "ServiceBusMessage.SessionId",
+    "PartitionKey": "ServiceBusMessage.PartitionKey",
+    "ReplyTo": "ServiceBusMessage.ReplyTo",
+    "TimeToLive": "ServiceBusMessage.TimeToLive",
+    "ScheduledAtUtc": "ScheduleMessageAsync",
+    "ApplicationProperties": "allowlisted TCJ headers"
+  },
+  "activities": [
+    "tcj.azure_service_bus.connect",
+    "tcj.azure_service_bus.publish",
+    "tcj.azure_service_bus.schedule",
+    "tcj.azure_service_bus.receive",
+    "tcj.azure_service_bus.complete",
+    "tcj.azure_service_bus.abandon",
+    "tcj.azure_service_bus.defer",
+    "tcj.azure_service_bus.dead_letter",
+    "tcj.azure_service_bus.lock_renew",
+    "tcj.azure_service_bus.session.accept",
+    "tcj.azure_service_bus.topology.validate"
+  ],
+  "metrics": [
+    "tcj.azure_service_bus.messages.published",
+    "tcj.azure_service_bus.messages.scheduled",
+    "tcj.azure_service_bus.messages.received",
+    "tcj.azure_service_bus.messages.completed",
+    "tcj.azure_service_bus.messages.abandoned",
+    "tcj.azure_service_bus.messages.deferred",
+    "tcj.azure_service_bus.messages.dead_lettered",
+    "tcj.azure_service_bus.publish.duration",
+    "tcj.azure_service_bus.processing.duration",
+    "tcj.azure_service_bus.lock_renewals",
+    "tcj.azure_service_bus.lock_losses",
+    "tcj.azure_service_bus.processor.errors",
+    "tcj.azure_service_bus.active_sessions"
+  ],
+  "healthChecks": [
+    "tcj.azure_service_bus.client",
+    "tcj.azure_service_bus.sender",
+    "tcj.azure_service_bus.processor",
+    "tcj.azure_service_bus.topology",
+    "tcj.azure_service_bus.session_processor"
+  ],
+  "deliveryGuarantees": {
+    "publisher": "at-least-once publication when used with TCJ Outbox",
+    "consumer": "at-least-once broker delivery with idempotent processing through TCJ Inbox",
+    "sessionOrdering": "ordered within a session when configured with one in-flight call per session",
+    "globalExactlyOnceGuaranteed": false,
+    "brokerDuplicateDetectionReplacesInbox": false
+  },
+  "testStrategy": {
+    "local": "official Azure Service Bus emulator for queue/topic/subscription/Peek-Lock/settlement/scheduling/TTL/duplicate-detection/session smoke coverage",
+    "live": "protected Azure namespace for cloud-only semantics, long-running session/lock behavior, RBAC and production topology validation"
+  },
+  "topologyProperties": {
+    "queue": [
+      "RequiresSession",
+      "RequiresDuplicateDetection",
+      "DuplicateDetectionHistoryTimeWindow",
+      "DefaultMessageTimeToLive",
+      "MaxDeliveryCount",
+      "EnableDeadLetteringOnMessageExpiration",
+      "EnablePartitioning"
+    ],
+    "topic": [
+      "RequiresDuplicateDetection",
+      "DuplicateDetectionHistoryTimeWindow",
+      "DefaultMessageTimeToLive",
+      "EnablePartitioning"
+    ],
+    "subscription": [
+      "RequiresSession",
+      "MaxDeliveryCount",
+      "EnableDeadLetteringOnMessageExpiration",
+      "EnableDeadLetteringOnFilterEvaluationExceptions",
+      "Rules"
+    ]
+  }
+}

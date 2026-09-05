@@ -40,6 +40,7 @@ jobs:
       health_checks: ${{ steps.resolve.outputs.health_checks }}
       transactional_outbox: ${{ steps.resolve.outputs.transactional_outbox }}
       performance: ${{ steps.resolve.outputs.performance }}
+      azure_service_bus: ${{ steps.resolve.outputs.azure_service_bus }}
       plan_json: ${{ steps.resolve.outputs.plan_json }}
 
     steps:
@@ -176,6 +177,12 @@ jobs:
     with:
       mode: short
 
+  azure_service_bus:
+    name: Azure Service Bus transport
+    needs: plan
+    if: needs.plan.outputs.azure_service_bus == 'true'
+    uses: ./.github/workflows/azure-service-bus.yml
+
   required:
     name: Required PR Gate
     if: ${{ always() }}
@@ -196,6 +203,7 @@ jobs:
       - health_checks
       - transactional_outbox
       - performance
+      - azure_service_bus
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -207,7 +215,7 @@ jobs:
         env:
           PLAN_JSON: ${{ needs.plan.outputs.plan_json }}
           RESULTS_JSON: >-
-            {"ci":"${{ needs.ci.result }}","dependency_review":"${{ needs.dependency_review.result }}","mutation":"${{ needs.mutation.result }}","reproducible_builds":"${{ needs.reproducible_builds.result }}","documentation":"${{ needs.documentation.result }}","sqlserver_integration":"${{ needs.sqlserver_integration.result }}","aspnetcore_integration":"${{ needs.aspnetcore_integration.result }}","consumer_compatibility":"${{ needs.consumer_compatibility.result }}","upgrade_compatibility":"${{ needs.upgrade_compatibility.result }}","property_fuzz":"${{ needs.property_fuzz.result }}","concurrency_stress":"${{ needs.concurrency_stress.result }}","resilience":"${{ needs.resilience.result }}","health_checks":"${{ needs.health_checks.result }}","transactional_outbox":"${{ needs.transactional_outbox.result }}","performance":"${{ needs.performance.result }}"}
+            {"ci":"${{ needs.ci.result }}","dependency_review":"${{ needs.dependency_review.result }}","mutation":"${{ needs.mutation.result }}","reproducible_builds":"${{ needs.reproducible_builds.result }}","documentation":"${{ needs.documentation.result }}","sqlserver_integration":"${{ needs.sqlserver_integration.result }}","aspnetcore_integration":"${{ needs.aspnetcore_integration.result }}","consumer_compatibility":"${{ needs.consumer_compatibility.result }}","upgrade_compatibility":"${{ needs.upgrade_compatibility.result }}","property_fuzz":"${{ needs.property_fuzz.result }}","concurrency_stress":"${{ needs.concurrency_stress.result }}","resilience":"${{ needs.resilience.result }}","health_checks":"${{ needs.health_checks.result }}","transactional_outbox":"${{ needs.transactional_outbox.result }}","performance":"${{ needs.performance.result }}","azure_service_bus":"${{ needs.azure_service_bus.result }}"}
         run: >
           python3 eng/resolve-pr-gates.py verify-results
           --plan-json "$PLAN_JSON"

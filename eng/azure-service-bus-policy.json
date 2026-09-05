@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "packageName": "TCJ.Messaging.AzureServiceBus",
+  "project": "src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj",
+  "testProject": "tests/TCJ.Messaging.AzureServiceBus.Tests/TCJ.Messaging.AzureServiceBus.Tests.csproj",
+  "targetFramework": "net10.0",
+  "azureCoreVersion": "1.62.0",
+  "azureServiceBusVersion": "7.20.2",
+  "azureIdentityVersion": "1.21.0",
+  "minimumIntegrationTestCount": 28,
+  "requirePeekLock": true,
+  "requireManualCompletion": true,
+  "requireDeadLetterTests": true,
+  "requireAbandonTests": true,
+  "requireDeferTests": true,
+  "requireSchedulingTests": true,
+  "requireTimeToLiveTests": true,
+  "requireLockRenewalTests": true,
+  "requireLockLossTests": true,
+  "requireSessionTests": true,
+  "requireGracefulShutdownTests": true,
+  "requireOutboxIntegration": true,
+  "requireInboxIntegration": true,
+  "requireConformanceSuite": true,
+  "requireSensitiveDataProtection": true,
+  "requirePackageConsumers": true,
+  "requirePublishedPackageSmoke": true,
+  "maximumPrefetchCount": 10000,
+  "maximumConcurrentMessages": 256,
+  "maximumConcurrentSessions": 128,
+  "maximumTryTimeoutSeconds": 120,
+  "maximumLockRenewalMinutes": 30,
+  "emulator": {
+    "image": "mcr.microsoft.com/azure-messaging/servicebus-emulator@sha256:5a96d893b245031740f7d46e0fe5ff282d24b78c4b7d761dd57590f3f010a9b3",
+    "sqlServerImage": "mcr.microsoft.com/mssql/server@sha256:ba4c8329f48fb8f02e1416be6a930ebfd71268caee78aa985f3af4315e457c89",
+    "amqpPort": 5672,
+    "managementPort": 5300,
+    "requirePinnedImages": true,
+    "version": "2.0.1",
+    "sqlServerVersion": "2022-CU26-ubuntu-22.04"
+  },
+  "requiredConsumers": [
+    "compatibility/Consumers/AzureServiceBusPublisher.Console/AzureServiceBusPublisher.Console.csproj",
+    "compatibility/Consumers/AzureServiceBusConsumer.Worker/AzureServiceBusConsumer.Worker.csproj",
+    "compatibility/Consumers/AzureServiceBusSessionConsumer.Worker/AzureServiceBusSessionConsumer.Worker.csproj",
+    "compatibility/Consumers/AzureServiceBusInboxOutbox.Worker/AzureServiceBusInboxOutbox.Worker.csproj"
+  ],
+  "generatedOutputRoots": [
+    "artifacts/azure-service-bus/",
+    "TestResults/AzureServiceBus/"
+  ]
+}
