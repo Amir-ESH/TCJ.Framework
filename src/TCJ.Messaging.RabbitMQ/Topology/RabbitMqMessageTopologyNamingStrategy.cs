@@ -13,4 +13,10 @@ internal sealed class RabbitMqMessageTopologyNamingStrategy : IMessageTopologyNa
         if (messageVersion <= 0) throw new ArgumentOutOfRangeException(nameof(messageVersion));
         return _options.DefaultExchange;
     }
+
+    public string GetSubscription(string consumerName)
+    {
+        RabbitMqValidation.ValidateEntityName(consumerName, nameof(consumerName), allowEmpty: false);
+        return consumerName;
+    }
 }
