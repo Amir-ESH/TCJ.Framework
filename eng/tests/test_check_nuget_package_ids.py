@@ -60,15 +60,17 @@ class NuGetPackageIdPolicyTests(unittest.TestCase):
                 "TCJ.EntityFrameworkCore.SqlServer",
                 "TCJ.AspNetCore",
                 "TCJ.Messaging",
+                "TCJ.Messaging.RabbitMQ",
                 "TCJ.Generators",
             ],
         )
-        self.assertEqual(set(current) - published, {"TCJ.Messaging"})
-        self.assertEqual(published, set(current) - {"TCJ.Messaging"})
+        target_only = {"TCJ.Messaging", "TCJ.Messaging.RabbitMQ"}
+        self.assertEqual(set(current) - published, target_only)
+        self.assertEqual(published, set(current) - target_only)
         self.assertTrue(
             all(
                 MODULE.expected_exists("transition", package_id, published)
-                is (package_id != "TCJ.Messaging")
+                is (package_id not in target_only)
                 for package_id in current
             )
         )
