@@ -230,7 +230,7 @@
       "rationale": "TCJ.Messaging.RabbitMQ avoids reflection-based message activation and keeps RabbitMQ SDK types out of its public API. Native AOT support remains Conditional because RabbitMQ.Client is an upstream runtime dependency and this step does not claim Full support without packed-NuGet Native AOT execution evidence.",
       "restrictions": [
         {
-          "kind": "Dependency",
+          "kind": "Upstream",
           "symbol": "RabbitMQ.Client",
           "status": "Restricted",
           "reason": "Native AOT/trimming support is limited by the pinned RabbitMQ.Client runtime path. TCJ does not suppress ILLink/NativeAOT diagnostics and does not claim Full support until a packed consumer publishes and executes with zero TCJ-caused warnings."
