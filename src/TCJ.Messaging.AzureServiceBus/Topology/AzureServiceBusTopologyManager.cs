@@ -51,7 +51,7 @@ internal sealed class AzureServiceBusTopologyManager
                 DeadLetteringOnMessageExpiration = expected.EnableDeadLetteringOnMessageExpiration
             };
             if (expected.DuplicateDetectionHistoryTimeWindow is { } duplicateWindow) create.DuplicateDetectionHistoryTimeWindow = duplicateWindow;
-            if (expected.DefaultMessageTimeToLive is { } ttl) create.DefaultMessageTimeToLive = ttl;
+            if (expected.DefaultMessageTimeToLive is { } createTtl) create.DefaultMessageTimeToLive = createTtl;
             if (expected.MaxDeliveryCount is { } max) create.MaxDeliveryCount = max;
             _ = await admin.CreateQueueAsync(create, token).ConfigureAwait(false);
             return;
@@ -62,7 +62,7 @@ internal sealed class AzureServiceBusTopologyManager
             (expected.MaxDeliveryCount is { } maxCount && actual.MaxDeliveryCount != maxCount) ||
             actual.DeadLetteringOnMessageExpiration != expected.EnableDeadLetteringOnMessageExpiration ||
             (expected.DuplicateDetectionHistoryTimeWindow is { } window && actual.DuplicateDetectionHistoryTimeWindow != window) ||
-            (expected.DefaultMessageTimeToLive is { } ttl && actual.DefaultMessageTimeToLive != ttl))
+            (expected.DefaultMessageTimeToLive is { } expectedTtl && actual.DefaultMessageTimeToLive != expectedTtl))
             throw PermanentTopology($"Queue '{expected.Name}' properties conflict with TCJ expectations.");
     }
 
@@ -78,7 +78,7 @@ internal sealed class AzureServiceBusTopologyManager
                 EnablePartitioning = expected.EnablePartitioning
             };
             if (expected.DuplicateDetectionHistoryTimeWindow is { } duplicateWindow) create.DuplicateDetectionHistoryTimeWindow = duplicateWindow;
-            if (expected.DefaultMessageTimeToLive is { } ttl) create.DefaultMessageTimeToLive = ttl;
+            if (expected.DefaultMessageTimeToLive is { } createTtl) create.DefaultMessageTimeToLive = createTtl;
             _ = await admin.CreateTopicAsync(create, token).ConfigureAwait(false);
             return;
         }
@@ -86,7 +86,7 @@ internal sealed class AzureServiceBusTopologyManager
         if (actual.RequiresDuplicateDetection != expected.RequiresDuplicateDetection ||
             actual.EnablePartitioning != expected.EnablePartitioning ||
             (expected.DuplicateDetectionHistoryTimeWindow is { } window && actual.DuplicateDetectionHistoryTimeWindow != window) ||
-            (expected.DefaultMessageTimeToLive is { } ttl && actual.DefaultMessageTimeToLive != ttl))
+            (expected.DefaultMessageTimeToLive is { } expectedTtl && actual.DefaultMessageTimeToLive != expectedTtl))
             throw PermanentTopology($"Topic '{expected.Name}' properties conflict with TCJ expectations.");
     }
 
