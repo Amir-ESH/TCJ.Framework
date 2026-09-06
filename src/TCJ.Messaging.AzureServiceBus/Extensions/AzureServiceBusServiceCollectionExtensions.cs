@@ -53,7 +53,7 @@ public static class AzureServiceBusServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(builder);
         if (builder.Services.Any(static descriptor => descriptor.ServiceType == typeof(AzureServiceBusHealthChecksMarker)))
             return builder;
-        builder.Services.AddSingleton<AzureServiceBusHealthChecksMarker>();
+        builder.Services.AddSingleton(new AzureServiceBusHealthChecksMarker());
         string[] tags = ["ready", "azure-service-bus"];
         builder.AddCheck<AzureServiceBusClientHealthCheck>(TcjAzureServiceBusHealthCheckNames.Client, failureStatus: HealthStatus.Unhealthy, tags: tags);
         builder.AddCheck<AzureServiceBusSenderHealthCheck>(TcjAzureServiceBusHealthCheckNames.Sender, failureStatus: HealthStatus.Unhealthy, tags: tags);
@@ -74,16 +74,33 @@ public static class AzureServiceBusServiceCollectionExtensions
         var options = new TcjAzureServiceBusOptions(); configure(options); options.Validate(credential is not null);
         services.AddSingleton(options);
         services.AddSingleton(new AzureServiceBusAuthentication(credential));
-        services.TryAddSingleton<IAzureServiceBusClientFactory, DefaultAzureServiceBusClientFactory>();
-        services.TryAddSingleton<AzureServiceBusClientManager>();
-        services.TryAddSingleton<AzureServiceBusMessageMapper>();
-        services.TryAddSingleton<AzureServiceBusTopologyManager>();
-        services.TryAddSingleton<AzureServiceBusTransportPublisher>();
+        services.TryAddSingleton<IAzureServiceBusClientFactory>(static _ => new DefaultAzureServiceBusClientFactory());
+        services.TryAddSingleton<AzureServiceBusClientManager>(static sp => new AzureServiceBusClientManager(
+            sp.GetRequiredService<TcjAzureServiceBusOptions>(),
+            sp.GetRequiredService<AzureServiceBusAuthentication>(),
+            sp.GetRequiredService<IAzureServiceBusClientFactory>()));
+        services.TryAddSingleton<AzureServiceBusMessageMapper>(static sp => new AzureServiceBusMessageMapper(
+            sp.GetRequiredService<MessagingHeaderPolicy>(),
+            sp.GetRequiredService<TcjAzureServiceBusOptions>(),
+            sp.GetRequiredService<TimeProvider>()));
+        services.TryAddSingleton<AzureServiceBusTopologyManager>(static sp => new AzureServiceBusTopologyManager(
+            sp.GetRequiredService<TcjAzureServiceBusOptions>(),
+            sp.GetRequiredService<AzureServiceBusClientManager>()));
+        services.TryAddSingleton<AzureServiceBusTransportPublisher>(static sp => new AzureServiceBusTransportPublisher(
+            sp.GetRequiredService<AzureServiceBusClientManager>(),
+            sp.GetRequiredService<AzureServiceBusMessageMapper>(),
+            sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IMessagingTransportPublisher>(static sp => sp.GetRequiredService<AzureServiceBusTransportPublisher>());
         services.AddSingleton<IMessagingTransportBatchPublisher>(static sp => sp.GetRequiredService<AzureServiceBusTransportPublisher>());
-        services.TryAddSingleton<AzureServiceBusMessageReceiver>();
+        services.TryAddSingleton<AzureServiceBusMessageReceiver>(static sp => new AzureServiceBusMessageReceiver(
+            sp.GetRequiredService<AzureServiceBusClientManager>(),
+            sp.GetRequiredService<AzureServiceBusMessageMapper>(),
+            sp.GetRequiredService<TcjAzureServiceBusOptions>(),
+            sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IMessageReceiver>(static sp => sp.GetRequiredService<AzureServiceBusMessageReceiver>());
-        services.TryAddSingleton<AzureServiceBusTransportHealthProbe>();
+        services.TryAddSingleton<AzureServiceBusTransportHealthProbe>(static sp => new AzureServiceBusTransportHealthProbe(
+            sp.GetRequiredService<AzureServiceBusClientManager>(),
+            sp.GetRequiredService<TcjAzureServiceBusOptions>()));
         services.AddSingleton<IMessagingTransportHealthProbe>(static sp => sp.GetRequiredService<AzureServiceBusTransportHealthProbe>());
 
         services.AddSingleton(new MessagingTransportDescriptor
@@ -110,19 +127,38 @@ public static class AzureServiceBusServiceCollectionExtensions
 
         services.TryAddSingleton<MessagingStartupValidator>();
         services.RemoveAll<IMessagingStartupValidator>();
-        services.TryAddSingleton<AzureServiceBusStartupValidator>();
+        services.TryAddSingleton<AzureServiceBusStartupValidator>(static sp => new AzureServiceBusStartupValidator(
+            sp.GetRequiredService<MessagingStartupValidator>(),
+            sp.GetRequiredService<AzureServiceBusTopologyManager>(),
+            sp.GetRequiredService<AzureServiceBusClientManager>(),
+            sp.GetRequiredService<TcjAzureServiceBusOptions>(),
+            sp.GetRequiredService<TcjMessagingOptions>(),
+            sp.GetRequiredService<AzureServiceBusAuthentication>()));
         services.AddSingleton<IMessagingStartupValidator>(static sp => sp.GetRequiredService<AzureServiceBusStartupValidator>());
         if (messaging.EnableConsumer)
         {
             services.RemoveAll<IMessageConsumerRunner>();
-            services.AddTransient<AzureServiceBusMessageConsumerRunner>();
+            services.AddTransient<AzureServiceBusMessageConsumerRunner>(static sp => new AzureServiceBusMessageConsumerRunner(
+                sp.GetRequiredService<IMessageReceiver>(),
+                sp.GetRequiredService<IServiceScopeFactory>(),
+                sp.GetRequiredService<IMessagingStartupValidator>(),
+                sp.GetRequiredService<TcjAzureServiceBusOptions>(),
+                sp.GetRequiredService<MessagingConsumerState>(),
+                sp.GetRequiredService<TimeProvider>()));
             services.AddTransient<IMessageConsumerRunner>(static sp => sp.GetRequiredService<AzureServiceBusMessageConsumerRunner>());
         }
-        services.TryAddSingleton<AzureServiceBusClientHealthCheck>();
-        services.TryAddSingleton<AzureServiceBusSenderHealthCheck>();
-        services.TryAddSingleton<AzureServiceBusProcessorHealthCheck>();
-        services.TryAddSingleton<AzureServiceBusTopologyHealthCheck>();
-        services.TryAddSingleton<AzureServiceBusSessionProcessorHealthCheck>();
+        services.TryAddSingleton<AzureServiceBusClientHealthCheck>(static sp => new AzureServiceBusClientHealthCheck(
+            sp.GetRequiredService<AzureServiceBusClientManager>(),
+            sp.GetRequiredService<TcjAzureServiceBusOptions>()));
+        services.TryAddSingleton<AzureServiceBusSenderHealthCheck>(static sp => new AzureServiceBusSenderHealthCheck(
+            sp.GetRequiredService<AzureServiceBusClientManager>()));
+        services.TryAddSingleton<AzureServiceBusProcessorHealthCheck>(static sp => new AzureServiceBusProcessorHealthCheck(
+            sp.GetRequiredService<TcjMessagingOptions>(),
+            sp.GetRequiredService<MessagingConsumerState>()));
+        services.TryAddSingleton<AzureServiceBusTopologyHealthCheck>(static sp => new AzureServiceBusTopologyHealthCheck(
+            sp.GetRequiredService<IMessagingStartupValidator>()));
+        services.TryAddSingleton<AzureServiceBusSessionProcessorHealthCheck>(static sp => new AzureServiceBusSessionProcessorHealthCheck(
+            sp.GetRequiredService<TcjAzureServiceBusOptions>()));
         return services;
     }
 
