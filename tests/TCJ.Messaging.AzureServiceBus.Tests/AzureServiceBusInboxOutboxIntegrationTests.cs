@@ -28,7 +28,8 @@ public sealed class AzureServiceBusInboxOutboxIntegrationTests
         await provider.GetRequiredService<IMessagePublisher>().PublishAsync(
             Envelope("inbox-commit"), new PublishContext { Destination = queue });
 
-        ReceivedMessage received = await ReceiveOne(provider, queue);
+        await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue);
+        ReceivedMessage received = lease.Message;
         var gate = new TaskCompletionSource<InboxHandlingResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var pipeline = new StubInboxPipeline((_, _) => gate.Task);
         InboxTransportBridge bridge = CreateInboxBridge(provider, pipeline);
@@ -62,8 +63,9 @@ public sealed class AzureServiceBusInboxOutboxIntegrationTests
             return Task.FromResult(new InboxHandlingResult(InboxHandlingOutcome.IgnoreDuplicate, IsDuplicate: true));
         });
 
+        await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue);
         InboxTransportBridgeResult result = await CreateInboxBridge(provider, pipeline)
-            .ProcessAsync(await ReceiveOne(provider, queue));
+            .ProcessAsync(lease.Message);
 
         Assert.Equal(1, pipelineCalls);
         Assert.True(result.InboxResult.IsDuplicate);
@@ -83,8 +85,9 @@ public sealed class AzureServiceBusInboxOutboxIntegrationTests
 
         var pipeline = new StubInboxPipeline((_, _) => Task.FromResult(
             new InboxHandlingResult(InboxHandlingOutcome.Retry, 2, InboxFailureType.TransientInfrastructure)));
+        await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue);
         InboxTransportBridgeResult result = await CreateInboxBridge(provider, pipeline)
-            .ProcessAsync(await ReceiveOne(provider, queue));
+            .ProcessAsync(lease.Message);
 
         Assert.Equal(MessageSettlement.Retry, result.Settlement);
         await using var direct = env.Client.CreateReceiver(queue);
@@ -108,8 +111,9 @@ public sealed class AzureServiceBusInboxOutboxIntegrationTests
 
         var pipeline = new StubInboxPipeline((_, _) => Task.FromResult(
             new InboxHandlingResult(InboxHandlingOutcome.DeadLetter, 1, InboxFailureType.PermanentValidation)));
+        await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue);
         InboxTransportBridgeResult result = await CreateInboxBridge(provider, pipeline)
-            .ProcessAsync(await ReceiveOne(provider, queue));
+            .ProcessAsync(lease.Message);
         Assert.Equal(MessageSettlement.DeadLetter, result.Settlement);
 
         await using var dlq = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
@@ -191,16 +195,26 @@ public sealed class AzureServiceBusInboxOutboxIntegrationTests
             TimeProvider.System);
     }
 
-    private static async Task<ReceivedMessage> ReceiveOne(ServiceProvider provider, string source)
+    private static async Task<AzureServiceBusReceivedLease> ReceiveOne(ServiceProvider provider, string source)
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
-        await using IAsyncEnumerator<ReceivedMessage> enumerator = provider
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        IAsyncEnumerator<ReceivedMessage> enumerator = provider
             .GetRequiredService<IMessageReceiver>()
             .ReceiveAsync(new ReceiveContext { Source = source }, cts.Token)
             .GetAsyncEnumerator(cts.Token);
-        if (!await enumerator.MoveNextAsync())
-            throw new InvalidOperationException("Expected Azure Service Bus delivery.");
-        return enumerator.Current;
+        try
+        {
+            if (!await enumerator.MoveNextAsync())
+                throw new InvalidOperationException("Expected Azure Service Bus delivery.");
+            return new AzureServiceBusReceivedLease(enumerator, enumerator.Current, cts);
+        }
+        catch
+        {
+            cts.Cancel();
+            await enumerator.DisposeAsync();
+            cts.Dispose();
+            throw;
+        }
     }
 
     private static TCJ.Messaging.Envelopes.TransportMessageEnvelope Envelope(string id) =>

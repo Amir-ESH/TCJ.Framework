@@ -147,6 +147,7 @@
       "name": "AzureServiceBusPublisher.Console",
       "project": "compatibility/Consumers/AzureServiceBusPublisher.Console/AzureServiceBusPublisher.Console.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging",
         "TCJ.Messaging.AzureServiceBus"
       ],
@@ -156,6 +157,7 @@
       "name": "AzureServiceBusConsumer.Worker",
       "project": "compatibility/Consumers/AzureServiceBusConsumer.Worker/AzureServiceBusConsumer.Worker.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging",
         "TCJ.Messaging.AzureServiceBus"
       ],
@@ -165,6 +167,7 @@
       "name": "AzureServiceBusSessionConsumer.Worker",
       "project": "compatibility/Consumers/AzureServiceBusSessionConsumer.Worker/AzureServiceBusSessionConsumer.Worker.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging",
         "TCJ.Messaging.AzureServiceBus"
       ],
@@ -174,6 +177,7 @@
       "name": "AzureServiceBusInboxOutbox.Worker",
       "project": "compatibility/Consumers/AzureServiceBusInboxOutbox.Worker/AzureServiceBusInboxOutbox.Worker.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging",
         "TCJ.Messaging.AzureServiceBus"
       ],

@@ -23,7 +23,7 @@ public sealed class AzureServiceBusIntegrationTests
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue);
         PublishResult result = await Publish(provider, queue, Envelope("m1")); Assert.True(result.IsSuccess);
-        ReceivedMessage received = await ReceiveOne(provider, queue); Assert.Equal("m1", received.Envelope.MessageId); Assert.Equal("tcj.test", received.Envelope.MessageType); Assert.Equal(1, received.Envelope.MessageVersion); Assert.Equal("corr", received.Envelope.CorrelationId); await received.Settlement.CompleteAsync();
+        await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; Assert.Equal("m1", received.Envelope.MessageId); Assert.Equal("tcj.test", received.Envelope.MessageType); Assert.Equal(1, received.Envelope.MessageVersion); Assert.Equal("corr", received.Envelope.CorrelationId); await received.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -31,7 +31,7 @@ public sealed class AzureServiceBusIntegrationTests
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue);
-        await Publish(provider, queue, Envelope("m2")); ReceivedMessage received = await ReceiveOne(provider, queue); Assert.NotNull(received.Delivery.LockExpiresAtUtc); await received.Settlement.CompleteAsync();
+        await Publish(provider, queue, Envelope("m2")); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; Assert.NotNull(received.Delivery.LockExpiresAtUtc); await received.Settlement.CompleteAsync();
         await using ServiceBusReceiver receiver = env.Client.CreateReceiver(queue); Assert.Null(await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(1)));
     }
 
@@ -40,7 +40,9 @@ public sealed class AzureServiceBusIntegrationTests
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue);
-        await Publish(provider, queue, Envelope("m3")); ReceivedMessage first = await ReceiveOne(provider, queue); int attempt = first.Delivery.DeliveryAttempt; await first.Settlement.AbandonAsync(); ReceivedMessage second = await ReceiveOne(provider, queue); Assert.Equal("m3", second.Envelope.MessageId); Assert.True(second.Delivery.DeliveryAttempt > attempt); await second.Settlement.CompleteAsync();
+        await Publish(provider, queue, Envelope("m3")); int attempt;
+        await using (AzureServiceBusReceivedLease firstLease = await ReceiveOne(provider, queue)) { ReceivedMessage first = firstLease.Message; attempt = first.Delivery.DeliveryAttempt; await first.Settlement.AbandonAsync(); }
+        await using AzureServiceBusReceivedLease secondLease = await ReceiveOne(provider, queue); ReceivedMessage second = secondLease.Message; Assert.Equal("m3", second.Envelope.MessageId); Assert.True(second.Delivery.DeliveryAttempt > attempt); await second.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -48,7 +50,7 @@ public sealed class AzureServiceBusIntegrationTests
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue);
-        await Publish(provider, queue, Envelope("m4", body: "sensitive-payload")); ReceivedMessage received = await ReceiveOne(provider, queue); await received.Settlement.DeadLetterAsync(new DeadLetterOptions { Reason = "invalid-contract", Description = "bounded" });
+        await Publish(provider, queue, Envelope("m4", body: "sensitive-payload")); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; await received.Settlement.DeadLetterAsync(new DeadLetterOptions { Reason = "invalid-contract", Description = "bounded" });
         await using ServiceBusReceiver dlq = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter }); ServiceBusReceivedMessage? dead = await dlq.ReceiveMessageAsync(TimeSpan.FromSeconds(5)); Assert.NotNull(dead); Assert.Equal("invalid-contract", dead.DeadLetterReason); Assert.DoesNotContain("sensitive-payload", dead.DeadLetterErrorDescription ?? string.Empty); await dlq.CompleteMessageAsync(dead);
     }
 
@@ -57,7 +59,7 @@ public sealed class AzureServiceBusIntegrationTests
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue, retryStrategy: AzureServiceBusRetrySettlementStrategy.Defer);
-        await Publish(provider, queue, Envelope("m5")); ReceivedMessage received = await ReceiveOne(provider, queue); Assert.True(received.Delivery.SequenceNumber.HasValue); long sequence = received.Delivery.SequenceNumber.Value; await received.Settlement.DeferAsync();
+        await Publish(provider, queue, Envelope("m5")); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; Assert.True(received.Delivery.SequenceNumber.HasValue); long sequence = received.Delivery.SequenceNumber.Value; await received.Settlement.DeferAsync();
         await using ServiceBusReceiver receiver = env.Client.CreateReceiver(queue); Assert.Null(await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(1))); ServiceBusReceivedMessage deferred = await receiver.ReceiveDeferredMessageAsync(sequence); Assert.Equal("m5", deferred.MessageId); await receiver.CompleteMessageAsync(deferred);
     }
 
@@ -130,7 +132,7 @@ public sealed class AzureServiceBusIntegrationTests
     public async Task Duplicate_detection_does_not_change_logical_message_identity()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = await env.CreateQueueAsync(duplicateDetection: true); await using ServiceProvider provider = CreateProvider(env, queue); PublishResult result = await Publish(provider, queue, Envelope("logical-dup")); Assert.Equal("logical-dup", result.TransportMessageId); ReceivedMessage received = await ReceiveOne(provider, queue); Assert.Equal("logical-dup", received.Envelope.MessageId); await received.Settlement.CompleteAsync();
+        string queue = await env.CreateQueueAsync(duplicateDetection: true); await using ServiceProvider provider = CreateProvider(env, queue); PublishResult result = await Publish(provider, queue, Envelope("logical-dup")); Assert.Equal("logical-dup", result.TransportMessageId); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; Assert.Equal("logical-dup", received.Envelope.MessageId); await received.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -138,7 +140,7 @@ public sealed class AzureServiceBusIntegrationTests
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         (string topic, string subscription) = await env.CreateTopicSubscriptionAsync(); await using ServiceProvider provider = CreateProvider(env, topic, subscription: subscription);
-        await Publish(provider, topic, Envelope("t1")); ReceivedMessage received = await ReceiveOne(provider, topic, subscription); Assert.Equal("t1", received.Envelope.MessageId); await received.Settlement.CompleteAsync();
+        await Publish(provider, topic, Envelope("t1")); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, topic, subscription); ReceivedMessage received = lease.Message; Assert.Equal("t1", received.Envelope.MessageId); await received.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -146,7 +148,9 @@ public sealed class AzureServiceBusIntegrationTests
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         (string topic, string subscription) = await env.CreateTopicSubscriptionAsync(); await using ServiceProvider provider = CreateProvider(env, topic, subscription: subscription);
-        await Publish(provider, topic, Envelope("t2")); ReceivedMessage first = await ReceiveOne(provider, topic, subscription); await first.Settlement.AbandonAsync(); ReceivedMessage second = await ReceiveOne(provider, topic, subscription); Assert.Equal("t2", second.Envelope.MessageId); await second.Settlement.CompleteAsync();
+        await Publish(provider, topic, Envelope("t2"));
+        await using (AzureServiceBusReceivedLease firstLease = await ReceiveOne(provider, topic, subscription)) { await firstLease.Message.Settlement.AbandonAsync(); }
+        await using AzureServiceBusReceivedLease secondLease = await ReceiveOne(provider, topic, subscription); ReceivedMessage second = secondLease.Message; Assert.Equal("t2", second.Envelope.MessageId); await second.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -154,7 +158,7 @@ public sealed class AzureServiceBusIntegrationTests
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(sessions: true); await using ServiceProvider provider = CreateProvider(env, queue, sessions: true);
-        TransportMessageEnvelope envelope = Envelope("s1", orderingKey: "order-1"); await Publish(provider, queue, envelope, orderingKey: "order-1"); ReceivedMessage received = await ReceiveOne(provider, queue); Assert.Equal("order-1", received.Envelope.OrderingKey); await received.Settlement.CompleteAsync();
+        TransportMessageEnvelope envelope = Envelope("s1", orderingKey: "order-1"); await Publish(provider, queue, envelope, orderingKey: "order-1"); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; Assert.Equal("order-1", received.Envelope.OrderingKey); await received.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -163,7 +167,7 @@ public sealed class AzureServiceBusIntegrationTests
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(sessions: true); await using ServiceProvider provider = CreateProvider(env, queue, sessions: true);
         await Publish(provider, queue, Envelope("s2-1", orderingKey: "order-2"), orderingKey: "order-2"); await Publish(provider, queue, Envelope("s2-2", orderingKey: "order-2"), orderingKey: "order-2");
-        await using IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = queue }).GetAsyncEnumerator(); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-1", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync(); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-2", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12)); await using IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = queue }, cts.Token).GetAsyncEnumerator(cts.Token); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-1", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync(); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-2", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -192,14 +196,14 @@ public sealed class AzureServiceBusIntegrationTests
     public async Task Trace_context_round_trips_through_application_properties()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue); var envelope = Envelope("trace", headers: new Dictionary<string,string> { ["traceparent"] = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", ["tracestate"] = "vendor=value" }); await Publish(provider, queue, envelope); ReceivedMessage received = await ReceiveOne(provider, queue); Assert.Equal(envelope.Headers["traceparent"], received.Envelope.Headers["traceparent"]); Assert.Equal("vendor=value", received.Envelope.Headers["tracestate"]); await received.Settlement.CompleteAsync();
+        string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue); var envelope = Envelope("trace", headers: new Dictionary<string,string> { ["traceparent"] = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", ["tracestate"] = "vendor=value" }); await Publish(provider, queue, envelope); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; Assert.Equal(envelope.Headers["traceparent"], received.Envelope.Headers["traceparent"]); Assert.Equal("vendor=value", received.Envelope.Headers["tracestate"]); await received.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
     public async Task ReplyTo_header_maps_to_service_bus_reply_to_and_back()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue); await Publish(provider, queue, Envelope("reply", headers: new Dictionary<string,string> { ["tcj-reply-to"] = "replies" })); ReceivedMessage received = await ReceiveOne(provider, queue); Assert.Equal("replies", received.Envelope.Headers["tcj-reply-to"]); await received.Settlement.CompleteAsync();
+        string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue); await Publish(provider, queue, Envelope("reply", headers: new Dictionary<string,string> { ["tcj-reply-to"] = "replies" })); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; Assert.Equal("replies", received.Envelope.Headers["tcj-reply-to"]); await received.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -213,7 +217,9 @@ public sealed class AzureServiceBusIntegrationTests
     public async Task Delivery_count_maps_to_transport_delivery_attempt()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue); await Publish(provider, queue, Envelope("delivery-count")); ReceivedMessage first = await ReceiveOne(provider, queue); await first.Settlement.AbandonAsync(); ReceivedMessage second = await ReceiveOne(provider, queue); Assert.True(second.Delivery.DeliveryAttempt >= 2); await second.Settlement.CompleteAsync();
+        string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue); await Publish(provider, queue, Envelope("delivery-count"));
+        await using (AzureServiceBusReceivedLease firstLease = await ReceiveOne(provider, queue)) { await firstLease.Message.Settlement.AbandonAsync(); }
+        await using AzureServiceBusReceivedLease secondLease = await ReceiveOne(provider, queue); ReceivedMessage second = secondLease.Message; Assert.True(second.Delivery.DeliveryAttempt >= 2); await second.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -255,7 +261,9 @@ public sealed class AzureServiceBusIntegrationTests
     public async Task Scheduled_retry_clone_preserves_logical_id_and_completes_original_after_schedule()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue, retryStrategy: AzureServiceBusRetrySettlementStrategy.ScheduledClone); await Publish(provider, queue, Envelope("retry-logical")); ReceivedMessage first = await ReceiveOne(provider, queue); await first.Settlement.RetryAsync(new RetrySettlementOptions { Delay = TimeSpan.FromSeconds(1) }); await Task.Delay(TimeSpan.FromSeconds(2)); ReceivedMessage retry = await ReceiveOne(provider, queue); Assert.Equal("retry-logical", retry.Envelope.MessageId); Assert.NotEqual("retry-logical", retry.Delivery.DeliveryId); await retry.Settlement.CompleteAsync();
+        string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue, retryStrategy: AzureServiceBusRetrySettlementStrategy.ScheduledClone); await Publish(provider, queue, Envelope("retry-logical"));
+        await using (AzureServiceBusReceivedLease firstLease = await ReceiveOne(provider, queue)) { await firstLease.Message.Settlement.RetryAsync(new RetrySettlementOptions { Delay = TimeSpan.FromSeconds(1) }); }
+        await Task.Delay(TimeSpan.FromSeconds(2)); await using AzureServiceBusReceivedLease retryLease = await ReceiveOne(provider, queue); ReceivedMessage retry = retryLease.Message; Assert.Equal("retry-logical", retry.Envelope.MessageId); Assert.NotEqual("retry-logical", retry.Delivery.DeliveryId); await retry.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -290,8 +298,8 @@ public sealed class AzureServiceBusIntegrationTests
     public async Task Graceful_receiver_disposal_leaves_unsettled_message_available_for_redelivery()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue); await Publish(provider, queue, Envelope("shutdown")); await using (IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = queue }).GetAsyncEnumerator()) { Assert.True(await e.MoveNextAsync()); Assert.Equal("shutdown", e.Current.Envelope.MessageId); }
-        await using ServiceBusReceiver direct = env.Client.CreateReceiver(queue); ServiceBusReceivedMessage? redelivered = await direct.ReceiveMessageAsync(TimeSpan.FromSeconds(5)); Assert.NotNull(redelivered); await direct.CompleteMessageAsync(redelivered);
+        string queue = await env.CreateQueueAsync(lockDuration: TimeSpan.FromSeconds(5)); await using ServiceProvider provider = CreateProvider(env, queue); await Publish(provider, queue, Envelope("shutdown")); using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12)); await using (IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = queue }, cts.Token).GetAsyncEnumerator(cts.Token)) { Assert.True(await e.MoveNextAsync()); Assert.Equal("shutdown", e.Current.Envelope.MessageId); }
+        await using ServiceBusReceiver direct = env.Client.CreateReceiver(queue); ServiceBusReceivedMessage? redelivered = await direct.ReceiveMessageAsync(TimeSpan.FromSeconds(10)); Assert.NotNull(redelivered); await direct.CompleteMessageAsync(redelivered);
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -359,11 +367,21 @@ public sealed class AzureServiceBusIntegrationTests
     private static Task<PublishResult> Publish(ServiceProvider provider, string destination, TransportMessageEnvelope envelope, string? orderingKey = null) =>
         provider.GetRequiredService<IMessagePublisher>().PublishAsync(envelope, new PublishContext { Destination = destination, OrderingKey = orderingKey });
 
-    private static async Task<ReceivedMessage> ReceiveOne(ServiceProvider provider, string source, string? subscription = null)
+    private static async Task<AzureServiceBusReceivedLease> ReceiveOne(ServiceProvider provider, string source, string? subscription = null)
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
-        await using IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = source, Subscription = subscription }, cts.Token).GetAsyncEnumerator(cts.Token);
-        if (!await e.MoveNextAsync()) throw new InvalidOperationException("Expected Azure Service Bus delivery.");
-        return e.Current;
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = source, Subscription = subscription }, cts.Token).GetAsyncEnumerator(cts.Token);
+        try
+        {
+            if (!await e.MoveNextAsync()) throw new InvalidOperationException("Expected Azure Service Bus delivery.");
+            return new AzureServiceBusReceivedLease(e, e.Current, cts);
+        }
+        catch
+        {
+            cts.Cancel();
+            await e.DisposeAsync();
+            cts.Dispose();
+            throw;
+        }
     }
 }

@@ -42,7 +42,7 @@ internal sealed class AzureServiceBusMessageReceiver : IMessageReceiver
         {
             ServiceBusReceivedMessage? brokerMessage;
             try { brokerMessage = await receiver.ReceiveMessageAsync(_options.ReceiveWaitTime, cancellationToken).ConfigureAwait(false); }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { yield break; }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception exception)
             {
                 _clients.RecordFailure(exception);
@@ -65,11 +65,21 @@ internal sealed class AzureServiceBusMessageReceiver : IMessageReceiver
             SingleReader = true,
             SingleWriter = false
         });
+        using var receiveCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         Task[] workers = Enumerable.Range(0, _options.MaximumConcurrentSessions)
-            .Select(_ => SessionWorkerAsync(context, channel.Writer, cancellationToken)).ToArray();
-        _ = CompleteChannelAsync(workers, channel.Writer);
-        await foreach (ReceivedMessage message in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
-            yield return message;
+            .Select(_ => SessionWorkerAsync(context, channel.Writer, receiveCancellation.Token)).ToArray();
+        Task completion = CompleteChannelAsync(workers, channel.Writer);
+        try
+        {
+            await foreach (ReceivedMessage message in channel.Reader.ReadAllAsync(receiveCancellation.Token).ConfigureAwait(false))
+                yield return message;
+        }
+        finally
+        {
+            receiveCancellation.Cancel();
+            try { await completion.WaitAsync(_options.ShutdownTimeout, CancellationToken.None).ConfigureAwait(false); }
+            catch (TimeoutException) { }
+        }
     }
 
     private async Task SessionWorkerAsync(ReceiveContext context, ChannelWriter<ReceivedMessage> writer, CancellationToken cancellationToken)

@@ -45,11 +45,11 @@ internal sealed class AzureServiceBusIntegrationEnvironment : IAsyncDisposable
     }
 
     internal Task<string> CreateQueueAsync(bool sessions = false, bool duplicateDetection = false,
-        bool deadLetterOnExpiration = false, TimeSpan? defaultTtl = null, int? maxDeliveryCount = null) =>
-        CreateQueueAsync(CreateName("q"), sessions, duplicateDetection, deadLetterOnExpiration, defaultTtl, maxDeliveryCount);
+        bool deadLetterOnExpiration = false, TimeSpan? defaultTtl = null, int? maxDeliveryCount = null, TimeSpan? lockDuration = null) =>
+        CreateQueueAsync(CreateName("q"), sessions, duplicateDetection, deadLetterOnExpiration, defaultTtl, maxDeliveryCount, lockDuration);
 
     internal async Task<string> CreateQueueAsync(string name, bool sessions = false, bool duplicateDetection = false,
-        bool deadLetterOnExpiration = false, TimeSpan? defaultTtl = null, int? maxDeliveryCount = null)
+        bool deadLetterOnExpiration = false, TimeSpan? defaultTtl = null, int? maxDeliveryCount = null, TimeSpan? lockDuration = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         var options = new CreateQueueOptions(name)
@@ -61,6 +61,7 @@ internal sealed class AzureServiceBusIntegrationEnvironment : IAsyncDisposable
         if (duplicateDetection) options.DuplicateDetectionHistoryTimeWindow = TimeSpan.FromSeconds(20);
         if (defaultTtl is { } ttl) options.DefaultMessageTimeToLive = ttl;
         if (maxDeliveryCount is { } count) options.MaxDeliveryCount = count;
+        if (lockDuration is { } messageLockDuration) options.LockDuration = messageLockDuration;
         await Administration.CreateQueueAsync(options).ConfigureAwait(false);
         _resources.Add(("queue", name, null));
         return name;
