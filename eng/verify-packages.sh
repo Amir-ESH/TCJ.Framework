@@ -22,6 +22,7 @@ package_ids=(
   TCJ.AspNetCore
   TCJ.Messaging
   TCJ.Messaging.RabbitMQ
+  TCJ.Messaging.AzureServiceBus
 )
 
 for package_id in "${package_ids[@]}"; do
