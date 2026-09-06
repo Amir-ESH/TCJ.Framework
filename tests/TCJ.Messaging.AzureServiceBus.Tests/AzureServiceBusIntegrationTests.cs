@@ -6,6 +6,7 @@ using TCJ.Messaging.AzureServiceBus.Extensions;
 using TCJ.Messaging.AzureServiceBus.HealthChecks;
 using TCJ.Messaging.AzureServiceBus.Tests.Infrastructure;
 using TCJ.Messaging.AzureServiceBus.Topology;
+using TCJ.Messaging.Configuration;
 using TCJ.Messaging.Envelopes;
 using TCJ.Messaging.Extensions;
 using TCJ.Messaging.HealthChecks;
