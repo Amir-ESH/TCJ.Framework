@@ -442,7 +442,8 @@ def verify_document(
             if dependency_id in release_package_id_set:
                 expected_edges[ref].add(package_ref(dependency_id, version))
             else:
-                pair = dependency_lookup(assets, dependency_id)
+                project_id = package_id if package_id in required_packages else None
+                pair = dependency_lookup(assets, dependency_id, project_id=project_id)
                 direct_external.add(pair)
                 expected_edges[ref].add(package_ref(*pair))
     for pair, children in assets.dependencies.items():

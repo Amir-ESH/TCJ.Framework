@@ -363,6 +363,58 @@ class VerifySbomTests(unittest.TestCase):
         self.assertEqual(5, summary["tcjPackageCount"])
         self.assertGreater(summary["transitiveDependencyCount"], 0)
 
+    def test_distinct_dependency_versions_across_release_projects_are_preserved(self):
+        self.fixture._create_external_package(
+            "Direct.Package",
+            "2.0.0",
+            {"Transitive.Package": "[2.0.0]"},
+        )
+        assets_path = (
+            self.fixture.root
+            / "src"
+            / "TCJ.AspNetCore"
+            / "obj"
+            / "project.assets.json"
+        )
+        data = json.loads(assets_path.read_text(encoding="utf-8"))
+        target = data["targets"]["net10.0"]
+        direct = target.pop("Direct.Package/1.0.0")
+        target["Direct.Package/2.0.0"] = direct
+        libraries = data["libraries"]
+        libraries.pop("Direct.Package/1.0.0")
+        libraries["Direct.Package/2.0.0"] = {
+            "type": "package",
+            "path": "direct.package/2.0.0",
+        }
+        data["project"]["frameworks"]["net10.0"]["dependencies"]["Direct.Package"][
+            "version"
+        ] = "[2.0.0, )"
+        assets_path.write_text(json.dumps(data), encoding="utf-8")
+
+        sbom = build_sbom(
+            root=self.fixture.root,
+            policy=self.fixture.policy,
+            version=VERSION,
+            package_directory=self.fixture.package_directory,
+            commit_sha=COMMIT,
+            release_tag=f"v{VERSION}",
+        )
+        summary = self.fixture.verify(sbom)
+
+        self.assertEqual("PASS", summary["status"])
+        refs = {component["bom-ref"] for component in sbom["components"]}
+        self.assertIn(nuget_purl("Direct.Package", "1.0.0"), refs)
+        self.assertIn(nuget_purl("Direct.Package", "2.0.0"), refs)
+        edges = {entry["ref"]: set(entry["dependsOn"]) for entry in sbom["dependencies"]}
+        self.assertIn(
+            nuget_purl("Direct.Package", "1.0.0"),
+            edges[nuget_purl("TCJ.DependencyInjection", VERSION)],
+        )
+        self.assertIn(
+            nuget_purl("Direct.Package", "2.0.0"),
+            edges[nuget_purl("TCJ.AspNetCore", VERSION)],
+        )
+
     def test_missing_tcj_package_fails(self):
         sbom = copy.deepcopy(self.fixture.sbom)
         sbom["components"] = [

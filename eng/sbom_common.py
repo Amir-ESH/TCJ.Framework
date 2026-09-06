@@ -524,7 +524,8 @@ def discover_release_packages(
 
 @dataclass
 class AssetsGraph:
-    package_versions: dict[str, tuple[str, str]]
+    package_versions: dict[str, set[tuple[str, str]]]
+    resolved_by_project: dict[str, dict[str, tuple[str, str]]]
     dependencies: dict[tuple[str, str], set[tuple[str, str]]]
     direct_by_project: dict[str, set[tuple[str, str]]]
     package_files: dict[tuple[str, str], tuple[Path, Path]]
@@ -544,7 +545,8 @@ def _select_target(data: dict[str, Any], source: Path) -> tuple[str, dict[str, A
 
 
 def load_assets_graph(root: Path, required_packages: Iterable[str]) -> AssetsGraph:
-    package_versions: dict[str, tuple[str, str]] = {}
+    package_versions: dict[str, set[tuple[str, str]]] = {}
+    resolved_by_project: dict[str, dict[str, tuple[str, str]]] = {}
     dependencies: dict[tuple[str, str], set[tuple[str, str]]] = {}
     direct_by_project: dict[str, set[tuple[str, str]]] = {}
     package_files: dict[tuple[str, str], tuple[Path, Path]] = {}
@@ -563,14 +565,11 @@ def load_assets_graph(root: Path, required_packages: Iterable[str]) -> AssetsGra
             package_id, version = key.rsplit("/", 1)
             normalized = package_id.casefold()
             pair = (package_id, version)
-            previous = package_versions.get(normalized)
-            if previous is not None and previous[1] != version:
-                fail(
-                    f"Dependency {package_id} resolves to both {previous[1]} and {version} across project assets."
-                )
-            package_versions[normalized] = pair
+            package_versions.setdefault(normalized, set()).add(pair)
             resolved_by_id[normalized] = pair
             dependencies.setdefault(pair, set())
+
+        resolved_by_project[project_id] = resolved_by_id
 
         for key, entry in target.items():
             if not isinstance(entry, dict) or entry.get("type") != "package" or "/" not in key:
@@ -581,7 +580,7 @@ def load_assets_graph(root: Path, required_packages: Iterable[str]) -> AssetsGra
             if not isinstance(dependency_values, dict):
                 fail(f"Invalid dependency map for {key} in {assets_path}")
             for dependency_id in dependency_values:
-                resolved = resolved_by_id.get(str(dependency_id).casefold()) or package_versions.get(str(dependency_id).casefold())
+                resolved = resolved_by_id.get(str(dependency_id).casefold())
                 if resolved is None:
                     fail(f"Unable to resolve dependency {dependency_id} from {key} in {assets_path}")
                 dependencies[pair].add(resolved)
@@ -597,7 +596,7 @@ def load_assets_graph(root: Path, required_packages: Iterable[str]) -> AssetsGra
                 target_type = descriptor.get("target") if isinstance(descriptor, dict) else None
                 if target_type not in (None, "Package"):
                     continue
-                resolved = resolved_by_id.get(str(dependency_id).casefold()) or package_versions.get(str(dependency_id).casefold())
+                resolved = resolved_by_id.get(str(dependency_id).casefold())
                 if resolved is not None:
                     direct.add(resolved)
         direct_by_project[project_id] = direct
@@ -633,14 +632,44 @@ def load_assets_graph(root: Path, required_packages: Iterable[str]) -> AssetsGra
             + ", ".join(missing_files)
         )
 
-    return AssetsGraph(package_versions, dependencies, direct_by_project, package_files)
+    return AssetsGraph(
+        package_versions,
+        resolved_by_project,
+        dependencies,
+        direct_by_project,
+        package_files,
+    )
 
 
-def dependency_lookup(graph: AssetsGraph, dependency_id: str) -> tuple[str, str]:
-    result = graph.package_versions.get(dependency_id.casefold())
-    if result is None:
+def dependency_lookup(
+    graph: AssetsGraph,
+    dependency_id: str,
+    *,
+    project_id: str | None = None,
+) -> tuple[str, str]:
+    normalized = dependency_id.casefold()
+    if project_id is not None:
+        project_dependencies = graph.resolved_by_project.get(project_id)
+        if project_dependencies is None:
+            fail(f"Project assets are missing for release package {project_id}.")
+        result = project_dependencies.get(normalized)
+        if result is None:
+            fail(
+                f"Dependency {dependency_id} is declared by release package {project_id} "
+                "but missing from its project.assets.json."
+            )
+        return result
+
+    candidates = graph.package_versions.get(normalized)
+    if not candidates:
         fail(f"Dependency {dependency_id} is declared by a release package but missing from project.assets.json.")
-    return result
+    if len(candidates) != 1:
+        versions = ", ".join(sorted(version for _, version in candidates))
+        fail(
+            f"Dependency {dependency_id} resolves to multiple versions ({versions}) across project assets; "
+            "a release package context is required."
+        )
+    return next(iter(candidates))
 
 
 def component_hash(value: object) -> str | None:
@@ -680,7 +709,7 @@ def build_sbom(
             if dependency_id in package_set.primary:
                 direct_refs.add(package_ref(dependency_id, version))
             else:
-                pair = dependency_lookup(assets, dependency_id)
+                pair = dependency_lookup(assets, dependency_id, project_id=package_id)
                 direct_external.add(pair)
                 direct_refs.add(package_ref(*pair))
         dependency_edges[ref] = direct_refs
