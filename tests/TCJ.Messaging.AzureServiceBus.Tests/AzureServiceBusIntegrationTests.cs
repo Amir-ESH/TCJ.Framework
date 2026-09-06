@@ -157,7 +157,7 @@ public sealed class AzureServiceBusIntegrationTests
     public async Task Session_queue_preserves_session_id_mapping()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = AzureServiceBusIntegrationEnvironment.SessionMappingQueue; await using ServiceProvider provider = CreateProvider(env, queue, sessions: true);
+        string queue = AzureServiceBusIntegrationEnvironment.SessionMappingQueue; await using ServiceProvider provider = CreateProvider(env, queue, sessions: true, maximumConcurrentSessions: 1);
         TransportMessageEnvelope envelope = Envelope("s1", orderingKey: "order-1"); await Publish(provider, queue, envelope, orderingKey: "order-1"); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue, timeout: GetSessionReceiveTimeout(provider)); ReceivedMessage received = lease.Message; Assert.Equal("order-1", received.Envelope.OrderingKey); await received.Settlement.CompleteAsync();
     }
 
@@ -165,7 +165,7 @@ public sealed class AzureServiceBusIntegrationTests
     public async Task Session_processing_order_is_single_in_flight_per_session()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = AzureServiceBusIntegrationEnvironment.SessionOrderingQueue; await using ServiceProvider provider = CreateProvider(env, queue, sessions: true);
+        string queue = AzureServiceBusIntegrationEnvironment.SessionOrderingQueue; await using ServiceProvider provider = CreateProvider(env, queue, sessions: true, maximumConcurrentSessions: 1);
         await Publish(provider, queue, Envelope("s2-1", orderingKey: "order-2"), orderingKey: "order-2"); await Publish(provider, queue, Envelope("s2-2", orderingKey: "order-2"), orderingKey: "order-2");
         using var cts = new CancellationTokenSource(GetSessionReceiveTimeout(provider)); await using IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = queue }, cts.Token).GetAsyncEnumerator(cts.Token); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-1", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync(); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-2", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync();
     }
@@ -332,7 +332,7 @@ public sealed class AzureServiceBusIntegrationTests
 
     private static ServiceProvider CreateProvider(AzureServiceBusIntegrationEnvironment env, string entity, string? subscription = null,
         bool sessions = false, bool duplicateDetection = false, AzureServiceBusTopologyMode topologyMode = AzureServiceBusTopologyMode.Disabled,
-        AzureServiceBusRetrySettlementStrategy retryStrategy = AzureServiceBusRetrySettlementStrategy.ScheduledClone)
+        AzureServiceBusRetrySettlementStrategy retryStrategy = AzureServiceBusRetrySettlementStrategy.ScheduledClone, int maximumConcurrentSessions = 4)
     {
         var services = new ServiceCollection();
         services.AddTcjMessaging(options =>
@@ -347,7 +347,7 @@ public sealed class AzureServiceBusIntegrationTests
             options.ReadinessDestination = entity;
             options.PrefetchCount = 8;
             options.MaximumConcurrentMessages = 8;
-            options.MaximumConcurrentSessions = 4;
+            options.MaximumConcurrentSessions = maximumConcurrentSessions;
             options.MaximumConcurrentCallsPerSession = 1;
             options.RetrySettlementStrategy = retryStrategy;
             if (subscription is null)
