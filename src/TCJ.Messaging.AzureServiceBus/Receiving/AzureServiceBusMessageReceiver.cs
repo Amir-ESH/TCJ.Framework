@@ -66,8 +66,9 @@ internal sealed class AzureServiceBusMessageReceiver : IMessageReceiver
             SingleWriter = false
         });
         using var receiveCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var sessionAcceptGate = new SemaphoreSlim(1, 1);
         Task[] workers = Enumerable.Range(0, _options.MaximumConcurrentSessions)
-            .Select(_ => SessionWorkerAsync(context, channel.Writer, receiveCancellation.Token)).ToArray();
+            .Select(_ => SessionWorkerAsync(context, channel.Writer, sessionAcceptGate, receiveCancellation.Token)).ToArray();
         Task completion = CompleteChannelAsync(workers, channel.Writer);
         try
         {
@@ -77,23 +78,39 @@ internal sealed class AzureServiceBusMessageReceiver : IMessageReceiver
         finally
         {
             receiveCancellation.Cancel();
-            try { await completion.WaitAsync(_options.ShutdownTimeout, CancellationToken.None).ConfigureAwait(false); }
-            catch (TimeoutException) { }
+            try
+            {
+                await completion.WaitAsync(_options.ShutdownTimeout, CancellationToken.None).ConfigureAwait(false);
+                sessionAcceptGate.Dispose();
+            }
+            catch (TimeoutException)
+            {
+                // Workers still reference the gate; leave it for GC rather than disposing under them.
+            }
         }
     }
 
-    private async Task SessionWorkerAsync(ReceiveContext context, ChannelWriter<ReceivedMessage> writer, CancellationToken cancellationToken)
+    private async Task SessionWorkerAsync(ReceiveContext context, ChannelWriter<ReceivedMessage> writer,
+        SemaphoreSlim sessionAcceptGate, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
             ServiceBusSessionReceiver? receiver = null;
             try
             {
-                using Activity? accept = AzureServiceBusDiagnostics.Start(TcjAzureServiceBusDiagnosticNames.SessionAcceptActivity,
-                    "session.accept", context.Source, context.Subscription is null ? "queue" : "subscription", sessionEnabled: true);
-                receiver = await _clients.AcceptNextSessionAsync(context.Source, context.Subscription, cancellationToken).ConfigureAwait(false);
-                AzureServiceBusDiagnostics.SessionAccepted();
-                accept?.SetStatus(ActivityStatusCode.Ok);
+                await sessionAcceptGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    using Activity? accept = AzureServiceBusDiagnostics.Start(TcjAzureServiceBusDiagnosticNames.SessionAcceptActivity,
+                        "session.accept", context.Source, context.Subscription is null ? "queue" : "subscription", sessionEnabled: true);
+                    receiver = await _clients.AcceptNextSessionAsync(context.Source, context.Subscription, cancellationToken).ConfigureAwait(false);
+                    AzureServiceBusDiagnostics.SessionAccepted();
+                    accept?.SetStatus(ActivityStatusCode.Ok);
+                }
+                finally
+                {
+                    sessionAcceptGate.Release();
+                }
                 await using ServiceBusSessionReceiver sessionReceiver = receiver;
                 {
                     while (!cancellationToken.IsCancellationRequested)
