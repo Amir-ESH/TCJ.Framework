@@ -158,7 +158,7 @@ public sealed class AzureServiceBusIntegrationTests
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(sessions: true); await using ServiceProvider provider = CreateProvider(env, queue, sessions: true);
-        TransportMessageEnvelope envelope = Envelope("s1", orderingKey: "order-1"); await Publish(provider, queue, envelope, orderingKey: "order-1"); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; Assert.Equal("order-1", received.Envelope.OrderingKey); await received.Settlement.CompleteAsync();
+        TransportMessageEnvelope envelope = Envelope("s1", orderingKey: "order-1"); await Publish(provider, queue, envelope, orderingKey: "order-1"); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue, timeout: GetSessionReceiveTimeout(provider)); ReceivedMessage received = lease.Message; Assert.Equal("order-1", received.Envelope.OrderingKey); await received.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -167,7 +167,7 @@ public sealed class AzureServiceBusIntegrationTests
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(sessions: true); await using ServiceProvider provider = CreateProvider(env, queue, sessions: true);
         await Publish(provider, queue, Envelope("s2-1", orderingKey: "order-2"), orderingKey: "order-2"); await Publish(provider, queue, Envelope("s2-2", orderingKey: "order-2"), orderingKey: "order-2");
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12)); await using IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = queue }, cts.Token).GetAsyncEnumerator(cts.Token); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-1", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync(); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-2", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync();
+        using var cts = new CancellationTokenSource(GetSessionReceiveTimeout(provider)); await using IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = queue }, cts.Token).GetAsyncEnumerator(cts.Token); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-1", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync(); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-2", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync();
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -367,9 +367,15 @@ public sealed class AzureServiceBusIntegrationTests
     private static Task<PublishResult> Publish(ServiceProvider provider, string destination, TransportMessageEnvelope envelope, string? orderingKey = null) =>
         provider.GetRequiredService<IMessagePublisher>().PublishAsync(envelope, new PublishContext { Destination = destination, OrderingKey = orderingKey });
 
-    private static async Task<AzureServiceBusReceivedLease> ReceiveOne(ServiceProvider provider, string source, string? subscription = null)
+    private static TimeSpan GetSessionReceiveTimeout(ServiceProvider provider)
     {
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        TimeSpan tryTimeout = provider.GetRequiredService<TcjAzureServiceBusOptions>().TryTimeout;
+        return TimeSpan.FromTicks(tryTimeout.Ticks + (tryTimeout.Ticks / 2));
+    }
+
+    private static async Task<AzureServiceBusReceivedLease> ReceiveOne(ServiceProvider provider, string source, string? subscription = null, TimeSpan? timeout = null)
+    {
+        var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(12));
         IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = source, Subscription = subscription }, cts.Token).GetAsyncEnumerator(cts.Token);
         try
         {
