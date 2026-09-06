@@ -5,6 +5,9 @@ namespace TCJ.Messaging.AzureServiceBus.Tests.Infrastructure;
 
 internal sealed class AzureServiceBusIntegrationEnvironment : IAsyncDisposable
 {
+    internal const string SessionMappingQueue = "tcj-s48-session-mapping";
+    internal const string SessionOrderingQueue = "tcj-s48-session-ordering";
+
     private readonly List<(string Kind, string Name, string? Subscription)> _resources = [];
 
     private AzureServiceBusIntegrationEnvironment(string connectionString, string managementConnectionString)

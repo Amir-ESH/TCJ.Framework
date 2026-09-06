@@ -154,7 +154,7 @@ def validate_config() -> tuple[dict[str, Any], dict[str, Any]]:
     if emulator.get("requirePinnedImages") is not True:
         fail("Azure Service Bus emulator images must remain pinned.")
     require(ROOT / "eng/azure-service-bus-emulator/docker-compose.yml", "TCJ_SERVICE_BUS_EMULATOR_IMAGE", "TCJ_SQL_SERVER_IMAGE", "5300:5300", "5672:5672")
-    require(ROOT / "eng/azure-service-bus-emulator/Config.json", '"Namespaces"', '"sbemulatorns"')
+    require(ROOT / "eng/azure-service-bus-emulator/Config.json", '"Namespaces"', '"sbemulatorns"', '"tcj-s48-session-mapping"', '"tcj-s48-session-ordering"', '"RequiresSession": true')
 
     project = parse_project(PROJECT)
     if (project.findtext("./PropertyGroup/PackageId") or "").strip() != "TCJ.Messaging.AzureServiceBus":

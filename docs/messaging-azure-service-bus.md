@@ -226,6 +226,8 @@ python3 eng/verify-azure-service-bus.py verify \
 
 The dedicated GitHub Actions workflow sets `TCJ_AZURE_SERVICE_BUS_REQUIRE_INTEGRATION=1`; missing broker infrastructure therefore fails instead of silently skipping broker coverage.
 
+The emulator fixture predeclares two isolated session-enabled queues, `tcj-s48-session-mapping` and `tcj-s48-session-ordering`, for the full `ServiceBusSessionProcessor` adapter scenarios. This follows the emulator path exercised by Azure's own session-processor repro/fix while keeping dynamic `ServiceBusAdministrationClient` entity creation covered by the separate topology and explicit-session tests. Do not replace these processor scenarios with silent skips or shorter broker waits; a failure to discover a predeclared session remains a real integration failure.
+
 The emulator is not evidence for every Azure-cloud behavior. Protected live validation is required for RBAC/managed identity, production topology permissions, and long-running lock/session behavior that the emulator does not faithfully reproduce.
 
 ## Production recommendations
