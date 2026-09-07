@@ -46,9 +46,9 @@ internal sealed class AzureServiceBusMessageMapper
             Subject = envelope.MessageType,
             ContentType = envelope.ContentType,
             CorrelationId = envelope.CorrelationId,
-            SessionId = sessionId,
-            PartitionKey = partitionKey
+            SessionId = sessionId
         };
+        if (partitionKey is not null) message.PartitionKey = partitionKey;
         if (context.TimeToLive is { } ttlValue) message.TimeToLive = ttlValue;
         if (envelope.Headers.TryGetValue("tcj-reply-to", out string? replyTo)) message.ReplyTo = replyTo;
 
