@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # The default branch is the immutable release line; maintenance audits
           # intentionally use the active development branch so published-release
