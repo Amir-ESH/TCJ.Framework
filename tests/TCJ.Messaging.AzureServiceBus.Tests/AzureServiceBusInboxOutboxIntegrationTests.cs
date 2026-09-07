@@ -85,9 +85,12 @@ public sealed class AzureServiceBusInboxOutboxIntegrationTests
 
         var pipeline = new StubInboxPipeline((_, _) => Task.FromResult(
             new InboxHandlingResult(InboxHandlingOutcome.Retry, 2, InboxFailureType.TransientInfrastructure)));
-        await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue);
-        InboxTransportBridgeResult result = await CreateInboxBridge(provider, pipeline)
-            .ProcessAsync(lease.Message);
+        InboxTransportBridgeResult result;
+        await using (AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue))
+        {
+            result = await CreateInboxBridge(provider, pipeline)
+                .ProcessAsync(lease.Message);
+        }
 
         Assert.Equal(MessageSettlement.Retry, result.Settlement);
         await using var direct = env.Client.CreateReceiver(queue);
@@ -111,9 +114,12 @@ public sealed class AzureServiceBusInboxOutboxIntegrationTests
 
         var pipeline = new StubInboxPipeline((_, _) => Task.FromResult(
             new InboxHandlingResult(InboxHandlingOutcome.DeadLetter, 1, InboxFailureType.PermanentValidation)));
-        await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue);
-        InboxTransportBridgeResult result = await CreateInboxBridge(provider, pipeline)
-            .ProcessAsync(lease.Message);
+        InboxTransportBridgeResult result;
+        await using (AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue))
+        {
+            result = await CreateInboxBridge(provider, pipeline)
+                .ProcessAsync(lease.Message);
+        }
         Assert.Equal(MessageSettlement.DeadLetter, result.Settlement);
 
         await using var dlq = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
