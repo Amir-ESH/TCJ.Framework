@@ -158,7 +158,7 @@ public sealed class AzureServiceBusIntegrationTests
     public async Task Session_queue_preserves_session_id_mapping()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = AzureServiceBusIntegrationEnvironment.SessionMappingQueue; await using ServiceProvider provider = CreateProvider(env, queue, sessions: true, maximumConcurrentSessions: 1);
+        string queue = await env.CreateQueueAsync(sessions: true); await using ServiceProvider provider = CreateProvider(env, queue, sessions: true, maximumConcurrentSessions: 1);
         TransportMessageEnvelope envelope = Envelope("s1", orderingKey: "order-1");
         PublishResult published = await Publish(provider, queue, envelope, orderingKey: "order-1");
         Assert.True(published.IsSuccess);
@@ -177,7 +177,7 @@ public sealed class AzureServiceBusIntegrationTests
     public async Task Session_ordering_contract_preserves_publish_order_with_single_in_flight_configuration()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
-        string queue = AzureServiceBusIntegrationEnvironment.SessionOrderingQueue; await using ServiceProvider provider = CreateProvider(env, queue, sessions: true, maximumConcurrentSessions: 1);
+        string queue = await env.CreateQueueAsync(sessions: true); await using ServiceProvider provider = CreateProvider(env, queue, sessions: true, maximumConcurrentSessions: 1);
         Assert.Equal(1, provider.GetRequiredService<TcjAzureServiceBusOptions>().MaximumConcurrentCallsPerSession);
 
         PublishResult firstPublished = await Publish(provider, queue, Envelope("s2-1", orderingKey: "order-2"), orderingKey: "order-2");
