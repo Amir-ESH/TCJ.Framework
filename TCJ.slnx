@@ -7,6 +7,7 @@
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/TCJ.Empty/TCJ.Empty.csproj" />
+    <Project Path="samples/TCJ.Messaging.AzureServiceBus.Worker/TCJ.Messaging.AzureServiceBus.Worker.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/TCJ.Analyzers/TCJ.Analyzers.csproj" />
@@ -18,6 +19,7 @@
     <Project Path="src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj" />
     <Project Path="src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj" />
     <Project Path="src/TCJ.Messaging/TCJ.Messaging.csproj" />
+    <Project Path="src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj" />
     <Project Path="src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -37,6 +39,7 @@
     <Project Path="tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj" />
     <Project Path="tests/TCJ.Messaging.RabbitMQ.Tests/TCJ.Messaging.RabbitMQ.Tests.csproj" />
+    <Project Path="tests/TCJ.Messaging.AzureServiceBus.Tests/TCJ.Messaging.AzureServiceBus.Tests.csproj" />
     <Project Path="tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj" />
     <Project Path="tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj" />
     <Project Path="tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj" />

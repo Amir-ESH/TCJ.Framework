@@ -6,7 +6,8 @@
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
-    "TCJ.Messaging"
+    "TCJ.Messaging",
+    "TCJ.Messaging.AzureServiceBus"
   ],
   "requiredOperatingSystems": [
     "ubuntu-latest",
@@ -28,7 +29,7 @@
   "supportedTargetFrameworks": [
     "net10.0"
   ],
-  "minimumConsumerCount": 8,
+  "minimumConsumerCount": 15,
   "requirePackageOnlyReferences": true,
   "requireLocalPackageSource": true,
   "requireSourcePackageValidation": true,
@@ -141,6 +142,46 @@
         "TCJ.Messaging"
       ],
       "expectedOutput": "TCJ.Messaging Inbox/Outbox consumer passed"
+    },
+    {
+      "name": "AzureServiceBusPublisher.Console",
+      "project": "compatibility/Consumers/AzureServiceBusPublisher.Console/AzureServiceBusPublisher.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.AzureServiceBus"
+      ],
+      "expectedOutput": "TCJ.Messaging.AzureServiceBus publisher consumer passed"
+    },
+    {
+      "name": "AzureServiceBusConsumer.Worker",
+      "project": "compatibility/Consumers/AzureServiceBusConsumer.Worker/AzureServiceBusConsumer.Worker.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.AzureServiceBus"
+      ],
+      "expectedOutput": "TCJ.Messaging.AzureServiceBus consumer worker passed"
+    },
+    {
+      "name": "AzureServiceBusSessionConsumer.Worker",
+      "project": "compatibility/Consumers/AzureServiceBusSessionConsumer.Worker/AzureServiceBusSessionConsumer.Worker.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.AzureServiceBus"
+      ],
+      "expectedOutput": "TCJ.Messaging.AzureServiceBus session consumer worker passed"
+    },
+    {
+      "name": "AzureServiceBusInboxOutbox.Worker",
+      "project": "compatibility/Consumers/AzureServiceBusInboxOutbox.Worker/AzureServiceBusInboxOutbox.Worker.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.AzureServiceBus"
+      ],
+      "expectedOutput": "TCJ.Messaging.AzureServiceBus Inbox/Outbox consumer passed"
     }
   ],
   "publishedConsumers": [
@@ -165,6 +206,9 @@
     ],
     "TCJ.Messaging": [
       "TCJ.Core"
+    ],
+    "TCJ.Messaging.AzureServiceBus": [
+      "TCJ.Messaging"
     ]
   }
 }

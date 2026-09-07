@@ -114,3 +114,7 @@ The dedicated GitHub Actions workflow runs the same suite on Linux and Windows a
 
 
 `TCJ.Inbox.Tests` is the Step 45 SQL Server Testcontainers suite for transactional Inbox idempotency. It covers stable IDs, consumer-scoped uniqueness, concurrent duplicates, payload conflicts, rollback, acknowledgement uncertainty, retry/dead-letter, deferred leases, replay, cleanup, sensitive headers, health/telemetry, and Inbox/Outbox atomicity. Use `TestResults/Inbox/` and `eng/verify-inbox.py` for sanitized evidence.
+
+## Azure Service Bus adapter tests
+
+`TCJ.Messaging.AzureServiceBus.Tests` contains configuration/contract tests and emulator/live integration scenarios for queues, topics/subscriptions, Peek-Lock/manual settlement, abandon/dead-letter/defer, scheduling/TTL, batching, delivery count, duplicate detection, lock renewal/loss, sessions, graceful shutdown, Inbox/Outbox bridges, telemetry, health, and sensitive-data boundaries. The suite uses unique resource names and only runs broker-required scenarios as mandatory when `TCJ_AZURE_SERVICE_BUS_REQUIRE_INTEGRATION=1`. `TCJ.Concurrency.Tests`, `TCJ.Resilience.Tests`, `TCJ.Observability.Tests`, and `TCJ.HealthChecks.Tests` also contain adapter-specific broker-independent regression coverage.

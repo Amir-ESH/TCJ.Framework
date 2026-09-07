@@ -6,7 +6,7 @@ namespace TCJ.Messaging.RabbitMQ.Topology;
 internal sealed class RabbitMqMessageTopologyNamingStrategy : IMessageTopologyNamingStrategy
 {
     private readonly TcjRabbitMqOptions _options;
-    internal RabbitMqMessageTopologyNamingStrategy(TcjRabbitMqOptions options) => _options = options ?? throw new ArgumentNullException(nameof(options));
+    public RabbitMqMessageTopologyNamingStrategy(TcjRabbitMqOptions options) => _options = options ?? throw new ArgumentNullException(nameof(options));
     public string GetDestination(string messageType, int messageVersion)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(messageType);

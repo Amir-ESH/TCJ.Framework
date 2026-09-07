@@ -14,6 +14,7 @@ on:
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.AspNetCore/**"
       - "src/TCJ.Messaging/**"
+      - "src/TCJ.Messaging.AzureServiceBus/**"
       - "tests/TCJ.HealthChecks.Tests/**"
       - "tests/TCJ.Inbox.Tests/**"
       - "tests/TCJ.Messaging.Tests/**"
@@ -58,6 +59,9 @@ jobs:
         run: python3 eng/verify-health-checks.py validate-config
       - name: Validate messaging policy and contract
         run: python3 eng/verify-messaging.py validate-config
+
+      - name: Validate Azure Service Bus adapter contract
+        run: python3 eng/verify-azure-service-bus.py validate-config
       - name: Restore and audit dependencies
         run: dotnet restore tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj --force-evaluate
       - name: Build health-check tests

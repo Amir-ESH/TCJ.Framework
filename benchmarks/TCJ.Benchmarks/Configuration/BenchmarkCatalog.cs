@@ -65,7 +65,12 @@ internal static class BenchmarkCatalog
         Messaging("MessagingBenchmarks", "CreateEnvelope", baseline: true),
         Messaging("MessagingBenchmarks", "Serialize"),
         Messaging("MessagingBenchmarks", "Deserialize"),
-        Messaging("MessagingBenchmarks", "FilterHeaders")
+        Messaging("MessagingBenchmarks", "FilterHeaders"),
+
+        AzureServiceBus("AzureServiceBusBenchmarks", "MapPublishMessage", baseline: true),
+        AzureServiceBus("AzureServiceBusBenchmarks", "MapScheduledPublishMessage"),
+        AzureServiceBus("AzureServiceBusBenchmarks", "ExtractTraceContext"),
+        AzureServiceBus("AzureServiceBusBenchmarks", "TelemetryDisabled")
     ];
 
     internal static void WriteManifest()
@@ -137,6 +142,12 @@ internal static class BenchmarkCatalog
         string method,
         bool baseline = false)
         => new(type, method, ["TCJ.Messaging", "Messaging"], null, baseline);
+
+    private static BenchmarkDefinition AzureServiceBus(
+        string type,
+        string method,
+        bool baseline = false)
+        => new(type, method, ["TCJ.Messaging.AzureServiceBus", "Messaging", "AzureServiceBus"], null, baseline);
 
     private sealed record BenchmarkDefinition(
         string Type,

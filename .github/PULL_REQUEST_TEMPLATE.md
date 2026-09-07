@@ -51,7 +51,7 @@ Describe the problem and the approach taken.
 - [ ] The official release uses the verified package set
 - [ ] Release-integrity automation remains valid and package checksums pass
 - [ ] SBOM generation and verification succeed
-- [ ] All seven release packages are represented and symbol packages are present for all six runtime packages
+- [ ] All nine release packages are represented and symbol packages are present for all eight runtime packages
 - [ ] Package versions and dependency relationships match generated package metadata
 - [ ] Required package and dependency hashes are present
 - [ ] License metadata has been reviewed
@@ -222,6 +222,27 @@ Describe the problem and the approach taken.
 - [ ] Messaging telemetry contains no payload, raw sensitive headers, credentials, or message IDs by default
 - [ ] Public messaging contract changes have compatibility and migration guidance
 - [ ] Generated messaging artifacts are not committed
+
+## Azure Service Bus transport
+
+- [ ] Peek-Lock processing passes
+- [ ] Auto-completion is disabled
+- [ ] Inbox commits before completion
+- [ ] Abandon behavior is tested
+- [ ] Dead-letter behavior is tested
+- [ ] Defer behavior is tested
+- [ ] Scheduling is tested
+- [ ] TTL behavior is tested
+- [ ] Lock renewal is bounded
+- [ ] Lock loss is tested
+- [ ] Sessions are tested
+- [ ] Duplicate detection guidance is accurate and does not replace TCJ Inbox
+- [ ] Outbox remains retryable on send failure
+- [ ] Graceful shutdown is tested
+- [ ] Credentials and payloads are not logged or emitted to telemetry/health responses
+- [ ] Adapter conformance tests pass
+- [ ] Azure Service Bus contract changes are documented
+- [ ] Generated Azure Service Bus artifacts are not committed
 
 ## Related issue
 

@@ -21,6 +21,7 @@ POLICY_REL = Path("eng/compatibility-policy.json")
 REQUIRED_PACKAGE_IDS = {
     "TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer", "TCJ.AspNetCore", "TCJ.Messaging",
+    "TCJ.Messaging.AzureServiceBus",
 }
 SEMVER_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
 WINDOWS_ABSOLUTE_PATTERN = re.compile(rb"[A-Za-z]:\\(?:Users|agent|runner|work|src|home)\\", re.IGNORECASE)
@@ -74,7 +75,7 @@ def load_policy(root: Path = ROOT) -> dict[str, Any]:
     if data["schemaVersion"] != 1: fail("Unsupported compatibility policy schemaVersion.")
     packages = data["requiredPackages"]
     if not isinstance(packages, list) or set(packages) != REQUIRED_PACKAGE_IDS or len(packages) != len(REQUIRED_PACKAGE_IDS):
-        fail("Compatibility policy must list exactly the six TCJ runtime release packages.")
+        fail("Compatibility policy must list exactly the required TCJ compatibility packages.")
     expected_os = ["ubuntu-latest", "windows-latest", "macos-latest"]
     if data["requiredOperatingSystems"] != expected_os: fail(f"requiredOperatingSystems must be {expected_os}.")
     if data["requiredConfigurations"] != ["Release"]: fail("Release must be the only required compatibility configuration.")

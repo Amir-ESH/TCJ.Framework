@@ -9,6 +9,7 @@
     "TCJ.DependencyInjection",
     "Resilience",
     "HealthChecks",
-    "Outbox"
+    "Outbox",
+    "AzureServiceBus"
   ]
 }

@@ -8,7 +8,7 @@ public sealed class MessagingHeaderPolicy
     private static readonly HashSet<string> FrameworkAllowed = new(StringComparer.OrdinalIgnoreCase)
     {
         "tcj-message-id", "tcj-message-type", "tcj-message-version", "tcj-correlation-id",
-        "tcj-causation-id", "tcj-created-at", "traceparent", "tracestate", "content-type"
+        "tcj-causation-id", "tcj-created-at", "tcj-reply-to", "traceparent", "tracestate", "content-type"
     };
 
     private static readonly HashSet<string> Forbidden = new(StringComparer.OrdinalIgnoreCase)

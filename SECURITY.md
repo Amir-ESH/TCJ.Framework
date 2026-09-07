@@ -74,3 +74,7 @@ Outbox payloads are durable application data and can contain sensitive fields. T
 ## Transactional Inbox data
 
 Inbox payloads and transport metadata can contain sensitive data. The default implementation stores only allowlisted headers, never emits payload/raw headers in logs or telemetry, bounds stored errors, and supports metadata-only retention for inline processing. Hosts remain responsible for database encryption at rest, access controls, backups, retention, replay authorization, and idempotency of non-transactional external effects. A duplicate `ConsumerName`/`MessageId` with a different payload hash is treated as a contract/security conflict, not a normal duplicate.
+
+## Azure Service Bus credentials and payloads
+
+`TCJ.Messaging.AzureServiceBus` treats connection strings, token credentials, payloads, authorization metadata, message IDs, and session IDs as sensitive by default. Production deployments should prefer `TokenCredential` implementations such as managed identity or workload identity over connection strings. Adapter logs, health responses, telemetry, verifier artifacts, and dead-letter descriptions must not include credentials or message bodies. Broker duplicate detection is a bounded broker feature and does not replace transactional Inbox idempotency.

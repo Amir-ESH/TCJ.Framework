@@ -61,10 +61,11 @@ class NuGetPackageIdPolicyTests(unittest.TestCase):
                 "TCJ.AspNetCore",
                 "TCJ.Messaging",
                 "TCJ.Messaging.RabbitMQ",
+                "TCJ.Messaging.AzureServiceBus",
                 "TCJ.Generators",
             ],
         )
-        target_only = {"TCJ.Messaging", "TCJ.Messaging.RabbitMQ"}
+        target_only = {"TCJ.Messaging", "TCJ.Messaging.RabbitMQ", "TCJ.Messaging.AzureServiceBus"}
         self.assertEqual(set(current) - published, target_only)
         self.assertEqual(published, set(current) - target_only)
         self.assertTrue(

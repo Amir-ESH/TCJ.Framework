@@ -198,3 +198,12 @@ This checklist prepares the next preview, currently `0.1.0-preview.5`. Do not cr
 - [ ] Retry, dead-letter, replay, cleanup, telemetry, health, and sensitive-data scenarios pass.
 - [ ] `INBOX_SUMMARY.md` evidence belongs to the exact release source and is retained with release artifacts.
 - [ ] Consumer migration guidance covers Inbox schema and any Outbox correlation/causation columns.
+
+## Azure Service Bus transport gate
+
+- [ ] `python3 eng/verify-azure-service-bus.py validate-config` passes.
+- [ ] The commit-matched `Azure Service Bus transport` workflow passes queue/topic, Peek-Lock/manual settlement, scheduling/TTL, lock-renewal/loss, sessions, Inbox/Outbox, conformance, health, telemetry, and sensitive-data validation.
+- [ ] `TCJ.Messaging.AzureServiceBus` is present in the release, SBOM, reproducibility, compatibility, upgrade, and published-package manifests.
+- [ ] Published-package smoke restores the exact released adapter and validates queue publish/receive/complete, Inbox duplicate handling, Outbox publication, scheduled delivery, and graceful shutdown.
+- [ ] Azure Service Bus credentials, payloads, raw application properties, message IDs, and session IDs are absent from release diagnostics.
+- [ ] No global exactly-once or cross-session ordering guarantee is claimed.

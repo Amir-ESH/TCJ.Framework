@@ -11,5 +11,9 @@
     <Project Path="Consumers/MessagingPublisher.Console/MessagingPublisher.Console.csproj" />
     <Project Path="Consumers/MessagingConsumer.Worker/MessagingConsumer.Worker.csproj" />
     <Project Path="Consumers/MessagingInboxOutbox.Worker/MessagingInboxOutbox.Worker.csproj" />
+    <Project Path="Consumers/AzureServiceBusPublisher.Console/AzureServiceBusPublisher.Console.csproj" />
+    <Project Path="Consumers/AzureServiceBusConsumer.Worker/AzureServiceBusConsumer.Worker.csproj" />
+    <Project Path="Consumers/AzureServiceBusSessionConsumer.Worker/AzureServiceBusSessionConsumer.Worker.csproj" />
+    <Project Path="Consumers/AzureServiceBusInboxOutbox.Worker/AzureServiceBusInboxOutbox.Worker.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "scenario": "AzureServiceBusConsumer",
+  "checks": {
+    "adapterLoadsWithoutNetwork": true,
+    "manualCompletionDefault": true,
+    "boundedMessageConcurrency": true,
+    "boundedSessionConcurrency": true,
+    "perSessionOrderingDefault": true,
+    "boundedLockRenewal": true,
+    "boundedSdkRetry": true,
+    "topologyOwnershipIsExplicit": true,
+    "scheduledCloneRetryDefault": true
+  }
+}

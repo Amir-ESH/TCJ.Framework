@@ -12,6 +12,8 @@
     <EnableOutboxSmoke Condition="'$(EnableOutboxSmoke)' == ''">false</EnableOutboxSmoke>
     <EnableInboxSmoke Condition="'$(EnableInboxSmoke)' == ''">false</EnableInboxSmoke>
     <EnableMessagingSmoke Condition="'$(EnableMessagingSmoke)' == ''">false</EnableMessagingSmoke>
+    <EnableAzureServiceBusSmoke Condition="'$(EnableAzureServiceBusSmoke)' == ''">false</EnableAzureServiceBusSmoke>
+    <EnableMessagingSmoke Condition="'$(EnableAzureServiceBusSmoke)' == 'true'">true</EnableMessagingSmoke>
     <EnableOutboxSmoke Condition="'$(EnableMessagingSmoke)' == 'true'">true</EnableOutboxSmoke>
     <EnableInboxSmoke Condition="'$(EnableMessagingSmoke)' == 'true'">true</EnableInboxSmoke>
     <DefineConstants Condition="'$(EnableResilienceSmoke)' == 'true'">$(DefineConstants);TCJ_RESILIENCE_SMOKE</DefineConstants>
@@ -19,6 +21,7 @@
     <DefineConstants Condition="'$(EnableOutboxSmoke)' == 'true'">$(DefineConstants);TCJ_OUTBOX_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableInboxSmoke)' == 'true'">$(DefineConstants);TCJ_INBOX_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableMessagingSmoke)' == 'true'">$(DefineConstants);TCJ_MESSAGING_SMOKE</DefineConstants>
+    <DefineConstants Condition="'$(EnableAzureServiceBusSmoke)' == 'true'">$(DefineConstants);TCJ_AZURE_SERVICE_BUS_SMOKE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,5 +31,6 @@
     <PackageReference Include="TCJ.EntityFrameworkCore.SqlServer" Version="$(TCJPackageVersion)" />
     <PackageReference Include="TCJ.AspNetCore" Version="$(TCJPackageVersion)" />
     <PackageReference Include="TCJ.Messaging" Version="$(TCJPackageVersion)" Condition="'$(EnableMessagingSmoke)' == 'true'" />
+    <PackageReference Include="TCJ.Messaging.AzureServiceBus" Version="$(TCJPackageVersion)" Condition="'$(EnableAzureServiceBusSmoke)' == 'true'" />
   </ItemGroup>
 </Project>

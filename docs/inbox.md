@@ -273,3 +273,7 @@ python3 eng/verify-inbox.py verify \
 ```
 
 Generated `TestResults/Inbox/` and `artifacts/inbox/` evidence is not source and must not be committed.
+
+## Azure Service Bus transport settlement
+
+The Azure adapter receives production deliveries in Peek-Lock mode with auto-completion disabled. `InboxTransportBridge` completes duplicates and successful committed deliveries only after the Inbox outcome is available; transient failures are abandoned/deferred/scheduled according to configured policy, and permanent invalid messages are dead-lettered. Bounded message/session lock renewal protects long handlers during normal processing and graceful shutdown, while lock loss remains observable and safe for broker redelivery because Inbox identity is authoritative.

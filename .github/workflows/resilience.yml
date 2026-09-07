@@ -25,6 +25,7 @@ on:
       - "src/TCJ.DependencyInjection/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.Messaging/**"
+      - "src/TCJ.Messaging.AzureServiceBus/**"
       - "tests/TCJ.Resilience.Tests/**"
       - "tests/TCJ.Inbox.Tests/**"
       - "eng/resilience-policy.json"
@@ -84,6 +85,9 @@ jobs:
 
       - name: Validate messaging policy and contract
         run: python3 eng/verify-messaging.py validate-config
+
+      - name: Validate Azure Service Bus adapter contract
+        run: python3 eng/verify-azure-service-bus.py validate-config
 
       - name: Restore and audit dependencies
         run: dotnet restore TCJ.slnx --force-evaluate

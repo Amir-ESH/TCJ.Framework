@@ -17,5 +17,6 @@
     <ProjectReference Include="..\..\src\TCJ.AspNetCore\TCJ.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\TCJ.Messaging\TCJ.Messaging.csproj" />
     <ProjectReference Include="..\..\src\TCJ.Messaging.RabbitMQ\TCJ.Messaging.RabbitMQ.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging.AzureServiceBus\TCJ.Messaging.AzureServiceBus.csproj" />
   </ItemGroup>
 </Project>

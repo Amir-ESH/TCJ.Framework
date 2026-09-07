@@ -76,6 +76,25 @@ class RequiredPrGateTests(unittest.TestCase):
         self.assertNotIn("aspnetcore_integration", selected)
         self.assertNotIn("resilience", selected)
 
+    def test_azure_service_bus_change_selects_adapter_and_cross_cutting_gates(self):
+        selected = self.required(
+            "develop",
+            "src/TCJ.Messaging.AzureServiceBus/Publishing/AzureServiceBusTransportPublisher.cs",
+        )
+        for gate in (
+            "reproducible_builds",
+            "documentation",
+            "consumer_compatibility",
+            "upgrade_compatibility",
+            "concurrency_stress",
+            "resilience",
+            "health_checks",
+            "transactional_outbox",
+            "performance",
+            "azure_service_bus",
+        ):
+            self.assertIn(gate, selected)
+
     def test_core_change_fans_out_to_every_conditional_gate(self):
         selected = self.required("develop", "src/TCJ.Core/Results/Result.cs")
         expected = {"ci", "dependency_review", *POLICY["gates"].keys()}

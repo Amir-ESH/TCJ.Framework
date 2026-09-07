@@ -25,6 +25,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [Transactional Inbox](inbox.md)
 - [Transport-neutral messaging](messaging.md)
 - [Messaging adapter authoring](messaging-adapter-authoring.md)
+- [Azure Service Bus messaging](messaging-azure-service-bus.md)
 - [Observability](observability.md)
 - [Strong typed IDs and Value Objects](guides/strong-types.md)
 
@@ -62,6 +63,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [`TCJ.AspNetCore`](packages/tcj-aspnetcore.md)
 - [`TCJ.Messaging`](packages/tcj-messaging.md)
 - [`TCJ.Messaging.RabbitMQ`](packages/tcj-messaging-rabbitmq.md)
+- [`TCJ.Messaging.AzureServiceBus`](packages/tcj-messaging-azure-service-bus.md)
 - [`TCJ.Generators`](packages/TCJ.Generators.md) — analyzer-only compile-time tooling
 
 ## Migrations and release notes

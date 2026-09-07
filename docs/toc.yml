@@ -19,6 +19,8 @@
     href: packages/tcj-messaging.md
   - name: TCJ.Messaging.RabbitMQ
     href: packages/tcj-messaging-rabbitmq.md
+  - name: TCJ.Messaging.AzureServiceBus
+    href: packages/tcj-messaging-azure-service-bus.md
 - name: Product Guides
   items:
   - name: Result and HTTP
@@ -45,6 +47,8 @@
     href: messaging.md
   - name: Messaging Adapter Authoring
     href: messaging-adapter-authoring.md
+  - name: Azure Service Bus Messaging
+    href: messaging-azure-service-bus.md
   - name: Observability
     href: observability.md
 - name: Architecture

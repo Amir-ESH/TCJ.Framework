@@ -7,5 +7,6 @@
     <Project Path="Scenarios/AspNetCoreConsumer/AspNetCoreConsumer.csproj" />
     <Project Path="Scenarios/FullStackConsumer/FullStackConsumer.csproj" />
     <Project Path="Scenarios/MessagingConsumer/MessagingConsumer.csproj" />
+    <Project Path="Scenarios/AzureServiceBusConsumer/AzureServiceBusConsumer.csproj" />
   </Folder>
 </Solution>
