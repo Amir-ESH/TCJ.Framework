@@ -219,7 +219,7 @@ def validate_config() -> tuple[dict[str, Any], dict[str, Any]]:
     for rel in policy.get("requiredConsumers", []):
         require(ROOT / rel, "TCJ.Messaging.AzureServiceBus", "$(TCJCompatibilityVersion)")
     require(ROOT / "upgrade-tests/Scenarios/AzureServiceBusConsumer/AzureServiceBusConsumer.csproj", "TCJ.Messaging.AzureServiceBus")
-    require(ROOT / "docs/messaging-azure-service-bus.md", "Peek-Lock", "TCJ Inbox", "TCJ Outbox", "Managed identity", "global exactly-once", "EnablePartitioning")
+    require(ROOT / "docs/messaging-azure-service-bus.md", "Peek-Lock", "TCJ Inbox", "TCJ Outbox", "Managed identity", "global exactly-once", "EnablePartitioning", "AcceptSessionAsync", "ServiceBusSessionProcessor", "protected live")
     require(ROOT / "docs/nuget/TCJ.Messaging.AzureServiceBus.md", "TCJ.Messaging.AzureServiceBus")
     require(ROOT / ".github/workflows/azure-service-bus.yml", "Azure Service Bus transport", "verify-azure-service-bus.py", "TCJ_AZURE_SERVICE_BUS_REQUIRE_INTEGRATION", "GITHUB_STEP_SUMMARY", "messaging-conformance.trx")
     require(ROOT / ".github/workflows/ci.yml", "verify-azure-service-bus.py", "validate-config")

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TCJ.Messaging.AzureServiceBus.Configuration;
 using TCJ.Messaging.AzureServiceBus.Extensions;
 using TCJ.Messaging.AzureServiceBus.HealthChecks;
+using TCJ.Messaging.AzureServiceBus.Publishing;
 using TCJ.Messaging.AzureServiceBus.Tests.Infrastructure;
 using TCJ.Messaging.AzureServiceBus.Topology;
 using TCJ.Messaging.Configuration;
@@ -158,16 +159,42 @@ public sealed class AzureServiceBusIntegrationTests
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = AzureServiceBusIntegrationEnvironment.SessionMappingQueue; await using ServiceProvider provider = CreateProvider(env, queue, sessions: true, maximumConcurrentSessions: 1);
-        TransportMessageEnvelope envelope = Envelope("s1", orderingKey: "order-1"); await Publish(provider, queue, envelope, orderingKey: "order-1"); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue, timeout: GetSessionReceiveTimeout(provider)); ReceivedMessage received = lease.Message; Assert.Equal("order-1", received.Envelope.OrderingKey); await received.Settlement.CompleteAsync();
+        TransportMessageEnvelope envelope = Envelope("s1", orderingKey: "order-1");
+        PublishResult published = await Publish(provider, queue, envelope, orderingKey: "order-1");
+        Assert.True(published.IsSuccess);
+
+        await using ServiceBusSessionReceiver receiver = await env.Client.AcceptSessionAsync(queue, "order-1");
+        ServiceBusReceivedMessage? brokerMessage = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
+        Assert.NotNull(brokerMessage);
+        Assert.Equal("order-1", brokerMessage.SessionId);
+
+        TransportMessageEnvelope mapped = provider.GetRequiredService<AzureServiceBusMessageMapper>().FromReceived(brokerMessage);
+        Assert.Equal("order-1", mapped.OrderingKey);
+        await receiver.CompleteMessageAsync(brokerMessage);
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
-    public async Task Session_processing_order_is_single_in_flight_per_session()
+    public async Task Session_ordering_contract_preserves_publish_order_with_single_in_flight_configuration()
     {
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = AzureServiceBusIntegrationEnvironment.SessionOrderingQueue; await using ServiceProvider provider = CreateProvider(env, queue, sessions: true, maximumConcurrentSessions: 1);
-        await Publish(provider, queue, Envelope("s2-1", orderingKey: "order-2"), orderingKey: "order-2"); await Publish(provider, queue, Envelope("s2-2", orderingKey: "order-2"), orderingKey: "order-2");
-        using var cts = new CancellationTokenSource(GetSessionReceiveTimeout(provider)); await using IAsyncEnumerator<ReceivedMessage> e = provider.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext { Source = queue }, cts.Token).GetAsyncEnumerator(cts.Token); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-1", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync(); Assert.True(await e.MoveNextAsync()); Assert.Equal("s2-2", e.Current.Envelope.MessageId); await e.Current.Settlement.CompleteAsync();
+        Assert.Equal(1, provider.GetRequiredService<TcjAzureServiceBusOptions>().MaximumConcurrentCallsPerSession);
+
+        PublishResult firstPublished = await Publish(provider, queue, Envelope("s2-1", orderingKey: "order-2"), orderingKey: "order-2");
+        PublishResult secondPublished = await Publish(provider, queue, Envelope("s2-2", orderingKey: "order-2"), orderingKey: "order-2");
+        Assert.True(firstPublished.IsSuccess);
+        Assert.True(secondPublished.IsSuccess);
+
+        await using ServiceBusSessionReceiver receiver = await env.Client.AcceptSessionAsync(queue, "order-2");
+        ServiceBusReceivedMessage? first = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
+        Assert.NotNull(first);
+        Assert.Equal("s2-1", first.MessageId);
+        await receiver.CompleteMessageAsync(first);
+
+        ServiceBusReceivedMessage? second = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
+        Assert.NotNull(second);
+        Assert.Equal("s2-2", second.MessageId);
+        await receiver.CompleteMessageAsync(second);
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -366,12 +393,6 @@ public sealed class AzureServiceBusIntegrationTests
 
     private static Task<PublishResult> Publish(ServiceProvider provider, string destination, TransportMessageEnvelope envelope, string? orderingKey = null) =>
         provider.GetRequiredService<IMessagePublisher>().PublishAsync(envelope, new PublishContext { Destination = destination, OrderingKey = orderingKey });
-
-    private static TimeSpan GetSessionReceiveTimeout(ServiceProvider provider)
-    {
-        TimeSpan tryTimeout = provider.GetRequiredService<TcjAzureServiceBusOptions>().TryTimeout;
-        return TimeSpan.FromTicks(tryTimeout.Ticks + (tryTimeout.Ticks / 2));
-    }
 
     private static async Task<AzureServiceBusReceivedLease> ReceiveOne(ServiceProvider provider, string source, string? subscription = null, TimeSpan? timeout = null)
     {
