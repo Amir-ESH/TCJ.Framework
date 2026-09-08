@@ -249,6 +249,25 @@ def check_gitignore(root: Path, critical: Iterable[Path]) -> None:
             if tracked.returncode != 0: fail(f"Required compatibility source is not tracked by Git: {relative}")
 
 
+def require_ignored(root: Path, paths: Iterable[str]) -> None:
+    if not (root / ".git").exists():
+        return
+    for relative in paths:
+        ignored = subprocess.run(
+            ["git", "check-ignore", "--quiet", "--no-index", "--", relative],
+            cwd=root,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if ignored.returncode == 0:
+            continue
+        if ignored.returncode == 1:
+            fail(f".gitignore does not ignore generated compatibility output: {relative}")
+        fail(f"Unable to inspect Git ignore state for {relative}: {ignored.stderr.strip()}")
+
+
 def require_text(path: Path, snippets: Iterable[str]) -> None:
     if not path.is_file(): fail(f"Required file is missing: {path}")
     text = path.read_text(encoding="utf-8")
@@ -314,8 +333,15 @@ def validate_config(root: Path = ROOT) -> dict[str, Any]:
         fail("Compatibility build props must enforce warnings-as-errors and policy-driven target frameworks.")
     check_gitignore(root, critical)
     gitignore = (root / ".gitignore").read_text(encoding="utf-8")
-    for required_ignore in ("artifacts/compatibility/", "compatibility/**/bin/", "compatibility/**/obj/"):
-        if required_ignore not in gitignore: fail(f".gitignore is missing {required_ignore!r}.")
+    if "artifacts/compatibility/" not in gitignore:
+        fail(".gitignore is missing 'artifacts/compatibility/'.")
+    require_ignored(
+        root,
+        (
+            "compatibility/IgnoreProbe/bin/.tcj-ignore-probe",
+            "compatibility/IgnoreProbe/obj/.tcj-ignore-probe",
+        ),
+    )
     require_text(root / ".github/workflows/consumer-compatibility.yml", [
         "name: Package consumer compatibility", "workflow_call:", "ubuntu-latest", "windows-latest", "macos-latest",
         "eng/verify-consumer-compatibility.py validate-config", "compatibility/scripts/run-compatibility.py",

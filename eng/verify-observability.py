@@ -89,6 +89,25 @@ def tracked_and_not_ignored(path: Path) -> None:
         fail(f"Unable to inspect Git ignore state for {relative}: {ignored.stderr.strip()}")
 
 
+def require_ignored(root: Path, paths: tuple[str, ...]) -> None:
+    if not (root / ".git").exists():
+        return
+    for relative in paths:
+        ignored = subprocess.run(
+            ["git", "check-ignore", "--quiet", "--no-index", "--", relative],
+            cwd=root,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if ignored.returncode == 0:
+            continue
+        if ignored.returncode == 1:
+            fail(f".gitignore does not ignore required observability build output: {relative}")
+        fail(f"Unable to inspect Git ignore state for {relative}: {ignored.stderr.strip()}")
+
+
 def require_text(path: Path, fragments: list[str]) -> str:
     if not path.is_file():
         fail(f"Required file is missing: {path.relative_to(ROOT).as_posix()}")
@@ -437,14 +456,19 @@ def validate_configuration() -> tuple[dict[str, Any], dict[str, Any]]:
         [
             "TestResults/Observability/",
             "artifacts/observability/",
-            "tests/TCJ.Observability.Tests/bin/",
-            "tests/TCJ.Observability.Tests/obj/",
             "!eng/observability-policy.json",
             "!eng/observability-contract.json",
         ],
     )
     if "!tests/TCJ.Observability.Tests/**/*.cs" not in gitignore:
         fail("Observability test source files must be explicitly kept trackable in .gitignore.")
+    require_ignored(
+        ROOT,
+        (
+            "tests/TCJ.Observability.Tests/bin/.tcj-ignore-probe",
+            "tests/TCJ.Observability.Tests/obj/.tcj-ignore-probe",
+        ),
+    )
 
     return policy, contract
 

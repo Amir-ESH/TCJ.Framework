@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import subprocess
 import tempfile
 import unittest
 import zipfile
@@ -210,6 +211,24 @@ class ConsumerCompatibilityVerifierTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaisesRegex(MODULE.VerificationError, "exactly one result"):
                 MODULE.find_platform_result(Path(temporary), "macos-latest")
+
+    def test_generic_build_output_rules_are_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            (root / ".gitignore").write_text("**/[Bb]in/*\n**/[Oo]bj/*\n", encoding="utf-8")
+            MODULE.require_ignored(root, (
+                "compatibility/IgnoreProbe/bin/.tcj-ignore-probe",
+                "compatibility/IgnoreProbe/obj/.tcj-ignore-probe",
+            ))
+
+    def test_missing_build_output_ignore_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            (root / ".gitignore").write_text("", encoding="utf-8")
+            with self.assertRaisesRegex(MODULE.VerificationError, "does not ignore"):
+                MODULE.require_ignored(root, ("compatibility/IgnoreProbe/bin/.tcj-ignore-probe",))
 
     def test_gitignore_rejects_compatibility_tree_rule(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
