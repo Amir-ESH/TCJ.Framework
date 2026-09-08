@@ -52,7 +52,7 @@ public sealed class AzureServiceBusIntegrationTests
         await using AzureServiceBusIntegrationEnvironment? env = await AzureServiceBusIntegrationEnvironment.CreateAsync(); if (env is null) return;
         string queue = await env.CreateQueueAsync(); await using ServiceProvider provider = CreateProvider(env, queue);
         await Publish(provider, queue, Envelope("m4", body: "sensitive-payload")); await using AzureServiceBusReceivedLease lease = await ReceiveOne(provider, queue); ReceivedMessage received = lease.Message; await received.Settlement.DeadLetterAsync(new DeadLetterOptions { Reason = "invalid-contract", Description = "bounded" });
-        await using ServiceBusReceiver dlq = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter }); ServiceBusReceivedMessage? dead = await dlq.ReceiveMessageAsync(TimeSpan.FromSeconds(5)); Assert.NotNull(dead); Assert.Equal("invalid-contract", dead.DeadLetterReason); Assert.DoesNotContain("sensitive-payload", dead.DeadLetterErrorDescription ?? string.Empty); await dlq.CompleteMessageAsync(dead);
+        await using ServiceBusReceiver dlq = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter, ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete }); ServiceBusReceivedMessage? dead = await dlq.ReceiveMessageAsync(TimeSpan.FromSeconds(5)); Assert.NotNull(dead); Assert.Equal("invalid-contract", dead.DeadLetterReason); Assert.DoesNotContain("sensitive-payload", dead.DeadLetterErrorDescription ?? string.Empty);
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
@@ -83,11 +83,10 @@ public sealed class AzureServiceBusIntegrationTests
         await Task.Delay(TimeSpan.FromSeconds(2));
         await using ServiceBusReceiver receiver = env.Client.CreateReceiver(queue);
         Assert.Null(await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(1)));
-        await using ServiceBusReceiver deadLetter = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
+        await using ServiceBusReceiver deadLetter = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter, ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete });
         ServiceBusReceivedMessage? expired = await deadLetter.ReceiveMessageAsync(TimeSpan.FromSeconds(5));
         Assert.NotNull(expired);
         Assert.Equal("m7", expired.MessageId);
-        await deadLetter.CompleteMessageAsync(expired);
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]
