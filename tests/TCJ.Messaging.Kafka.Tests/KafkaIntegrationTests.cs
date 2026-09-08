@@ -6,6 +6,7 @@ using TCJ.Messaging.Envelopes;
 using TCJ.Messaging.Extensions;
 using TCJ.Messaging.Kafka.Configuration;
 using TCJ.Messaging.Kafka.Extensions;
+using TCJ.Messaging.Kafka.Publishing;
 using TCJ.Messaging.Kafka.Receiving;
 using TCJ.Messaging.Publishing;
 using TCJ.Messaging.Receiving;
