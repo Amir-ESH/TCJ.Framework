@@ -30,7 +30,7 @@ Publication through Outbox is at least once and succeeds only after Kafka confir
 
 ## Documentation
 
-See [Apache Kafka messaging transport](../messaging-kafka.md) for offset invariants, rebalance behavior, retry/DLT semantics, TLS/SASL, topology ownership, telemetry, health, AOT status, and migration guidance.
+See [Apache Kafka messaging transport](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/messaging-kafka.md) for offset invariants, rebalance behavior, retry/DLT semantics, TLS/SASL, topology ownership, telemetry, health, AOT status, and migration guidance.
 
 ## License
 
