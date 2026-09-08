@@ -57,6 +57,23 @@ def require_text(path: Path, fragments: list[str]) -> str:
     return text
 
 
+def require_ignored(root: Path, paths: tuple[str, ...]) -> None:
+    if not (root / ".git").exists():
+        return
+    for relative in paths:
+        ignored = subprocess.run(
+            ["git", "check-ignore", "--quiet", "--no-index", "--", relative],
+            cwd=root,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if ignored.returncode == 0:
+            continue
+        if ignored.returncode == 1:
+            fail(f".gitignore does not ignore required outbox build output: {relative}")
+        fail(f"Unable to inspect Git ignore state for {relative}: {ignored.stderr.strip()}")
 
 
 def validate_system_text_json_serializer_source(text: str) -> None:
@@ -264,9 +281,13 @@ def validate_config() -> tuple[dict[str, Any], dict[str, Any]]:
     require_text(TEST_PROJECT, ["<TargetFramework>net10.0</TargetFramework>", "Testcontainers.MsSql"])
     require_text(ROOT / "TCJ.slnx", ["tests/TCJ.Outbox.Tests/TCJ.Outbox.Tests.csproj"])
     require_text(ROOT / ".gitignore", [
-        "TestResults/Outbox/", "artifacts/outbox/", "tests/TCJ.Outbox.Tests/bin/", "tests/TCJ.Outbox.Tests/obj/",
+        "TestResults/Outbox/", "artifacts/outbox/",
         "!eng/outbox-policy.json", "!eng/outbox-contract.json", "!tests/TCJ.Outbox.Tests/**/*.cs"
     ])
+    require_ignored(ROOT, (
+        "tests/TCJ.Outbox.Tests/bin/.tcj-ignore-probe",
+        "tests/TCJ.Outbox.Tests/obj/.tcj-ignore-probe",
+    ))
     require_text(ROOT / "docs/outbox.md", [
         "at-least-once", "exactly-once", "idempotent", "TCJ_OutboxMessages", "consumer-controlled migration",
         "UPDLOCK", "READPAST", "lease", "dead-letter", "replay", "retention", "sensitive", "encryption at rest"

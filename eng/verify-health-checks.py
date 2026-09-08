@@ -40,6 +40,24 @@ def tracked(path: Path) -> None:
     ignored=subprocess.run(['git','check-ignore','--quiet','--',rel],cwd=ROOT).returncode
     if ignored==0: fail(f"{rel} is ignored by Git and must remain tracked.")
 
+def require_ignored(root: Path, paths: tuple[str, ...]) -> None:
+    if not (root / '.git').exists():
+        return
+    for rel in paths:
+        result = subprocess.run(
+            ['git', 'check-ignore', '--quiet', '--no-index', '--', rel],
+            cwd=root,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if result.returncode == 0:
+            continue
+        if result.returncode == 1:
+            fail(f'.gitignore does not ignore required health-check build output: {rel}')
+        fail(f'Unable to inspect Git ignore state for {rel}: {result.stderr.strip()}')
+
 def validate_config() -> tuple[dict[str,Any],dict[str,Any]]:
     policy, contract = read_json(POLICY), read_json(CONTRACT)
     if policy.get('schemaVersion') != 1 or contract.get('schemaVersion') != 1: fail('Health-check policy and contract schemaVersion must be 1.')
@@ -91,7 +109,8 @@ def validate_config() -> tuple[dict[str,Any],dict[str,Any]]:
     if missing: fail('Health-check tests are missing required scenarios: '+', '.join(missing))
     project=require_text(TEST_PROJECT,['<TargetFramework>net10.0</TargetFramework>','Microsoft.AspNetCore.TestHost','Testcontainers.MsSql'])
     require_text(ROOT/'TCJ.slnx',['tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj'])
-    require_text(ROOT/'.gitignore',['TestResults/HealthChecks/','artifacts/health-checks/','tests/TCJ.HealthChecks.Tests/bin/','tests/TCJ.HealthChecks.Tests/obj/','!eng/health-check-policy.json','!eng/health-check-contract.json','!tests/TCJ.HealthChecks.Tests/**/*.cs'])
+    require_text(ROOT/'.gitignore',['TestResults/HealthChecks/','artifacts/health-checks/','!eng/health-check-policy.json','!eng/health-check-contract.json','!tests/TCJ.HealthChecks.Tests/**/*.cs'])
+    require_ignored(ROOT, ('tests/TCJ.HealthChecks.Tests/bin/.tcj-ignore-probe','tests/TCJ.HealthChecks.Tests/obj/.tcj-ignore-probe'))
     require_text(ROOT/'docs/health-checks.md',['liveness','readiness','/health/live','/health/ready','Kubernetes','cancellation','cache','migration','authorization','compatibility'])
     require_text(ROOT/'.github/PULL_REQUEST_TEMPLATE.md',['Liveness remains dependency-independent','Health-check contracts are updated intentionally','Generated health-check artifacts are not committed'])
     require_text(ROOT/'.github/workflows/ci.yml',['python3 eng/verify-health-checks.py validate-config','TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj','python3 eng/verify-health-checks.py verify'])

@@ -143,6 +143,25 @@ def check_gitignore(root: Path, critical: Iterable[Path]) -> None:
                 fail(f"Required upgrade source is ignored by Git: {rel}")
 
 
+def require_ignored(root: Path, paths: Iterable[str]) -> None:
+    if not (root / ".git").exists():
+        return
+    for relative in paths:
+        ignored = subprocess.run(
+            ["git", "check-ignore", "--quiet", "--no-index", "--", relative],
+            cwd=root,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if ignored.returncode == 0:
+            continue
+        if ignored.returncode == 1:
+            fail(f".gitignore does not ignore generated upgrade output: {relative}")
+        fail(f"Unable to inspect Git ignore state for {relative}: {ignored.stderr.strip()}")
+
+
 def markdown_anchor_exists(text: str, anchor: str) -> bool:
     anchor = anchor.strip().lstrip("#").casefold()
     for line in text.splitlines():
@@ -542,13 +561,15 @@ def validate_repository_wiring(root: Path = ROOT) -> None:
             if snippet not in text:
                 fail(f"{rel} is missing upgrade compatibility wiring: {snippet}")
     ignore = (root / ".gitignore").read_text(encoding="utf-8")
-    for pattern in (
-        "artifacts/upgrade-compatibility/",
-        "upgrade-tests/**/bin/",
-        "upgrade-tests/**/obj/",
-    ):
-        if pattern not in ignore:
-            fail(f".gitignore must ignore generated upgrade output: {pattern}")
+    if "artifacts/upgrade-compatibility/" not in ignore:
+        fail(".gitignore must ignore generated upgrade output: artifacts/upgrade-compatibility/")
+    require_ignored(
+        root,
+        (
+            "upgrade-tests/IgnoreProbe/bin/.tcj-ignore-probe",
+            "upgrade-tests/IgnoreProbe/obj/.tcj-ignore-probe",
+        ),
+    )
 
 
 def normalize_source(value: str) -> str:

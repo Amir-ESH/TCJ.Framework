@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import json
 import sys
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -41,6 +42,24 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
         verify.validate_repository_wiring(verify.ROOT)
         self.assertEqual(6, len(self.policy["scenarios"]))
         self.assertEqual(3, len(self.policy["targetOnlyScenarios"]))
+
+    def test_generic_build_output_rules_are_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            (root / ".gitignore").write_text("**/[Bb]in/*\n**/[Oo]bj/*\n", encoding="utf-8")
+            verify.require_ignored(root, (
+                "upgrade-tests/IgnoreProbe/bin/.tcj-ignore-probe",
+                "upgrade-tests/IgnoreProbe/obj/.tcj-ignore-probe",
+            ))
+
+    def test_missing_build_output_ignore_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            (root / ".gitignore").write_text("", encoding="utf-8")
+            with self.assertRaisesRegex(verify.VerificationError, "does not ignore"):
+                verify.require_ignored(root, ("upgrade-tests/IgnoreProbe/bin/.tcj-ignore-probe",))
 
     def test_metadata_versions_are_ordered(self):
         self.assertLess(verify.semver_key(self.baseline["version"]), verify.semver_key(self.target["version"]))

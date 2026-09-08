@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,6 +20,24 @@ class ObservabilityVerifierTests(unittest.TestCase):
         policy, contract = MODULE.validate_configuration()
         self.assertEqual(1, policy["schemaVersion"])
         self.assertEqual(1, contract["schemaVersion"])
+
+    def test_generic_build_output_rules_are_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            (root / ".gitignore").write_text("**/[Bb]in/*\n**/[Oo]bj/*\n", encoding="utf-8")
+            MODULE.require_ignored(root, (
+                "tests/TCJ.Observability.Tests/bin/.tcj-ignore-probe",
+                "tests/TCJ.Observability.Tests/obj/.tcj-ignore-probe",
+            ))
+
+    def test_missing_build_output_ignore_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            (root / ".gitignore").write_text("", encoding="utf-8")
+            with self.assertRaisesRegex(MODULE.ObservabilityError, "does not ignore"):
+                MODULE.require_ignored(root, ("tests/TCJ.Observability.Tests/bin/.tcj-ignore-probe",))
 
     def test_duplicate_contract_values_fail(self) -> None:
         with self.assertRaisesRegex(MODULE.ObservabilityError, "duplicates"):
