@@ -125,7 +125,7 @@ public sealed class AzureServiceBusInboxOutboxIntegrationTests
         await using var dlq = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions
         {
             SubQueue = SubQueue.DeadLetter,
-            ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete
+            ReceiveMode = ServiceBusReceiveMode.PeekLock
         });
         ServiceBusReceivedMessage? dead = await dlq.ReceiveMessageAsync(TimeSpan.FromSeconds(5));
         Assert.NotNull(dead);
