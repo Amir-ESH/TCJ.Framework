@@ -1,5 +1,6 @@
 using TCJ.Messaging.Kafka.Diagnostics;
 using TCJ.Messaging.Kafka.Publishing;
+using TCJ.Messaging.Publishing;
 using TCJ.Messaging.Receiving;
 
 namespace TCJ.Messaging.Kafka.Receiving;

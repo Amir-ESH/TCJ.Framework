@@ -150,7 +150,7 @@ public sealed class TcjKafkaOptions
         if (value is "." or ".." || value.Any(static c => !(char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-')))
             throw new ArgumentException("Kafka topic names may contain only ASCII letters, digits, '.', '_' and '-'.", parameterName);
     }
-    private static void ValidateSuffix(string value, string name) { Require(value, name, 64); if (!value.StartsWith('.', StringComparison.Ordinal)) throw new ArgumentException("Kafka topic suffixes must start with '.'.", name); ValidateTopic("x" + value, name); }
+    private static void ValidateSuffix(string value, string name) { Require(value, name, 64); if (!value.StartsWith(".", StringComparison.Ordinal)) throw new ArgumentException("Kafka topic suffixes must start with '.'.", name); ValidateTopic("x" + value, name); }
     private static void ValidateTimeout(TimeSpan value, string name, TimeSpan max, bool allowZero = false) { if ((allowZero ? value < TimeSpan.Zero : value <= TimeSpan.Zero) || value > max) throw new ArgumentOutOfRangeException(name); }
     private static void Require(string? value, string name, int max) { ArgumentException.ThrowIfNullOrWhiteSpace(value, name); if (value.Length > max || value.Any(char.IsControl)) throw new ArgumentException($"{name} is invalid or too long.", name); }
 }
