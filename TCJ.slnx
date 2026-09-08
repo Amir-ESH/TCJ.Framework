@@ -21,6 +21,7 @@
     <Project Path="src/TCJ.Messaging/TCJ.Messaging.csproj" />
     <Project Path="src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj" />
     <Project Path="src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj" />
+    <Project Path="src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TCJ.Analyzers.Tests/TCJ.Analyzers.Tests.csproj" />
@@ -40,6 +41,7 @@
     <Project Path="tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj" />
     <Project Path="tests/TCJ.Messaging.RabbitMQ.Tests/TCJ.Messaging.RabbitMQ.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.AzureServiceBus.Tests/TCJ.Messaging.AzureServiceBus.Tests.csproj" />
+    <Project Path="tests/TCJ.Messaging.Kafka.Tests/TCJ.Messaging.Kafka.Tests.csproj" />
     <Project Path="tests/TCJ.PropertyTests/TCJ.PropertyTests.csproj" />
     <Project Path="tests/TCJ.Resilience.Tests/TCJ.Resilience.Tests.csproj" />
     <Project Path="tests/TCJ.Observability.Tests/TCJ.Observability.Tests.csproj" />

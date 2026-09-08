@@ -97,7 +97,8 @@ jobs:
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
             src/TCJ.Messaging/TCJ.Messaging.csproj \
             src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj \
-            src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj; do
+            src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj \
+            src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj; do
             dotnet build "$project" --configuration Release --no-restore \
               -p:Version="${{ steps.versions.outputs.target }}" \
               -p:RepositoryCommit="$GITHUB_SHA"
@@ -118,7 +119,8 @@ jobs:
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
             src/TCJ.Messaging/TCJ.Messaging.csproj \
             src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj \
-            src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj; do
+            src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj \
+            src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj; do
             dotnet pack "$project" --configuration Release --no-build --no-restore \
               -p:PackageOutputPath="$packages" \
               -p:Version="${{ steps.versions.outputs.target }}" \
@@ -129,7 +131,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for id in TCJ.Core TCJ.DependencyInjection TCJ.EntityFrameworkCore TCJ.EntityFrameworkCore.SqlServer TCJ.AspNetCore TCJ.Messaging TCJ.Messaging.RabbitMQ TCJ.Messaging.AzureServiceBus; do
+          for id in TCJ.Core TCJ.DependencyInjection TCJ.EntityFrameworkCore TCJ.EntityFrameworkCore.SqlServer TCJ.AspNetCore TCJ.Messaging TCJ.Messaging.RabbitMQ TCJ.Messaging.AzureServiceBus TCJ.Messaging.Kafka; do
             test -f "artifacts/upgrade-compatibility/target/packages/$id.${{ steps.versions.outputs.target }}.nupkg" || { echo "Missing target package: $id" >&2; exit 1; }
           done
 

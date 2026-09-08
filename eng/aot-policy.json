@@ -251,6 +251,20 @@
         }
       ],
       "fullSupportEvidence": []
+    },
+    {
+      "packageId": "TCJ.Messaging.Kafka",
+      "tier": "Unsupported",
+      "rationale": "TCJ.Messaging.Kafka is conservative for Native AOT because Confluent.Kafka depends on the native librdkafka runtime and no packed-consumer Native AOT evidence is recorded.",
+      "restrictions": [
+        {
+          "kind": "Upstream",
+          "symbol": "Confluent.Kafka / librdkafka",
+          "status": "Unsupported",
+          "reason": "No Native AOT compatibility claim is made until a packed consumer publishes and executes with supported native assets and zero TCJ-caused trimming/AOT diagnostics."
+        }
+      ],
+      "fullSupportEvidence": []
     }
   ],
   "supportedCiRuntimeIdentifiers": [

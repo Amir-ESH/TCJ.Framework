@@ -33,6 +33,7 @@ PACKAGES = [
     "TCJ.Messaging",
     "TCJ.Messaging.RabbitMQ",
     "TCJ.Messaging.AzureServiceBus",
+    "TCJ.Messaging.Kafka",
 ]
 TOOLING_PACKAGE = "TCJ.Generators"
 VERSION = "1.2.3-preview.4"
@@ -275,8 +276,8 @@ class ReproducibleBuildTests(unittest.TestCase):
         summary = self.fixture.compare()
         self.assertEqual("PASS", summary.status)
         self.assertTrue(summary.archiveByteEquality)
-        self.assertEqual(9, summary.comparedNupkgCount)
-        self.assertEqual(8, summary.comparedSnupkgCount)
+        self.assertEqual(10, summary.comparedNupkgCount)
+        self.assertEqual(9, summary.comparedSnupkgCount)
 
     def test_symbol_packages_without_physical_source_entries_pass(self) -> None:
         self.fixture.create_set(self.fixture.build_a, include_source_files=False)

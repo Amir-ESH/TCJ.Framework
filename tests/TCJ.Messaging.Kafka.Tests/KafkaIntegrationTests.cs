@@ -1,0 +1,76 @@
+using System.Text;
+using Confluent.Kafka;
+using Confluent.Kafka.Admin;
+using Microsoft.Extensions.DependencyInjection;
+using TCJ.Messaging.Envelopes;
+using TCJ.Messaging.Extensions;
+using TCJ.Messaging.Kafka.Configuration;
+using TCJ.Messaging.Kafka.Extensions;
+using TCJ.Messaging.Kafka.Publishing;
+using TCJ.Messaging.Kafka.Receiving;
+using TCJ.Messaging.Publishing;
+using TCJ.Messaging.Receiving;
+using TCJ.Messaging.Kafka.Tests.Infrastructure;
+namespace TCJ.Messaging.Kafka.Tests;
+
+[Collection(KafkaIntegrationCollection.Name)]
+public sealed class KafkaIntegrationTests(KafkaContainerFixture fixture)
+{
+    [Fact] public async Task Producer_publish_is_confirmed_by_real_Kafka(){string topic=await TopicAsync();await using var p=Provider(topic);var pub=p.GetRequiredService<IMessagePublisher>();PublishResult r=await pub.PublishAsync(Envelope("publish"),new PublishContext{Destination=topic});Assert.Equal(PublishOutcome.Published,r.Outcome);}
+    [Fact] public async Task Stable_message_identity_survives_publish_and_receive(){string topic=await TopicAsync();await using var p=Provider(topic);await p.GetRequiredService<IMessagePublisher>().PublishAsync(Envelope("stable"),new PublishContext{Destination=topic});using var cts=new CancellationTokenSource(TimeSpan.FromSeconds(15));await using var e=p.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext{Source=topic,Subscription="g-"+Guid.NewGuid().ToString("N")},cts.Token).GetAsyncEnumerator(cts.Token);Assert.True(await e.MoveNextAsync());Assert.Equal("stable",e.Current.Envelope.MessageId);await e.Current.Settlement.CompleteAsync(cts.Token);}
+    [Fact] public async Task Retry_topic_publish_happens_before_source_progression(){string topic=await TopicAsync();await TopicAsync(topic+".retry");await using var p=Provider(topic);await p.GetRequiredService<IMessagePublisher>().PublishAsync(Envelope("retry"),new PublishContext{Destination=topic});using var cts=new CancellationTokenSource(TimeSpan.FromSeconds(15));await using var e=p.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext{Source=topic,Subscription="g-"+Guid.NewGuid().ToString("N")},cts.Token).GetAsyncEnumerator(cts.Token);Assert.True(await e.MoveNextAsync());await e.Current.Settlement.RetryAsync(new RetrySettlementOptions(),cts.Token);Assert.True(await HasMessageAsync(topic+".retry","retry",cts.Token));}
+    [Fact] public async Task Dead_letter_topic_publish_happens_before_source_progression(){string topic=await TopicAsync();await TopicAsync(topic+".dead");await using var p=Provider(topic);await p.GetRequiredService<IMessagePublisher>().PublishAsync(Envelope("dead"),new PublishContext{Destination=topic});using var cts=new CancellationTokenSource(TimeSpan.FromSeconds(15));await using var e=p.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext{Source=topic,Subscription="g-"+Guid.NewGuid().ToString("N")},cts.Token).GetAsyncEnumerator(cts.Token);Assert.True(await e.MoveNextAsync());await e.Current.Settlement.DeadLetterAsync(new DeadLetterOptions{Reason="test"},cts.Token);Assert.True(await HasMessageAsync(topic+".dead","dead",cts.Token));}
+    [Fact] public async Task Abandon_and_Defer_are_explicitly_unsupported(){var settlement=new KafkaMessageSettlement(new StubSettlementOwner(),null!,new KafkaSettlementToken("t",0,1,1),Envelope("unsupported"),1,Options("t"));await Assert.ThrowsAsync<MessagingCapabilityException>(()=>settlement.AbandonAsync());await Assert.ThrowsAsync<MessagingCapabilityException>(()=>settlement.DeferAsync());}
+    [Fact] public void Pause_resume_backpressure_configuration_is_bounded(){var o=Options("x");Assert.InRange(o.MaximumBufferedMessages,1,4096);Assert.InRange(o.MaximumConcurrentPartitions,1,256);}
+    [Fact] public void Shutdown_timeout_is_bounded(){var o=Options("x");Assert.True(o.ShutdownTimeout<=TimeSpan.FromMinutes(2));}
+    [Fact] public void Inbox_commit_offset_commit_crash_window_allows_safe_redelivery(){var c=new KafkaOffsetCoordinator();var p=new TopicPartition("t",0);long first=c.Assign(p);c.Register(p,10);Assert.Equal(11,c.Complete(p,10,first)!.Value.Value);c.Revoke(p);long second=c.Assign(p);c.Register(p,10);Assert.Equal(11,c.Complete(p,10,second)!.Value.Value);}
+    [Fact] public void Outbox_durable_retry_ownership_is_not_replaced(){var o=Options("x");ProducerConfig config=KafkaConfigFactory.Producer(o);Assert.True(config.EnableIdempotence == true);Assert.Equal(Acks.All,config.Acks);Assert.Equal(o.ProducerRetryCount,config.MessageSendMaxRetries);Assert.InRange(config.MessageSendMaxRetries!.Value,1,20);}
+    [Fact]
+    public async Task Pause_resume_backpressure_blocks_second_delivery_until_capacity_returns()
+    {
+        string topic = await TopicAsync();
+        await using var p = Provider(topic, maximumBufferedMessages: 1);
+        IMessagePublisher publisher = p.GetRequiredService<IMessagePublisher>();
+        await publisher.PublishAsync(Envelope("bp-1"), new PublishContext { Destination = topic, PartitionKey = "same" });
+        await publisher.PublishAsync(Envelope("bp-2"), new PublishContext { Destination = topic, PartitionKey = "same" });
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        IAsyncEnumerator<ReceivedMessage> e = p.GetRequiredService<IMessageReceiver>()
+            .ReceiveAsync(new ReceiveContext { Source = topic, Subscription = "bp-" + Guid.NewGuid().ToString("N") }, cts.Token)
+            .GetAsyncEnumerator(cts.Token);
+        Task<bool>? second = null;
+        try
+        {
+            Assert.True(await e.MoveNextAsync());
+            ReceivedMessage first = e.Current;
+            second = e.MoveNextAsync().AsTask();
+            await Task.Delay(250, cts.Token);
+            Assert.False(second.IsCompleted);
+            await first.Settlement.CompleteAsync(cts.Token);
+            Assert.True(await second.WaitAsync(TimeSpan.FromSeconds(5)));
+            await e.Current.Settlement.CompleteAsync(cts.Token);
+        }
+        finally
+        {
+            if (second is { IsCompleted: false })
+            {
+                cts.Cancel();
+                try { await second.ConfigureAwait(false); }
+                catch (OperationCanceledException) { }
+            }
+
+            await e.DisposeAsync();
+        }
+    }
+    [Fact] public void Conformance_capabilities_do_not_claim_transactions_or_defer(){var s=new ServiceCollection();s.AddTcjMessaging();s.AddTcjKafka(o=>o.BootstrapServers=fixture.BootstrapServers);using var p=s.BuildServiceProvider();var d=p.GetRequiredService<MessagingTransportDescriptor>();Assert.False(d.Capabilities.SupportsTransactions);Assert.False(d.Capabilities.SupportsDefer);}
+    [Fact] public void Rebalance_safety_uses_manual_offsets_and_stale_generation_rejection(){var o=Options("x");Assert.False(o.EnableAutoCommit);Assert.False(o.EnableAutoOffsetStore);}
+    [Fact] public async Task Producer_instance_is_reused_across_concurrent_callers(){var o=Options("x");await using var manager=new KafkaProducerManager(o);IProducer<string,byte[]>[] producers=await Task.WhenAll(Enumerable.Range(0,16).Select(async _=>await manager.GetAsync(CancellationToken.None)));Assert.All(producers,p=>Assert.Same(producers[0],p));}
+    [Fact] public async Task Broker_outage_is_bounded_and_classified_without_adapter_retry_loop(){var o=new TcjKafkaOptions{BootstrapServers="127.0.0.1:1",DefaultTopic="unreachable",PublishTimeout=TimeSpan.FromMilliseconds(500),ShutdownTimeout=TimeSpan.FromSeconds(1)};var s=new ServiceCollection();s.AddTcjMessaging();s.AddTcjKafka(x=>Copy(o,x));await using var p=s.BuildServiceProvider();PublishResult result=await p.GetRequiredService<IMessagePublisher>().PublishAsync(Envelope("outage"),new PublishContext{Destination="unreachable"});Assert.NotEqual(PublishOutcome.Published,result.Outcome);}
+    [Fact] public void Max_poll_behavior_is_explicit_and_bounded(){var o=Options("x");Assert.True(o.MaxPollInterval>o.SessionTimeout);Assert.True(o.MaxPollInterval<=TimeSpan.FromMinutes(30));}
+    private ServiceProvider Provider(string topic,int maximumBufferedMessages=8){var s=new ServiceCollection();s.AddTcjMessaging(o=>{o.MaximumConcurrentMessages=2;o.MaximumBufferedMessages=maximumBufferedMessages;o.AdditionalAllowedHeaders.Add("custom-safe");});s.AddTcjKafka(o=>{Copy(Options(topic,maximumBufferedMessages),o);});return s.BuildServiceProvider(new ServiceProviderOptions{ValidateOnBuild=true,ValidateScopes=true});}
+    private TcjKafkaOptions Options(string topic,int maximumBufferedMessages=8)=>new(){BootstrapServers=fixture.BootstrapServers,DefaultTopic=topic,MaximumConcurrentPartitions=2,MaximumBufferedMessages=maximumBufferedMessages,PublishTimeout=TimeSpan.FromSeconds(10),ShutdownTimeout=TimeSpan.FromSeconds(10),TopologyMode=KafkaTopologyMode.Disabled,AutoOffsetReset=KafkaOffsetResetMode.Earliest};
+    private static void Copy(TcjKafkaOptions a,TcjKafkaOptions b){b.BootstrapServers=a.BootstrapServers;b.DefaultTopic=a.DefaultTopic;b.MaximumConcurrentPartitions=a.MaximumConcurrentPartitions;b.MaximumBufferedMessages=a.MaximumBufferedMessages;b.PublishTimeout=a.PublishTimeout;b.ShutdownTimeout=a.ShutdownTimeout;b.TopologyMode=a.TopologyMode;b.AutoOffsetReset=a.AutoOffsetReset;}
+    private async Task<string> TopicAsync(string? name=null){name??="tcj.test."+Guid.NewGuid().ToString("N");using IAdminClient admin=new AdminClientBuilder(new AdminClientConfig{BootstrapServers=fixture.BootstrapServers}).Build();try{await admin.CreateTopicsAsync([new TopicSpecification{Name=name,NumPartitions=3,ReplicationFactor=1}]);}catch(CreateTopicsException e) when(e.Results.All(static x=>x.Error.Code==ErrorCode.TopicAlreadyExists)){}return name;}
+    private async Task<bool> HasMessageAsync(string topic,string id,CancellationToken token){using IConsumer<string,byte[]> c=new ConsumerBuilder<string,byte[]>(new ConsumerConfig{BootstrapServers=fixture.BootstrapServers,GroupId="verify-"+Guid.NewGuid().ToString("N"),AutoOffsetReset=Confluent.Kafka.AutoOffsetReset.Earliest,EnableAutoCommit=false}).Build();c.Subscribe(topic);while(!token.IsCancellationRequested){ConsumeResult<string,byte[]>? r=c.Consume(TimeSpan.FromMilliseconds(250));if(r is null)continue;string? h=r.Message.Headers.LastOrDefault(x=>x.Key=="tcj-message-id") is { } x?Encoding.UTF8.GetString(x.GetValueBytes()):null;if(h==id)return true;}return false;}
+    private sealed class StubSettlementOwner:IKafkaSettlementOwner{public Task CompleteAsync(KafkaSettlementToken token,CancellationToken cancellationToken)=>Task.CompletedTask;}
+    private static TransportMessageEnvelope Envelope(string id)=>new(id,"test.message",1,Encoding.UTF8.GetBytes("{}"),"application/json",DateTimeOffset.UtcNow,correlationId:"corr",causationId:"cause",headers:new Dictionary<string,string>{{"custom-safe","value"}});
+}

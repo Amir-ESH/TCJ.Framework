@@ -37,7 +37,7 @@ Entities can collect pending domain events and `IDomainEventDispatcher` invokes 
 
 ### Explicit transport-neutral messaging
 
-`TCJ.Messaging` owns broker-neutral envelopes, publishing/receiving contracts, settlement outcomes, capability declarations, topology naming, safe headers, observability, health checks, and adapter conformance rules. Broker SDKs belong only in leaf adapter packages such as `TCJ.Messaging.RabbitMQ` and `TCJ.Messaging.AzureServiceBus`. Outbox-to-transport publishing is explicit through `AddTcjMessagingOutboxBridge`; transport-to-Inbox processing settles only after the Inbox pipeline returns its committed outcome. The non-durable in-memory adapter exists for tests and local development and is not a production broker.
+`TCJ.Messaging` owns broker-neutral envelopes, publishing/receiving contracts, settlement outcomes, capability declarations, topology naming, safe headers, observability, health checks, and adapter conformance rules. Broker SDKs belong only in leaf adapter packages such as `TCJ.Messaging.RabbitMQ`, `TCJ.Messaging.AzureServiceBus`, and `TCJ.Messaging.Kafka`. Outbox-to-transport publishing is explicit through `AddTcjMessagingOutboxBridge`; transport-to-Inbox processing settles only after the Inbox pipeline returns its committed outcome. The non-durable in-memory adapter exists for tests and local development and is not a production broker.
 
 ### Host-owned configuration
 
@@ -115,3 +115,7 @@ The transactional Inbox keeps message identity/idempotency contracts in `TCJ.Cor
 ## Azure Service Bus adapter boundary
 
 `TCJ.Messaging.AzureServiceBus` is a leaf transport adapter above `TCJ.Messaging`. It owns `Azure.Messaging.ServiceBus`, authentication/client lifecycle, Service Bus topology, Peek-Lock settlement, sessions, scheduling, and adapter-specific diagnostics. `TCJ.Messaging`, `TCJ.Core`, and EF Core packages do not acquire Azure SDK references. The adapter exposes only TCJ neutral messaging contracts to upstream framework packages; see [Azure Service Bus messaging](messaging-azure-service-bus.md).
+
+## Apache Kafka adapter boundary
+
+`TCJ.Messaging.Kafka` is a leaf transport adapter above `TCJ.Messaging`. It owns `Confluent.Kafka`, idempotent acknowledged producer lifecycle, consumer-group polling, manual contiguous offset coordination, partition workers, retry/DLT topics, topology validation/declaration, and adapter-specific diagnostics. `TCJ.Messaging`, `TCJ.Core`, ASP.NET Core, and EF Core packages do not acquire Kafka SDK references. See [Kafka messaging](messaging-kafka.md).

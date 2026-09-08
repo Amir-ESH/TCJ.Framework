@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "dgSpecHash": "Rtn40DRKNEk=",
+  "success": false,
+  "projectFilePath": "C:\\Projects\\TCJ\\TCJ.Framework\\src\\TCJ.Messaging\\TCJ.Messaging.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\10.0.10\\microsoft.extensions.configuration.abstractions.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.10\\microsoft.extensions.dependencyinjection.abstractions.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.diagnostics.abstractions\\10.0.10\\microsoft.extensions.diagnostics.abstractions.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.diagnostics.healthchecks\\10.0.10\\microsoft.extensions.diagnostics.healthchecks.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.diagnostics.healthchecks.abstractions\\10.0.10\\microsoft.extensions.diagnostics.healthchecks.abstractions.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.fileproviders.abstractions\\10.0.10\\microsoft.extensions.fileproviders.abstractions.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.hosting.abstractions\\10.0.10\\microsoft.extensions.hosting.abstractions.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\10.0.10\\microsoft.extensions.logging.abstractions.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.options\\10.0.10\\microsoft.extensions.options.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.extensions.primitives\\10.0.10\\microsoft.extensions.primitives.10.0.10.nupkg.sha512",
+    "C:\\Users\\Amir\\.nuget\\packages\\microsoft.net.illink.tasks\\10.0.10\\microsoft.net.illink.tasks.10.0.10.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1905",
+      "level": "Error",
+      "message": "Warning As Error: Audit source 'nuget.org' did not provide any vulnerability data.",
+      "projectPath": "C:\\Projects\\TCJ\\TCJ.Framework\\src\\TCJ.Messaging\\TCJ.Messaging.csproj",
+      "filePath": "C:\\Projects\\TCJ\\TCJ.Framework\\src\\TCJ.Messaging\\TCJ.Messaging.csproj",
+      "targetGraphs": []
+    },
+    {
+      "code": "NU1900",
+      "level": "Error",
+      "message": "Warning As Error: Error occurred while getting package vulnerability data: Unable to load the service index for source https://api.nuget.org/v3/index.json.",
+      "projectPath": "C:\\Projects\\TCJ\\TCJ.Framework\\src\\TCJ.Messaging\\TCJ.Messaging.csproj",
+      "filePath": "C:\\Projects\\TCJ\\TCJ.Framework\\src\\TCJ.Messaging\\TCJ.Messaging.csproj",
+      "targetGraphs": []
+    }
+  ]
+}

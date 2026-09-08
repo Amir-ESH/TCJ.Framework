@@ -51,7 +51,7 @@ Describe the problem and the approach taken.
 - [ ] The official release uses the verified package set
 - [ ] Release-integrity automation remains valid and package checksums pass
 - [ ] SBOM generation and verification succeed
-- [ ] All nine release packages are represented and symbol packages are present for all eight runtime packages
+- [ ] All ten release packages are represented and symbol packages are present for all nine runtime packages
 - [ ] Package versions and dependency relationships match generated package metadata
 - [ ] Required package and dependency hashes are present
 - [ ] License metadata has been reviewed
@@ -243,6 +243,21 @@ Describe the problem and the approach taken.
 - [ ] Adapter conformance tests pass
 - [ ] Azure Service Bus contract changes are documented
 - [ ] Generated Azure Service Bus artifacts are not committed
+
+## Kafka transport
+
+- [ ] Kafka SDK dependency remains isolated to `TCJ.Messaging.Kafka`
+- [ ] Producer idempotence and strong acknowledgements remain enabled
+- [ ] Automatic offset commit/store remain disabled
+- [ ] Same-partition processing is sequential and cross-partition concurrency is bounded
+- [ ] Contiguous-offset progression cannot skip unresolved earlier records
+- [ ] Assignment, revocation, restart, and stale settlement behavior are safe
+- [ ] Retry/DLT publication completes before source-offset progression
+- [ ] Pause/resume backpressure and graceful shutdown remain bounded
+- [ ] Kafka telemetry, health, and diagnostics remain sensitive-safe
+- [ ] Real pinned Kafka Testcontainers integration tests pass
+- [ ] Kafka package, policy, compatibility, SBOM, AOT, reproducibility, release, and published-package smoke gates pass
+- [ ] Kafka contract and migration documentation are updated
 
 ## Related issue
 

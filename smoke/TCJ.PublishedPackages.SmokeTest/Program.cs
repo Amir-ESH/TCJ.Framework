@@ -18,6 +18,11 @@ using TCJ.Messaging.Integration;
 using TCJ.Messaging.Publishing;
 using TCJ.Messaging.Receiving;
 #endif
+#if TCJ_KAFKA_SMOKE
+using TCJ.Messaging.Kafka.Configuration;
+using TCJ.Messaging.Kafka.Extensions;
+using Testcontainers.Kafka;
+#endif
 #if TCJ_AZURE_SERVICE_BUS_SMOKE
 using TCJ.Messaging.AzureServiceBus.Configuration;
 using TCJ.Messaging.AzureServiceBus.Extensions;
@@ -58,6 +63,11 @@ internal static class Program
 {
     public static async Task Main(string[] args)
     {
+#if TCJ_KAFKA_SMOKE
+        await using KafkaContainer kafka = new KafkaBuilder("confluentinc/cp-kafka:7.5.12").WithKRaft().Build();
+        await kafka.StartAsync().ConfigureAwait(false);
+        string kafkaBootstrapServers = kafka.GetBootstrapAddress();
+#endif
         WebApplicationBuilder builder = WebApplication.CreateBuilder(
             new WebApplicationOptions
             {
@@ -107,7 +117,18 @@ internal static class Program
         builder.Services.AddTcjMessaging(options => options.EnableConsumer = true);
         builder.Services.AddTcjMessage("smoke.inbound", 1, SmokeMessagingJsonContext.Default.SmokeInboundCommand);
         builder.Services.AddTcjMessage("smoke.changed", 1, SmokeMessagingJsonContext.Default.SmokeChanged);
-#if TCJ_AZURE_SERVICE_BUS_SMOKE
+#if TCJ_KAFKA_SMOKE
+        builder.Services.AddTcjKafka(options =>
+        {
+            options.BootstrapServers = kafkaBootstrapServers;
+            options.AutoOffsetReset = KafkaOffsetResetMode.Earliest;
+            options.MaximumConcurrentPartitions = 8;
+            options.MaximumBufferedMessages = 64;
+            options.PublishTimeout = TimeSpan.FromSeconds(15);
+            options.ShutdownTimeout = TimeSpan.FromSeconds(15);
+            options.TopologyMode = KafkaTopologyMode.Disabled;
+        });
+#elif TCJ_AZURE_SERVICE_BUS_SMOKE
         string azureServiceBusConnection = Environment.GetEnvironmentVariable("TCJ_AZURE_SERVICE_BUS_CONNECTION_STRING")
             ?? throw new InvalidOperationException("TCJ_AZURE_SERVICE_BUS_CONNECTION_STRING is required for published Azure Service Bus smoke.");
         string azureServiceBusManagementConnection = Environment.GetEnvironmentVariable("TCJ_AZURE_SERVICE_BUS_MANAGEMENT_CONNECTION_STRING")
@@ -188,6 +209,9 @@ internal static class Program
 #if TCJ_MESSAGING_SMOKE
             , typeof(TCJ.Messaging.Configuration.TcjMessagingOptions)
 #endif
+#if TCJ_KAFKA_SMOKE
+            , typeof(TcjKafkaOptions)
+#endif
 #if TCJ_AZURE_SERVICE_BUS_SMOKE
             , typeof(TcjAzureServiceBusOptions)
 #endif
@@ -248,7 +272,7 @@ internal static class Program
         IMessageReceiver receiver = services.GetRequiredService<IMessageReceiver>();
         using var receiveTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await using IAsyncEnumerator<ReceivedMessage> enumerator = receiver
-            .ReceiveAsync(new ReceiveContext { Source = "smoke.changed.v1" }, receiveTimeout.Token)
+            .ReceiveAsync(KafkaCompatibleReceiveContext("smoke.changed.v1"), receiveTimeout.Token)
             .GetAsyncEnumerator(receiveTimeout.Token);
         if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
         {
@@ -318,6 +342,13 @@ internal static class Program
 #endif
 
 #if TCJ_MESSAGING_SMOKE
+    private static ReceiveContext KafkaCompatibleReceiveContext(string source)
+#if TCJ_KAFKA_SMOKE
+        => new() { Source = source, Subscription = "published-package-smoke" };
+#else
+        => new() { Source = source };
+#endif
+
     private static async Task VerifyPublishedMessagingAsync(IServiceProvider services)
     {
         const string transportSource = "published-messaging-inbox";
@@ -352,7 +383,7 @@ internal static class Program
         InboxTransportBridge bridge = services.GetRequiredService<InboxTransportBridge>();
         using var receiveTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await using IAsyncEnumerator<ReceivedMessage> enumerator = receiver
-            .ReceiveAsync(new ReceiveContext { Source = transportSource }, receiveTimeout.Token)
+            .ReceiveAsync(KafkaCompatibleReceiveContext(transportSource), receiveTimeout.Token)
             .GetAsyncEnumerator(receiveTimeout.Token);
 
         if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
@@ -397,7 +428,7 @@ internal static class Program
         bool foundOutbound = false;
         using var outboxReceiveTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await using IAsyncEnumerator<ReceivedMessage> outboxEnumerator = receiver
-            .ReceiveAsync(new ReceiveContext { Source = "smoke.changed.v1" }, outboxReceiveTimeout.Token)
+            .ReceiveAsync(KafkaCompatibleReceiveContext("smoke.changed.v1"), outboxReceiveTimeout.Token)
             .GetAsyncEnumerator(outboxReceiveTimeout.Token);
         for (int attempt = 0; attempt < outboxResult.ProcessedCount; attempt++)
         {
@@ -467,9 +498,11 @@ internal static class Program
 
         IMessageConsumerRunner runner = services.GetRequiredService<IMessageConsumerRunner>();
         using var shutdown = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-        await runner.RunAsync(new ReceiveContext { Source = "published-messaging-graceful-shutdown" }, shutdown.Token).ConfigureAwait(false);
+        await runner.RunAsync(KafkaCompatibleReceiveContext("published-messaging-graceful-shutdown"), shutdown.Token).ConfigureAwait(false);
 
-#if TCJ_AZURE_SERVICE_BUS_SMOKE
+#if TCJ_KAFKA_SMOKE
+        Console.WriteLine("TCJ_KAFKA_SMOKE succeeded for published package restore, real Kafka publish/receive, Inbox duplicate settlement, Outbox publishing, safe headers, and graceful shutdown.");
+#elif TCJ_AZURE_SERVICE_BUS_SMOKE
         Console.WriteLine("TCJ_AZURE_SERVICE_BUS_SMOKE succeeded for published package restore, queue publish/receive, Inbox duplicate settlement, Outbox publishing, scheduled delivery, safe headers, and graceful shutdown.");
 #else
         Console.WriteLine("TCJ_MESSAGING_SMOKE succeeded for package restore, in-memory publish/receive, Inbox duplicate settlement, Outbox publishing, safe headers, and graceful shutdown.");

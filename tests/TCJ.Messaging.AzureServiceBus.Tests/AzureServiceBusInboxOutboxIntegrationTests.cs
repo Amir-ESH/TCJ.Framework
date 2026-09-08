@@ -122,11 +122,14 @@ public sealed class AzureServiceBusInboxOutboxIntegrationTests
         }
         Assert.Equal(MessageSettlement.DeadLetter, result.Settlement);
 
-        await using var dlq = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
+        await using var dlq = env.Client.CreateReceiver(queue, new ServiceBusReceiverOptions
+        {
+            SubQueue = SubQueue.DeadLetter,
+            ReceiveMode = ServiceBusReceiveMode.PeekLock
+        });
         ServiceBusReceivedMessage? dead = await dlq.ReceiveMessageAsync(TimeSpan.FromSeconds(5));
         Assert.NotNull(dead);
         Assert.Equal("inbox-dead-letter", dead.MessageId);
-        await dlq.CompleteMessageAsync(dead);
     }
 
     [Fact, Trait("Category", "AzureServiceBusIntegration")]

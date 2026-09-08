@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "packageName": "TCJ.Messaging.Kafka",
+  "project": "src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj",
+  "testProject": "tests/TCJ.Messaging.Kafka.Tests/TCJ.Messaging.Kafka.Tests.csproj",
+  "targetFramework": "net10.0",
+  "kafkaClientVersion": "2.15.0",
+  "testcontainersKafkaVersion": "4.15.0",
+  "containerImage": "confluentinc/cp-kafka:7.5.12",
+  "minimumIntegrationTestCount": 12,
+  "requirePinnedImage": true,
+  "requireIdempotence": true,
+  "requireStrongAcknowledgement": true,
+  "requireManualOffsetCommit": true,
+  "requireManualOffsetStore": true,
+  "requireContiguousOffsetTests": true,
+  "requireOrderingTests": true,
+  "requireRebalanceTests": true,
+  "requireRetryDeadLetterTests": true,
+  "requireGracefulShutdownTests": true,
+  "requireInboxOutboxIntegration": true,
+  "requireConformance": true,
+  "requireSensitiveDataProtection": true,
+  "requiredWorkflows": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/kafka.yml",
+    ".github/workflows/release-preflight.yml",
+    ".github/workflows/release.yml",
+    ".github/workflows/published-package-smoke.yml"
+  ],
+  "generatedOutputRoots": ["artifacts/kafka", "TestResults/Kafka"]
+}

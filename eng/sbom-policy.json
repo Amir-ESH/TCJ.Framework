@@ -30,6 +30,9 @@
       },
       {
         "id": "TCJ.Messaging.AzureServiceBus"
+      },
+      {
+        "id": "TCJ.Messaging.Kafka"
       }
     ],
     "tooling": [

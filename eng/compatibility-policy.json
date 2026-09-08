@@ -7,7 +7,8 @@
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
-    "TCJ.Messaging.AzureServiceBus"
+    "TCJ.Messaging.AzureServiceBus",
+    "TCJ.Messaging.Kafka"
   ],
   "requiredOperatingSystems": [
     "ubuntu-latest",
@@ -182,6 +183,16 @@
         "TCJ.Messaging.AzureServiceBus"
       ],
       "expectedOutput": "TCJ.Messaging.AzureServiceBus Inbox/Outbox consumer passed"
+    },
+    {
+      "name": "KafkaPublisher.Console",
+      "project": "compatibility/Consumers/KafkaPublisher.Console/KafkaPublisher.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.Kafka"
+      ],
+      "expectedOutput": "TCJ.Messaging.Kafka publisher consumer passed"
     }
   ],
   "publishedConsumers": [
@@ -208,6 +219,9 @@
       "TCJ.Core"
     ],
     "TCJ.Messaging.AzureServiceBus": [
+      "TCJ.Messaging"
+    ],
+    "TCJ.Messaging.Kafka": [
       "TCJ.Messaging"
     ]
   }

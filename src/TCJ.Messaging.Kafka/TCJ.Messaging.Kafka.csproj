@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../eng/Packaging.props" />
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TCJ.Messaging.Kafka</RootNamespace>
+    <AssemblyName>TCJ.Messaging.Kafka</AssemblyName>
+    <PackageId>TCJ.Messaging.Kafka</PackageId>
+    <Title>TCJ Messaging Kafka</Title>
+    <Description>Apache Kafka transport adapter for TCJ Messaging with reliable publishing, manual offsets, per-partition ordering, retry/dead-letter topics, observability, health checks, and Inbox/Outbox integration.</Description>
+    <PackageTags>tcj;kafka;messaging;broker;outbox;inbox;integration-events</PackageTags>
+    <PublishTrimmed>false</PublishTrimmed>
+    <IsAotCompatible>false</IsAotCompatible>
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TCJ.Messaging/TCJ.Messaging.csproj" />
+    <PackageReference Include="Confluent.Kafka" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+  </ItemGroup>
+</Project>

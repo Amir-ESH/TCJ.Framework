@@ -16,12 +16,14 @@
     "TCJ.AspNetCore",
     "TCJ.Messaging",
     "TCJ.Messaging.RabbitMQ",
-    "TCJ.Messaging.AzureServiceBus"
+    "TCJ.Messaging.AzureServiceBus",
+    "TCJ.Messaging.Kafka"
   ],
   "targetOnlyPackages": [
     "TCJ.Messaging",
     "TCJ.Messaging.RabbitMQ",
-    "TCJ.Messaging.AzureServiceBus"
+    "TCJ.Messaging.AzureServiceBus",
+    "TCJ.Messaging.Kafka"
   ],
   "requireBaselineRestore": true,
   "requireBaselineBuild": true,
@@ -49,7 +51,8 @@
   ],
   "publishedTargetOnlyScenarios": [
     "MessagingConsumer",
-    "AzureServiceBusConsumer"
+    "AzureServiceBusConsumer",
+    "KafkaConsumer"
   ],
   "scenarios": [
     {
@@ -141,6 +144,17 @@
       ],
       "expectedBehavior": "upgrade-tests/Expected/AzureServiceBusConsumer.json",
       "expectedOutput": "TCJ.Messaging.AzureServiceBus target-only upgrade scenario passed"
+    },
+    {
+      "name": "KafkaConsumer",
+      "project": "upgrade-tests/Scenarios/KafkaConsumer/KafkaConsumer.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.Kafka"
+      ],
+      "expectedBehavior": "upgrade-tests/Expected/KafkaConsumer.json",
+      "expectedOutput": "TCJ.Messaging.Kafka target-only upgrade scenario passed"
     }
   ]
 }

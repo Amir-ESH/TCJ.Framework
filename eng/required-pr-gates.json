@@ -41,7 +41,8 @@
       "health_checks",
       "transactional_outbox",
       "performance",
-      "azure_service_bus"
+      "azure_service_bus",
+      "kafka"
     ]
   },
   "gates": {
@@ -364,6 +365,24 @@
         ".github/workflows/release-preflight.yml",
         ".github/workflows/release.yml",
         "TCJ.slnx"
+      ]
+    },
+    "kafka": {
+      "workflow": ".github/workflows/kafka.yml",
+      "paths": [
+        "eng/release-manifest.json",
+        "eng/architecture-policy.json",
+        "tests/TCJ.Messaging.Tests/**",
+        "src/TCJ.Messaging/**",
+        "src/TCJ.Core/**",
+        "src/TCJ.Messaging.Kafka/**",
+        "tests/TCJ.Messaging.Kafka.Tests/**",
+        "eng/kafka-policy.json",
+        "eng/kafka-contract.json",
+        "eng/verify-kafka.py",
+        "eng/tests/test_verify_kafka.py",
+        ".github/workflows/kafka.yml",
+        "Directory.Packages.props"
       ]
     }
   }
