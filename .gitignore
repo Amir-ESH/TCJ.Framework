@@ -27,31 +27,21 @@ mono_crash.*
 [Dd]ebugPublic/x64/
 [Rr]elease/x64/
 [Rr]eleases/x64/
-bin/x64/
-obj/x64/
 
 [Dd]ebug/x86/
 [Dd]ebugPublic/x86/
 [Rr]elease/x86/
 [Rr]eleases/x86/
-bin/x86/
-obj/x86/
 
 [Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 [Aa][Rr][Mm]64[Ee][Cc]/
 bld/
-[Oo]bj/
 [Oo]ut/
 [Ll]og/
 [Ll]ogs/
 
-# Build results on 'Bin' directories
-**/[Bb]in/*
-# Uncomment if you have tasks that rely on *.refresh files to move binaries
-# (https://github.com/github/gitignore/pull/3736)
-#!**/[Bb]in/*.refresh
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -103,8 +93,6 @@ artifacts/reproducibility/
 
 # Package upgrade compatibility
 artifacts/upgrade-compatibility/
-upgrade-tests/**/bin/
-upgrade-tests/**/obj/
 !eng/upgrade-compatibility-policy.json
 !eng/breaking-changes.json
 
@@ -499,8 +487,6 @@ artifacts/aspnetcore-integration-cross-platform/
 
 # Package consumer compatibility
 artifacts/compatibility/
-compatibility/**/bin/
-compatibility/**/obj/
 !eng/compatibility-policy.json
 !eng/verify-consumer-compatibility.py
 !compatibility/NuGet.Config
@@ -513,22 +499,16 @@ compatibility/**/obj/
 
 # Property-based testing and fuzzing generated output
 artifacts/fuzzing/
-fuzz/**/bin/
-fuzz/**/obj/
 fuzz/generated-corpus/
 TestResults/PropertyTests/
 
 # Concurrency stress generated output
 TestResults/Concurrency/
 artifacts/concurrency/
-tests/TCJ.Concurrency.Tests/bin/
-tests/TCJ.Concurrency.Tests/obj/
 
 # Observability test and verifier output
 TestResults/Observability/
 artifacts/observability/
-tests/TCJ.Observability.Tests/bin/
-tests/TCJ.Observability.Tests/obj/
 !eng/observability-policy.json
 !eng/observability-contract.json
 !eng/verify-observability.py
@@ -538,8 +518,6 @@ tests/TCJ.Observability.Tests/obj/
 # Health-check validation output
 TestResults/HealthChecks/
 artifacts/health-checks/
-tests/TCJ.HealthChecks.Tests/bin/
-tests/TCJ.HealthChecks.Tests/obj/
 !eng/health-check-policy.json
 !eng/health-check-contract.json
 !eng/verify-health-checks.py
@@ -549,8 +527,6 @@ tests/TCJ.HealthChecks.Tests/obj/
 # Transactional outbox generated output
 TestResults/Outbox/
 artifacts/outbox/
-tests/TCJ.Outbox.Tests/bin/
-tests/TCJ.Outbox.Tests/obj/
 !eng/outbox-policy.json
 !eng/outbox-contract.json
 !eng/verify-outbox.py
@@ -560,8 +536,6 @@ tests/TCJ.Outbox.Tests/obj/
 # Transactional Inbox generated evidence
 artifacts/inbox/
 TestResults/Inbox/
-tests/TCJ.Inbox.Tests/bin/
-tests/TCJ.Inbox.Tests/obj/
 !eng/inbox-policy.json
 !eng/inbox-contract.json
 !tests/TCJ.Inbox.Tests/**/*.cs
@@ -570,10 +544,6 @@ tests/TCJ.Inbox.Tests/obj/
 # Transport-neutral messaging generated evidence
 artifacts/messaging/
 TestResults/Messaging/
-tests/TCJ.Messaging.Tests/bin/
-tests/TCJ.Messaging.Tests/obj/
-tests/TCJ.Messaging.ConformanceTests/bin/
-tests/TCJ.Messaging.ConformanceTests/obj/
 !eng/messaging-policy.json
 !eng/messaging-contract.json
 !eng/verify-messaging.py
@@ -584,11 +554,17 @@ tests/TCJ.Messaging.ConformanceTests/obj/
 # Azure Service Bus transport generated evidence
 artifacts/azure-service-bus/
 TestResults/AzureServiceBus/
-tests/TCJ.Messaging.AzureServiceBus.Tests/bin/
-tests/TCJ.Messaging.AzureServiceBus.Tests/obj/
 !eng/azure-service-bus-policy.json
 !eng/azure-service-bus-contract.json
 !eng/verify-azure-service-bus.py
 !eng/azure-service-bus-emulator/**
 !src/TCJ.Messaging.AzureServiceBus/**
 !tests/TCJ.Messaging.AzureServiceBus.Tests/**
+
+# Build output directories
+# Keep these rules last so broad negation rules above cannot re-include generated build outputs.
+**/[Bb]in/*
+**/[Oo]bj/*
+# Uncomment if you have tasks that rely on *.refresh files to move binaries
+# (https://github.com/github/gitignore/pull/3736)
+#!**/[Bb]in/*.refresh
