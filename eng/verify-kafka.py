@@ -56,6 +56,7 @@ def validate():
  aot=readj('eng/aot-policy.json')
  if not any(x.get('packageId')=='TCJ.Messaging.Kafka' and x.get('tier') in {'Unsupported','Conditional'} for x in aot.get('packages',[])): fail('Kafka AOT status must be conservative.')
  require('.github/workflows/kafka.yml','name: Kafka transport','eng/verify-kafka.py validate-config','TCJ.Messaging.Kafka.Tests','dotnet pack')
+ require('.github/workflows/required-pr-gate.yml','kafka: ${{ steps.resolve.outputs.kafka }}',"if: needs.plan.outputs.kafka == 'true'",'uses: ./.github/workflows/kafka.yml','- kafka','"kafka":"${{ needs.kafka.result }}"')
  require('.github/workflows/ci.yml','eng/verify-kafka.py validate-config')
  require('.github/workflows/published-package-smoke.yml','kafka-smoke','EnableKafkaSmoke','TCJ_KAFKA_SMOKE')
  require('docs/messaging-kafka.md','at-least-once','contiguous','consumer-group','idempotence','Outbox','Inbox','AOT','ValidateOnly')
