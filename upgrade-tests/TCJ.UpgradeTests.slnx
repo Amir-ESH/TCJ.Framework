@@ -8,5 +8,6 @@
     <Project Path="Scenarios/FullStackConsumer/FullStackConsumer.csproj" />
     <Project Path="Scenarios/MessagingConsumer/MessagingConsumer.csproj" />
     <Project Path="Scenarios/AzureServiceBusConsumer/AzureServiceBusConsumer.csproj" />
+    <Project Path="Scenarios/KafkaConsumer/KafkaConsumer.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,73 @@
+name: Kafka transport
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - "src/TCJ.Messaging.Kafka/**"
+      - "tests/TCJ.Messaging.Kafka.Tests/**"
+      - "eng/kafka-policy.json"
+      - "eng/kafka-contract.json"
+      - "eng/verify-kafka.py"
+      - "eng/tests/test_verify_kafka.py"
+      - "Directory.Packages.props"
+      - ".github/workflows/kafka.yml"
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  kafka:
+    name: Kafka correctness and integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Validate Kafka policy and contract
+        run: python3 eng/verify-kafka.py validate-config
+      - name: Restore and audit
+        run: dotnet restore TCJ.slnx --force-evaluate
+      - name: Build Kafka adapter and tests
+        run: dotnet build tests/TCJ.Messaging.Kafka.Tests/TCJ.Messaging.Kafka.Tests.csproj -c Release --no-restore
+      - name: Pack Kafka adapter with package validation
+        run: dotnet pack src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj -c Release --no-restore -o artifacts/packages
+      - name: Run Kafka integration, offset, ordering, retry and shutdown tests
+        run: >
+          dotnet test tests/TCJ.Messaging.Kafka.Tests/TCJ.Messaging.Kafka.Tests.csproj
+          -c Release --no-build
+          --logger "trx;LogFileName=kafka.trx"
+          --results-directory TestResults/Kafka
+      - name: Run architecture validation
+        run: python3 eng/verify-architecture-policy.py validate-config
+      - name: Run Kafka verifier tests
+        run: python3 -m unittest eng.tests.test_verify_kafka
+      - name: Publish summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Kafka transport"
+            echo "- Policy/contract validation: completed"
+            echo "- Real Kafka image: confluentinc/cp-kafka:7.5.12 (KRaft)"
+            echo "- Test project: TCJ.Messaging.Kafka.Tests"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Kafka test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: kafka-test-results-${{ github.run_id }}
+          path: TestResults/Kafka
+          if-no-files-found: warn
+          retention-days: 7

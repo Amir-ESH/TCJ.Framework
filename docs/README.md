@@ -64,6 +64,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [`TCJ.Messaging`](packages/tcj-messaging.md)
 - [`TCJ.Messaging.RabbitMQ`](packages/tcj-messaging-rabbitmq.md)
 - [`TCJ.Messaging.AzureServiceBus`](packages/tcj-messaging-azure-service-bus.md)
+- [`TCJ.Messaging.Kafka`](packages/tcj-messaging-kafka.md)
 - [`TCJ.Generators`](packages/TCJ.Generators.md) — analyzer-only compile-time tooling
 
 ## Migrations and release notes

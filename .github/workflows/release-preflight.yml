@@ -79,8 +79,12 @@ jobs:
     name: Azure Service Bus transport gate
     uses: ./.github/workflows/azure-service-bus.yml
 
+  kafka:
+    name: Kafka transport gate
+    uses: ./.github/workflows/kafka.yml
+
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus, kafka]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -135,6 +139,9 @@ jobs:
 
       - name: Validate Azure Service Bus release contract
         run: python3 eng/verify-azure-service-bus.py validate-config
+
+      - name: Validate Kafka release contract
+        run: python3 eng/verify-kafka.py validate-config
 
       - name: Validate package consumer compatibility configuration
         run: python3 eng/verify-consumer-compatibility.py validate-config

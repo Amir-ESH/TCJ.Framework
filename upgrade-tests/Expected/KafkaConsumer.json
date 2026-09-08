@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "scenario": "KafkaConsumer",
+  "checks": {
+    "adapterLoadsWithoutNetwork": true,
+    "manualCommitDefault": true,
+    "manualOffsetStoreDefault": true,
+    "idempotentProducerDefault": true,
+    "strongAcknowledgementDefault": true,
+    "boundedProducerRetry": true,
+    "boundedPartitionConcurrency": true,
+    "boundedBuffer": true,
+    "topologyOwnershipIsExplicit": true,
+    "aotClaimIsConservative": true
+  }
+}

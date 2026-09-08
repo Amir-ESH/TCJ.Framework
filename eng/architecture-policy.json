@@ -27,6 +27,9 @@
     ],
     "TCJ.Messaging.AzureServiceBus": [
       "TCJ.Messaging"
+    ],
+    "TCJ.Messaging.Kafka": [
+      "TCJ.Messaging"
     ]
   },
   "projectPaths": {
@@ -37,7 +40,8 @@
     "TCJ.AspNetCore": "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj",
     "TCJ.Messaging": "src/TCJ.Messaging/TCJ.Messaging.csproj",
     "TCJ.Messaging.RabbitMQ": "src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj",
-    "TCJ.Messaging.AzureServiceBus": "src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj"
+    "TCJ.Messaging.AzureServiceBus": "src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj",
+    "TCJ.Messaging.Kafka": "src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj"
   },
   "namespaceRoots": {
     "TCJ.Core": "TCJ.Core",
@@ -47,7 +51,8 @@
     "TCJ.AspNetCore": "TCJ.AspNetCore",
     "TCJ.Messaging": "TCJ.Messaging",
     "TCJ.Messaging.RabbitMQ": "TCJ.Messaging.RabbitMQ",
-    "TCJ.Messaging.AzureServiceBus": "TCJ.Messaging.AzureServiceBus"
+    "TCJ.Messaging.AzureServiceBus": "TCJ.Messaging.AzureServiceBus",
+    "TCJ.Messaging.Kafka": "TCJ.Messaging.Kafka"
   },
   "forbiddenDependencyPrefixes": {
     "TCJ.Core": [
@@ -56,7 +61,8 @@
       "Microsoft.Data.SqlClient",
       "System.Data.SqlClient",
       "RabbitMQ",
-      "Azure.Messaging.ServiceBus"
+      "Azure.Messaging.ServiceBus",
+      "Confluent"
     ],
     "TCJ.DependencyInjection": [
       "Microsoft.AspNetCore",
@@ -64,7 +70,8 @@
       "Microsoft.Data.SqlClient",
       "System.Data.SqlClient",
       "RabbitMQ",
-      "Azure.Messaging.ServiceBus"
+      "Azure.Messaging.ServiceBus",
+      "Confluent"
     ],
     "TCJ.EntityFrameworkCore": [
       "Microsoft.EntityFrameworkCore.SqlServer",
@@ -98,7 +105,8 @@
       "Microsoft.Data.SqlClient",
       "System.Data.SqlClient",
       "RabbitMQ",
-      "Azure.Messaging.ServiceBus"
+      "Azure.Messaging.ServiceBus",
+      "Confluent"
     ],
     "TCJ.Messaging": [
       "Microsoft.EntityFrameworkCore",
@@ -113,7 +121,8 @@
       "MassTransit",
       "Rebus",
       "Wolverine",
-      "DotNetCore.CAP"
+      "DotNetCore.CAP",
+      "Confluent"
     ],
     "TCJ.Messaging.RabbitMQ": [
       "Microsoft.EntityFrameworkCore",
@@ -142,6 +151,12 @@
       "Rebus",
       "Wolverine",
       "DotNetCore.CAP"
+    ],
+    "TCJ.Messaging.Kafka": [
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.AspNetCore",
+      "RabbitMQ",
+      "Azure.Messaging.ServiceBus"
     ]
   },
   "forbiddenPublicApiTypePrefixes": {
@@ -208,13 +223,23 @@
       "System.Data.SqlClient",
       "Microsoft.AspNetCore",
       "RabbitMQ"
+    ],
+    "TCJ.Messaging.Kafka": [
+      "Confluent.Kafka",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.Data.SqlClient",
+      "System.Data.SqlClient",
+      "Microsoft.AspNetCore",
+      "RabbitMQ",
+      "Azure.Messaging.ServiceBus"
     ]
   },
   "approvedExtensionContainers": [
     "TCJ.Core.Guards.Check",
     "TCJ.Messaging.Extensions.MessagingServiceCollectionExtensions",
     "TCJ.Messaging.RabbitMQ.Extensions.RabbitMqServiceCollectionExtensions",
-    "TCJ.Messaging.AzureServiceBus.Extensions.AzureServiceBusServiceCollectionExtensions"
+    "TCJ.Messaging.AzureServiceBus.Extensions.AzureServiceBusServiceCollectionExtensions",
+    "TCJ.Messaging.Kafka.Extensions.KafkaServiceCollectionExtensions"
   ],
   "approvedPublicOptionTypes": [
     "TCJ.AspNetCore.Options.TcjAspNetCoreOptions",
@@ -243,6 +268,8 @@
     "TCJ.Messaging.AzureServiceBus.Topology.AzureServiceBusTopicOptions",
     "TCJ.Messaging.AzureServiceBus.Topology.AzureServiceBusSubscriptionOptions",
     "TCJ.Messaging.AzureServiceBus.Topology.AzureServiceBusRuleOptions",
-    "TCJ.Messaging.AzureServiceBus.Topology.AzureServiceBusTopologyOptions"
+    "TCJ.Messaging.AzureServiceBus.Topology.AzureServiceBusTopologyOptions",
+    "TCJ.Messaging.Kafka.Configuration.TcjKafkaOptions",
+    "TCJ.Messaging.Kafka.Configuration.KafkaTopicOptions"
   ]
 }

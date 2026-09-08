@@ -23,6 +23,7 @@ package_ids=(
   TCJ.Messaging
   TCJ.Messaging.RabbitMQ
   TCJ.Messaging.AzureServiceBus
+  TCJ.Messaging.Kafka
 )
 
 for package_id in "${package_ids[@]}"; do

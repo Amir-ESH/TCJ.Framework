@@ -12,7 +12,8 @@
     "TCJ.AspNetCore",
     "TCJ.Messaging",
     "TCJ.Messaging.RabbitMQ",
-    "TCJ.Messaging.AzureServiceBus"
+    "TCJ.Messaging.AzureServiceBus",
+    "TCJ.Messaging.Kafka"
   ],
   "excludedTestProjects": [
     "tests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests/TCJ.EntityFrameworkCore.SqlServer.IntegrationTests.csproj",

@@ -26,6 +26,7 @@ REQUIRED_ASSEMBLIES = (
     "TCJ.Messaging",
     "TCJ.Messaging.RabbitMQ",
     "TCJ.Messaging.AzureServiceBus",
+    "TCJ.Messaging.Kafka",
 )
 REQUIRED_WORKFLOWS = (
     ".github/workflows/ci.yml",

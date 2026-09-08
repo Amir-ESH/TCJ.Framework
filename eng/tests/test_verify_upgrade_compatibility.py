@@ -40,7 +40,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
     def test_repository_configuration_is_valid(self):
         verify.validate_repository_wiring(verify.ROOT)
         self.assertEqual(6, len(self.policy["scenarios"]))
-        self.assertEqual(2, len(self.policy["targetOnlyScenarios"]))
+        self.assertEqual(3, len(self.policy["targetOnlyScenarios"]))
 
     def test_metadata_versions_are_ordered(self):
         self.assertLess(verify.semver_key(self.baseline["version"]), verify.semver_key(self.target["version"]))
@@ -50,7 +50,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
         target = verify.runtime_release_packages(self.target)
         target_only = set(self.policy["targetOnlyPackages"])
         self.assertEqual(target - baseline, target_only)
-        self.assertEqual({"TCJ.Messaging", "TCJ.Messaging.RabbitMQ", "TCJ.Messaging.AzureServiceBus"}, target_only)
+        self.assertEqual({"TCJ.Messaging", "TCJ.Messaging.RabbitMQ", "TCJ.Messaging.AzureServiceBus", "TCJ.Messaging.Kafka"}, target_only)
 
     def test_all_runtime_packages_are_covered(self):
         direct = {package for scenario in self.policy["scenarios"] for package in scenario["packages"]}
@@ -175,8 +175,8 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
                 self.policy, self.baseline, self.target, self.manifest, args, published=False
             )
             self.assertEqual(6, totals["directUpgradeSuccessCount"])
-            self.assertEqual(2, totals["targetOnlySuccessCount"])
-            self.assertEqual(8, totals["scenarioCount"])
+            self.assertEqual(3, totals["targetOnlySuccessCount"])
+            self.assertEqual(9, totals["scenarioCount"])
 
     def test_valid_published_results_pass_for_selected_scenarios(self):
         with tempfile.TemporaryDirectory() as td:
@@ -186,8 +186,8 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
                 self.policy, self.baseline, self.target, self.manifest, args, published=True
             )
             self.assertEqual(3, totals["directUpgradeSuccessCount"])
-            self.assertEqual(2, totals["targetOnlySuccessCount"])
-            self.assertEqual(5, totals["scenarioCount"])
+            self.assertEqual(3, totals["targetOnlySuccessCount"])
+            self.assertEqual(6, totals["scenarioCount"])
 
     def test_target_only_scenario_cannot_fabricate_baseline(self):
         with tempfile.TemporaryDirectory() as td:
@@ -336,7 +336,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
             totals = verify.verify_results(self.policy, self.baseline, self.target, manifest, args, published=False)
             self.assertEqual(1, totals["guidedMigrationSuccessCount"])
             self.assertEqual(5, totals["directUpgradeSuccessCount"])
-            self.assertEqual(2, totals["targetOnlySuccessCount"])
+            self.assertEqual(3, totals["targetOnlySuccessCount"])
 
     def test_stale_source_breaking_change_fails(self):
         with tempfile.TemporaryDirectory() as td:
@@ -367,7 +367,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
             verify.write_summary(out, self.baseline["version"], self.target["version"], totals, published=False)
             text = (out / "UPGRADE_COMPATIBILITY_SUMMARY.md").read_text()
             self.assertIn("Direct-upgrade success count: 6", text)
-            self.assertIn("Target-only package introduction success count: 2", text)
+            self.assertIn("Target-only package introduction success count: 3", text)
             self.assertIn("Dependency downgrades: 0", text)
             self.assertIn("**PASS**", text)
 

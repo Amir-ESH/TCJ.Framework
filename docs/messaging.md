@@ -2,7 +2,7 @@
 
 `TCJ.Messaging` defines the broker-neutral messaging boundary for TCJ Framework. It contains envelopes, serialization contracts, publishing and receiving abstractions, settlement semantics, topology naming, bounded consumer execution, diagnostics, health checks, and integration bridges for the existing transactional Outbox and Inbox.
 
-The package intentionally contains **no production broker SDK**. Production adapters currently include `TCJ.Messaging.RabbitMQ` and `TCJ.Messaging.AzureServiceBus`; Kafka, SQS, NATS, and other transports belong in separate adapter packages that implement the contracts described in [Messaging adapter authoring](messaging-adapter-authoring.md). Azure-specific configuration and guarantees are documented in [Azure Service Bus messaging](messaging-azure-service-bus.md).
+The package intentionally contains **no production broker SDK**. Production adapters currently include `TCJ.Messaging.RabbitMQ`, `TCJ.Messaging.AzureServiceBus`, and `TCJ.Messaging.Kafka`; SQS, NATS, and other transports belong in separate adapter packages that implement the contracts described in [Messaging adapter authoring](messaging-adapter-authoring.md). Azure-specific configuration and guarantees are documented in [Azure Service Bus messaging](messaging-azure-service-bus.md).
 
 ## Delivery semantics
 

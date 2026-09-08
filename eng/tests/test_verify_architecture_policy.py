@@ -138,6 +138,7 @@ class ArchitecturePolicyVerifierTests(unittest.TestCase):
             "TCJ.Messaging": ["TCJ.Core"],
             "TCJ.Messaging.RabbitMQ": ["TCJ.Messaging"],
             "TCJ.Messaging.AzureServiceBus": ["TCJ.Messaging"],
+            "TCJ.Messaging.Kafka": ["TCJ.Messaging"],
         }
         project_paths = {
             assembly: f"src/{assembly}/{assembly}.csproj"

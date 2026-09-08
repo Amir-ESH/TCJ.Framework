@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "packageName": "TCJ.Messaging.Kafka",
+  "transportDescriptor": {"name": "Kafka", "versionSource": "adapter-package-version"},
+  "deliveryGuarantees": {
+    "publisherWithOutbox": "at-least-once",
+    "consumerWithInbox": "at-least-once-with-idempotent-processing",
+    "ordering": "sequential-within-partition",
+    "globalExactlyOnceGuaranteed": false,
+    "globalOrderingGuaranteed": false
+  },
+  "capabilities": {
+    "SupportsBatchPublish": true,
+    "SupportsScheduling": false,
+    "SupportsTimeToLive": false,
+    "SupportsDeadLetter": true,
+    "SupportsDefer": false,
+    "SupportsOrderedDelivery": true,
+    "SupportsPartitioning": true,
+    "SupportsTransactions": false,
+    "SupportsPeekLock": false,
+    "OrderingGuarantee": "PerPartition"
+  },
+  "optionDefaults": {
+    "EnableAutoCommit": false,
+    "EnableAutoOffsetStore": false,
+    "EnableIdempotence": true,
+    "AcknowledgementMode": "All",
+    "ProducerRetryCount": 3,
+    "PublishTimeoutSeconds": 30,
+    "ShutdownTimeoutSeconds": 30,
+    "SessionTimeoutSeconds": 30,
+    "MaxPollIntervalSeconds": 300,
+    "MaximumConcurrentPartitions": 8,
+    "MaximumBufferedMessages": 64,
+    "MaximumProcessingAttempts": 5,
+    "TopologyMode": "Disabled"
+  },
+  "topicKeyRules": {
+    "partitionKeyOnly": "key=PartitionKey",
+    "orderingKeyOnly": "key=OrderingKey",
+    "bothEqual": "key=value",
+    "bothDifferent": "validation-failure"
+  },
+  "offsetInvariant": "Only the highest contiguous completed range may advance the committed position; later completed offsets never skip an earlier unresolved offset.",
+  "settlementMappings": {
+    "Complete": "offset-coordinator -> serialized owner commit",
+    "Retry": "confirmed retry-topic publish -> source completion",
+    "DeadLetter": "confirmed dead-letter-topic publish -> source completion",
+    "Abandon": "UnsupportedCapability",
+    "Defer": "UnsupportedCapability"
+  },
+  "topologyModes": ["Declare", "ValidateOnly", "Disabled"],
+  "activities": ["tcj.kafka.publish", "tcj.kafka.consume", "tcj.kafka.offset.commit", "tcj.kafka.partition.assign", "tcj.kafka.partition.revoke", "tcj.kafka.pause", "tcj.kafka.resume", "tcj.kafka.retry.publish", "tcj.kafka.dead_letter.publish"],
+  "metrics": ["tcj.kafka.messages.published", "tcj.kafka.messages.failed", "tcj.kafka.messages.consumed", "tcj.kafka.messages.processed", "tcj.kafka.messages.retried", "tcj.kafka.messages.dead_lettered", "tcj.kafka.publish.duration", "tcj.kafka.processing.duration", "tcj.kafka.offset.commits", "tcj.kafka.offset.commit_failures", "tcj.kafka.rebalances"],
+  "healthChecks": ["tcj.kafka.transport"],
+  "unsupportedCapabilities": ["Defer", "Abandon", "DelayedRetry", "Scheduling", "TimeToLive", "KafkaTransactionsAsTcjTransactions", "GlobalOrdering", "GlobalExactlyOnceWithApplicationDatabase"]
+}
