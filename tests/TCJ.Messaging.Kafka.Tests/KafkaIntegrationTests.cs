@@ -25,7 +25,42 @@ public sealed class KafkaIntegrationTests(KafkaContainerFixture fixture)
     [Fact] public void Shutdown_timeout_is_bounded(){var o=Options("x");Assert.True(o.ShutdownTimeout<=TimeSpan.FromMinutes(2));}
     [Fact] public void Inbox_commit_offset_commit_crash_window_allows_safe_redelivery(){var c=new KafkaOffsetCoordinator();var p=new TopicPartition("t",0);long first=c.Assign(p);c.Register(p,10);Assert.Equal(11,c.Complete(p,10,first)!.Value.Value);c.Revoke(p);long second=c.Assign(p);c.Register(p,10);Assert.Equal(11,c.Complete(p,10,second)!.Value.Value);}
     [Fact] public void Outbox_durable_retry_ownership_is_not_replaced(){var o=Options("x");ProducerConfig config=KafkaConfigFactory.Producer(o);Assert.True(config.EnableIdempotence == true);Assert.Equal(Acks.All,config.Acks);Assert.Equal(o.ProducerRetryCount,config.MessageSendMaxRetries);Assert.InRange(config.MessageSendMaxRetries!.Value,1,20);}
-    [Fact] public async Task Pause_resume_backpressure_blocks_second_delivery_until_capacity_returns(){string topic=await TopicAsync();await using var p=Provider(topic,maximumBufferedMessages:1);IMessagePublisher publisher=p.GetRequiredService<IMessagePublisher>();await publisher.PublishAsync(Envelope("bp-1"),new PublishContext{Destination=topic,PartitionKey="same"});await publisher.PublishAsync(Envelope("bp-2"),new PublishContext{Destination=topic,PartitionKey="same"});using var cts=new CancellationTokenSource(TimeSpan.FromSeconds(15));await using var e=p.GetRequiredService<IMessageReceiver>().ReceiveAsync(new ReceiveContext{Source=topic,Subscription="bp-"+Guid.NewGuid().ToString("N")},cts.Token).GetAsyncEnumerator(cts.Token);Assert.True(await e.MoveNextAsync());Task<bool> second=e.MoveNextAsync().AsTask();await Task.Delay(250,cts.Token);Assert.False(second.IsCompleted);await e.Current.Settlement.CompleteAsync(cts.Token);Assert.True(await second.WaitAsync(TimeSpan.FromSeconds(5)));await e.Current.Settlement.CompleteAsync(cts.Token);}
+    [Fact]
+    public async Task Pause_resume_backpressure_blocks_second_delivery_until_capacity_returns()
+    {
+        string topic = await TopicAsync();
+        await using var p = Provider(topic, maximumBufferedMessages: 1);
+        IMessagePublisher publisher = p.GetRequiredService<IMessagePublisher>();
+        await publisher.PublishAsync(Envelope("bp-1"), new PublishContext { Destination = topic, PartitionKey = "same" });
+        await publisher.PublishAsync(Envelope("bp-2"), new PublishContext { Destination = topic, PartitionKey = "same" });
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        IAsyncEnumerator<ReceivedMessage> e = p.GetRequiredService<IMessageReceiver>()
+            .ReceiveAsync(new ReceiveContext { Source = topic, Subscription = "bp-" + Guid.NewGuid().ToString("N") }, cts.Token)
+            .GetAsyncEnumerator(cts.Token);
+        Task<bool>? second = null;
+        try
+        {
+            Assert.True(await e.MoveNextAsync());
+            ReceivedMessage first = e.Current;
+            second = e.MoveNextAsync().AsTask();
+            await Task.Delay(250, cts.Token);
+            Assert.False(second.IsCompleted);
+            await first.Settlement.CompleteAsync(cts.Token);
+            Assert.True(await second.WaitAsync(TimeSpan.FromSeconds(5)));
+            await e.Current.Settlement.CompleteAsync(cts.Token);
+        }
+        finally
+        {
+            if (second is { IsCompleted: false })
+            {
+                cts.Cancel();
+                try { await second.ConfigureAwait(false); }
+                catch (OperationCanceledException) { }
+            }
+
+            await e.DisposeAsync();
+        }
+    }
     [Fact] public void Conformance_capabilities_do_not_claim_transactions_or_defer(){var s=new ServiceCollection();s.AddTcjMessaging();s.AddTcjKafka(o=>o.BootstrapServers=fixture.BootstrapServers);using var p=s.BuildServiceProvider();var d=p.GetRequiredService<MessagingTransportDescriptor>();Assert.False(d.Capabilities.SupportsTransactions);Assert.False(d.Capabilities.SupportsDefer);}
     [Fact] public void Rebalance_safety_uses_manual_offsets_and_stale_generation_rejection(){var o=Options("x");Assert.False(o.EnableAutoCommit);Assert.False(o.EnableAutoOffsetStore);}
     [Fact] public async Task Producer_instance_is_reused_across_concurrent_callers(){var o=Options("x");await using var manager=new KafkaProducerManager(o);IProducer<string,byte[]>[] producers=await Task.WhenAll(Enumerable.Range(0,16).Select(async _=>await manager.GetAsync(CancellationToken.None)));Assert.All(producers,p=>Assert.Same(producers[0],p));}
