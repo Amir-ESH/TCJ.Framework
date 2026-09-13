@@ -138,8 +138,23 @@ public sealed class RabbitMqIntegrationTests(RabbitMqContainerFixture fixture)
 
     [Fact] public async Task Automatic_recovery_restores_publication()
     {
-        await using var h = await RabbitMqTestHarness.CreateAsync(fixture); await fixture.StopAsync(); await fixture.EnsureRunningAsync(); using var c = Deadline();
-        while (!await h.HealthProbe.IsReadyAsync(c.Token)) await Task.Delay(100, c.Token);
+        await using var h = await RabbitMqTestHarness.CreateAsync(fixture);
+        await fixture.StopAsync();
+        try
+        {
+            Assert.False((await h.PublishAsync()).IsSuccess);
+        }
+        finally
+        {
+            await fixture.EnsureRunningAsync();
+        }
+
+        using var c = Deadline();
+        while (!await h.HealthProbe.IsReadyAsync(c.Token))
+        {
+            await Task.Delay(100, c.Token);
+        }
+
         Assert.True((await h.PublishAsync()).IsSuccess);
     }
 
