@@ -199,6 +199,7 @@
       "name": "RabbitMqPublisher.Console",
       "project": "compatibility/Consumers/RabbitMqPublisher.Console/RabbitMqPublisher.Console.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging",
         "TCJ.Messaging.RabbitMQ"
       ],
@@ -208,6 +209,7 @@
       "name": "RabbitMqConsumer.Worker",
       "project": "compatibility/Consumers/RabbitMqConsumer.Worker/RabbitMqConsumer.Worker.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging",
         "TCJ.Messaging.RabbitMQ"
       ],
@@ -217,6 +219,7 @@
       "name": "RabbitMqInboxOutbox.Worker",
       "project": "compatibility/Consumers/RabbitMqInboxOutbox.Worker/RabbitMqInboxOutbox.Worker.csproj",
       "packages": [
+        "TCJ.Core",
         "TCJ.Messaging",
         "TCJ.Messaging.RabbitMQ"
       ],
