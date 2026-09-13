@@ -8,6 +8,7 @@ namespace TCJ.Messaging.RabbitMQ.Connections;
 
 internal sealed class RabbitMqConnectionManager : IAsyncDisposable
 {
+    private static readonly TimeSpan RequestedHeartbeat = TimeSpan.FromSeconds(10);
     private readonly TcjRabbitMqOptions _options;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private IConnection? _connection;
@@ -67,6 +68,7 @@ internal sealed class RabbitMqConnectionManager : IAsyncDisposable
                 UserName = _options.UserName,
                 Password = _options.Password,
                 RequestedConnectionTimeout = _options.ConnectionTimeout,
+                RequestedHeartbeat = RequestedHeartbeat,
                 AutomaticRecoveryEnabled = _options.AutomaticRecoveryEnabled,
                 TopologyRecoveryEnabled = _options.TopologyRecoveryEnabled,
                 NetworkRecoveryInterval = _options.NetworkRecoveryInterval,
