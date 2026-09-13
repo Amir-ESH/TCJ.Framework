@@ -146,12 +146,10 @@ internal sealed class RabbitMqConnectionManager : IAsyncDisposable
         connection.ConnectionRecoveryErrorAsync -= OnRecoveryErrorAsync;
         try
         {
-            if (connection.IsOpen)
-                await connection.CloseAsync(Constants.ReplySuccess, "TCJ adapter shutdown", _options.ShutdownTimeout, abort: false, CancellationToken.None).ConfigureAwait(false);
+            await connection.CloseAsync(Constants.ReplySuccess, "TCJ adapter shutdown", _options.ShutdownTimeout, abort: false, CancellationToken.None).ConfigureAwait(false);
         }
         catch { }
         await connection.DisposeAsync().ConfigureAwait(false);
         RabbitMqDiagnostics.ConnectionClosed();
     }
 }
-
