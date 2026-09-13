@@ -26,6 +26,7 @@ internal sealed class RabbitMqConnectionManager : IAsyncDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         IConnection? current = Volatile.Read(ref _connection);
         if (current?.IsOpen == true) return current;
+
         if (current is not null && _options.AutomaticRecoveryEnabled)
         {
             using var waitCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -36,11 +37,12 @@ internal sealed class RabbitMqConnectionManager : IAsyncDisposable
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(100), waitCts.Token).ConfigureAwait(false);
                 }
+
                 return current;
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                // Recovery did not complete within the bounded connect window; replace the unusable connection below.
+                throw new TimeoutException("RabbitMQ automatic recovery exceeded the configured connection timeout.");
             }
         }
 
@@ -49,6 +51,7 @@ internal sealed class RabbitMqConnectionManager : IAsyncDisposable
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (_connection?.IsOpen == true) return _connection;
+
             if (_connection is not null)
             {
                 await DisposeConnectionAsync(_connection).ConfigureAwait(false);
@@ -146,9 +149,17 @@ internal sealed class RabbitMqConnectionManager : IAsyncDisposable
         connection.ConnectionRecoveryErrorAsync -= OnRecoveryErrorAsync;
         try
         {
-            await connection.CloseAsync(Constants.ReplySuccess, "TCJ adapter shutdown", _options.ShutdownTimeout, abort: false, CancellationToken.None).ConfigureAwait(false);
+            await connection.CloseAsync(
+                Constants.ReplySuccess,
+                "TCJ adapter shutdown",
+                _options.ShutdownTimeout,
+                abort: false,
+                CancellationToken.None).ConfigureAwait(false);
         }
-        catch { }
+        catch
+        {
+        }
+
         await connection.DisposeAsync().ConfigureAwait(false);
         RabbitMqDiagnostics.ConnectionClosed();
     }
