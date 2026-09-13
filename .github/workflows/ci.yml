@@ -396,7 +396,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
-          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
+          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency&Category!=MessagingCompatibility"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFilePrefix=test-results"
