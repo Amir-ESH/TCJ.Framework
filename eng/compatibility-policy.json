@@ -8,7 +8,8 @@
     "TCJ.AspNetCore",
     "TCJ.Messaging",
     "TCJ.Messaging.AzureServiceBus",
-    "TCJ.Messaging.Kafka"
+    "TCJ.Messaging.Kafka",
+    "TCJ.Messaging.RabbitMQ"
   ],
   "requiredOperatingSystems": [
     "ubuntu-latest",
@@ -193,6 +194,36 @@
         "TCJ.Messaging.Kafka"
       ],
       "expectedOutput": "TCJ.Messaging.Kafka publisher consumer passed"
+    },
+    {
+      "name": "RabbitMqPublisher.Console",
+      "project": "compatibility/Consumers/RabbitMqPublisher.Console/RabbitMqPublisher.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.RabbitMQ"
+      ],
+      "expectedOutput": "TCJ.Messaging.RabbitMQ RabbitMqPublisher.Console consumer passed"
+    },
+    {
+      "name": "RabbitMqConsumer.Worker",
+      "project": "compatibility/Consumers/RabbitMqConsumer.Worker/RabbitMqConsumer.Worker.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.RabbitMQ"
+      ],
+      "expectedOutput": "TCJ.Messaging.RabbitMQ RabbitMqConsumer.Worker consumer passed"
+    },
+    {
+      "name": "RabbitMqInboxOutbox.Worker",
+      "project": "compatibility/Consumers/RabbitMqInboxOutbox.Worker/RabbitMqInboxOutbox.Worker.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.RabbitMQ"
+      ],
+      "expectedOutput": "TCJ.Messaging.RabbitMQ RabbitMqInboxOutbox.Worker consumer passed"
     }
   ],
   "publishedConsumers": [
@@ -222,6 +253,9 @@
       "TCJ.Messaging"
     ],
     "TCJ.Messaging.Kafka": [
+      "TCJ.Messaging"
+    ],
+    "TCJ.Messaging.RabbitMQ": [
       "TCJ.Messaging"
     ]
   }

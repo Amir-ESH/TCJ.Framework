@@ -20,7 +20,7 @@ internal sealed class RabbitMqTransportPublisher : IMessagingTransportPublisher,
     private IChannel? _channel;
     private bool _disposed;
 
-    internal RabbitMqTransportPublisher(RabbitMqConnectionManager connections, RabbitMqMessageMapper mapper,
+    public RabbitMqTransportPublisher(RabbitMqConnectionManager connections, RabbitMqMessageMapper mapper,
         IRabbitMqRoutingKeyStrategy routing, TcjRabbitMqOptions options)
     {
         _connections = connections ?? throw new ArgumentNullException(nameof(connections));
@@ -35,8 +35,9 @@ internal sealed class RabbitMqTransportPublisher : IMessagingTransportPublisher,
         ArgumentNullException.ThrowIfNull(context);
         string exchange = context.Destination ?? _options.DefaultExchange;
         RabbitMqValidation.ValidateEntityName(exchange, nameof(context.Destination), false);
-        string routingKey = _routing.GetRoutingKey(message.MessageType, message.MessageVersion, message);
-        return PublishCoreAsync(message, exchange, routingKey, context.TimeToLive, null, cancellationToken);
+        TransportMessageEnvelope effectiveMessage = ApplyRoutingMetadata(message, context);
+        string routingKey = _routing.GetRoutingKey(effectiveMessage.MessageType, effectiveMessage.MessageVersion, effectiveMessage);
+        return PublishCoreAsync(effectiveMessage, exchange, routingKey, context.TimeToLive, null, cancellationToken);
     }
 
     internal Task<PublishResult> PublishDeadLetterAsync(TransportMessageEnvelope message, RabbitMqRetryTopologyOptions retry,
@@ -67,6 +68,28 @@ internal sealed class RabbitMqTransportPublisher : IMessagingTransportPublisher,
         properties.Headers = headers;
         return PublishMappedAsync(properties, body, retry.DeadLetterExchange, retry.DeadLetterRoutingKey,
             transportMessageId: originalProperties.MessageId, message: null, cancellationToken: cancellationToken);
+    }
+
+    private static TransportMessageEnvelope ApplyRoutingMetadata(TransportMessageEnvelope message, PublishContext context)
+    {
+        string? partitionKey = context.PartitionKey ?? message.PartitionKey;
+        string? orderingKey = context.OrderingKey ?? message.OrderingKey;
+        if (string.Equals(partitionKey, message.PartitionKey, StringComparison.Ordinal) &&
+            string.Equals(orderingKey, message.OrderingKey, StringComparison.Ordinal))
+            return message;
+
+        return new TransportMessageEnvelope(
+            message.MessageId,
+            message.MessageType,
+            message.MessageVersion,
+            message.Body,
+            message.ContentType,
+            message.CreatedAtUtc,
+            message.CorrelationId,
+            message.CausationId,
+            partitionKey,
+            orderingKey,
+            message.Headers);
     }
 
     private async Task<PublishResult> PublishCoreAsync(TransportMessageEnvelope message, string exchange, string routingKey,

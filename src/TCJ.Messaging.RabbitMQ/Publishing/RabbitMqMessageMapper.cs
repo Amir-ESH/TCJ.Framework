@@ -10,7 +10,7 @@ internal sealed class RabbitMqMessageMapper
 {
     private readonly MessagingHeaderPolicy _headerPolicy;
 
-    internal RabbitMqMessageMapper(MessagingHeaderPolicy headerPolicy) => _headerPolicy = headerPolicy ?? throw new ArgumentNullException(nameof(headerPolicy));
+    public RabbitMqMessageMapper(MessagingHeaderPolicy headerPolicy) => _headerPolicy = headerPolicy ?? throw new ArgumentNullException(nameof(headerPolicy));
 
     internal BasicProperties ToProperties(TransportMessageEnvelope message, TimeSpan? timeToLive, IReadOnlyDictionary<string, string>? additionalHeaders = null)
     {
@@ -18,6 +18,8 @@ internal sealed class RabbitMqMessageMapper
         foreach ((string key, string value) in message.Headers)
             headers[key] = Encoding.UTF8.GetBytes(value);
         if (message.CausationId is not null) headers["tcj-causation-id"] = Encoding.UTF8.GetBytes(message.CausationId);
+        if (message.PartitionKey is not null) headers["tcj-partition-key"] = Encoding.UTF8.GetBytes(message.PartitionKey);
+        if (message.OrderingKey is not null) headers["tcj-ordering-key"] = Encoding.UTF8.GetBytes(message.OrderingKey);
         headers["tcj-message-version"] = Encoding.UTF8.GetBytes(message.MessageVersion.ToString(CultureInfo.InvariantCulture));
         if (additionalHeaders is not null)
             foreach ((string key, string value) in additionalHeaders) headers[key] = Encoding.UTF8.GetBytes(value);
@@ -72,6 +74,8 @@ internal sealed class RabbitMqMessageMapper
                 if (TryReadHeaderString(value, out string? text)) raw[key] = text;
             }
         }
+        string? partitionKey = raw.GetValueOrDefault("tcj-partition-key");
+        string? orderingKey = raw.GetValueOrDefault("tcj-ordering-key");
         IReadOnlyDictionary<string, string> headers = _headerPolicy.Filter(raw);
         string messageId = properties.MessageId ?? headers.GetValueOrDefault("tcj-message-id")
             ?? throw new InvalidOperationException("RabbitMQ delivery is missing a stable message ID.");
@@ -86,7 +90,7 @@ internal sealed class RabbitMqMessageMapper
             : ParseCreatedAt(headers.GetValueOrDefault("tcj-created-at"));
         string? correlation = properties.CorrelationId ?? headers.GetValueOrDefault("tcj-correlation-id");
         string? causation = headers.GetValueOrDefault("tcj-causation-id");
-        return new TransportMessageEnvelope(messageId, messageType, version, body, contentType, created, correlation, causation, headers: headers);
+        return new TransportMessageEnvelope(messageId, messageType, version, body, contentType, created, correlation, causation, partitionKey, orderingKey, headers);
     }
 
     internal static int GetDeliveryAttempt(IReadOnlyBasicProperties properties, int maximum)

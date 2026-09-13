@@ -79,12 +79,20 @@ jobs:
     name: Azure Service Bus transport gate
     uses: ./.github/workflows/azure-service-bus.yml
 
+  rabbitmq:
+    name: TCJ.Messaging.RabbitMQ.Tests gate
+    uses: ./.github/workflows/rabbitmq.yml
+
+  messaging-compatibility:
+    name: Cross-transport messaging compatibility gate
+    uses: ./.github/workflows/messaging-compatibility.yml
+
   kafka:
     name: Kafka transport gate
     uses: ./.github/workflows/kafka.yml
 
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus, kafka]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus, kafka, rabbitmq, messaging-compatibility]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -139,6 +147,9 @@ jobs:
 
       - name: Validate Azure Service Bus release contract
         run: python3 eng/verify-azure-service-bus.py validate-config
+
+      - name: Verify RabbitMQ policy
+        run: python3 eng/verify-rabbitmq.py validate-config
 
       - name: Validate Kafka release contract
         run: python3 eng/verify-kafka.py validate-config
@@ -339,7 +350,7 @@ jobs:
           dotnet test TCJ.slnx
           --configuration Release
           --no-build
-          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency"
+          --filter "Category!=SqlServer&Category!=AspNetCore&Category!=Concurrency&Category!=MessagingCompatibility"
           --collect:"XPlat Code Coverage"
           --settings tests/coverlet.runsettings
           --logger "trx;LogFileName=preflight-test-results.trx"

@@ -21,7 +21,7 @@ internal sealed class RabbitMqMessageReceiver : IMessageReceiver
     private readonly TcjRabbitMqOptions _options;
     private readonly TimeProvider _timeProvider;
 
-    internal RabbitMqMessageReceiver(RabbitMqConnectionManager connections, RabbitMqMessageMapper mapper,
+    public RabbitMqMessageReceiver(RabbitMqConnectionManager connections, RabbitMqMessageMapper mapper,
         RabbitMqTransportPublisher publisher, TcjRabbitMqOptions options, TimeProvider timeProvider)
     {
         _connections = connections ?? throw new ArgumentNullException(nameof(connections));

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\TestProject.props" />
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TCJ.Messaging.ConformanceTests\TCJ.Messaging.ConformanceTests.csproj" />
+    <ProjectReference Include="..\TCJ.Messaging.RabbitMQ.Tests\TCJ.Messaging.RabbitMQ.Tests.csproj" />
+    <ProjectReference Include="..\TCJ.Messaging.AzureServiceBus.Tests\TCJ.Messaging.AzureServiceBus.Tests.csproj" />
+    <ProjectReference Include="..\TCJ.Messaging.Kafka.Tests\TCJ.Messaging.Kafka.Tests.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging\TCJ.Messaging.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging.RabbitMQ\TCJ.Messaging.RabbitMQ.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging.AzureServiceBus\TCJ.Messaging.AzureServiceBus.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging.Kafka\TCJ.Messaging.Kafka.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\eng\messaging-compatibility-contract.json" Link="messaging-compatibility-contract.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

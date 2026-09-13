@@ -221,3 +221,5 @@ Independent forks may be developed and distributed commercially under the applic
 ## Transactional Inbox
 
 The development line includes an opt-in SQL Server-backed Transactional Inbox for stable-ID, consumer-scoped idempotent inbound processing. It supports duplicate/concurrency protection, bounded retry/dead-letter, replay/cleanup, telemetry/health, and atomic integration with the Transactional Outbox. See [`docs/inbox.md`](docs/inbox.md). The guarantee is effectively-once committed database side effects within a consumer boundary, not global exactly-once delivery.
+
+See the [messaging transport compatibility matrix](docs/messaging-transport-matrix.md) for capability evidence, transport differences and release requirements.

@@ -1,0 +1,206 @@
+name: Messaging compatibility
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * 4'
+  pull_request:
+    branches: [main, develop]
+    paths: &paths
+      - 'src/TCJ.Messaging*/**'
+      - 'src/TCJ.Core/**'
+      - 'tests/TCJ.Inbox.Tests/**'
+      - 'tests/TCJ.Outbox.Tests/**'
+      - 'eng/azure-service-bus-emulator/**'
+      - 'tests/TCJ.Messaging*/**'
+      - 'tests/TestProject.props'
+      - 'eng/messaging-*.json'
+      - 'eng/*rabbitmq*'
+      - 'eng/*azure-service-bus*'
+      - 'eng/*kafka*'
+      - 'eng/verify-messaging*.py'
+      - 'eng/run-messaging-package-compatibility.py'
+      - 'eng/tests/test_verify_messaging_compatibility.py'
+      - 'compatibility/**'
+      - '.github/workflows/messaging*.yml'
+      - '.github/workflows/rabbitmq.yml'
+      - '.github/workflows/azure-service-bus.yml'
+      - '.github/workflows/kafka.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'TCJ.slnx'
+  push:
+    branches: [main, develop]
+    paths: *paths
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  validate:
+    name: Validate contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Validate independent contracts and verifier tests
+        run: |
+          python3 -m unittest eng.tests.test_verify_messaging_compatibility
+          python3 eng/verify-messaging.py validate-config
+          python3 eng/verify-rabbitmq.py validate-config
+          python3 eng/verify-azure-service-bus.py validate-config
+          python3 eng/verify-kafka.py validate-config
+          python3 eng/verify-messaging-compatibility.py validate-config
+      - name: Build shared and compatibility test infrastructure
+        run: dotnet build tests/TCJ.Messaging.CompatibilityTests -c Release
+
+  rabbitmq:
+    needs: validate
+    uses: ./.github/workflows/rabbitmq.yml
+    with:
+      evidence_scope: compatibility
+  azure-service-bus:
+    needs: validate
+    uses: ./.github/workflows/azure-service-bus.yml
+    with:
+      evidence_scope: compatibility
+  kafka:
+    needs: validate
+    uses: ./.github/workflows/kafka.yml
+    with:
+      evidence_scope: compatibility
+
+  transport:
+    name: ${{ matrix.transport }}
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        transport: [InMemory, RabbitMQ, AzureServiceBus, Kafka]
+    env:
+      TCJ_MESSAGING_COMPATIBILITY_RESULTS: ${{ github.workspace }}/TestResults/MessagingCompatibility/${{ matrix.transport }}
+      TCJ_AZURE_SERVICE_BUS_REQUIRE_INTEGRATION: 1
+      TCJ_AZURE_SERVICE_BUS_TEST_ENVIRONMENT: emulator
+      TCJ_AZURE_SERVICE_BUS_CONNECTION_STRING: Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      TCJ_AZURE_SERVICE_BUS_MANAGEMENT_CONNECTION_STRING: Endpoint=sb://localhost:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Resolve pinned emulator infrastructure
+        if: matrix.transport == 'AzureServiceBus'
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          policy = json.load(open('eng/azure-service-bus-policy.json'))
+          print('TCJ_SERVICE_BUS_EMULATOR_IMAGE=' + policy['emulator']['image'])
+          print('TCJ_SQL_SERVER_IMAGE=' + policy['emulator']['sqlServerImage'])
+          PY
+          password="Aa1!$(openssl rand -hex 16)"
+          echo "::add-mask::$password"
+          echo "SQL_PASSWORD=$password" >> "$GITHUB_ENV"
+      - name: Start repository emulator
+        if: matrix.transport == 'AzureServiceBus'
+        run: |
+          docker compose -f eng/azure-service-bus-emulator/docker-compose.yml up -d
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent http://localhost:5300/health >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Build matrix
+        run: dotnet build tests/TCJ.Messaging.CompatibilityTests -c Release
+      - name: Bind scenarios to current source
+        run: python3 eng/verify-messaging-compatibility.py record-context --results "$TCJ_MESSAGING_COMPATIBILITY_RESULTS"
+      - name: Run shared semantics against selected transport
+        run: dotnet test tests/TCJ.Messaging.CompatibilityTests -c Release --no-build --filter "Transport=${{ matrix.transport }}" --logger "trx;LogFileName=matrix.trx" --results-directory "$TCJ_MESSAGING_COMPATIBILITY_RESULTS"
+      - name: Run authoritative neutral suites
+        if: matrix.transport == 'InMemory'
+        run: |
+          dotnet test tests/TCJ.Messaging.Tests -c Release --logger "trx;LogFileName=neutral.trx" --results-directory TestResults/MessagingCompatibility/neutral
+          dotnet test tests/TCJ.Messaging.ConformanceTests -c Release --no-build --logger "trx;LogFileName=conformance.trx" --results-directory TestResults/MessagingCompatibility/conformance
+          python3 eng/verify-messaging-compatibility.py record-context --results TestResults/MessagingCompatibility/neutral
+          python3 eng/verify-messaging-compatibility.py record-context --results TestResults/MessagingCompatibility/conformance
+      - uses: actions/upload-artifact@v7
+        with:
+          name: messaging-matrix-${{ matrix.transport }}-${{ github.run_id }}
+          path: TestResults/MessagingCompatibility
+          if-no-files-found: error
+      - name: Stop emulator
+        if: always() && matrix.transport == 'AzureServiceBus'
+        run: docker compose -f eng/azure-service-bus-emulator/docker-compose.yml down -v --remove-orphans
+
+  packages:
+    name: Packed package compatibility
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Pack candidate messaging packages
+        run: |
+          for package in TCJ.Core TCJ.Messaging TCJ.Messaging.RabbitMQ TCJ.Messaging.AzureServiceBus TCJ.Messaging.Kafka; do
+            dotnet pack "src/$package/$package.csproj" -c Release -o artifacts/messaging-compatibility/packages
+          done
+      - name: Restore isolated package consumers and capture descriptors
+        run: |
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          python3 eng/run-messaging-package-compatibility.py --version "$version" --source artifacts/messaging-compatibility/packages --output TestResults/MessagingCompatibility/packages
+      - uses: actions/upload-artifact@v7
+        with:
+          name: messaging-matrix-packages-${{ github.run_id }}
+          path: TestResults/MessagingCompatibility
+          if-no-files-found: error
+
+  aggregate:
+    name: Aggregate matrix
+    needs: [validate, rabbitmq, azure-service-bus, kafka, transport, packages]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: messaging-matrix-*-${{ github.run_id }}
+          path: TestResults/MessagingCompatibility
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          name: messaging-adapter-RabbitMQ-${{ github.run_id }}
+          path: TestResults/MessagingCompatibility/RabbitMQ-adapter
+      - uses: actions/download-artifact@v8
+        with:
+          name: messaging-adapter-AzureServiceBus-${{ github.run_id }}
+          path: TestResults/MessagingCompatibility/AzureServiceBus-adapter
+      - uses: actions/download-artifact@v8
+        with:
+          name: messaging-adapter-Kafka-${{ github.run_id }}
+          path: TestResults/MessagingCompatibility/Kafka-adapter
+      - name: Reject semantic drift and stale or incomplete evidence
+        run: python3 eng/verify-messaging-compatibility.py verify --results TestResults/MessagingCompatibility --output artifacts/messaging-compatibility
+      - name: Publish reviewed evidence
+        run: cat artifacts/messaging-compatibility/MESSAGING_COMPATIBILITY_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: messaging-compatibility-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            artifacts/messaging-compatibility/compatibility-matrix.json
+            artifacts/messaging-compatibility/MESSAGING_COMPATIBILITY_SUMMARY.md
+          if-no-files-found: error

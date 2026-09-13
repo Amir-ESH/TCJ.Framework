@@ -15,4 +15,5 @@
     <None Include="..\..\eng\kafka-policy.json" Link="kafka-policy.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\eng\kafka-contract.json" Link="kafka-contract.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="TCJ.Messaging.CompatibilityTests" /></ItemGroup>
 </Project>

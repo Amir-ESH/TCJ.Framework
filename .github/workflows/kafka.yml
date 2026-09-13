@@ -2,6 +2,11 @@ name: Kafka transport
 
 on:
   workflow_call:
+    inputs:
+      evidence_scope:
+        type: string
+        required: false
+        default: adapter
   workflow_dispatch:
   pull_request:
     branches: [develop, main]
@@ -53,6 +58,16 @@ jobs:
         run: python3 eng/verify-architecture-policy.py validate-config
       - name: Run Kafka verifier tests
         run: python3 -m unittest eng.tests.test_verify_kafka
+      - name: Bind adapter evidence to source and workflow run
+        run: python3 eng/verify-messaging-compatibility.py record-context --results TestResults/Kafka
+      - name: Upload compatibility adapter evidence
+        if: inputs.evidence_scope == 'compatibility'
+        uses: actions/upload-artifact@v7
+        with:
+          name: messaging-adapter-Kafka-${{ github.run_id }}
+          path: TestResults/Kafka
+          if-no-files-found: error
+
       - name: Publish summary
         if: always()
         shell: bash
@@ -67,7 +82,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: kafka-test-results-${{ github.run_id }}
+          name: kafka-test-results-${{ github.run_id }}-${{ inputs.evidence_scope || 'adapter' }}
           path: TestResults/Kafka
           if-no-files-found: warn
           retention-days: 7

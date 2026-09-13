@@ -95,9 +95,17 @@ internal sealed class RabbitMqTestHarness : IAsyncDisposable
         configureServices?.Invoke(services);
         ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
         var harness = new RabbitMqTestHarness(provider, topology);
-        if (validateStartup)
-            await provider.GetRequiredService<IMessagingStartupValidator>().ValidateAsync().ConfigureAwait(false);
-        return harness;
+        try
+        {
+            if (validateStartup)
+                await provider.GetRequiredService<IMessagingStartupValidator>().ValidateAsync().ConfigureAwait(false);
+            return harness;
+        }
+        catch
+        {
+            await harness.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
     internal static TransportMessageEnvelope CreateEnvelope(
