@@ -1,0 +1,565 @@
+{
+  "schemaVersion": 1,
+  "matrixSchemaVersion": 1,
+  "statuses": [
+    "Supported",
+    "Unsupported",
+    "Emulated",
+    "ConventionBased",
+    "TransportSpecific",
+    "NotApplicable",
+    "Blocked"
+  ],
+  "transports": {
+    "InMemory": {
+      "runtimeName": "in-memory",
+      "adapterContract": "eng/messaging-contract.json",
+      "validator": "eng/verify-messaging.py",
+      "testProject": "tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj",
+      "descriptorCapabilities": {
+        "SupportsBatchPublish": true,
+        "SupportsScheduling": false,
+        "SupportsTimeToLive": false,
+        "SupportsDeadLetter": true,
+        "SupportsDefer": false,
+        "SupportsOrderedDelivery": false,
+        "SupportsPartitioning": false,
+        "SupportsTransactions": false,
+        "SupportsPeekLock": true,
+        "OrderingGuarantee": "None"
+      },
+      "capabilities": {
+        "BatchPublish": {
+          "status": "Supported",
+          "evidence": [
+            "matrix:batch"
+          ]
+        },
+        "Scheduling": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "TimeToLive": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "DeadLetter": {
+          "status": "Emulated",
+          "evidence": [
+            "neutral:In_memory_transport_dead_letter_metadata_is_sanitized"
+          ]
+        },
+        "Defer": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "OrderedDelivery": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "Partitioning": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "Transactions": {
+          "status": "NotApplicable",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "PeekLock": {
+          "status": "Emulated",
+          "evidence": [
+            "matrix:inbox-order"
+          ]
+        }
+      },
+      "settlements": {
+        "Complete": {
+          "status": "Supported",
+          "evidence": [
+            "matrix:settlement"
+          ]
+        },
+        "Retry": {
+          "status": "Emulated",
+          "evidence": [
+            "neutral:In_memory_transport_preserves_message_id_on_redelivery"
+          ]
+        },
+        "DeadLetter": {
+          "status": "Emulated",
+          "evidence": [
+            "neutral:In_memory_transport_dead_letter_metadata_is_sanitized"
+          ]
+        },
+        "Abandon": {
+          "status": "Emulated",
+          "evidence": [
+            "neutral:Permanent_failure_abandons_when_dead_letter_not_supported"
+          ]
+        },
+        "Defer": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:settlement"
+          ]
+        }
+      },
+      "orderingScope": "None",
+      "retryOwnership": {
+        "transportClient": "none",
+        "outbox": "TCJ durable publish retry",
+        "redelivery": "Emulated",
+        "inbox": "TCJ durable processing retry",
+        "handler": "optional bounded application policy"
+      },
+      "requiredAdapterTests": []
+    },
+    "RabbitMQ": {
+      "runtimeName": "RabbitMQ",
+      "adapterContract": "eng/rabbitmq-contract.json",
+      "validator": "eng/verify-rabbitmq.py",
+      "testProject": "tests/TCJ.Messaging.RabbitMQ.Tests/TCJ.Messaging.RabbitMQ.Tests.csproj",
+      "descriptorCapabilities": {
+        "SupportsBatchPublish": false,
+        "SupportsScheduling": false,
+        "SupportsTimeToLive": true,
+        "SupportsDeadLetter": true,
+        "SupportsDefer": false,
+        "SupportsOrderedDelivery": true,
+        "OrderingGuarantee": "BestEffort",
+        "SupportsPartitioning": true,
+        "SupportsTransactions": false,
+        "SupportsPeekLock": false
+      },
+      "capabilities": {
+        "BatchPublish": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:batch"
+          ]
+        },
+        "Scheduling": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "TimeToLive": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:Time_to_live_expires_before_delivery"
+          ]
+        },
+        "DeadLetter": {
+          "status": "ConventionBased",
+          "evidence": [
+            "adapter:Dead_letter_routing_preserves_identity"
+          ]
+        },
+        "Defer": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "OrderedDelivery": {
+          "status": "Supported",
+          "evidence": [
+            "matrix:ordering"
+          ]
+        },
+        "Partitioning": {
+          "status": "TransportSpecific",
+          "evidence": [
+            "adapter:Partitioning_uses_explicit_routing_strategy"
+          ]
+        },
+        "Transactions": {
+          "status": "NotApplicable",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "PeekLock": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        }
+      },
+      "settlements": {
+        "Complete": {
+          "status": "Supported",
+          "evidence": [
+            "matrix:settlement"
+          ]
+        },
+        "Retry": {
+          "status": "ConventionBased",
+          "evidence": [
+            "adapter:Retry_routing_preserves_identity_and_attempt"
+          ]
+        },
+        "DeadLetter": {
+          "status": "ConventionBased",
+          "evidence": [
+            "adapter:Dead_letter_routing_preserves_identity"
+          ]
+        },
+        "Abandon": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:Duplicate_redelivery_preserves_identity"
+          ]
+        },
+        "Defer": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:settlement"
+          ]
+        }
+      },
+      "orderingScope": "BestEffort",
+      "retryOwnership": {
+        "transportClient": "bounded operation retry",
+        "outbox": "TCJ durable publish retry",
+        "redelivery": "ConventionBased",
+        "inbox": "TCJ durable processing retry",
+        "handler": "optional bounded application policy"
+      },
+      "requiredAdapterTests": [
+        "Connect_successfully",
+        "Publish_nack_does_not_report_success",
+        "Connection_loss_during_publish_does_not_false_confirm",
+        "Automatic_recovery_restores_publication",
+        "Outbox_bridge_preserves_durable_identity",
+        "Transaction_failure_does_not_acknowledge_Inbox"
+      ]
+    },
+    "AzureServiceBus": {
+      "runtimeName": "AzureServiceBus",
+      "adapterContract": "eng/azure-service-bus-contract.json",
+      "validator": "eng/verify-azure-service-bus.py",
+      "testProject": "tests/TCJ.Messaging.AzureServiceBus.Tests/TCJ.Messaging.AzureServiceBus.Tests.csproj",
+      "descriptorCapabilities": {
+        "SupportsBatchPublish": true,
+        "SupportsScheduling": true,
+        "SupportsTimeToLive": true,
+        "SupportsDeadLetter": true,
+        "SupportsDefer": true,
+        "SupportsOrderedDelivery": true,
+        "SupportsPartitioning": true,
+        "SupportsTransactions": false,
+        "SupportsPeekLock": true,
+        "OrderingGuarantee": "PerSession"
+      },
+      "capabilities": {
+        "BatchPublish": {
+          "status": "Supported",
+          "evidence": [
+            "matrix:batch"
+          ]
+        },
+        "Scheduling": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:Scheduled_delivery_is_not_available_early_and_preserves_stable_id"
+          ]
+        },
+        "TimeToLive": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:Per_message_time_to_live_is_applied"
+          ]
+        },
+        "DeadLetter": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:DeadLetter_moves_message_to_dead_letter_subqueue_without_payload_in_reason"
+          ]
+        },
+        "Defer": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:Defer_removes_normal_delivery_and_explicit_sequence_retrieval_succeeds"
+          ]
+        },
+        "OrderedDelivery": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:Session_ordering_contract_preserves_publish_order_with_single_in_flight_configuration"
+          ]
+        },
+        "Partitioning": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:Mapper_rejects_mismatched_session_and_partition_keys"
+          ]
+        },
+        "Transactions": {
+          "status": "NotApplicable",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "PeekLock": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:PeekLock_manual_completion_removes_message_only_after_complete"
+          ]
+        }
+      },
+      "settlements": {
+        "Complete": {
+          "status": "Supported",
+          "evidence": [
+            "matrix:settlement"
+          ]
+        },
+        "Retry": {
+          "status": "Emulated",
+          "evidence": [
+            "adapter:Scheduled_retry_clone_preserves_logical_id_and_completes_original_after_schedule"
+          ]
+        },
+        "DeadLetter": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:DeadLetter_moves_message_to_dead_letter_subqueue_without_payload_in_reason"
+          ]
+        },
+        "Abandon": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:Abandon_redelivers_and_delivery_count_increases"
+          ]
+        },
+        "Defer": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:Defer_removes_normal_delivery_and_explicit_sequence_retrieval_succeeds"
+          ]
+        }
+      },
+      "orderingScope": "PerSession",
+      "retryOwnership": {
+        "transportClient": "bounded operation retry",
+        "outbox": "TCJ durable publish retry",
+        "redelivery": "Emulated",
+        "inbox": "TCJ durable processing retry",
+        "handler": "optional bounded application policy"
+      },
+      "requiredAdapterTests": [
+        "Outbox_bridge_publishes_stable_context_identity_and_metadata_through_azure_service_bus",
+        "Inbox_duplicate_redelivery_maps_to_complete_without_second_business_effect",
+        "Liveness_contract_is_not_coupled_to_service_bus_readiness_probe",
+        "Entity_deleted_after_registration_is_classified_as_permanent_topology_on_publish"
+      ]
+    },
+    "Kafka": {
+      "runtimeName": "Kafka",
+      "adapterContract": "eng/kafka-contract.json",
+      "validator": "eng/verify-kafka.py",
+      "testProject": "tests/TCJ.Messaging.Kafka.Tests/TCJ.Messaging.Kafka.Tests.csproj",
+      "descriptorCapabilities": {
+        "SupportsBatchPublish": true,
+        "SupportsScheduling": false,
+        "SupportsTimeToLive": false,
+        "SupportsDeadLetter": true,
+        "SupportsDefer": false,
+        "SupportsOrderedDelivery": true,
+        "SupportsPartitioning": true,
+        "SupportsTransactions": false,
+        "SupportsPeekLock": false,
+        "OrderingGuarantee": "PerPartition"
+      },
+      "capabilities": {
+        "BatchPublish": {
+          "status": "Supported",
+          "evidence": [
+            "matrix:batch"
+          ]
+        },
+        "Scheduling": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "TimeToLive": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "DeadLetter": {
+          "status": "ConventionBased",
+          "evidence": [
+            "adapter:Dead_letter_topic_publish_happens_before_source_progression"
+          ]
+        },
+        "Defer": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "OrderedDelivery": {
+          "status": "Supported",
+          "evidence": [
+            "matrix:ordering"
+          ]
+        },
+        "Partitioning": {
+          "status": "Supported",
+          "evidence": [
+            "adapter:PartitionKey_only_maps_to_key"
+          ]
+        },
+        "Transactions": {
+          "status": "NotApplicable",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        },
+        "PeekLock": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:unsupported-options"
+          ]
+        }
+      },
+      "settlements": {
+        "Complete": {
+          "status": "Supported",
+          "evidence": [
+            "matrix:settlement"
+          ]
+        },
+        "Retry": {
+          "status": "ConventionBased",
+          "evidence": [
+            "adapter:Retry_topic_publish_happens_before_source_progression"
+          ]
+        },
+        "DeadLetter": {
+          "status": "ConventionBased",
+          "evidence": [
+            "adapter:Dead_letter_topic_publish_happens_before_source_progression"
+          ]
+        },
+        "Abandon": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:settlement"
+          ]
+        },
+        "Defer": {
+          "status": "Unsupported",
+          "evidence": [
+            "matrix:settlement"
+          ]
+        }
+      },
+      "orderingScope": "PerPartition",
+      "retryOwnership": {
+        "transportClient": "bounded operation retry",
+        "outbox": "TCJ durable publish retry",
+        "redelivery": "ConventionBased",
+        "inbox": "TCJ durable processing retry",
+        "handler": "optional bounded application policy"
+      },
+      "requiredAdapterTests": [
+        "Unresolved_earlier_offset_blocks_later_completion",
+        "Concurrent_out_of_order_completions_never_skip_the_contiguous_boundary",
+        "Stale_settlement_after_Rebalance_revocation_cannot_commit",
+        "Outbox_durable_retry_ownership_is_not_replaced",
+        "Inbox_commit_offset_commit_crash_window_allows_safe_redelivery",
+        "Broker_outage_is_bounded_and_classified_without_adapter_retry_loop"
+      ]
+    }
+  },
+  "requiredNeutralTests": [
+    "Serializer_uses_explicit_contract",
+    "Serializer_rejects_unknown_content_type",
+    "Typed_envelope_rejects_assembly_qualified_type_name",
+    "Upcaster_advances_payload_to_registered_target_version",
+    "Missing_upcaster_chain_fails_closed",
+    "MessagingOutbox_success_preserves_outbox_identity_and_correlation",
+    "MessagingOutbox_transient_publish_failure_is_retryable_by_core_classifier",
+    "MessagingOutbox_permanent_publish_failure_is_not_retryable",
+    "Complete_occurs_only_after_inbox_pipeline_returns",
+    "Duplicate_delivery_completes_without_retry",
+    "Cancellation_is_propagated_without_false_settlement",
+    "Messaging_transport_health_check_becomes_unhealthy_when_probe_is_unavailable",
+    "Messaging_startup_validator_fails_closed_without_transport_registration",
+    "Publisher_timeout_uses_injected_time_provider"
+  ],
+  "requiredConformanceTests": [
+    "Publish_timeout_is_classified_as_retryable_timeout",
+    "Transient_failure_is_classified_retryable",
+    "Permanent_failure_is_not_retryable",
+    "Metric_dimensions_exclude_application_defined_destination"
+  ],
+  "failureCategories": [
+    "TransientConnection",
+    "TransientThrottle",
+    "TransientTimeout",
+    "PermanentAuthentication",
+    "PermanentAuthorization",
+    "PermanentTopology",
+    "PermanentSerialization",
+    "PayloadTooLarge",
+    "Canceled",
+    "UnsupportedCapability",
+    "Unknown"
+  ],
+  "activities": [
+    "tcj.messaging.publish",
+    "tcj.messaging.receive",
+    "tcj.messaging.settle",
+    "tcj.messaging.deserialize",
+    "tcj.messaging.consumer.execute"
+  ],
+  "metrics": [
+    "tcj.messaging.messages.published",
+    "tcj.messaging.messages.received",
+    "tcj.messaging.messages.completed",
+    "tcj.messaging.messages.retried",
+    "tcj.messaging.messages.dead_lettered",
+    "tcj.messaging.publish.duration",
+    "tcj.messaging.processing.duration",
+    "tcj.messaging.active_consumers"
+  ],
+  "healthChecks": [
+    "tcj.messaging.transport",
+    "tcj.messaging.publisher",
+    "tcj.messaging.consumer",
+    "tcj.messaging.topology"
+  ],
+  "normalizedEnvelopeFields": [
+    "MessageId",
+    "MessageType",
+    "MessageVersion",
+    "Body",
+    "ContentType",
+    "CreatedAtUtc",
+    "CorrelationId",
+    "CausationId",
+    "PartitionKey",
+    "OrderingKey",
+    "Headers"
+  ]
+}

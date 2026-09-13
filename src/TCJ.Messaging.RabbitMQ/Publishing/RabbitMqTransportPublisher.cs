@@ -20,7 +20,7 @@ internal sealed class RabbitMqTransportPublisher : IMessagingTransportPublisher,
     private IChannel? _channel;
     private bool _disposed;
 
-    internal RabbitMqTransportPublisher(RabbitMqConnectionManager connections, RabbitMqMessageMapper mapper,
+    public RabbitMqTransportPublisher(RabbitMqConnectionManager connections, RabbitMqMessageMapper mapper,
         IRabbitMqRoutingKeyStrategy routing, TcjRabbitMqOptions options)
     {
         _connections = connections ?? throw new ArgumentNullException(nameof(connections));

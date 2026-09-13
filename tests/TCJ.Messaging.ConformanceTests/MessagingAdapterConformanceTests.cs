@@ -53,12 +53,12 @@ public abstract class MessagingAdapterConformanceTests
 
         PublishResult result = await harness.Publisher.PublishAsync(
             message,
-            new PublishContext { Destination = harness.Source });
+            new PublishContext { Destination = harness.PublishDestination });
 
         Assert.True(result.IsSuccess);
         await using IAsyncEnumerator<ReceivedMessage> receiver = harness.Receiver
-            .ReceiveAsync(new ReceiveContext { Source = harness.Source })
-            .GetAsyncEnumerator();
+            .ReceiveAsync(new ReceiveContext { Source = harness.Source, Subscription = harness.Subscription }, harness.ScenarioCancellation)
+            .GetAsyncEnumerator(harness.ScenarioCancellation);
         Assert.True(await receiver.MoveNextAsync());
         ReceivedMessage received = receiver.Current;
         Assert.Equal(message.MessageId, received.Envelope.MessageId);
@@ -84,12 +84,12 @@ public abstract class MessagingAdapterConformanceTests
 
         PublishResult result = await harness.Publisher.PublishAsync(
             message,
-            new PublishContext { Destination = harness.Source });
+            new PublishContext { Destination = harness.PublishDestination });
         Assert.True(result.IsSuccess);
 
         await using IAsyncEnumerator<ReceivedMessage> receiver = harness.Receiver
-            .ReceiveAsync(new ReceiveContext { Source = harness.Source })
-            .GetAsyncEnumerator();
+            .ReceiveAsync(new ReceiveContext { Source = harness.Source, Subscription = harness.Subscription }, harness.ScenarioCancellation)
+            .GetAsyncEnumerator(harness.ScenarioCancellation);
         Assert.True(await receiver.MoveNextAsync());
         Assert.Equal("safe", receiver.Current.Envelope.Headers["custom-safe"]);
         Assert.False(receiver.Current.Envelope.Headers.ContainsKey("authorization"));
@@ -103,7 +103,7 @@ public abstract class MessagingAdapterConformanceTests
         await using MessagingAdapterHarness harness = await CreateHarnessAsync();
         using var cancellation = new CancellationTokenSource();
         await using IAsyncEnumerator<ReceivedMessage> receiver = harness.Receiver
-            .ReceiveAsync(new ReceiveContext { Source = harness.Source }, cancellation.Token)
+            .ReceiveAsync(new ReceiveContext { Source = harness.Source, Subscription = harness.Subscription }, cancellation.Token)
             .GetAsyncEnumerator(cancellation.Token);
 
         Task<bool> pending = receiver.MoveNextAsync().AsTask();
@@ -119,7 +119,7 @@ public abstract class MessagingAdapterConformanceTests
 
         Task<PublishResult> publish = harness.Publisher.PublishAsync(
             CreateEnvelope(),
-            new PublishContext { Destination = harness.Source });
+            new PublishContext { Destination = harness.PublishDestination });
         AdvanceTime(harness, TimeSpan.FromSeconds(31));
 
         PublishResult result = await publish;
@@ -141,7 +141,7 @@ public abstract class MessagingAdapterConformanceTests
 
         PublishResult result = await harness.Publisher.PublishAsync(
             CreateEnvelope(),
-            new PublishContext { Destination = harness.Source });
+            new PublishContext { Destination = harness.PublishDestination });
 
         Assert.Equal(PublishOutcome.TransientFailure, result.Outcome);
         Assert.True(result.IsRetryable);
@@ -160,7 +160,7 @@ public abstract class MessagingAdapterConformanceTests
 
         PublishResult result = await harness.Publisher.PublishAsync(
             CreateEnvelope(),
-            new PublishContext { Destination = harness.Source });
+            new PublishContext { Destination = harness.PublishDestination });
 
         Assert.Equal(PublishOutcome.PermanentFailure, result.Outcome);
         Assert.False(result.IsRetryable);
@@ -172,11 +172,11 @@ public abstract class MessagingAdapterConformanceTests
         await using MessagingAdapterHarness harness = await CreateHarnessAsync();
         await harness.Publisher.PublishAsync(
             CreateEnvelope(id: "retry-stable"),
-            new PublishContext { Destination = harness.Source });
+            new PublishContext { Destination = harness.PublishDestination });
 
         await using IAsyncEnumerator<ReceivedMessage> receiver = harness.Receiver
-            .ReceiveAsync(new ReceiveContext { Source = harness.Source })
-            .GetAsyncEnumerator();
+            .ReceiveAsync(new ReceiveContext { Source = harness.Source, Subscription = harness.Subscription }, harness.ScenarioCancellation)
+            .GetAsyncEnumerator(harness.ScenarioCancellation);
         Assert.True(await receiver.MoveNextAsync());
         Assert.Equal(1, receiver.Current.Delivery.DeliveryAttempt);
         await receiver.Current.Settlement.RetryAsync(new RetrySettlementOptions());
@@ -195,8 +195,8 @@ public abstract class MessagingAdapterConformanceTests
         await InjectDuplicateAsync(harness, message);
 
         await using IAsyncEnumerator<ReceivedMessage> receiver = harness.Receiver
-            .ReceiveAsync(new ReceiveContext { Source = harness.Source })
-            .GetAsyncEnumerator();
+            .ReceiveAsync(new ReceiveContext { Source = harness.Source, Subscription = harness.Subscription }, harness.ScenarioCancellation)
+            .GetAsyncEnumerator(harness.ScenarioCancellation);
         Assert.True(await receiver.MoveNextAsync());
         string first = receiver.Current.Envelope.MessageId;
         await receiver.Current.Settlement.CompleteAsync();
@@ -214,10 +214,10 @@ public abstract class MessagingAdapterConformanceTests
         await using MessagingAdapterHarness harness = await CreateHarnessAsync();
         await harness.Publisher.PublishAsync(
             CreateEnvelope(),
-            new PublishContext { Destination = harness.Source });
+            new PublishContext { Destination = harness.PublishDestination });
         await using IAsyncEnumerator<ReceivedMessage> receiver = harness.Receiver
-            .ReceiveAsync(new ReceiveContext { Source = harness.Source })
-            .GetAsyncEnumerator();
+            .ReceiveAsync(new ReceiveContext { Source = harness.Source, Subscription = harness.Subscription }, harness.ScenarioCancellation)
+            .GetAsyncEnumerator(harness.ScenarioCancellation);
         Assert.True(await receiver.MoveNextAsync());
 
         if (harness.Descriptor.Capabilities.SupportsDeadLetter)
@@ -267,7 +267,7 @@ public abstract class MessagingAdapterConformanceTests
 
         PublishResult result = await harness.Publisher.PublishAsync(
             CreateEnvelope(),
-            new PublishContext { Destination = harness.Source });
+            new PublishContext { Destination = harness.PublishDestination });
         Assert.True(result.IsSuccess);
         Assert.Contains(activities, activity => activity.OperationName == TcjMessagingDiagnosticNames.Activities.Publish);
         Assert.Contains(TcjMessagingDiagnosticNames.Metrics.MessagesPublished, metricNames);
@@ -299,7 +299,7 @@ public abstract class MessagingAdapterConformanceTests
 
         PublishResult result = await harness.Publisher.PublishAsync(
             CreateEnvelope(),
-            new PublishContext { Destination = harness.Source + ".tenant-123" });
+            new PublishContext { Destination = harness.PublishDestination + ".tenant-123" });
 
         Assert.True(result.IsSuccess);
         Assert.DoesNotContain(TcjMessagingDiagnosticNames.Tags.Destination, metricTagNames);
@@ -313,7 +313,7 @@ public abstract class MessagingAdapterConformanceTests
 
         PublishResult result = await harness.Publisher.PublishAsync(
             CreateEnvelope(),
-            new PublishContext { Destination = harness.Source });
+            new PublishContext { Destination = harness.PublishDestination });
 
         Assert.Equal(PublishOutcome.TransientFailure, result.Outcome);
         Assert.True(result.IsRetryable);

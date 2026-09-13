@@ -10,7 +10,7 @@ internal sealed class RabbitMqMessageMapper
 {
     private readonly MessagingHeaderPolicy _headerPolicy;
 
-    internal RabbitMqMessageMapper(MessagingHeaderPolicy headerPolicy) => _headerPolicy = headerPolicy ?? throw new ArgumentNullException(nameof(headerPolicy));
+    public RabbitMqMessageMapper(MessagingHeaderPolicy headerPolicy) => _headerPolicy = headerPolicy ?? throw new ArgumentNullException(nameof(headerPolicy));
 
     internal BasicProperties ToProperties(TransportMessageEnvelope message, TimeSpan? timeToLive, IReadOnlyDictionary<string, string>? additionalHeaders = null)
     {

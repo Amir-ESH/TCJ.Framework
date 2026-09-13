@@ -124,6 +124,12 @@ jobs:
       - name: Validate Azure Service Bus adapter configuration
         run: python3 eng/verify-azure-service-bus.py validate-config
 
+      - name: Verify RabbitMQ policy
+        run: python3 eng/verify-rabbitmq.py validate-config
+
+      - name: Validate messaging compatibility configuration
+        run: python3 eng/verify-messaging-compatibility.py validate-config
+
       - name: Validate Kafka transport configuration
         run: python3 eng/verify-kafka.py validate-config
 

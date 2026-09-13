@@ -13,7 +13,7 @@ internal sealed class RabbitMqStartupValidator : IMessagingStartupValidator
     private readonly SemaphoreSlim _gate = new(1, 1);
     private volatile bool _validated;
 
-    internal RabbitMqStartupValidator(MessagingStartupValidator neutral, RabbitMqTopologyManager topology,
+    public RabbitMqStartupValidator(MessagingStartupValidator neutral, RabbitMqTopologyManager topology,
         TcjRabbitMqOptions rabbit, TcjMessagingOptions messaging)
     {
         _neutral = neutral ?? throw new ArgumentNullException(nameof(neutral));

@@ -13,7 +13,7 @@ internal sealed class RabbitMqConnectionManager : IAsyncDisposable
     private IConnection? _connection;
     private bool _disposed;
 
-    internal RabbitMqConnectionManager(TcjRabbitMqOptions options)
+    public RabbitMqConnectionManager(TcjRabbitMqOptions options)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate();

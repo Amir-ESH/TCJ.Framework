@@ -561,6 +561,18 @@ TestResults/AzureServiceBus/
 !src/TCJ.Messaging.AzureServiceBus/**
 !tests/TCJ.Messaging.AzureServiceBus.Tests/**
 
+# Messaging compatibility and RabbitMQ evidence
+artifacts/rabbitmq/
+TestResults/RabbitMQ/
+artifacts/messaging-compatibility/
+TestResults/MessagingCompatibility/
+!eng/messaging-compatibility-*.json
+!eng/verify-messaging-compatibility.py
+!eng/tests/test_verify_messaging_compatibility.py
+!tests/TCJ.Messaging.CompatibilityTests/**
+!tests/TCJ.Messaging.RabbitMQ.Tests/**
+!compatibility/Consumers/RabbitMq*/**
+
 # Build output directories
 # Keep these rules last so broad negation rules above cannot re-include generated build outputs.
 **/[Bb]in/*

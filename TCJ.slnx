@@ -24,6 +24,7 @@
     <Project Path="src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/TCJ.Messaging.CompatibilityTests/TCJ.Messaging.CompatibilityTests.csproj" />
     <Project Path="tests/TCJ.Analyzers.Tests/TCJ.Analyzers.Tests.csproj" />
     <Project Path="tests/TCJ.Architecture.Tests/TCJ.Architecture.Tests.csproj" />
     <Project Path="tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj" />

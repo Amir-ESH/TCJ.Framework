@@ -8,10 +8,11 @@ internal sealed class RabbitMqTransportHealthProbe : IMessagingTransportHealthPr
 {
     private readonly RabbitMqConnectionManager _connections;
     private readonly TcjRabbitMqOptions _options;
-    internal RabbitMqTransportHealthProbe(RabbitMqConnectionManager connections, TcjRabbitMqOptions options)
+    public RabbitMqTransportHealthProbe(RabbitMqConnectionManager connections, TcjRabbitMqOptions options)
     { _connections = connections; _options = options; }
     public async ValueTask<bool> IsReadyAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(_options.ConnectionTimeout);
         try { _ = await _connections.GetConnectionAsync(cts.Token).ConfigureAwait(false); return true; }
