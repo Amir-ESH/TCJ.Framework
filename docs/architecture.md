@@ -9,9 +9,12 @@ TCJ.Core
 │   └── TCJ.EntityFrameworkCore.SqlServer
 ├── TCJ.AspNetCore
 └── TCJ.Messaging
+    └── TCJ.Messaging.Sagas
+        └── TCJ.Messaging.Sagas.EntityFrameworkCore
+            └── TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer
 ```
 
-`TCJ.EntityFrameworkCore.SqlServer` depends on `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.EntityFrameworkCore`. `TCJ.DependencyInjection`, `TCJ.AspNetCore`, and `TCJ.Messaging` depend on `TCJ.Core`. `TCJ.Core` does not reference ASP.NET Core, Entity Framework Core, messaging, or broker SDKs. `TCJ.Messaging` does not reference EF Core, ASP.NET Core, or a broker-specific SDK.
+`TCJ.EntityFrameworkCore.SqlServer` depends on `TCJ.Core`, `TCJ.DependencyInjection`, and `TCJ.EntityFrameworkCore`. `TCJ.DependencyInjection`, `TCJ.AspNetCore`, and `TCJ.Messaging` depend on `TCJ.Core`. `TCJ.Messaging.Sagas` depends on the neutral messaging contracts (and Core domain-event contracts), `TCJ.Messaging.Sagas.EntityFrameworkCore` adds provider-neutral EF persistence, and `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer` is the SQL Server leaf. Existing runtime packages do not depend on Saga packages. `TCJ.Core` does not reference ASP.NET Core, Entity Framework Core, messaging, Saga, or broker SDKs. `TCJ.Messaging` does not reference EF Core, Saga, ASP.NET Core, or a broker-specific SDK.
 
 ## Design principles
 
@@ -38,6 +41,10 @@ Entities can collect pending domain events and `IDomainEventDispatcher` invokes 
 ### Explicit transport-neutral messaging
 
 `TCJ.Messaging` owns broker-neutral envelopes, publishing/receiving contracts, settlement outcomes, capability declarations, topology naming, safe headers, observability, health checks, and adapter conformance rules. Broker SDKs belong only in leaf adapter packages such as `TCJ.Messaging.RabbitMQ`, `TCJ.Messaging.AzureServiceBus`, and `TCJ.Messaging.Kafka`. Outbox-to-transport publishing is explicit through `AddTcjMessagingOutboxBridge`; transport-to-Inbox processing settles only after the Inbox pipeline returns its committed outcome. The non-durable in-memory adapter exists for tests and local development and is not a production broker.
+
+### Explicit durable Saga orchestration
+
+The optional Saga family sits above `TCJ.Messaging` and reuses the existing transactional Inbox and Outbox boundaries. `TCJ.Messaging.Sagas` owns transport-neutral orchestration contracts; `TCJ.Messaging.Sagas.EntityFrameworkCore` owns provider-neutral persistence and transaction integration; `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer` owns `rowversion`, active-correlation uniqueness, and lease-based timer claiming. External Saga message handlers join the same scoped application DbContext transaction already owned by Inbox. No existing runtime package gains a Saga dependency, and no broker SDK type is exposed by the neutral Saga API. See [Durable Saga orchestration](messaging-sagas.md).
 
 ### Host-owned configuration
 
@@ -111,6 +118,10 @@ The transactional-outbox feature set keeps provider-neutral outbox contracts in 
 ## Transactional-Inbox boundary
 
 The transactional Inbox keeps message identity/idempotency contracts in `TCJ.Core` and persistence/processing in the EF packages. `TCJ.Messaging` does not own Inbox persistence. Its receive bridge maps a transport delivery into the existing Inbox pipeline and performs transport settlement only after the Inbox result is available, preserving the commit-before-acknowledgement boundary. See [Transactional Inbox](inbox.md) and [Transport-neutral messaging](messaging.md).
+
+## Durable Saga boundary
+
+Durable Saga orchestration is opt-in. Saga definitions use stable logical contracts and explicit `JsonTypeInfo<TState>` state metadata rather than persisted CLR identities or runtime assembly scanning. For externally delivered messages, the existing Inbox owns the transaction and Saga infrastructure uses that same application DbContext; the existing Outbox remains the publication boundary. SQL Server-specific optimistic concurrency and timer claiming stay in the SQL Server Saga leaf package. Consumers own Saga EF migrations. TCJ does not claim distributed ACID, global exactly-once delivery, automatic remote rollback, general-purpose scheduling, or event-sourcing replay. See [Durable Saga and process-manager orchestration](messaging-sagas.md).
 
 ## Azure Service Bus adapter boundary
 

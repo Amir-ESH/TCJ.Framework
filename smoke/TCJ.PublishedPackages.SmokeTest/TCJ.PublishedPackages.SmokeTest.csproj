@@ -12,17 +12,21 @@
     <EnableOutboxSmoke Condition="'$(EnableOutboxSmoke)' == ''">false</EnableOutboxSmoke>
     <EnableInboxSmoke Condition="'$(EnableInboxSmoke)' == ''">false</EnableInboxSmoke>
     <EnableMessagingSmoke Condition="'$(EnableMessagingSmoke)' == ''">false</EnableMessagingSmoke>
+    <EnableSagaSmoke Condition="'$(EnableSagaSmoke)' == ''">false</EnableSagaSmoke>
     <EnableAzureServiceBusSmoke Condition="'$(EnableAzureServiceBusSmoke)' == ''">false</EnableAzureServiceBusSmoke>
     <EnableKafkaSmoke Condition="'$(EnableKafkaSmoke)' == ''">false</EnableKafkaSmoke>
     <EnableMessagingSmoke Condition="'$(EnableAzureServiceBusSmoke)' == 'true'">true</EnableMessagingSmoke>
     <EnableMessagingSmoke Condition="'$(EnableKafkaSmoke)' == 'true'">true</EnableMessagingSmoke>
     <EnableOutboxSmoke Condition="'$(EnableMessagingSmoke)' == 'true'">true</EnableOutboxSmoke>
     <EnableInboxSmoke Condition="'$(EnableMessagingSmoke)' == 'true'">true</EnableInboxSmoke>
+    <EnableOutboxSmoke Condition="'$(EnableSagaSmoke)' == 'true'">true</EnableOutboxSmoke>
+    <EnableInboxSmoke Condition="'$(EnableSagaSmoke)' == 'true'">true</EnableInboxSmoke>
     <DefineConstants Condition="'$(EnableResilienceSmoke)' == 'true'">$(DefineConstants);TCJ_RESILIENCE_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableHealthCheckSmoke)' == 'true'">$(DefineConstants);TCJ_HEALTH_CHECK_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableOutboxSmoke)' == 'true'">$(DefineConstants);TCJ_OUTBOX_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableInboxSmoke)' == 'true'">$(DefineConstants);TCJ_INBOX_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableMessagingSmoke)' == 'true'">$(DefineConstants);TCJ_MESSAGING_SMOKE</DefineConstants>
+    <DefineConstants Condition="'$(EnableSagaSmoke)' == 'true'">$(DefineConstants);TCJ_SAGA_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableAzureServiceBusSmoke)' == 'true'">$(DefineConstants);TCJ_AZURE_SERVICE_BUS_SMOKE</DefineConstants>
     <DefineConstants Condition="'$(EnableKafkaSmoke)' == 'true'">$(DefineConstants);TCJ_KAFKA_SMOKE</DefineConstants>
   </PropertyGroup>
@@ -34,6 +38,9 @@
     <PackageReference Include="TCJ.EntityFrameworkCore.SqlServer" Version="$(TCJPackageVersion)" />
     <PackageReference Include="TCJ.AspNetCore" Version="$(TCJPackageVersion)" />
     <PackageReference Include="TCJ.Messaging" Version="$(TCJPackageVersion)" Condition="'$(EnableMessagingSmoke)' == 'true'" />
+    <PackageReference Include="TCJ.Messaging.Sagas" Version="$(TCJPackageVersion)" Condition="'$(EnableSagaSmoke)' == 'true'" />
+    <PackageReference Include="TCJ.Messaging.Sagas.EntityFrameworkCore" Version="$(TCJPackageVersion)" Condition="'$(EnableSagaSmoke)' == 'true'" />
+    <PackageReference Include="TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer" Version="$(TCJPackageVersion)" Condition="'$(EnableSagaSmoke)' == 'true'" />
     <PackageReference Include="TCJ.Messaging.AzureServiceBus" Version="$(TCJPackageVersion)" Condition="'$(EnableAzureServiceBusSmoke)' == 'true'" />
     <PackageReference Include="TCJ.Messaging.Kafka" Version="$(TCJPackageVersion)" Condition="'$(EnableKafkaSmoke)' == 'true'" />
     <PackageReference Include="Testcontainers.Kafka" Version="4.15.0" Condition="'$(EnableKafkaSmoke)' == 'true'" />

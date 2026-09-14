@@ -19,6 +19,9 @@
     <Project Path="src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj" />
     <Project Path="src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj" />
     <Project Path="src/TCJ.Messaging/TCJ.Messaging.csproj" />
+    <Project Path="src/TCJ.Messaging.Sagas/TCJ.Messaging.Sagas.csproj" />
+    <Project Path="src/TCJ.Messaging.Sagas.EntityFrameworkCore/TCJ.Messaging.Sagas.EntityFrameworkCore.csproj" />
+    <Project Path="src/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.csproj" />
     <Project Path="src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj" />
     <Project Path="src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj" />
     <Project Path="src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj" />
@@ -39,6 +42,8 @@
     <Project Path="tests/TCJ.HealthChecks.Tests/TCJ.HealthChecks.Tests.csproj" />
     <Project Path="tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj" />
+    <Project Path="tests/TCJ.Messaging.Sagas.Tests/TCJ.Messaging.Sagas.Tests.csproj" />
+    <Project Path="tests/TCJ.Messaging.Sagas.SqlServer.Tests/TCJ.Messaging.Sagas.SqlServer.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj" />
     <Project Path="tests/TCJ.Messaging.RabbitMQ.Tests/TCJ.Messaging.RabbitMQ.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.AzureServiceBus.Tests/TCJ.Messaging.AzureServiceBus.Tests.csproj" />

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../eng/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>TCJ.Messaging.Sagas</PackageId>
+    <Title>TCJ Messaging Sagas</Title>
+    <Description>Transport-neutral durable Saga and Process Manager contracts for TCJ Framework.</Description>
+    <PackageTags>tcj;messaging;saga;process-manager;orchestration</PackageTags>
+    <RootNamespace>TCJ.Messaging.Sagas</RootNamespace>
+    <AssemblyName>TCJ.Messaging.Sagas</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TCJ.Core/TCJ.Core.csproj" />
+    <ProjectReference Include="../TCJ.Messaging/TCJ.Messaging.csproj" />
+  </ItemGroup>
+</Project>

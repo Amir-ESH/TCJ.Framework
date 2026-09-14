@@ -21,6 +21,8 @@ POLICY_REL = Path("eng/compatibility-policy.json")
 REQUIRED_PACKAGE_IDS = {
     "TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer", "TCJ.AspNetCore", "TCJ.Messaging",
+    "TCJ.Messaging.Sagas", "TCJ.Messaging.Sagas.EntityFrameworkCore",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
     "TCJ.Messaging.AzureServiceBus", "TCJ.Messaging.Kafka", "TCJ.Messaging.RabbitMQ",
 }
 SEMVER_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
@@ -95,8 +97,8 @@ def load_policy(root: Path = ROOT) -> dict[str, Any]:
         fail("Compatibility policy does not define enough consumers.")
     names = [item.get("name") for item in consumers if isinstance(item, dict)]
     if len(names) != len(consumers) or len(names) != len(set(names)): fail("Consumer names must be unique strings.")
-    if set(data["publishedConsumers"]) != {"Core.Console", "AspNetCore.MinimalApi", "FullStack.MinimalApi"}:
-        fail("Published-package compatibility must reuse Core, ASP.NET Core, and full-stack consumers.")
+    if set(data["publishedConsumers"]) != {"Core.Console", "AspNetCore.MinimalApi", "FullStack.MinimalApi", "Sagas.SqlServer.Console"}:
+        fail("Published-package compatibility must reuse Core, ASP.NET Core, full-stack, and Saga SQL Server consumers.")
     aot_safe_consumers = [item for item in consumers if item.get("name") == "DependencyInjection.AotSafe.Console"]
     if len(aot_safe_consumers) != 1:
         fail("Compatibility policy must define exactly one DependencyInjection.AotSafe.Console package consumer.")
@@ -318,6 +320,15 @@ def validate_config(root: Path = ROOT) -> dict[str, Any]:
                 "IOutboxProcessor",
                 "ProcessBatchAsync",
                 "TCJ transactional outbox consumer passed",
+            ])
+        if consumer["name"] == "Sagas.SqlServer.Console":
+            require_text(program, [
+                "SagaCorrelationKey.From",
+                "TcjSagaOptions",
+                "SagaModelBuilderExtensions",
+                "SqlServerSagaModelBuilderExtensions",
+                "[redacted-correlation]",
+                "TCJ durable Saga SQL Server consumer passed",
             ])
     required_combinations = {
         ("TCJ.Core",),

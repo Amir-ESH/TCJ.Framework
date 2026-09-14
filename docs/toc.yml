@@ -23,12 +23,20 @@
     href: packages/tcj-messaging-azure-service-bus.md
   - name: TCJ.Messaging.Kafka
     href: packages/tcj-messaging-kafka.md
+  - name: TCJ.Messaging.Sagas
+    href: packages/tcj-messaging-sagas.md
+  - name: TCJ.Messaging.Sagas.EntityFrameworkCore
+    href: packages/tcj-messaging-sagas-entityframeworkcore.md
+  - name: TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer
+    href: packages/tcj-messaging-sagas-entityframeworkcore-sqlserver.md
 - name: Product Guides
   items:
   - name: Result and HTTP
     href: guides/results-and-http.md
   - name: Domain Events
     href: guides/domain-events.md
+  - name: Durable Saga orchestration
+    href: messaging-sagas.md
   - name: Specifications and Repositories
     href: guides/specifications-and-repositories.md
   - name: Auditing, Soft Delete, and Rowversion

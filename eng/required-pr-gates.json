@@ -43,7 +43,8 @@
       "performance",
       "azure_service_bus",
       "kafka",
-      "messaging_compatibility"
+      "messaging_compatibility",
+      "sagas"
     ]
   },
   "gates": {
@@ -411,6 +412,46 @@
         "tests/TCJ.Inbox.Tests/**",
         "tests/TCJ.Outbox.Tests/**",
         "eng/azure-service-bus-emulator/**"
+      ]
+    },
+    "sagas": {
+      "workflow": ".github/workflows/sagas.yml",
+      "paths": [
+        "src/TCJ.EntityFrameworkCore.SqlServer/**",
+        "src/TCJ.EntityFrameworkCore/**",
+        "src/TCJ.Messaging/**",
+        "src/TCJ.Core/**",
+        "src/TCJ.Messaging.Sagas*/**",
+        "src/TCJ.EntityFrameworkCore/Inbox/**",
+        "src/TCJ.EntityFrameworkCore/Outbox/**",
+        "tests/TCJ.Messaging.Sagas*/**",
+        "tests/TCJ.Messaging.CompatibilityTests/**",
+        "compatibility/Consumers/Sagas.SqlServer.Console/**",
+        "upgrade-tests/Scenarios/SagaConsumer/**",
+        "eng/sagas-*.json",
+        "eng/verify-sagas.py",
+        "eng/tests/test_verify_sagas.py",
+        "docs/messaging-sagas.md",
+        "docs/nuget/TCJ.Messaging.Sagas*.md",
+        ".github/workflows/sagas.yml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release-preflight.yml",
+        ".github/workflows/release.yml",
+        ".github/workflows/concurrency-stress.yml",
+        ".github/workflows/resilience.yml",
+        ".github/workflows/published-package-smoke.yml",
+        "eng/architecture-policy.json",
+        "eng/release-manifest.json",
+        "eng/sbom-policy.json",
+        "eng/aot-policy.json",
+        "eng/reproducibility-policy.json",
+        "eng/compatibility-policy.json",
+        "eng/upgrade-compatibility-policy.json",
+        "eng/messaging-compatibility-policy.json",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        "TCJ.slnx"
       ]
     }
   }

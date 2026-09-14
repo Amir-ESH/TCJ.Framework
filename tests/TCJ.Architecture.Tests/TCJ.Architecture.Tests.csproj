@@ -19,5 +19,8 @@
     <ProjectReference Include="..\..\src\TCJ.Messaging.RabbitMQ\TCJ.Messaging.RabbitMQ.csproj" />
     <ProjectReference Include="..\..\src\TCJ.Messaging.AzureServiceBus\TCJ.Messaging.AzureServiceBus.csproj" />
     <ProjectReference Include="..\..\src\TCJ.Messaging.Kafka\TCJ.Messaging.Kafka.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging.Sagas\TCJ.Messaging.Sagas.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging.Sagas.EntityFrameworkCore\TCJ.Messaging.Sagas.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer\TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.csproj" />
   </ItemGroup>
 </Project>

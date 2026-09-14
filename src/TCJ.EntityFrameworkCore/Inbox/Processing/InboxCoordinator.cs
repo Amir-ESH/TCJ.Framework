@@ -417,8 +417,10 @@ internal sealed class InboxCoordinator<TDbContext> : IInboxPipeline, IInboxDefer
         if (exception is JsonException) return InboxFailureType.PermanentDeserialization;
         if (exception is OperationCanceledException) return InboxFailureType.Canceled;
         if (exception is TimeoutException) return InboxFailureType.Timeout;
+        if (exception is DbUpdateConcurrencyException) return InboxFailureType.ConcurrencyConflict;
         for (Exception? current = exception; current is not null; current = current.InnerException)
         {
+            if (current is DbUpdateConcurrencyException) return InboxFailureType.ConcurrencyConflict;
             if (detector.IsTransient(current)) return current is TimeoutException ? InboxFailureType.Timeout : InboxFailureType.TransientInfrastructure;
         }
         if (exception.GetType().Name.Contains("Validation", StringComparison.Ordinal)) return InboxFailureType.PermanentValidation;

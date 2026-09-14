@@ -178,6 +178,9 @@ jobs:
       - name: Validate transport-neutral messaging configuration
         run: python3 eng/verify-messaging.py validate-config
 
+      - name: Validate durable Saga orchestration configuration
+        run: python3 eng/verify-sagas.py validate-config
+
       - name: Verify Native AOT policy and release wiring
         run: python3 eng/verify-aot.py verify
 

@@ -1,6 +1,6 @@
 # Packages
 
-The `0.1.0-preview.5` development line contains nine runtime packages plus the analyzer-only `TCJ.Generators` compile-time tooling package. Each package page describes its installation or consumption model, target framework or tooling boundary, namespaces, primary entry points, and related guides.
+The `0.1.0-preview.5` development line contains twelve runtime packages plus the analyzer-only `TCJ.Generators` compile-time tooling package. Each package page describes its installation or consumption model, target framework or tooling boundary, namespaces, primary entry points, and related guides.
 
 - [TCJ.Core](tcj-core.md)
 - [TCJ.DependencyInjection](tcj-dependencyinjection.md)
@@ -11,4 +11,7 @@ The `0.1.0-preview.5` development line contains nine runtime packages plus the a
 - [TCJ.Messaging.RabbitMQ](tcj-messaging-rabbitmq.md) — production RabbitMQ transport adapter for TCJ Messaging
 - [TCJ.Messaging.AzureServiceBus](tcj-messaging-azure-service-bus.md) — production Azure Service Bus transport adapter for TCJ Messaging
 - [TCJ.Messaging.Kafka](tcj-messaging-kafka.md) — production Apache Kafka transport adapter for TCJ Messaging
+- [TCJ.Messaging.Sagas](tcj-messaging-sagas.md) — transport-neutral durable Saga / Process Manager contracts
+- [TCJ.Messaging.Sagas.EntityFrameworkCore](tcj-messaging-sagas-entityframeworkcore.md) — provider-neutral EF Core Saga persistence and Inbox/Outbox transaction integration
+- [TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer](tcj-messaging-sagas-entityframeworkcore-sqlserver.md) — SQL Server rowversion, correlation uniqueness, and atomic timer leases
 - [TCJ.Generators](TCJ.Generators.md) — compile-time tooling only

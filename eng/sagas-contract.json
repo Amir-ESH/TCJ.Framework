@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "packageIds": [
+    "TCJ.Messaging.Sagas",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer"
+  ],
+  "statuses": ["Active", "Completed", "Failed", "Compensating", "Compensated"],
+  "transactionOwnership": {
+    "externalMessages": "existing-transactional-inbox",
+    "requiresSameDbContext": true,
+    "sagaCreatesNestedTransaction": false,
+    "durableOutput": "existing-outbox-compatible-domain-events",
+    "directBrokerPublishDefault": false
+  },
+  "correlation": {
+    "supportedKeyTypes": ["Guid", "string", "long", "int"],
+    "stringComparison": "OrdinalCaseSensitive",
+    "implicitTrimming": false,
+    "persistRawValue": false,
+    "activeUniqueness": "database-constraint"
+  },
+  "versioning": {
+    "definitionVersionRequiredPositive": true,
+    "stateSchemaVersionRequiredPositive": true,
+    "stableSagaTypeRequired": true,
+    "assemblyQualifiedTypeNamesPersisted": false,
+    "explicitStateMigrators": true,
+    "migrationTransactional": true
+  },
+  "concurrency": {
+    "model": "optimistic",
+    "sqlServerToken": "rowversion",
+    "inboxFailureType": "ConcurrencyConflict",
+    "sameTransactionRetryLoop": false
+  },
+  "timers": {
+    "scope": "saga-owned-deadlines-only",
+    "storage": "application-database",
+    "claiming": "sqlserver-atomic-lease",
+    "nativeBrokerSchedulingRequired": false,
+    "boundedRetries": true
+  },
+  "retryClassifications": {
+    "retryable": ["SagaRetryException", "DbUpdateConcurrencyException"],
+    "sameFailedTransactionHandlerRerun": false,
+    "bounded": true
+  },
+  "compensation": {
+    "explicit": true,
+    "semantic": "new-business-action-not-rollback",
+    "durable": true,
+    "boundedRetries": true,
+    "automaticRemoteRollback": false
+  },
+  "telemetry": {
+    "activitySource": "TCJ.Messaging.Sagas",
+    "metricPrefix": "tcj.saga.",
+    "allowsSagaIdDimension": false,
+    "allowsStatePayload": false,
+    "allowsCorrelationValue": false
+  },
+  "health": {
+    "readiness": "tcj.saga.readiness",
+    "liveness": "tcj.saga.liveness",
+    "failedBusinessSagaFailsReadinessByDefault": false,
+    "payloadsInOutput": false
+  },
+  "retentionAndRemediation": {
+    "cleanupBounded": true,
+    "activeSagaCleanupAllowed": false,
+    "activeTimerCleanupAllowed": false,
+    "pendingCompensationCleanupAllowed": false,
+    "remediationUsesCurrentDurableState": true,
+    "eventSourcingReplayGuaranteed": false
+  },
+  "claims": {
+    "distributedAcid": false,
+    "globalExactlyOnce": false,
+    "automaticRemoteRollback": false,
+    "generalPurposeScheduler": false,
+    "eventSourcingReplay": false
+  }
+}

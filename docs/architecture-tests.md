@@ -1,6 +1,6 @@
 # Architecture tests and module dependency rules
 
-TCJ Framework has nine runtime packages with intentionally one-way dependencies, plus the analyzer-only `TCJ.Generators` compile-time tooling package. Compiler checks prove that code builds; architecture tests prove that runtime code still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
+TCJ Framework has twelve runtime packages with intentionally one-way dependencies, plus the analyzer-only `TCJ.Generators` compile-time tooling package. Compiler checks prove that code builds; architecture tests prove that runtime code still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
 
 The executable policy is stored in `eng/architecture-policy.json` (repository path: `eng/architecture-policy.json`). The test implementation lives in `tests/TCJ.Architecture.Tests` (repository path: `tests/TCJ.Architecture.Tests`).
 
@@ -14,6 +14,9 @@ The executable policy is stored in `eng/architecture-policy.json` (repository pa
 | `TCJ.EntityFrameworkCore.SqlServer` | SQL Server provider registration, retry options, and SQL Server model conventions. |
 | `TCJ.AspNetCore` | HTTP result mapping, Problem Details, exception handling, current-user resolution, middleware/application integration, and ASP.NET Core options. |
 | `TCJ.Messaging` | Broker-neutral message envelopes, serialization, publishing/receiving contracts, Inbox/Outbox bridges, adapter capabilities, topology naming, telemetry, health checks, and the non-durable in-memory test transport. |
+| `TCJ.Messaging.Sagas` | Transport-neutral durable Saga contracts, lifecycle, policies, timers, compensation/remediation abstractions, diagnostics, and state migration contracts. |
+| `TCJ.Messaging.Sagas.EntityFrameworkCore` | Provider-neutral Saga persistence, explicit definitions, Inbox/Outbox transaction integration, state migration, timers, health, cleanup, and remediation. |
+| `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer` | SQL Server Saga `rowversion`, active-correlation uniqueness, and atomic lease-based timer claiming. |
 
 ## Approved dependency graph
 
@@ -37,6 +40,12 @@ TCJ.AspNetCore
 TCJ.Core
     ↑
 TCJ.Messaging
+    ↑
+TCJ.Messaging.Sagas
+    ↑
+TCJ.Messaging.Sagas.EntityFrameworkCore
+    ↑
+TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer
 ```
 
 A project may use a subset of its approved lower-level dependencies. It may not reference a higher-level package. The current direct project references are checked from the production `csproj` files, while compiled assembly references are checked from the built outputs.
@@ -48,7 +57,11 @@ The following directions are forbidden:
 - `TCJ.EntityFrameworkCore` to SQL Server, ASP.NET Core, or Messaging modules;
 - `TCJ.EntityFrameworkCore.SqlServer` to `TCJ.AspNetCore` or `TCJ.Messaging`;
 - `TCJ.AspNetCore` to SQL Server-specific or Messaging modules;
-- `TCJ.Messaging` to dependency-injection, EF Core, SQL Server, or ASP.NET Core TCJ modules;
+- `TCJ.Messaging` to dependency-injection, EF Core, SQL Server, ASP.NET Core, or Saga modules;
+- existing non-Saga packages to any Saga package;
+- `TCJ.Messaging.Sagas` to EF Core, SQL Server, ASP.NET Core, or broker SDK packages;
+- `TCJ.Messaging.Sagas.EntityFrameworkCore` to SQL Server-specific or broker SDK packages;
+- `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer` to broker SDK or ASP.NET Core packages;
 - any dependency cycle between production modules.
 
 Provider-independent projects also reject SQL Server package references. Core and dependency-injection modules reject EF Core and ASP.NET Core infrastructure references. `TCJ.Messaging` additionally rejects broker SDK dependencies and infrastructure types from its public API.
@@ -64,6 +77,9 @@ TCJ.EntityFrameworkCore.*
 TCJ.EntityFrameworkCore.SqlServer.*
 TCJ.AspNetCore.*
 TCJ.Messaging.*
+TCJ.Messaging.Sagas.*
+TCJ.Messaging.Sagas.EntityFrameworkCore.*
+TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.*
 ```
 
 A type compiled into one package cannot be declared under another package root. Compiler-generated implementation types, including generated regular-expression runners and collection-expression helpers, are excluded because they do not represent source-owned package namespaces. Types under an `Internal` namespace cannot be public. Test-only namespaces and test-fixture naming are rejected in production assemblies.
@@ -79,6 +95,9 @@ The tests reject public contracts that expose infrastructure forbidden for their
 - SQL Server or ASP.NET Core types leaking from provider-independent EF Core contracts;
 - EF Core or SQL Server types leaking from `TCJ.AspNetCore`;
 - broker SDK, EF Core, SQL Server, or ASP.NET Core types leaking from `TCJ.Messaging`;
+- EF Core, SQL Server, ASP.NET Core, or broker SDK types leaking from `TCJ.Messaging.Sagas`;
+- SQL Server or broker SDK types leaking from `TCJ.Messaging.Sagas.EntityFrameworkCore`;
+- broker SDK or ASP.NET Core types leaking from `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer`;
 - public interfaces exposing concrete TCJ implementation classes.
 
 This complements package compatibility validation: API compatibility detects accidental binary breaks, while architecture tests detect an API that is technically compatible but placed in the wrong layer.
@@ -88,7 +107,7 @@ This complements package compatibility validation: API compatibility detects acc
 The initial suite enforces only patterns already established by the repository:
 
 - containers with extension methods are static and end with `Extensions`; established fluent guard containers such as `TCJ.Core.Guards.Check` and the explicit messaging registration container are policy-approved exceptions/containers;
-- public option types are explicitly listed in `approvedPublicOptionTypes`; `TCJ.Core.Diagnostics.TcjTelemetryOptions` is approved because the observability contract adds the cross-package, backend-neutral observability configuration contract; `TCJ.Core.Inbox.TcjInboxOptions` is approved because Step 45 adds provider-neutral transactional Inbox configuration owned by `TCJ.Core`; `TCJ.Messaging.Configuration.TcjMessagingOptions` owns bounded broker-neutral messaging configuration; `TCJ.Messaging.Receiving.RetrySettlementOptions` and `TCJ.Messaging.Receiving.DeadLetterOptions` are approved because Step 46 exposes transport-neutral retry and dead-letter settlement metadata as part of the public adapter contract;
+- public option types are explicitly listed in `approvedPublicOptionTypes`; `TCJ.Core.Diagnostics.TcjTelemetryOptions` is approved because the observability contract adds the cross-package, backend-neutral observability configuration contract; `TCJ.Core.Inbox.TcjInboxOptions` is approved because Step 45 adds provider-neutral transactional Inbox configuration owned by `TCJ.Core`; `TCJ.Messaging.Configuration.TcjMessagingOptions` owns bounded broker-neutral messaging configuration; `TCJ.Messaging.Receiving.RetrySettlementOptions` and `TCJ.Messaging.Receiving.DeadLetterOptions` are approved because Step 46 exposes transport-neutral retry and dead-letter settlement metadata as part of the public adapter contract; `TCJ.Messaging.Sagas.Configuration.TcjSagaOptions` is approved because it owns bounded transport-neutral Saga state, timer, compensation, lease, retention, and cleanup limits;
 - repository interfaces use the `I` prefix;
 - SQL Server-specific types remain in `TCJ.EntityFrameworkCore.SqlServer`;
 - ASP.NET Core middleware and exception-handler types remain in `TCJ.AspNetCore`;

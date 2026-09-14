@@ -7,6 +7,9 @@
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
+    "TCJ.Messaging.Sagas",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
     "TCJ.Messaging.AzureServiceBus",
     "TCJ.Messaging.Kafka",
     "TCJ.Messaging.RabbitMQ"
@@ -31,7 +34,7 @@
   "supportedTargetFrameworks": [
     "net10.0"
   ],
-  "minimumConsumerCount": 15,
+  "minimumConsumerCount": 20,
   "requirePackageOnlyReferences": true,
   "requireLocalPackageSource": true,
   "requireSourcePackageValidation": true,
@@ -224,12 +227,27 @@
         "TCJ.Messaging.RabbitMQ"
       ],
       "expectedOutput": "TCJ.Messaging.RabbitMQ RabbitMqInboxOutbox.Worker consumer passed"
+    },
+    {
+      "name": "Sagas.SqlServer.Console",
+      "project": "compatibility/Consumers/Sagas.SqlServer.Console/Sagas.SqlServer.Console.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.EntityFrameworkCore",
+        "TCJ.EntityFrameworkCore.SqlServer",
+        "TCJ.Messaging",
+        "TCJ.Messaging.Sagas",
+        "TCJ.Messaging.Sagas.EntityFrameworkCore",
+        "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer"
+      ],
+      "expectedOutput": "TCJ durable Saga SQL Server consumer passed"
     }
   ],
   "publishedConsumers": [
     "Core.Console",
     "AspNetCore.MinimalApi",
-    "FullStack.MinimalApi"
+    "FullStack.MinimalApi",
+    "Sagas.SqlServer.Console"
   ],
   "expectedTcjDependencies": {
     "TCJ.Core": [],
@@ -257,6 +275,18 @@
     ],
     "TCJ.Messaging.RabbitMQ": [
       "TCJ.Messaging"
+    ],
+    "TCJ.Messaging.Sagas": [
+      "TCJ.Core",
+      "TCJ.Messaging"
+    ],
+    "TCJ.Messaging.Sagas.EntityFrameworkCore": [
+      "TCJ.EntityFrameworkCore",
+      "TCJ.Messaging.Sagas"
+    ],
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer": [
+      "TCJ.EntityFrameworkCore.SqlServer",
+      "TCJ.Messaging.Sagas.EntityFrameworkCore"
     ]
   }
 }

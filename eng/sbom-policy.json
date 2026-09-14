@@ -26,6 +26,15 @@
         "id": "TCJ.Messaging"
       },
       {
+        "id": "TCJ.Messaging.Sagas"
+      },
+      {
+        "id": "TCJ.Messaging.Sagas.EntityFrameworkCore"
+      },
+      {
+        "id": "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer"
+      },
+      {
         "id": "TCJ.Messaging.RabbitMQ"
       },
       {

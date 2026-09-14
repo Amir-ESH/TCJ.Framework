@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TCJ.Core" Version="$(TCJCompatibilityVersion)" />
+    <PackageReference Include="TCJ.EntityFrameworkCore" Version="$(TCJCompatibilityVersion)" />
+    <PackageReference Include="TCJ.EntityFrameworkCore.SqlServer" Version="$(TCJCompatibilityVersion)" />
+    <PackageReference Include="TCJ.Messaging" Version="$(TCJCompatibilityVersion)" />
+    <PackageReference Include="TCJ.Messaging.Sagas" Version="$(TCJCompatibilityVersion)" />
+    <PackageReference Include="TCJ.Messaging.Sagas.EntityFrameworkCore" Version="$(TCJCompatibilityVersion)" />
+    <PackageReference Include="TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer" Version="$(TCJCompatibilityVersion)" />
+  </ItemGroup>
+</Project>

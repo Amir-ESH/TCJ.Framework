@@ -190,6 +190,9 @@ class MessagingCompatibilityConfigurationTests(unittest.TestCase):
     def test_missing_transport(self):
         self.check_mutation(VERIFIER.CONTRACT, lambda p: p["transports"].pop("Kafka"))
 
+    def test_saga_packages_are_explicit_non_adapters(self):
+        self.check_mutation(VERIFIER.POLICY, lambda p: p["nonAdapterPackages"].remove("TCJ.Messaging.Sagas"))
+
     def test_adapter_contract_mismatch(self):
         self.check_mutation(VERIFIER.CONTRACT, lambda p: p["transports"]["Kafka"]["descriptorCapabilities"].update(SupportsScheduling=True))
 

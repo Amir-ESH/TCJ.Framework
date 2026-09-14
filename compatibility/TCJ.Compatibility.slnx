@@ -19,5 +19,6 @@
     <Project Path="Consumers/RabbitMqPublisher.Console/RabbitMqPublisher.Console.csproj" />
     <Project Path="Consumers/RabbitMqConsumer.Worker/RabbitMqConsumer.Worker.csproj" />
     <Project Path="Consumers/RabbitMqInboxOutbox.Worker/RabbitMqInboxOutbox.Worker.csproj" />
+    <Project Path="Consumers/Sagas.SqlServer.Console/Sagas.SqlServer.Console.csproj" />
   </Folder>
 </Solution>

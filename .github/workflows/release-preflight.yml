@@ -91,8 +91,12 @@ jobs:
     name: Kafka transport gate
     uses: ./.github/workflows/kafka.yml
 
+  sagas:
+    name: Durable Saga orchestration gate
+    uses: ./.github/workflows/sagas.yml
+
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus, kafka, rabbitmq, messaging-compatibility]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus, kafka, rabbitmq, messaging-compatibility, sagas]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -117,6 +121,27 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
+
+      - name: Download commit-matched Saga evidence
+        uses: actions/download-artifact@v8
+        with:
+          name: sagas-${{ github.sha }}-${{ github.run_id }}
+          path: artifacts/sagas
+
+      - name: Verify commit-matched Saga evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY2'
+          import json
+          import os
+          from pathlib import Path
+          summary = json.loads(Path('artifacts/sagas/saga-summary.json').read_text(encoding='utf-8'))
+          sourceCommit = summary.get('sourceCommit')
+          expected = os.environ['GITHUB_SHA']
+          if sourceCommit != expected:
+              raise SystemExit(f'Saga evidence sourceCommit {sourceCommit!r} does not match {expected!r}.')
+          PY2
 
       - name: Restore repository tools
         run: dotnet tool restore
@@ -186,6 +211,9 @@ jobs:
 
       - name: Validate transport-neutral messaging configuration
         run: python3 eng/verify-messaging.py validate-config
+
+      - name: Validate durable Saga orchestration configuration
+        run: python3 eng/verify-sagas.py validate-config
 
       - name: Verify Native AOT policy and release wiring
         run: python3 eng/verify-aot.py verify

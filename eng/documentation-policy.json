@@ -7,7 +7,10 @@
     "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
-    "TCJ.Messaging"
+    "TCJ.Messaging",
+    "TCJ.Messaging.Sagas",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer"
   ],
   "projects": {
     "TCJ.Core": "src/TCJ.Core/TCJ.Core.csproj",
@@ -15,7 +18,10 @@
     "TCJ.EntityFrameworkCore": "src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj",
     "TCJ.EntityFrameworkCore.SqlServer": "src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj",
     "TCJ.AspNetCore": "src/TCJ.AspNetCore/TCJ.AspNetCore.csproj",
-    "TCJ.Messaging": "src/TCJ.Messaging/TCJ.Messaging.csproj"
+    "TCJ.Messaging": "src/TCJ.Messaging/TCJ.Messaging.csproj",
+    "TCJ.Messaging.Sagas": "src/TCJ.Messaging.Sagas/TCJ.Messaging.Sagas.csproj",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore": "src/TCJ.Messaging.Sagas.EntityFrameworkCore/TCJ.Messaging.Sagas.EntityFrameworkCore.csproj",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer": "src/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.csproj"
   },
   "packagePages": {
     "TCJ.Core": "docs/packages/tcj-core.md",
@@ -23,7 +29,10 @@
     "TCJ.EntityFrameworkCore": "docs/packages/tcj-entityframeworkcore.md",
     "TCJ.EntityFrameworkCore.SqlServer": "docs/packages/tcj-entityframeworkcore-sqlserver.md",
     "TCJ.AspNetCore": "docs/packages/tcj-aspnetcore.md",
-    "TCJ.Messaging": "docs/packages/tcj-messaging.md"
+    "TCJ.Messaging": "docs/packages/tcj-messaging.md",
+    "TCJ.Messaging.Sagas": "docs/packages/tcj-messaging-sagas.md",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore": "docs/packages/tcj-messaging-sagas-entityframeworkcore.md",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer": "docs/packages/tcj-messaging-sagas-entityframeworkcore-sqlserver.md"
   },
   "minimumPublicApiDocumentationPercent": 100.0,
   "requireTypeSummaries": true,
@@ -79,7 +88,7 @@
       "path": "docs/examples.md"
     }
   ],
-  "baselineRecordedDate": "2026-09-03",
-  "measuredPublicApiCount": 1161,
-  "measuredFullyDocumentedApiCount": 1161
+  "baselineRecordedDate": "2026-09-14",
+  "measuredPublicApiCount": 1268,
+  "measuredFullyDocumentedApiCount": 1268
 }
