@@ -46,6 +46,7 @@ internal sealed class RabbitMqTestHarness : IAsyncDisposable
     {
         await fixture.EnsureRunningAsync().ConfigureAwait(false);
         topology ??= RabbitMqTestTopology.Create();
+        string retryReturnRoutingKey = ResolveRetryReturnRoutingKey(topology.RoutingKey);
         var services = new ServiceCollection();
         services.AddTcjMessaging(options =>
         {
@@ -85,7 +86,7 @@ internal sealed class RabbitMqTestHarness : IAsyncDisposable
                 RetryQueue = topology.RetryQueue,
                 RetryRoutingKey = topology.RetryRoutingKey,
                 ReturnExchange = topology.Exchange,
-                ReturnRoutingKey = topology.RoutingKey,
+                ReturnRoutingKey = retryReturnRoutingKey,
                 DeadLetterExchange = topology.DeadLetterExchange,
                 DeadLetterQueue = topology.DeadLetterQueue,
                 DeadLetterRoutingKey = topology.DeadLetterRoutingKey,
@@ -95,9 +96,25 @@ internal sealed class RabbitMqTestHarness : IAsyncDisposable
         configureServices?.Invoke(services);
         ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
         var harness = new RabbitMqTestHarness(provider, topology);
-        if (validateStartup)
-            await provider.GetRequiredService<IMessagingStartupValidator>().ValidateAsync().ConfigureAwait(false);
-        return harness;
+        try
+        {
+            if (validateStartup)
+                await provider.GetRequiredService<IMessagingStartupValidator>().ValidateAsync().ConfigureAwait(false);
+            return harness;
+        }
+        catch
+        {
+            await harness.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    private static string ResolveRetryReturnRoutingKey(string bindingRoutingKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bindingRoutingKey);
+        return bindingRoutingKey
+            .Replace("*", "retry", StringComparison.Ordinal)
+            .Replace("#", "retry", StringComparison.Ordinal);
     }
 
     internal static TransportMessageEnvelope CreateEnvelope(

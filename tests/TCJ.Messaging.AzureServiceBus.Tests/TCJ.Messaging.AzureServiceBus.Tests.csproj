@@ -18,4 +18,5 @@
     <None Include="..\..\eng\azure-service-bus-policy.json" Link="azure-service-bus-policy.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\eng\azure-service-bus-contract.json" Link="azure-service-bus-contract.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="TCJ.Messaging.CompatibilityTests" /></ItemGroup>
 </Project>

@@ -12,6 +12,7 @@ public sealed class MessagingAdapterHarness : IAsyncDisposable
 {
     private readonly IAsyncDisposable? _asyncDisposable;
     private readonly IDisposable? _disposable;
+    private readonly CancellationTokenSource? _scenarioCancellation;
 
     public MessagingAdapterHarness(
         IMessagePublisher publisher,
@@ -21,7 +22,10 @@ public sealed class MessagingAdapterHarness : IAsyncDisposable
         IMessagingTransportHealthProbe healthProbe,
         TimeProvider timeProvider,
         string source,
-        object? lifetime = null)
+        object? lifetime = null,
+        string? publishDestination = null,
+        string? subscription = null,
+        TimeSpan? scenarioTimeout = null)
     {
         Publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         BatchPublisher = batchPublisher ?? throw new ArgumentNullException(nameof(batchPublisher));
@@ -31,6 +35,9 @@ public sealed class MessagingAdapterHarness : IAsyncDisposable
         TimeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         Source = source;
+        PublishDestination = publishDestination ?? source;
+        Subscription = subscription;
+        _scenarioCancellation = scenarioTimeout is { } timeout ? new CancellationTokenSource(timeout) : null;
         _asyncDisposable = lifetime as IAsyncDisposable;
         _disposable = lifetime as IDisposable;
     }
@@ -42,9 +49,14 @@ public sealed class MessagingAdapterHarness : IAsyncDisposable
     public IMessagingTransportHealthProbe HealthProbe { get; }
     public TimeProvider TimeProvider { get; }
     public string Source { get; }
+    public string PublishDestination { get; }
+    public string? Subscription { get; }
+    public CancellationToken ScenarioCancellation => _scenarioCancellation?.Token ?? CancellationToken.None;
 
     public async ValueTask DisposeAsync()
     {
+        _scenarioCancellation?.Cancel();
+        _scenarioCancellation?.Dispose();
         if (_asyncDisposable is not null)
         {
             await _asyncDisposable.DisposeAsync().ConfigureAwait(false);

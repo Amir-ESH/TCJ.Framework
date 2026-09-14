@@ -13,6 +13,7 @@ public sealed class RabbitMqContainerFixture : IAsyncLifetime
     private readonly string _diagnosticsDirectory;
     private RabbitMqContainer? _container;
     private bool _ready;
+    private bool _brokerReady;
 
     public RabbitMqContainerFixture()
     {
@@ -26,7 +27,7 @@ public sealed class RabbitMqContainerFixture : IAsyncLifetime
     internal int Port => _container?.GetMappedPublicPort(RabbitMqBuilder.RabbitMqPort) ?? throw new InvalidOperationException("RabbitMQ container has not started.");
     internal string UserName => _username;
     internal string Password => _password;
-    internal bool IsReady => _ready;
+    internal bool IsReady => _ready && _brokerReady;
 
     public async ValueTask InitializeAsync()
     {
@@ -52,6 +53,7 @@ public sealed class RabbitMqContainerFixture : IAsyncLifetime
         {
             _container = null;
             _ready = false;
+            _brokerReady = false;
         }
     }
 
@@ -73,12 +75,39 @@ public sealed class RabbitMqContainerFixture : IAsyncLifetime
         if (_container is null || !_ready) return;
         await _container.StopAsync(CancellationToken.None).ConfigureAwait(false);
         _ready = false;
+        _brokerReady = false;
+    }
+
+    internal async Task StopBrokerAsync(CancellationToken cancellationToken = default)
+    {
+        if (_container is null || !_ready)
+            throw new InvalidOperationException("RabbitMQ container is not running.");
+
+        await ExecuteRabbitMqCtlAsync("stop_app", cancellationToken).ConfigureAwait(false);
+        _brokerReady = false;
+    }
+
+    internal async Task StartBrokerAsync(CancellationToken cancellationToken = default)
+    {
+        if (_container is null || !_ready)
+            throw new InvalidOperationException("RabbitMQ container is not running.");
+
+        await ExecuteRabbitMqCtlAsync("start_app", cancellationToken).ConfigureAwait(false);
+        await ProbeBrokerAsync(cancellationToken).ConfigureAwait(false);
     }
 
     internal async Task EnsureRunningAsync()
     {
-        if (_ready) return;
+        if (_ready && _brokerReady) return;
         if (_container is null) throw new InvalidOperationException("RabbitMQ container has not been created.");
+
+        if (_ready)
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await StartBrokerAsync(timeout.Token).ConfigureAwait(false);
+            return;
+        }
+
         await StartAndProbeAsync().ConfigureAwait(false);
     }
 
@@ -89,16 +118,47 @@ public sealed class RabbitMqContainerFixture : IAsyncLifetime
         try
         {
             await _container.StartAsync(timeout.Token).ConfigureAwait(false);
-            await using IConnection connection = await CreateConnectionFactory().CreateConnectionAsync(timeout.Token).ConfigureAwait(false);
-            await using IChannel channel = await connection.CreateChannelAsync(cancellationToken: timeout.Token).ConfigureAwait(false);
-            _ready = connection.IsOpen && channel.IsOpen;
-            if (!_ready) throw new InvalidOperationException("RabbitMQ readiness probe did not open a connection and channel.");
+            _ready = true;
+            await ProbeBrokerAsync(timeout.Token).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
+            _ready = false;
+            _brokerReady = false;
             await WriteFailureAsync("startup", exception).ConfigureAwait(false);
             throw;
         }
+    }
+
+    private async Task ProbeBrokerAsync(CancellationToken cancellationToken)
+    {
+        await using IConnection connection = await CreateConnectionFactory()
+            .CreateConnectionAsync(cancellationToken)
+            .ConfigureAwait(false);
+        await using IChannel channel = await connection
+            .CreateChannelAsync(cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        _brokerReady = connection.IsOpen && channel.IsOpen;
+        if (!_brokerReady)
+            throw new InvalidOperationException("RabbitMQ readiness probe did not open a connection and channel.");
+    }
+
+    private async Task ExecuteRabbitMqCtlAsync(string command, CancellationToken cancellationToken)
+    {
+        if (_container is null)
+            throw new InvalidOperationException("RabbitMQ container has not been created.");
+
+        var result = await _container
+            .ExecAsync(new[] { "rabbitmqctl", command }, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (result.ExitCode == 0) return;
+
+        string details = Sanitize(result.Stderr);
+        if (details.Length > 512) details = details[..512];
+        throw new InvalidOperationException(
+            $"rabbitmqctl {command} failed with exit code {result.ExitCode}: {details}");
     }
 
     private async Task WriteContainerLogsAsync()

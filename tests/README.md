@@ -118,3 +118,7 @@ The dedicated GitHub Actions workflow runs the same suite on Linux and Windows a
 ## Azure Service Bus adapter tests
 
 `TCJ.Messaging.AzureServiceBus.Tests` contains configuration/contract tests and emulator/live integration scenarios for queues, topics/subscriptions, Peek-Lock/manual settlement, abandon/dead-letter/defer, scheduling/TTL, batching, delivery count, duplicate detection, lock renewal/loss, sessions, graceful shutdown, Inbox/Outbox bridges, telemetry, health, and sensitive-data boundaries. The suite uses unique resource names and only runs broker-required scenarios as mandatory when `TCJ_AZURE_SERVICE_BUS_REQUIRE_INTEGRATION=1`. `TCJ.Concurrency.Tests`, `TCJ.Resilience.Tests`, `TCJ.Observability.Tests`, and `TCJ.HealthChecks.Tests` also contain adapter-specific broker-independent regression coverage.
+
+## Cross-transport messaging compatibility
+
+`TCJ.Messaging.CompatibilityTests` composes the existing conformance suite and adapter test fixtures. Select `--filter "Transport=InMemory"` (or RabbitMQ, AzureServiceBus, Kafka). Set `TCJ_MESSAGING_COMPATIBILITY_RESULTS` to the absolute output directory. Broker cases require the repository pinned containers/emulator and fail when unavailable. See [execution and evidence requirements](../docs/messaging-transport-matrix.md).

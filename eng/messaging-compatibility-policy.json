@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "testProject": "tests/TCJ.Messaging.CompatibilityTests/TCJ.Messaging.CompatibilityTests.csproj",
+  "supportedTransports": [
+    "InMemory",
+    "RabbitMQ",
+    "AzureServiceBus",
+    "Kafka"
+  ],
+  "requiredScenarios": [
+    "descriptor",
+    "identity",
+    "headers",
+    "receive-cancellation",
+    "publish-telemetry",
+    "logical-body",
+    "publish-cancellation",
+    "payload-limit",
+    "batch",
+    "unsupported-options",
+    "settlement",
+    "inbox-order",
+    "inbox-failure",
+    "readiness",
+    "ordering",
+    "header-limit",
+    "outbox-retry",
+    "neutral-runner-telemetry",
+    "startup-diagnostics"
+  ],
+  "maximumEvidenceFileBytes": 16777216,
+  "sensitiveMarkers": [
+    "tcj-compat-secret",
+    "should-not-propagate",
+    "sensitive-payload",
+    "SAS_KEY_VALUE"
+  ],
+  "requireExistingConformanceSuite": true,
+  "requireAdapterSpecificValidation": true,
+  "requireCapabilityTruthfulness": true,
+  "requireUnsupportedCapabilityTests": true,
+  "requireInboxScenarios": true,
+  "requireOutboxScenarios": true,
+  "requireSettlementScenarios": true,
+  "requireOrderingScopeTests": true,
+  "requireFailureCategoryTests": true,
+  "requireObservabilityScenarios": true,
+  "requireHealthScenarios": true,
+  "requireSensitiveDataScan": true,
+  "requireMachineReadableMatrix": true,
+  "requireMarkdownMatrix": true,
+  "requirePublishedPackageEvidence": true
+}

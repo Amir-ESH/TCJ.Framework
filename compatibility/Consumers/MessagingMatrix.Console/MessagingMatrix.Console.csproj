@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsAotCompatible>false</IsAotCompatible>
+    <DefineConstants>$(DefineConstants);$(MatrixTransport)</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TCJ.Messaging" Version="$(TCJCompatibilityVersion)" />
+    <PackageReference Include="TCJ.Messaging.$(MatrixTransport)" Version="$(TCJCompatibilityVersion)" Condition="'$(MatrixTransport)' != 'InMemory'" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+  </ItemGroup>
+</Project>

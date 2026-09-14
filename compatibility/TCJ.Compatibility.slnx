@@ -16,5 +16,8 @@
     <Project Path="Consumers/AzureServiceBusSessionConsumer.Worker/AzureServiceBusSessionConsumer.Worker.csproj" />
     <Project Path="Consumers/AzureServiceBusInboxOutbox.Worker/AzureServiceBusInboxOutbox.Worker.csproj" />
     <Project Path="Consumers/KafkaPublisher.Console/KafkaPublisher.Console.csproj" />
+    <Project Path="Consumers/RabbitMqPublisher.Console/RabbitMqPublisher.Console.csproj" />
+    <Project Path="Consumers/RabbitMqConsumer.Worker/RabbitMqConsumer.Worker.csproj" />
+    <Project Path="Consumers/RabbitMqInboxOutbox.Worker/RabbitMqInboxOutbox.Worker.csproj" />
   </Folder>
 </Solution>

@@ -164,3 +164,7 @@ python3 eng/verify-messaging.py verify \
 ```
 
 Generated evidence under `TestResults/Messaging/` and `artifacts/messaging/` is CI output and is not source-controlled.
+
+## Cross-transport compatibility
+
+The [transport matrix](messaging-transport-matrix.md) maps runtime descriptors to executed neutral and adapter-specific evidence. Unsupported capabilities must fail explicitly; missing or stale results block release.

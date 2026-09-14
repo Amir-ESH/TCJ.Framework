@@ -1,0 +1,55 @@
+name: RabbitMQ transport
+
+on:
+  workflow_call:
+    inputs:
+      evidence_scope:
+        type: string
+        required: false
+        default: adapter
+  workflow_dispatch:
+  pull_request:
+    branches: [main, develop]
+    paths: ['src/TCJ.Messaging*/**', 'tests/TCJ.Messaging*/**', 'eng/*rabbitmq*', '.github/workflows/rabbitmq.yml', 'Directory.*.props', 'global.json']
+
+permissions:
+  contents: read
+
+jobs:
+  rabbitmq:
+    name: Run adapter conformance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Validate RabbitMQ policy
+        run: python3 eng/verify-rabbitmq.py validate-config
+      - name: Restore and build
+        run: |
+          dotnet restore tests/TCJ.Messaging.RabbitMQ.Tests --force-evaluate
+          dotnet build tests/TCJ.Messaging.RabbitMQ.Tests -c Release --no-restore
+      - name: Validate Inbox and Outbox
+        run: dotnet test tests/TCJ.Messaging.RabbitMQ.Tests -c Release --no-build --filter "FullyQualifiedName~Inbox|FullyQualifiedName~Outbox" --logger "trx;LogFileName=bridges.trx" --results-directory TestResults/RabbitMQ/bridges
+      - name: Validate recovery and shutdown
+        run: dotnet test tests/TCJ.Messaging.RabbitMQ.Tests -c Release --no-build --logger "trx;LogFileName=rabbitmq.trx" --results-directory TestResults/RabbitMQ/integration
+      - name: Verify evidence
+        run: python3 eng/verify-rabbitmq.py verify --results TestResults/RabbitMQ/integration --output artifacts/rabbitmq
+      - name: Bind adapter evidence to source and workflow run
+        run: python3 eng/verify-messaging-compatibility.py record-context --results TestResults/RabbitMQ
+      - name: Upload compatibility adapter evidence
+        if: inputs.evidence_scope == 'compatibility'
+        uses: actions/upload-artifact@v7
+        with:
+          name: messaging-adapter-RabbitMQ-${{ github.run_id }}
+          path: TestResults/RabbitMQ
+          if-no-files-found: error
+
+      - name: Publish summary
+        run: cat artifacts/rabbitmq/RABBITMQ_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rabbitmq-test-results-${{ github.run_id }}-${{ inputs.evidence_scope || 'adapter' }}
+          path: TestResults/RabbitMQ

@@ -16,7 +16,7 @@ internal sealed class RabbitMqMessageConsumerRunner : IMessageConsumerRunner
     private readonly MessagingConsumerState _state;
     private readonly TimeProvider _timeProvider;
 
-    internal RabbitMqMessageConsumerRunner(IMessageReceiver receiver, IServiceScopeFactory scopeFactory,
+    public RabbitMqMessageConsumerRunner(IMessageReceiver receiver, IServiceScopeFactory scopeFactory,
         IMessagingStartupValidator startupValidator, TcjRabbitMqOptions options, MessagingConsumerState state, TimeProvider timeProvider)
     {
         _receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));

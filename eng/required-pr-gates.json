@@ -42,7 +42,8 @@
       "transactional_outbox",
       "performance",
       "azure_service_bus",
-      "kafka"
+      "kafka",
+      "messaging_compatibility"
     ]
   },
   "gates": {
@@ -383,6 +384,33 @@
         "eng/tests/test_verify_kafka.py",
         ".github/workflows/kafka.yml",
         "Directory.Packages.props"
+      ]
+    },
+    "messaging_compatibility": {
+      "workflow": ".github/workflows/messaging-compatibility.yml",
+      "paths": [
+        "src/TCJ.Messaging*/**",
+        "tests/TCJ.Messaging*/**",
+        "eng/messaging-*.json",
+        "eng/*rabbitmq*",
+        "eng/*azure-service-bus*",
+        "eng/*kafka*",
+        "eng/verify-messaging*.py",
+        "eng/run-messaging-package-compatibility.py",
+        "eng/tests/test_verify_messaging_compatibility.py",
+        "compatibility/**",
+        ".github/workflows/*messaging*",
+        ".github/workflows/rabbitmq.yml",
+        ".github/workflows/azure-service-bus.yml",
+        ".github/workflows/kafka.yml",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        "TCJ.slnx",
+        "src/TCJ.Core/**",
+        "tests/TCJ.Inbox.Tests/**",
+        "tests/TCJ.Outbox.Tests/**",
+        "eng/azure-service-bus-emulator/**"
       ]
     }
   }

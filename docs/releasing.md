@@ -293,3 +293,7 @@ Release preflight and the official tag workflow invoke the reusable `outbox.yml`
 ## Azure Service Bus release gate
 
 `TCJ.Messaging.AzureServiceBus` is release-blocking once present in the release manifest. Release preflight and tag publication validate `eng/azure-service-bus-policy.json` / `eng/azure-service-bus-contract.json`, consume commit-matched adapter conformance and integration evidence, retain the sanitized summary, and block publication on contract drift or failed settlement/session/Inbox/Outbox/security checks. Post-publication smoke restores the exact NuGet package and exercises queue send/receive/complete, duplicate Inbox handling, Outbox publication, scheduled delivery, and graceful shutdown against isolated Service Bus test infrastructure.
+
+## Messaging compatibility release gate
+
+Release preflight and release require the `Messaging compatibility` reusable workflow. It accepts only commit-, source-digest-, run- and attempt-matched evidence from all four transports plus independent adapter validation and packed-package consumers. Missing capabilities, skipped tests, sensitive output or an absent adapter fail the gate. See [the transport matrix](messaging-transport-matrix.md). No live-cloud credentials are required for the standard emulator/container path.

@@ -120,6 +120,7 @@ jobs:
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
             src/TCJ.Messaging/TCJ.Messaging.csproj \
+            src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj \
             src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj \
             src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj; do
             dotnet build "$project" \
@@ -142,6 +143,7 @@ jobs:
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
             src/TCJ.Messaging/TCJ.Messaging.csproj \
+            src/TCJ.Messaging.RabbitMQ/TCJ.Messaging.RabbitMQ.csproj \
             src/TCJ.Messaging.AzureServiceBus/TCJ.Messaging.AzureServiceBus.csproj \
             src/TCJ.Messaging.Kafka/TCJ.Messaging.Kafka.csproj; do
             dotnet pack "$project" \

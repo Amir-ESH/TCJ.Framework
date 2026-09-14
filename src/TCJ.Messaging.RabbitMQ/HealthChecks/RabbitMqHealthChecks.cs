@@ -21,28 +21,31 @@ public static class TcjRabbitMqHealthCheckNames
 internal sealed class RabbitMqConnectionHealthCheck : IHealthCheck
 {
     private readonly RabbitMqConnectionManager _connections;
-    private readonly TcjRabbitMqOptions _options;
-    internal RabbitMqConnectionHealthCheck(RabbitMqConnectionManager connections, TcjRabbitMqOptions options)
-    { _connections = connections; _options = options; }
+    public RabbitMqConnectionHealthCheck(RabbitMqConnectionManager connections) => _connections = connections;
+
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(_options.ConnectionTimeout);
         try
         {
-            _ = await _connections.GetConnectionAsync(cts.Token).ConfigureAwait(false);
+            _ = await _connections.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
             return HealthCheckResult.Healthy("RabbitMQ connection is ready.");
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch { return HealthCheckResult.Unhealthy("RabbitMQ connection is not ready."); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return HealthCheckResult.Unhealthy("RabbitMQ connection is not ready.");
+        }
     }
 }
 
 internal sealed class RabbitMqPublisherHealthCheck : IHealthCheck
 {
     private readonly RabbitMqConnectionManager _connections;
-    internal RabbitMqPublisherHealthCheck(RabbitMqConnectionManager connections) => _connections = connections;
+    public RabbitMqPublisherHealthCheck(RabbitMqConnectionManager connections) => _connections = connections;
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context); cancellationToken.ThrowIfCancellationRequested();
@@ -54,7 +57,7 @@ internal sealed class RabbitMqConsumerHealthCheck : IHealthCheck
 {
     private readonly TcjMessagingOptions _messaging;
     private readonly TcjRabbitMqOptions _rabbit;
-    internal RabbitMqConsumerHealthCheck(TcjMessagingOptions messaging, TcjRabbitMqOptions rabbit) { _messaging = messaging; _rabbit = rabbit; }
+    public RabbitMqConsumerHealthCheck(TcjMessagingOptions messaging, TcjRabbitMqOptions rabbit) { _messaging = messaging; _rabbit = rabbit; }
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context); cancellationToken.ThrowIfCancellationRequested();
@@ -67,7 +70,7 @@ internal sealed class RabbitMqConsumerHealthCheck : IHealthCheck
 internal sealed class RabbitMqTopologyHealthCheck : IHealthCheck
 {
     private readonly IMessagingStartupValidator _validator;
-    internal RabbitMqTopologyHealthCheck(IMessagingStartupValidator validator) => _validator = validator;
+    public RabbitMqTopologyHealthCheck(IMessagingStartupValidator validator) => _validator = validator;
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);

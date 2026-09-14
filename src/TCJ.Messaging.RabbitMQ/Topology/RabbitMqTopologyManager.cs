@@ -11,7 +11,7 @@ internal sealed class RabbitMqTopologyManager
     private readonly RabbitMqConnectionManager _connections;
     private readonly TcjRabbitMqOptions _options;
 
-    internal RabbitMqTopologyManager(RabbitMqConnectionManager connections, TcjRabbitMqOptions options)
+    public RabbitMqTopologyManager(RabbitMqConnectionManager connections, TcjRabbitMqOptions options)
     {
         _connections = connections ?? throw new ArgumentNullException(nameof(connections));
         _options = options ?? throw new ArgumentNullException(nameof(options));

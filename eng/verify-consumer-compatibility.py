@@ -21,7 +21,7 @@ POLICY_REL = Path("eng/compatibility-policy.json")
 REQUIRED_PACKAGE_IDS = {
     "TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer", "TCJ.AspNetCore", "TCJ.Messaging",
-    "TCJ.Messaging.AzureServiceBus", "TCJ.Messaging.Kafka",
+    "TCJ.Messaging.AzureServiceBus", "TCJ.Messaging.Kafka", "TCJ.Messaging.RabbitMQ",
 }
 SEMVER_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
 WINDOWS_ABSOLUTE_PATTERN = re.compile(rb"[A-Za-z]:\\(?:Users|agent|runner|work|src|home)\\", re.IGNORECASE)

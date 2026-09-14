@@ -117,3 +117,7 @@ Before publishing an adapter:
 ## Reference production adapters
 
 `TCJ.Messaging.RabbitMQ` and `TCJ.Messaging.AzureServiceBus` are production reference implementations of the neutral adapter contract. The Azure adapter demonstrates Peek-Lock/manual settlement, scheduling, deferral, session-scoped ordering, broker-aware batching, bounded sender/client reuse, and a broker-specific policy/contract verifier without exposing Azure SDK types through `TCJ.Messaging`.
+
+## Required compatibility evidence
+
+Before release, every production adapter must pass its independent policy and integration suite, reuse `MessagingAdapterConformanceTests`, add a test-only compatibility fixture, join `eng/messaging-compatibility-contract.json`, and supply capability truthfulness evidence. Update the [transport matrix](messaging-transport-matrix.md). `Blocked` results or an absent adapter prevent release. Broker SDKs remain isolated from neutral runtime APIs.

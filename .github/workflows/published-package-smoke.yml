@@ -39,6 +39,7 @@ jobs:
 
     outputs:
       version: ${{ steps.package-version.outputs.value }}
+      messaging_matrix: ${{ steps.messaging-matrix.outputs.required }}
 
     steps:
       - name: Checkout repository
@@ -69,6 +70,21 @@ jobs:
           --version "${{ steps.package-version.outputs.value }}"
           --wait-seconds 900
           --interval-seconds 30
+
+      - name: Preserve the historical published package set
+        id: messaging-matrix
+        env:
+          TARGET_VERSION: ${{ steps.package-version.outputs.value }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          published = json.load(open('eng/published-release.json'))
+          expected = {'TCJ.Messaging', 'TCJ.Messaging.RabbitMQ', 'TCJ.Messaging.AzureServiceBus', 'TCJ.Messaging.Kafka'}
+          historical = os.environ['TARGET_VERSION'] == published['version']
+          package_ids = {item['id'] for item in published['releasePackages']['runtime']}
+          required = not historical or expected <= package_ids
+          print('required=' + str(required).lower())
+          PY
 
       - name: Upload downloaded packages
         uses: actions/upload-artifact@v7
@@ -407,3 +423,19 @@ jobs:
             artifacts/upgrade-compatibility/report/**
           if-no-files-found: warn
           retention-days: 7
+
+  messaging-package-descriptors:
+    name: Published TCJ.Messaging.RabbitMQ and transport compatibility
+    needs: verify-publication
+    if: needs.verify-publication.outputs.messaging_matrix == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.version && github.sha || 'develop' }}
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Validate published transport packages
+        run: python3 eng/run-messaging-package-compatibility.py --version "${{ needs.verify-publication.outputs.version }}" --source https://api.nuget.org/v3/index.json --output TestResults/MessagingCompatibility/published-packages

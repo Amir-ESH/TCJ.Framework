@@ -95,3 +95,6 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [Validated consumer examples](examples.md)
 
 The generated `artifacts/documentation/api/` and `artifacts/documentation/site/` directories are workflow outputs and must not be committed.
+
+- [Messaging transport compatibility matrix](messaging-transport-matrix.md)
+- [RabbitMQ transport](messaging-rabbitmq.md)

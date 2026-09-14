@@ -20,6 +20,7 @@
     "tests/TCJ.EntityFrameworkCore.NativeAotExperimental/TCJ.EntityFrameworkCore.NativeAotExperimental.csproj",
     "tests/TCJ.AspNetCore.IntegrationTests/TCJ.AspNetCore.IntegrationTests.csproj",
     "tests/TCJ.AspNetCore.NativeAotSmoke/TCJ.AspNetCore.NativeAotSmoke.csproj",
-    "tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj"
+    "tests/TCJ.Concurrency.Tests/TCJ.Concurrency.Tests.csproj",
+    "tests/TCJ.Messaging.CompatibilityTests/TCJ.Messaging.CompatibilityTests.csproj"
   ]
 }

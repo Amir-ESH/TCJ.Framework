@@ -207,3 +207,12 @@ This checklist prepares the next preview, currently `0.1.0-preview.5`. Do not cr
 - [ ] Published-package smoke restores the exact released adapter and validates queue publish/receive/complete, Inbox duplicate handling, Outbox publication, scheduled delivery, and graceful shutdown.
 - [ ] Azure Service Bus credentials, payloads, raw application properties, message IDs, and session IDs are absent from release diagnostics.
 - [ ] No global exactly-once or cross-session ordering guarantee is claimed.
+
+## Messaging compatibility
+
+- [ ] Independent RabbitMQ, Azure Service Bus and Kafka validation succeeds.
+- [ ] All required transports have commit- and workflow-run-matched compatibility evidence.
+- [ ] Declared capability, settlement and ordering semantics match executed tests.
+- [ ] Packed-package descriptors and neutral publish/receive pass with verified versions and sources.
+- [ ] Sensitive-data scanning succeeds for inputs and generated matrix reports.
+- [ ] The aggregate compatibility matrix passes before release.
