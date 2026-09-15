@@ -329,6 +329,19 @@ def validate_config() -> tuple[dict[str, Any], dict[str, Any]]:
     require_text(ROOT / ".github/workflows/required-pr-gate.yml", "sagas.yml")
     require_text(ROOT / ".github/workflows/concurrency-stress.yml", "TCJ.Messaging.Sagas.SqlServer.Tests")
     require_text(ROOT / ".github/workflows/resilience.yml", "TCJ.Messaging.Sagas.SqlServer.Tests")
+    require_text(
+        ROOT / ".github/workflows/consumer-compatibility.yml",
+        "src/TCJ.Messaging.Sagas/TCJ.Messaging.Sagas.csproj",
+        "src/TCJ.Messaging.Sagas.EntityFrameworkCore/TCJ.Messaging.Sagas.EntityFrameworkCore.csproj",
+        "src/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.csproj",
+    )
+    require_text(
+        ROOT / ".github/workflows/upgrade-compatibility.yml",
+        "src/TCJ.Messaging.Sagas/TCJ.Messaging.Sagas.csproj",
+        "src/TCJ.Messaging.Sagas.EntityFrameworkCore/TCJ.Messaging.Sagas.EntityFrameworkCore.csproj",
+        "src/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.csproj",
+        "TCJ.Messaging.Sagas TCJ.Messaging.Sagas.EntityFrameworkCore TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
+    )
     require_text(ROOT / ".github/workflows/published-package-smoke.yml", "saga-smoke", "EnableSagaSmoke")
     require_text(ROOT / "smoke/TCJ.PublishedPackages.SmokeTest/TCJ.PublishedPackages.SmokeTest.csproj", "EnableSagaSmoke", "TCJ.Messaging.Sagas")
     require_text(ROOT / "smoke/TCJ.PublishedPackages.SmokeTest/Program.cs", "TCJ_SAGA_SMOKE", "SagaCorrelationKey", "TcjSagaOptions")
