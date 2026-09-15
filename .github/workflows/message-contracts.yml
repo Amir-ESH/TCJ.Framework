@@ -1,0 +1,119 @@
+name: Message contract governance
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, develop]
+    paths: &paths
+      - 'src/TCJ.Messaging/**'
+      - 'src/TCJ.Messaging.Contracts/**'
+      - 'tests/TCJ.Messaging.Tests/**'
+      - 'tests/TCJ.Messaging.Contracts.Tests/**'
+      - 'eng/TCJ.MessageContracts.Tool/**'
+      - 'eng/message-contract-*.json'
+      - 'eng/verify-message-contracts.py'
+      - 'eng/tests/test_verify_message_contracts.py'
+      - 'eng/architecture-policy.json'
+      - 'eng/release-manifest.json'
+      - 'eng/sbom-policy.json'
+      - 'eng/aot-policy.json'
+      - 'eng/reproducibility-policy.json'
+      - 'eng/compatibility-policy.json'
+      - 'eng/upgrade-compatibility-policy.json'
+      - 'compatibility/Consumers/MessageContracts.Console/**'
+      - 'upgrade-tests/Scenarios/MessageContractsConsumer/**'
+      - 'upgrade-tests/Expected/MessageContractsConsumer.json'
+      - 'docs/message-contract-governance.md'
+      - 'docs/nuget/TCJ.Messaging.Contracts.md'
+      - '.github/workflows/message-contracts.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/release-preflight.yml'
+      - '.github/workflows/release.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'TCJ.slnx'
+  push:
+    branches: [main, develop]
+    paths: *paths
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  validate:
+    name: Schema, compatibility, examples and security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Validate governance policy and verifier tests
+        run: |
+          python3 -m unittest eng.tests.test_verify_message_contracts
+          python3 eng/verify-message-contracts.py validate-config
+      - name: Restore governance projects
+        run: |
+          dotnet restore tests/TCJ.Messaging.Contracts.Tests/TCJ.Messaging.Contracts.Tests.csproj --force-evaluate
+          dotnet restore eng/TCJ.MessageContracts.Tool/TCJ.MessageContracts.Tool.csproj --force-evaluate
+      - name: Build governance package, tests, and repository tool
+        run: |
+          dotnet build tests/TCJ.Messaging.Contracts.Tests/TCJ.Messaging.Contracts.Tests.csproj -c Release --no-restore
+          dotnet build eng/TCJ.MessageContracts.Tool/TCJ.MessageContracts.Tool.csproj -c Release --no-restore
+      - name: Run governance and runtime-regression tests
+        run: |
+          dotnet test tests/TCJ.Messaging.Contracts.Tests/TCJ.Messaging.Contracts.Tests.csproj -c Release --no-build --logger "trx;LogFileName=message-contracts.trx" --results-directory TestResults/MessageContracts/governance
+          dotnet test tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj -c Release --logger "trx;LogFileName=messaging-regression.trx" --results-directory TestResults/MessageContracts/runtime
+      - name: Verify deterministic artifact generation and compatibility direction
+        run: dotnet run --project eng/TCJ.MessageContracts.Tool/TCJ.MessageContracts.Tool.csproj -c Release --no-build -- verify --output artifacts/message-contracts/generated
+      - name: Pack package-only consumer inputs
+        run: |
+          version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          for package in TCJ.Core TCJ.Messaging TCJ.Messaging.Contracts; do
+            dotnet pack "src/$package/$package.csproj" -c Release -o artifacts/message-contracts/packages
+          done
+          dotnet restore compatibility/Consumers/MessageContracts.Console/MessageContracts.Console.csproj \
+            -p:TCJCompatibilityVersion="$version" \
+            --source artifacts/message-contracts/packages \
+            --source https://api.nuget.org/v3/index.json
+          dotnet run --project compatibility/Consumers/MessageContracts.Console/MessageContracts.Console.csproj \
+            -c Release --no-restore -p:TCJCompatibilityVersion="$version"
+          TCJ_MESSAGE_CONTRACT_PACKAGE_VERSION="$version" python3 - <<'PY2'
+          import json
+          import os
+          from pathlib import Path
+          path = Path("artifacts/message-contracts/package-consumer-evidence.json")
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps({
+              "schemaVersion": 1,
+              "sourceCommit": os.environ["GITHUB_SHA"].lower(),
+              "packageId": "TCJ.Messaging.Contracts",
+              "packageVersion": os.environ["TCJ_MESSAGE_CONTRACT_PACKAGE_VERSION"],
+              "status": "passed"
+          }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY2
+      - name: Aggregate commit-bound governance evidence
+        run: >
+          python3 eng/verify-message-contracts.py verify
+          --results TestResults/MessageContracts
+          --output artifacts/message-contracts/generated
+          --source-commit "$GITHUB_SHA"
+          --package-consumer-evidence artifacts/message-contracts/package-consumer-evidence.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: message-contracts-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            artifacts/message-contracts/generated/message-contract-evidence.json
+            artifacts/message-contracts/package-consumer-evidence.json
+            artifacts/message-contracts/generated/run-a/manifest.json
+            artifacts/message-contracts/generated/run-b/manifest.json
+            TestResults/MessageContracts/**/*.trx
+          if-no-files-found: error

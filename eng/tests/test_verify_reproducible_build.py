@@ -31,6 +31,7 @@ PACKAGES = [
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
+    "TCJ.Messaging.Contracts",
     "TCJ.Messaging.Sagas",
     "TCJ.Messaging.Sagas.EntityFrameworkCore",
     "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
@@ -279,8 +280,8 @@ class ReproducibleBuildTests(unittest.TestCase):
         summary = self.fixture.compare()
         self.assertEqual("PASS", summary.status)
         self.assertTrue(summary.archiveByteEquality)
-        self.assertEqual(13, summary.comparedNupkgCount)
-        self.assertEqual(12, summary.comparedSnupkgCount)
+        self.assertEqual(14, summary.comparedNupkgCount)
+        self.assertEqual(13, summary.comparedSnupkgCount)
 
     def test_symbol_packages_without_physical_source_entries_pass(self) -> None:
         self.fixture.create_set(self.fixture.build_a, include_source_files=False)

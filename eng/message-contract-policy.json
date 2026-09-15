@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "manifestSchemaVersion": 1,
+  "jsonSchemaDraft": "https://json-schema.org/draft/2020-12/schema",
+  "canonicalizationVersion": 1,
+  "fingerprintAlgorithm": "SHA-256",
+  "supportedCompatibilityModes": [
+    "None",
+    "Backward",
+    "Forward",
+    "Full",
+    "BackwardTransitive",
+    "ForwardTransitive",
+    "FullTransitive"
+  ],
+  "compatibilityResults": ["Compatible", "Breaking", "ReviewRequired"],
+  "reviewRequiredBehavior": "FailUnlessExplicitlyReviewed",
+  "publishedVersionImmutability": true,
+  "requiredExamplesForPublicIntegrationContracts": 1,
+  "maximumPayloadBytes": 16777216,
+  "maximumManifestBytes": 16777216,
+  "maximumContractsPerManifest": 10000,
+  "requireUpcasterGraphValidation": true,
+  "requireRepresentativeUpcasterExamples": true,
+  "dataClassifications": ["Public", "Internal", "Personal", "Confidential", "SecretProhibited"],
+  "secretProhibitedBehavior": "Fail",
+  "runtimeRegistryPackage": "TCJ.Messaging",
+  "governancePackage": "TCJ.Messaging.Contracts",
+  "requiredPaths": [
+    "src/TCJ.Messaging.Contracts/TCJ.Messaging.Contracts.csproj",
+    "src/TCJ.Messaging.Contracts/Artifacts/MessageContractArtifactGenerator.cs",
+    "src/TCJ.Messaging.Contracts/Artifacts/MessageContractArtifactPath.cs",
+    "src/TCJ.Messaging.Contracts/Artifacts/MessageContractManifestSerializer.cs",
+    "src/TCJ.Messaging.Contracts/Artifacts/MessageContractModels.cs",
+    "tests/TCJ.Messaging.Contracts.Tests/TCJ.Messaging.Contracts.Tests.csproj",
+    "eng/TCJ.MessageContracts.Tool/TCJ.MessageContracts.Tool.csproj",
+    "eng/message-contract-policy.json",
+    "eng/message-contract-governance-contract.json",
+    "eng/verify-message-contracts.py",
+    ".github/workflows/message-contracts.yml",
+    "docs/message-contract-governance.md",
+    "docs/nuget/TCJ.Messaging.Contracts.md"
+  ],
+  "requiredWorkflowIntegrations": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/release-preflight.yml",
+    ".github/workflows/release.yml"
+  ],
+  "generatedOutputRoots": [
+    "artifacts/message-contracts",
+    "TestResults/MessageContracts"
+  ]
+}

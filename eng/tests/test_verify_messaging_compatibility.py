@@ -193,6 +193,9 @@ class MessagingCompatibilityConfigurationTests(unittest.TestCase):
     def test_saga_packages_are_explicit_non_adapters(self):
         self.check_mutation(VERIFIER.POLICY, lambda p: p["nonAdapterPackages"].remove("TCJ.Messaging.Sagas"))
 
+    def test_contract_governance_package_is_explicit_non_adapter(self):
+        self.check_mutation(VERIFIER.POLICY, lambda p: p["nonAdapterPackages"].remove("TCJ.Messaging.Contracts"))
+
     def test_adapter_contract_mismatch(self):
         self.check_mutation(VERIFIER.CONTRACT, lambda p: p["transports"]["Kafka"]["descriptorCapabilities"].update(SupportsScheduling=True))
 

@@ -60,6 +60,7 @@ class NuGetPackageIdPolicyTests(unittest.TestCase):
                 "TCJ.EntityFrameworkCore.SqlServer",
                 "TCJ.AspNetCore",
                 "TCJ.Messaging",
+                "TCJ.Messaging.Contracts",
                 "TCJ.Messaging.Sagas",
                 "TCJ.Messaging.Sagas.EntityFrameworkCore",
                 "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
@@ -71,6 +72,7 @@ class NuGetPackageIdPolicyTests(unittest.TestCase):
         )
         target_only = {
             "TCJ.Messaging",
+            "TCJ.Messaging.Contracts",
             "TCJ.Messaging.Sagas",
             "TCJ.Messaging.Sagas.EntityFrameworkCore",
             "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",

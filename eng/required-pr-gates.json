@@ -44,7 +44,8 @@
       "azure_service_bus",
       "kafka",
       "messaging_compatibility",
-      "sagas"
+      "sagas",
+      "message_contracts"
     ]
   },
   "gates": {
@@ -448,6 +449,41 @@
         "eng/compatibility-policy.json",
         "eng/upgrade-compatibility-policy.json",
         "eng/messaging-compatibility-policy.json",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json",
+        "TCJ.slnx"
+      ]
+    },
+    "message_contracts": {
+      "workflow": ".github/workflows/message-contracts.yml",
+      "paths": [
+        "src/**",
+        "src/TCJ.Messaging/**",
+        "src/TCJ.Messaging.Contracts/**",
+        "tests/TCJ.Messaging.Tests/**",
+        "tests/TCJ.Messaging.Contracts.Tests/**",
+        "eng/TCJ.MessageContracts.Tool/**",
+        "eng/message-contract-policy.json",
+        "eng/message-contract-governance-contract.json",
+        "eng/verify-message-contracts.py",
+        "eng/tests/test_verify_message_contracts.py",
+        "eng/architecture-policy.json",
+        "eng/release-manifest.json",
+        "eng/sbom-policy.json",
+        "eng/aot-policy.json",
+        "eng/reproducibility-policy.json",
+        "eng/compatibility-policy.json",
+        "eng/upgrade-compatibility-policy.json",
+        "compatibility/Consumers/MessageContracts.Console/**",
+        "upgrade-tests/Scenarios/MessageContractsConsumer/**",
+        "upgrade-tests/Expected/MessageContractsConsumer.json",
+        "docs/message-contract-governance.md",
+        "docs/nuget/TCJ.Messaging.Contracts.md",
+        ".github/workflows/message-contracts.yml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release-preflight.yml",
+        ".github/workflows/release.yml",
         "Directory.Build.props",
         "Directory.Packages.props",
         "global.json",

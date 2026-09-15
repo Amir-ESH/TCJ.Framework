@@ -41,7 +41,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
     def test_repository_configuration_is_valid(self):
         verify.validate_repository_wiring(verify.ROOT)
         self.assertEqual(6, len(self.policy["scenarios"]))
-        self.assertEqual(4, len(self.policy["targetOnlyScenarios"]))
+        self.assertEqual(5, len(self.policy["targetOnlyScenarios"]))
 
     def test_generic_build_output_rules_are_accepted(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -72,6 +72,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
         self.assertEqual(
             {
                 "TCJ.Messaging",
+                "TCJ.Messaging.Contracts",
                 "TCJ.Messaging.Sagas",
                 "TCJ.Messaging.Sagas.EntityFrameworkCore",
                 "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
@@ -205,8 +206,8 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
                 self.policy, self.baseline, self.target, self.manifest, args, published=False
             )
             self.assertEqual(6, totals["directUpgradeSuccessCount"])
-            self.assertEqual(4, totals["targetOnlySuccessCount"])
-            self.assertEqual(10, totals["scenarioCount"])
+            self.assertEqual(5, totals["targetOnlySuccessCount"])
+            self.assertEqual(11, totals["scenarioCount"])
 
     def test_valid_published_results_pass_for_selected_scenarios(self):
         with tempfile.TemporaryDirectory() as td:
@@ -216,8 +217,8 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
                 self.policy, self.baseline, self.target, self.manifest, args, published=True
             )
             self.assertEqual(3, totals["directUpgradeSuccessCount"])
-            self.assertEqual(4, totals["targetOnlySuccessCount"])
-            self.assertEqual(7, totals["scenarioCount"])
+            self.assertEqual(5, totals["targetOnlySuccessCount"])
+            self.assertEqual(8, totals["scenarioCount"])
 
     def test_target_only_scenario_cannot_fabricate_baseline(self):
         with tempfile.TemporaryDirectory() as td:
@@ -366,7 +367,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
             totals = verify.verify_results(self.policy, self.baseline, self.target, manifest, args, published=False)
             self.assertEqual(1, totals["guidedMigrationSuccessCount"])
             self.assertEqual(5, totals["directUpgradeSuccessCount"])
-            self.assertEqual(4, totals["targetOnlySuccessCount"])
+            self.assertEqual(5, totals["targetOnlySuccessCount"])
 
     def test_stale_source_breaking_change_fails(self):
         with tempfile.TemporaryDirectory() as td:
@@ -397,7 +398,7 @@ class VerifyUpgradeCompatibilityTests(unittest.TestCase):
             verify.write_summary(out, self.baseline["version"], self.target["version"], totals, published=False)
             text = (out / "UPGRADE_COMPATIBILITY_SUMMARY.md").read_text()
             self.assertIn("Direct-upgrade success count: 6", text)
-            self.assertIn("Target-only package introduction success count: 4", text)
+            self.assertIn("Target-only package introduction success count: 5", text)
             self.assertIn("Dependency downgrades: 0", text)
             self.assertIn("**PASS**", text)
 

@@ -51,7 +51,7 @@ Describe the problem and the approach taken.
 - [ ] The official release uses the verified package set
 - [ ] Release-integrity automation remains valid and package checksums pass
 - [ ] SBOM generation and verification succeed
-- [ ] All thirteen release packages are represented and symbol packages are present for all twelve runtime packages
+- [ ] All fourteen release packages are represented and symbol packages are present for all thirteen runtime packages
 - [ ] Package versions and dependency relationships match generated package metadata
 - [ ] Required package and dependency hashes are present
 - [ ] License metadata has been reviewed

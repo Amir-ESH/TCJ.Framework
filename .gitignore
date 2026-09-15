@@ -100,6 +100,9 @@ artifacts/upgrade-compatibility/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+# Keep message-contract governance source files trackable even on case-insensitive Git filesystems.
+!src/TCJ.Messaging.Contracts/Artifacts/
+!src/TCJ.Messaging.Contracts/Artifacts/**
 .artifacts/
 
 # ASP.NET Scaffolding
@@ -580,3 +583,7 @@ TestResults/MessagingCompatibility/
 # Uncomment if you have tasks that rely on *.refresh files to move binaries
 # (https://github.com/github/gitignore/pull/3736)
 #!**/[Bb]in/*.refresh
+
+# Message-contract governance generated evidence
+artifacts/message-contracts/
+TestResults/MessageContracts/

@@ -62,6 +62,7 @@ These documents describe the public TCJ Framework contract and the repository's 
 - [`TCJ.EntityFrameworkCore.SqlServer`](packages/tcj-entityframeworkcore-sqlserver.md)
 - [`TCJ.AspNetCore`](packages/tcj-aspnetcore.md)
 - [`TCJ.Messaging`](packages/tcj-messaging.md)
+- [`TCJ.Messaging.Contracts`](packages/tcj-messaging-contracts.md)
 - [`TCJ.Messaging.Sagas`](packages/tcj-messaging-sagas.md)
 - [`TCJ.Messaging.Sagas.EntityFrameworkCore`](packages/tcj-messaging-sagas-entityframeworkcore.md)
 - [`TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer`](packages/tcj-messaging-sagas-entityframeworkcore-sqlserver.md)

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../eng/Packaging.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TCJ.Messaging.Contracts</RootNamespace>
+    <AssemblyName>TCJ.Messaging.Contracts</AssemblyName>
+
+    <PackageId>TCJ.Messaging.Contracts</PackageId>
+    <Title>TCJ Messaging Contracts</Title>
+    <Description>Optional deterministic JSON-schema governance, compatibility analysis, fingerprints, examples, and upcaster validation for TCJ.Messaging.</Description>
+    <PackageTags>tcj;messaging;contracts;json-schema;schema-evolution;compatibility</PackageTags>
+
+    <PublishTrimmed>false</PublishTrimmed>
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <!-- TCJ.Messaging.Contracts is introduced in preview.5, so no preview.4 package baseline exists. -->
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TCJ.Messaging/TCJ.Messaging.csproj" />
+  </ItemGroup>
+</Project>

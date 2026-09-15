@@ -7,6 +7,7 @@
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
+    "TCJ.Messaging.Contracts",
     "TCJ.Messaging.Sagas",
     "TCJ.Messaging.Sagas.EntityFrameworkCore",
     "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
@@ -241,6 +242,14 @@
         "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer"
       ],
       "expectedOutput": "TCJ durable Saga SQL Server consumer passed"
+    },
+    {
+      "name": "MessageContracts.Console",
+      "project": "compatibility/Consumers/MessageContracts.Console/MessageContracts.Console.csproj",
+      "packages": [
+        "TCJ.Messaging.Contracts"
+      ],
+      "expectedOutput": "TCJ.Messaging.Contracts package-only consumer passed"
     }
   ],
   "publishedConsumers": [
@@ -287,6 +296,9 @@
     "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer": [
       "TCJ.EntityFrameworkCore.SqlServer",
       "TCJ.Messaging.Sagas.EntityFrameworkCore"
+    ],
+    "TCJ.Messaging.Contracts": [
+      "TCJ.Messaging"
     ]
   }
 }

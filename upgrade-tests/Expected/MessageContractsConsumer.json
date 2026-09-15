@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "scenario": "MessageContractsConsumer",
+  "checks": {
+    "fingerprintAlgorithm": true,
+    "fingerprintLength": true,
+    "backwardCompatible": true,
+    "runtimeIdentity": true
+  }
+}

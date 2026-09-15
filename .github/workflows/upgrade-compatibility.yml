@@ -96,6 +96,7 @@ jobs:
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
             src/TCJ.Messaging/TCJ.Messaging.csproj \
+            src/TCJ.Messaging.Contracts/TCJ.Messaging.Contracts.csproj \
             src/TCJ.Messaging.Sagas/TCJ.Messaging.Sagas.csproj \
             src/TCJ.Messaging.Sagas.EntityFrameworkCore/TCJ.Messaging.Sagas.EntityFrameworkCore.csproj \
             src/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.csproj \
@@ -121,6 +122,7 @@ jobs:
             src/TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj \
             src/TCJ.AspNetCore/TCJ.AspNetCore.csproj \
             src/TCJ.Messaging/TCJ.Messaging.csproj \
+            src/TCJ.Messaging.Contracts/TCJ.Messaging.Contracts.csproj \
             src/TCJ.Messaging.Sagas/TCJ.Messaging.Sagas.csproj \
             src/TCJ.Messaging.Sagas.EntityFrameworkCore/TCJ.Messaging.Sagas.EntityFrameworkCore.csproj \
             src/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.csproj \
@@ -137,7 +139,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for id in TCJ.Core TCJ.DependencyInjection TCJ.EntityFrameworkCore TCJ.EntityFrameworkCore.SqlServer TCJ.AspNetCore TCJ.Messaging TCJ.Messaging.Sagas TCJ.Messaging.Sagas.EntityFrameworkCore TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer TCJ.Messaging.RabbitMQ TCJ.Messaging.AzureServiceBus TCJ.Messaging.Kafka; do
+          for id in TCJ.Core TCJ.DependencyInjection TCJ.EntityFrameworkCore TCJ.EntityFrameworkCore.SqlServer TCJ.AspNetCore TCJ.Messaging TCJ.Messaging.Contracts TCJ.Messaging.Sagas TCJ.Messaging.Sagas.EntityFrameworkCore TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer TCJ.Messaging.RabbitMQ TCJ.Messaging.AzureServiceBus TCJ.Messaging.Kafka; do
             test -f "artifacts/upgrade-compatibility/target/packages/$id.${{ steps.versions.outputs.target }}.nupkg" || { echo "Missing target package: $id" >&2; exit 1; }
           done
 
