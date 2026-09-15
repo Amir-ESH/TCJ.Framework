@@ -435,7 +435,7 @@ internal sealed record CompatibilityEvent(string Value, DateTimeOffset OccurredO
 internal sealed partial class CompatibilityJsonContext : JsonSerializerContext;
 
 
-[Trait("Category", "SagaTransportCompatibility")]
+[Trait("Category", "MessagingCompatibility")]
 public sealed class SagaTransportCompatibilityTests
 {
     [Fact, Trait("Transport", "InMemory")] public Task InMemory() => RunAsync("InMemory");
