@@ -139,6 +139,21 @@ class ArchitecturePolicyVerifierTests(unittest.TestCase):
             "TCJ.Messaging.RabbitMQ": ["TCJ.Messaging"],
             "TCJ.Messaging.AzureServiceBus": ["TCJ.Messaging"],
             "TCJ.Messaging.Kafka": ["TCJ.Messaging"],
+            "TCJ.Messaging.Sagas": ["TCJ.Core", "TCJ.Messaging"],
+            "TCJ.Messaging.Sagas.EntityFrameworkCore": [
+                "TCJ.Core",
+                "TCJ.EntityFrameworkCore",
+                "TCJ.Messaging",
+                "TCJ.Messaging.Sagas",
+            ],
+            "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer": [
+                "TCJ.Core",
+                "TCJ.EntityFrameworkCore",
+                "TCJ.EntityFrameworkCore.SqlServer",
+                "TCJ.Messaging",
+                "TCJ.Messaging.Sagas",
+                "TCJ.Messaging.Sagas.EntityFrameworkCore",
+            ],
         }
         project_paths = {
             assembly: f"src/{assembly}/{assembly}.csproj"

@@ -45,6 +45,9 @@ Install only the modules your application needs.
 | [`TCJ.EntityFrameworkCore.SqlServer`](https://www.nuget.org/packages/TCJ.EntityFrameworkCore.SqlServer) | SQL Server provider integration and conventions. | **Experimental** |
 | [`TCJ.AspNetCore`](https://www.nuget.org/packages/TCJ.AspNetCore) | ASP.NET Core application primitives and Minimal API integration. | **Full** for the verified Minimal API path |
 | [`TCJ.Messaging`](https://www.nuget.org/packages/TCJ.Messaging) | Transport-neutral messaging envelopes, publishing/receiving contracts, topology, settlement, health, and adapter abstractions. | **Conditional** |
+| `TCJ.Messaging.Sagas` | Transport-neutral durable Saga / Process Manager contracts, explicit registration, state transitions, timers, compensation, observability, and remediation abstractions. | **Conditional** |
+| `TCJ.Messaging.Sagas.EntityFrameworkCore` | Provider-neutral EF Core Saga persistence and transactional Inbox/Outbox integration using the application `DbContext`. | **Experimental** |
+| `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer` | SQL Server Saga persistence with `rowversion` optimistic concurrency and atomic durable timer claiming. | **Experimental** |
 | `TCJ.Messaging.RabbitMQ` | RabbitMQ transport adapter with publisher confirms, manual settlement, topology, recovery, health, and Inbox/Outbox integration. | **Conditional** |
 | `TCJ.Messaging.AzureServiceBus` | Azure Service Bus adapter with Peek-Lock settlement, scheduling, sessions, topology validation, health, and Inbox/Outbox integration. | **Conditional** |
 | `TCJ.Messaging.Kafka` | Apache Kafka adapter with idempotent publishing, consumer groups, manual contiguous offset coordination, per-partition ordering, retry/DLT topics, health, and Inbox/Outbox integration. | **Unsupported** for Native AOT until packed-consumer evidence exists |
