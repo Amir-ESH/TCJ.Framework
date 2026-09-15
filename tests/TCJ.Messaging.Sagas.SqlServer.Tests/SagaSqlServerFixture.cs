@@ -60,6 +60,7 @@ public sealed class SagaSqlServerFixture : IAsyncLifetime
         services.AddSingleton(Time);
         services.AddSingleton<TimeProvider>(Time);
         services.AddSingleton(Behavior);
+        services.AddScoped<IDomainEventDispatcher, SagaNoopDomainEventDispatcher>();
         services.AddTcjSqlServer<SagaTestDbContext>(connection.ConnectionString, options => { options.EnableRetryOnFailure = false; options.CommandTimeout = 30; });
         services.AddTcjOutboxEvent<SagaStartedEvent>("saga.started.v1");
         services.AddTcjOutboxEvent<SagaIncrementedEvent>("saga.incremented.v1");
@@ -221,6 +222,15 @@ internal sealed class OrderProcessSaga(SagaTestDbContext dbContext, SagaTestBeha
 }
 
 internal sealed class SagaTestValidationException : Exception;
+
+internal sealed class SagaNoopDomainEventDispatcher : IDomainEventDispatcher
+{
+    public Task DispatchAsync(IReadOnlyCollection<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
+}
 
 internal sealed class StateV1ToV2Migrator : TCJ.Messaging.Sagas.Migration.ISagaStateMigrator
 {
