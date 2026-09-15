@@ -21,6 +21,9 @@ package_ids=(
   TCJ.EntityFrameworkCore.SqlServer
   TCJ.AspNetCore
   TCJ.Messaging
+  TCJ.Messaging.Sagas
+  TCJ.Messaging.Sagas.EntityFrameworkCore
+  TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer
   TCJ.Messaging.RabbitMQ
   TCJ.Messaging.AzureServiceBus
   TCJ.Messaging.Kafka
