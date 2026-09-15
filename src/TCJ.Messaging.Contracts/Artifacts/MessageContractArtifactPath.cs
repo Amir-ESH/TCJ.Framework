@@ -32,7 +32,7 @@ internal static class MessageContractArtifactPath
 
     private static bool IsPortableSegment(string value)
     {
-        if (value.EndsWith('.', StringComparison.Ordinal))
+        if (value.EndsWith(".", StringComparison.Ordinal))
             return false;
 
         int dot = value.IndexOf('.');
