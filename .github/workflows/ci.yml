@@ -133,6 +133,9 @@ jobs:
       - name: Validate messaging compatibility configuration
         run: python3 eng/verify-messaging-compatibility.py validate-config
 
+      - name: Validate message-contract governance configuration
+        run: python3 eng/verify-message-contracts.py validate-config
+
       - name: Validate Kafka transport configuration
         run: python3 eng/verify-kafka.py validate-config
 

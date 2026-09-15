@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "manifestSchemaVersion": 1,
+  "artifactFields": [
+    "messageType",
+    "messageVersion",
+    "schemaDraft",
+    "schemaPath",
+    "wireSchemaFingerprint",
+    "owner",
+    "compatibilityMode",
+    "deprecated",
+    "deprecatedSince",
+    "replacementVersion",
+    "changeSummary",
+    "migrationNotes",
+    "semanticCompatibilityNotes",
+    "dataClassifications",
+    "reviewedExceptions",
+    "examples"
+  ],
+  "compatibilityModes": {
+    "None": "No structural compatibility comparison is required.",
+    "Backward": "The new reader can read payloads written with the previous producer schema.",
+    "Forward": "The previous reader can read payloads written with the new producer schema.",
+    "Full": "Both Backward and Forward conditions hold.",
+    "BackwardTransitive": "Backward comparison is performed against every retained published version.",
+    "ForwardTransitive": "Forward comparison is performed against every retained published version.",
+    "FullTransitive": "Full comparison is performed against every retained published version."
+  },
+  "compatibilityResults": [
+    "Compatible",
+    "Breaking",
+    "ReviewRequired"
+  ],
+  "fingerprint": {
+    "algorithm": "SHA-256",
+    "encoding": "lowercase-hex",
+    "input": "canonical-wire-schema-only"
+  },
+  "canonicalization": {
+    "version": 1,
+    "encoding": "UTF-8",
+    "whitespace": "none",
+    "objectProperties": "ordinal-key-order",
+    "requiredArrays": "ordinal-value-order",
+    "lineEndings": "none",
+    "numericFormatting": "equivalent-json-numbers-normalized"
+  },
+  "schemaDraft": "https://json-schema.org/draft/2020-12/schema",
+  "baselineProvenanceFields": [
+    "releaseVersion",
+    "sourceTag",
+    "sourceCommit"
+  ],
+  "deprecationFields": [
+    "deprecated",
+    "deprecatedSince",
+    "replacementVersion"
+  ],
+  "classificationFields": [
+    "path",
+    "classification"
+  ],
+  "dataClassifications": [
+    "Public",
+    "Internal",
+    "Personal",
+    "Confidential",
+    "SecretProhibited"
+  ],
+  "artifactPathEncoding": {
+    "messageTypeSegment": "Use the raw MessageType when it is a portable filesystem segment; otherwise use '~' followed by unpadded base64url of its ASCII bytes.",
+    "identityPreservedInMetadata": true
+  },
+  "outputPaths": {
+    "manifest": "manifest.json",
+    "schema": "<messageTypeSegment>/v<messageVersion>/schema.json",
+    "contract": "<messageTypeSegment>/v<messageVersion>/contract.json",
+    "fingerprint": "<messageTypeSegment>/v<messageVersion>/fingerprint.sha256",
+    "examples": "<messageTypeSegment>/v<messageVersion>/examples/<name>.json"
+  },
+  "runtimeSemantics": {
+    "identity": "MessageType + MessageVersion",
+    "runtimeRegistry": "TCJ.Messaging.IMessageContractRegistry",
+    "upcaster": "TCJ.Messaging.IMessageUpcaster",
+    "downcastingSupported": false,
+    "runtimeJsonSchemaValidationRequired": false,
+    "externalRegistryRequired": false,
+    "serializationFormat": "JSON"
+  }
+}

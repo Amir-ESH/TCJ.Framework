@@ -7,6 +7,7 @@
     <Project Path="Scenarios/AspNetCoreConsumer/AspNetCoreConsumer.csproj" />
     <Project Path="Scenarios/FullStackConsumer/FullStackConsumer.csproj" />
     <Project Path="Scenarios/MessagingConsumer/MessagingConsumer.csproj" />
+    <Project Path="Scenarios/MessageContractsConsumer/MessageContractsConsumer.csproj" />
     <Project Path="Scenarios/AzureServiceBusConsumer/AzureServiceBusConsumer.csproj" />
     <Project Path="Scenarios/KafkaConsumer/KafkaConsumer.csproj" />
     <Project Path="Scenarios/SagaConsumer/SagaConsumer.csproj" />

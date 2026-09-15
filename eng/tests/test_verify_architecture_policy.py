@@ -136,6 +136,7 @@ class ArchitecturePolicyVerifierTests(unittest.TestCase):
             ],
             "TCJ.AspNetCore": ["TCJ.Core", "TCJ.DependencyInjection"],
             "TCJ.Messaging": ["TCJ.Core"],
+            "TCJ.Messaging.Contracts": ["TCJ.Messaging"],
             "TCJ.Messaging.RabbitMQ": ["TCJ.Messaging"],
             "TCJ.Messaging.AzureServiceBus": ["TCJ.Messaging"],
             "TCJ.Messaging.Kafka": ["TCJ.Messaging"],

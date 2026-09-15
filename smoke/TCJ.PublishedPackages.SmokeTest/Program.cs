@@ -13,6 +13,10 @@ using TCJ.Core.Inbox;
 #if TCJ_MESSAGING_SMOKE || TCJ_SAGA_SMOKE
 using System.Text.Json.Serialization;
 #endif
+#if TCJ_MESSAGE_CONTRACTS_SMOKE
+using TCJ.Messaging.Contracts;
+using TCJ.Messaging.Serialization;
+#endif
 #if TCJ_MESSAGING_SMOKE
 using TCJ.Messaging.Envelopes;
 using TCJ.Messaging.Extensions;
@@ -185,6 +189,17 @@ internal static class Program
 #endif
 
         await using WebApplication app = builder.Build();
+#if TCJ_MESSAGE_CONTRACTS_SMOKE
+        IMessageContractRegistry smokeRegistry = app.Services.GetRequiredService<IMessageContractRegistry>();
+        MessagingMessageContract smokeContract = smokeRegistry.Resolve("smoke.changed", 1);
+        GeneratedMessageContractSchema smokeSchema = new MessageContractSchemaGenerator().Generate(smokeContract);
+        if (smokeSchema.Fingerprint.Algorithm != "SHA-256" || smokeSchema.Fingerprint.Value.Length != 64)
+            throw new InvalidOperationException("Published TCJ.Messaging.Contracts schema fingerprint validation failed.");
+        ReadOnlyMemory<byte> oldContractSchema = """{"type":"object","properties":{"value":{"type":"string"}},"required":["value"],"additionalProperties":true}"""u8.ToArray();
+        ReadOnlyMemory<byte> breakingContractSchema = """{"type":"object","properties":{"value":{"type":"string"},"requiredValue":{"type":"string"}},"required":["value","requiredValue"],"additionalProperties":true}"""u8.ToArray();
+        if (new MessageContractCompatibilityAnalyzer().Analyze(oldContractSchema, breakingContractSchema, MessageContractCompatibilityMode.Backward).Status != MessageContractCompatibilityStatus.Breaking)
+            throw new InvalidOperationException("Published TCJ.Messaging.Contracts compatibility detection failed.");
+#endif
 
         app.UseTcjAspNetCore();
 #if TCJ_HEALTH_CHECK_SMOKE
