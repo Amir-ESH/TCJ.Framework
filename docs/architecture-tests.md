@@ -109,7 +109,7 @@ The initial suite enforces only patterns already established by the repository:
 - containers with extension methods are static and end with `Extensions`; established fluent guard containers such as `TCJ.Core.Guards.Check` and the explicit messaging registration container are policy-approved exceptions/containers;
 - public option types are explicitly listed in `approvedPublicOptionTypes`; `TCJ.Core.Diagnostics.TcjTelemetryOptions` is approved because the observability contract adds the cross-package, backend-neutral observability configuration contract; `TCJ.Core.Inbox.TcjInboxOptions` is approved because Step 45 adds provider-neutral transactional Inbox configuration owned by `TCJ.Core`; `TCJ.Messaging.Configuration.TcjMessagingOptions` owns bounded broker-neutral messaging configuration; `TCJ.Messaging.Receiving.RetrySettlementOptions` and `TCJ.Messaging.Receiving.DeadLetterOptions` are approved because Step 46 exposes transport-neutral retry and dead-letter settlement metadata as part of the public adapter contract; `TCJ.Messaging.Sagas.Configuration.TcjSagaOptions` is approved because it owns bounded transport-neutral Saga state, timer, compensation, lease, retention, and cleanup limits;
 - repository interfaces use the `I` prefix;
-- SQL Server-specific types remain in `TCJ.EntityFrameworkCore.SqlServer`;
+- SQL Server-specific types remain in their owning SQL Server packages: `TCJ.EntityFrameworkCore.SqlServer` or `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer`;
 - ASP.NET Core middleware and exception-handler types remain in `TCJ.AspNetCore`;
 - broker-specific adapter types do not enter `TCJ.Messaging`;
 - implementation helpers under `Internal` namespaces are not public.

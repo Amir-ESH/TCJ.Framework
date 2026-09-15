@@ -110,7 +110,8 @@ public sealed class NamingAndVisibilityArchitectureTests
                 var fullName = type.FullName ?? type.Name;
 
                 if (fullName.Contains("SqlServer", StringComparison.OrdinalIgnoreCase)
-                    && !assemblyName.Equals("TCJ.EntityFrameworkCore.SqlServer", StringComparison.Ordinal))
+                    && !assemblyName.Equals("TCJ.EntityFrameworkCore.SqlServer", StringComparison.Ordinal)
+                    && !assemblyName.Equals("TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer", StringComparison.Ordinal))
                 {
                     violations.Add(
                         $"SQL Server-specific type '{fullName}' is declared in assembly '{assemblyName}'.");
