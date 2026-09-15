@@ -100,6 +100,9 @@ artifacts/upgrade-compatibility/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+# Keep message-contract governance source files trackable even on case-insensitive Git filesystems.
+!src/TCJ.Messaging.Contracts/Artifacts/
+!src/TCJ.Messaging.Contracts/Artifacts/**
 .artifacts/
 
 # ASP.NET Scaffolding

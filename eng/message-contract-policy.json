@@ -28,6 +28,10 @@
   "governancePackage": "TCJ.Messaging.Contracts",
   "requiredPaths": [
     "src/TCJ.Messaging.Contracts/TCJ.Messaging.Contracts.csproj",
+    "src/TCJ.Messaging.Contracts/Artifacts/MessageContractArtifactGenerator.cs",
+    "src/TCJ.Messaging.Contracts/Artifacts/MessageContractArtifactPath.cs",
+    "src/TCJ.Messaging.Contracts/Artifacts/MessageContractManifestSerializer.cs",
+    "src/TCJ.Messaging.Contracts/Artifacts/MessageContractModels.cs",
     "tests/TCJ.Messaging.Contracts.Tests/TCJ.Messaging.Contracts.Tests.csproj",
     "eng/TCJ.MessageContracts.Tool/TCJ.MessageContracts.Tool.csproj",
     "eng/message-contract-policy.json",

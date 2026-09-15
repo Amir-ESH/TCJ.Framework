@@ -22,4 +22,4 @@ The package depends on `TCJ.Messaging`. `TCJ.Messaging` does not depend on this 
 
 Schema compatibility and runtime version registration are distinct. The package does not add automatic downcasting, remote schema-registry access, or semantic migration.
 
-See [Message contract governance](../message-contract-governance.md) for versioning, compatibility direction, baseline provenance, classifications, and CI guidance.
+See [Message contract governance](https://github.com/Amir-ESH/TCJ.Framework/blob/v0.1.0-preview.5/docs/message-contract-governance.md) for versioning, compatibility direction, baseline provenance, classifications, and CI guidance.

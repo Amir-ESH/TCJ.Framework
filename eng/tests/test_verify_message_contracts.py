@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,6 +23,26 @@ class MessageContractVerifierTests(unittest.TestCase):
     def test_sensitive_markers_are_detected_case_insensitively(self):
         self.assertTrue(verifier.contains_secret_marker(b"SharedAccessKey=synthetic"))
         self.assertFalse(verifier.contains_secret_marker(b'{"id":"fixture-1"}'))
+
+    @unittest.skipUnless(shutil.which("git"), "git is required for ignore-rule verification")
+    def test_required_source_shadowed_by_artifacts_ignore_is_detected(self):
+        relative = "src/TCJ.Messaging.Contracts/Artifacts/MessageContractModels.cs"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / relative
+            source.parent.mkdir(parents=True)
+            source.write_text("// fixture\n", encoding="utf-8")
+            (root / ".gitignore").write_text("artifacts/\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "core.ignorecase", "true"], check=True)
+
+            self.assertEqual([relative], verifier.ignored_required_paths([relative], root))
+
+            (root / ".gitignore").write_text(
+                "artifacts/\n!src/TCJ.Messaging.Contracts/Artifacts/\n!src/TCJ.Messaging.Contracts/Artifacts/**\n",
+                encoding="utf-8",
+            )
+            self.assertEqual([], verifier.ignored_required_paths([relative], root))
 
     def test_verify_requires_commit_matched_package_consumer_evidence(self):
         commit = "a" * 40

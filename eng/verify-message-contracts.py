@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -48,6 +49,22 @@ def contains_secret_marker(data: bytes) -> bool:
     text = data.decode("utf-8", errors="ignore").lower()
     return any(marker in text for marker in SECRET_MARKERS)
 
+def ignored_required_paths(required_paths: list[str], root: Path = ROOT) -> list[str]:
+    if not (root / ".git").exists():
+        return []
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "check-ignore", "--no-index", "--stdin"],
+            input="\n".join(required_paths) + "\n",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except OSError as error:
+        raise VerificationError(f"Unable to verify Git ignore rules: {error}") from error
+    require(result.returncode in {0, 1}, f"Git ignore verification failed: {result.stderr.strip()}")
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
 def validate_config() -> tuple[dict, dict]:
     policy = read_json(POLICY_PATH)
     contract = read_json(CONTRACT_PATH)
@@ -67,8 +84,12 @@ def validate_config() -> tuple[dict, dict]:
     require(runtime.get("upcaster") == "TCJ.Messaging.IMessageUpcaster" and runtime.get("downcastingSupported") is False, "Upcaster/downcaster contract drift.")
     require(runtime.get("externalRegistryRequired") is False and runtime.get("runtimeJsonSchemaValidationRequired") is False, "Runtime governance scope drift.")
 
-    for relative in policy.get("requiredPaths", []):
+    required_paths = policy.get("requiredPaths", [])
+    require(isinstance(required_paths, list) and all(isinstance(path, str) for path in required_paths), "requiredPaths must be a string array.")
+    for relative in required_paths:
         require(safe_relative_path(relative) and (ROOT / relative).is_file(), f"Required message-contract file missing: {relative}")
+    ignored_paths = ignored_required_paths(required_paths)
+    require(not ignored_paths, f"Required message-contract files are ignored by Git: {', '.join(ignored_paths)}")
 
     governance_project = (ROOT / "src/TCJ.Messaging.Contracts/TCJ.Messaging.Contracts.csproj").read_text(encoding="utf-8")
     require("../TCJ.Messaging/TCJ.Messaging.csproj" in governance_project.replace("\\", "/"), "Governance package must depend on TCJ.Messaging.")
