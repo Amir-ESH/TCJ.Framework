@@ -27,6 +27,9 @@ REQUIRED_ASSEMBLIES = (
     "TCJ.Messaging.RabbitMQ",
     "TCJ.Messaging.AzureServiceBus",
     "TCJ.Messaging.Kafka",
+    "TCJ.Messaging.Sagas",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
 )
 REQUIRED_WORKFLOWS = (
     ".github/workflows/ci.yml",

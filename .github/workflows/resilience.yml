@@ -25,15 +25,19 @@ on:
       - "src/TCJ.DependencyInjection/**"
       - "src/TCJ.EntityFrameworkCore.SqlServer/**"
       - "src/TCJ.Messaging/**"
+      - "src/TCJ.Messaging.Sagas*/**"
       - "src/TCJ.Messaging.AzureServiceBus/**"
       - "tests/TCJ.Resilience.Tests/**"
       - "tests/TCJ.Inbox.Tests/**"
+      - "tests/TCJ.Messaging.Sagas.SqlServer.Tests/**"
       - "eng/resilience-policy.json"
       - "eng/resilience-contract.json"
       - "eng/verify-resilience.py"
       - "eng/inbox-*.json"
       - "eng/verify-inbox.py"
       - "eng/messaging-*.json"
+      - "eng/sagas-*.json"
+      - "eng/verify-sagas.py"
       - "eng/verify-messaging.py"
       - "eng/observability-*.json"
       - "benchmarks/TCJ.Benchmarks/**"
@@ -86,6 +90,9 @@ jobs:
       - name: Validate messaging policy and contract
         run: python3 eng/verify-messaging.py validate-config
 
+      - name: Validate Saga resilience policy and contract
+        run: python3 eng/verify-sagas.py validate-config
+
       - name: Validate Azure Service Bus adapter contract
         run: python3 eng/verify-azure-service-bus.py validate-config
 
@@ -101,6 +108,12 @@ jobs:
       - name: Build Inbox resilience tests
         run: >
           dotnet build tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Build Saga SQL Server resilience tests
+        run: >
+          dotnet build tests/TCJ.Messaging.Sagas.SqlServer.Tests/TCJ.Messaging.Sagas.SqlServer.Tests.csproj
           --configuration Release
           --no-restore
 
@@ -138,6 +151,16 @@ jobs:
           --logger "trx;LogFileName=inbox-resilience.trx"
           --results-directory TestResults/Inbox/ResilienceCrossGate
 
+      - name: Run Saga rollback and timer recovery fault scenarios
+        if: inputs.mode != 'fast' || github.event_name == 'push' || github.event_name == 'schedule'
+        run: >
+          dotnet test tests/TCJ.Messaging.Sagas.SqlServer.Tests/TCJ.Messaging.Sagas.SqlServer.Tests.csproj
+          --configuration Release
+          --no-build
+          --filter "FullyQualifiedName~Handler_failure_rolls_back_saga_business_timer_correlation_and_outbox_state|FullyQualifiedName~Due_timer_failure_rolls_back_transition_and_is_retried_with_bounded_attempts"
+          --logger "trx;LogFileName=saga-resilience.trx"
+          --results-directory TestResults/Sagas/ResilienceCrossGate
+
       - name: Verify resilience evidence
         if: always()
         run: >
@@ -164,6 +187,7 @@ jobs:
           path: |
             TestResults/Resilience/**
             TestResults/Inbox/ResilienceCrossGate/**
+            TestResults/Sagas/ResilienceCrossGate/**
             artifacts/resilience/traces/**
             artifacts/resilience/report/**
           if-no-files-found: warn

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "scenario": "SagaConsumer",
+  "checks": {
+    "boundedStatePayload": true,
+    "boundedTimerRetries": true,
+    "boundedCompensationRetries": true,
+    "correlationIsRedacted": true,
+    "explicitStatusContract": true,
+    "efIntegrationLoads": true,
+    "sqlServerIntegrationLoads": true
+  }
+}

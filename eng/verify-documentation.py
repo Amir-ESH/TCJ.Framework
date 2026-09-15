@@ -157,8 +157,8 @@ def validate_policy(policy: dict) -> None:
     if policy["schemaVersion"] != 1:
         fail("documentation-policy.json schemaVersion must be 1.")
     packages = policy["requiredPackages"]
-    if not isinstance(packages, list) or len(packages) != 6 or len(set(packages)) != 6:
-        fail("requiredPackages must contain the six unique TCJ runtime package IDs.")
+    if not isinstance(packages, list) or len(packages) != 9 or len(set(packages)) != 9:
+        fail("requiredPackages must contain the nine unique documentation-gated runtime package IDs.")
     for package in packages:
         project = policy["projects"].get(package)
         page = policy["packagePages"].get(package)

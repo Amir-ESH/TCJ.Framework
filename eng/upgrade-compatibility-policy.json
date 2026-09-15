@@ -7,7 +7,7 @@
   "configuration": "Release",
   "targetFramework": "net10.0",
   "minimumScenarioCount": 6,
-  "minimumTargetOnlyScenarioCount": 2,
+  "minimumTargetOnlyScenarioCount": 4,
   "requiredPackages": [
     "TCJ.Core",
     "TCJ.DependencyInjection",
@@ -15,12 +15,18 @@
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
+    "TCJ.Messaging.Sagas",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
     "TCJ.Messaging.RabbitMQ",
     "TCJ.Messaging.AzureServiceBus",
     "TCJ.Messaging.Kafka"
   ],
   "targetOnlyPackages": [
     "TCJ.Messaging",
+    "TCJ.Messaging.Sagas",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
     "TCJ.Messaging.RabbitMQ",
     "TCJ.Messaging.AzureServiceBus",
     "TCJ.Messaging.Kafka"
@@ -52,7 +58,8 @@
   "publishedTargetOnlyScenarios": [
     "MessagingConsumer",
     "AzureServiceBusConsumer",
-    "KafkaConsumer"
+    "KafkaConsumer",
+    "SagaConsumer"
   ],
   "scenarios": [
     {
@@ -155,6 +162,21 @@
       ],
       "expectedBehavior": "upgrade-tests/Expected/KafkaConsumer.json",
       "expectedOutput": "TCJ.Messaging.Kafka target-only upgrade scenario passed"
+    },
+    {
+      "name": "SagaConsumer",
+      "project": "upgrade-tests/Scenarios/SagaConsumer/SagaConsumer.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.EntityFrameworkCore",
+        "TCJ.EntityFrameworkCore.SqlServer",
+        "TCJ.Messaging",
+        "TCJ.Messaging.Sagas",
+        "TCJ.Messaging.Sagas.EntityFrameworkCore",
+        "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer"
+      ],
+      "expectedBehavior": "upgrade-tests/Expected/SagaConsumer.json",
+      "expectedOutput": "TCJ durable Saga target-only upgrade scenario passed"
     }
   ]
 }

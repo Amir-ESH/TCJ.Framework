@@ -10,8 +10,10 @@ using TCJ.Core.Outbox;
 using System.Text.Json;
 using TCJ.Core.Inbox;
 #endif
-#if TCJ_MESSAGING_SMOKE
+#if TCJ_MESSAGING_SMOKE || TCJ_SAGA_SMOKE
 using System.Text.Json.Serialization;
+#endif
+#if TCJ_MESSAGING_SMOKE
 using TCJ.Messaging.Envelopes;
 using TCJ.Messaging.Extensions;
 using TCJ.Messaging.Integration;
@@ -56,6 +58,11 @@ using TCJ.EntityFrameworkCore.Repositories;
 using TCJ.EntityFrameworkCore.SqlServer.Extensions;
 using TCJ.EntityFrameworkCore.SqlServer.Options;
 using TCJ.EntityFrameworkCore.UnitOfWork;
+#if TCJ_SAGA_SMOKE
+using TCJ.Messaging.Sagas;
+using TCJ.Messaging.Sagas.EntityFrameworkCore.Registration;
+using TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.Extensions;
+#endif
 
 namespace TCJ.PublishedPackages.SmokeTest;
 
@@ -112,6 +119,24 @@ internal static class Program
             options.ProcessingMode = InboxProcessingMode.Inline;
             options.MaxRetryAttempts = 1;
         });
+#endif
+#if TCJ_SAGA_SMOKE
+        builder.Services.AddTcjSqlServerSagas<SmokeDbContext>();
+        builder.Services.AddTcjSaga<SmokeDbContext, PublishedSmokeSaga, PublishedSmokeSagaState>(
+            sagaType: "published.smoke.saga",
+            definitionVersion: 1,
+            stateSchemaVersion: 1,
+            stateJsonTypeInfo: PublishedSmokeSagaJsonContext.Default.PublishedSmokeSagaState,
+            stateFactory: static () => new PublishedSmokeSagaState(),
+            configure: saga => saga
+                .TerminalStates("Completed", "Failed", "Compensating", "Compensated")
+                .StartsWith<PublishedSmokeSagaStart>(
+                    "published.smoke.saga.start", 1, "AwaitingContinuation", "workflow-id",
+                    static message => SagaCorrelationKey.From(message.WorkflowId))
+                .Handles<PublishedSmokeSagaContinue>(
+                    "published.smoke.saga.continue", 1, "workflow-id",
+                    static message => SagaCorrelationKey.From(message.WorkflowId),
+                    ["AwaitingContinuation"]));
 #endif
 #if TCJ_MESSAGING_SMOKE
         builder.Services.AddTcjMessaging(options => options.EnableConsumer = true);
@@ -209,6 +234,10 @@ internal static class Program
 #if TCJ_MESSAGING_SMOKE
             , typeof(TCJ.Messaging.Configuration.TcjMessagingOptions)
 #endif
+#if TCJ_SAGA_SMOKE
+            , typeof(TCJ.Messaging.Sagas.Configuration.TcjSagaOptions)
+            , typeof(SagaCorrelationKey)
+#endif
 #if TCJ_KAFKA_SMOKE
             , typeof(TcjKafkaOptions)
 #endif
@@ -234,6 +263,10 @@ internal static class Program
 
 #if TCJ_INBOX_SMOKE
         await VerifyPublishedInboxAsync(services);
+#endif
+
+#if TCJ_SAGA_SMOKE
+        await VerifyPublishedSagaAsync(services);
 #endif
 
 #if TCJ_MESSAGING_SMOKE
@@ -510,6 +543,53 @@ internal static class Program
     }
 #endif
 
+#if TCJ_SAGA_SMOKE
+    private static async Task VerifyPublishedSagaAsync(IServiceProvider services)
+    {
+        SmokeDbContext dbContext = services.GetRequiredService<SmokeDbContext>();
+        await dbContext.Database.EnsureCreatedAsync().ConfigureAwait(false);
+
+        Guid workflowId = Guid.CreateVersion7();
+        IInboxPipeline inbox = services.GetRequiredService<IInboxPipeline>();
+        string startPayload = JsonSerializer.Serialize(new PublishedSmokeSagaStart(workflowId));
+        var start = new IncomingMessageEnvelope(
+            "published-saga-start-1", "published.smoke.saga.start", 1, "published-package-smoke",
+            startPayload, DateTimeOffset.UtcNow, correlationId: "published-saga-correlation");
+
+        InboxHandlingResult started = await inbox.ProcessAsync(start).ConfigureAwait(false);
+        InboxHandlingResult duplicate = await inbox.ProcessAsync(start).ConfigureAwait(false);
+        if (started.Outcome != InboxHandlingOutcome.Acknowledge || duplicate.Outcome != InboxHandlingOutcome.IgnoreDuplicate)
+            throw new InvalidOperationException("Published Saga start/duplicate Inbox semantics failed.");
+
+        string continuePayload = JsonSerializer.Serialize(new PublishedSmokeSagaContinue(workflowId));
+        var continuation = new IncomingMessageEnvelope(
+            "published-saga-continue-1", "published.smoke.saga.continue", 1, "published-package-smoke",
+            continuePayload, DateTimeOffset.UtcNow, correlationId: "published-saga-correlation", causationId: start.MessageId);
+        InboxHandlingResult continued = await inbox.ProcessAsync(continuation).ConfigureAwait(false);
+        if (continued.Outcome != InboxHandlingOutcome.Acknowledge)
+            throw new InvalidOperationException("Published Saga continuation did not commit.");
+
+        dbContext.ChangeTracker.Clear();
+        int sagaCount = await dbContext.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) AS [Value] FROM [TCJ_SagaInstances] WHERE [SagaType] = N'published.smoke.saga'").SingleAsync().ConfigureAwait(false);
+        int completedCount = await dbContext.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) AS [Value] FROM [TCJ_SagaInstances] WHERE [SagaType] = N'published.smoke.saga' AND [Status] = N'Completed'").SingleAsync().ConfigureAwait(false);
+        int outboxCount = await dbContext.Set<OutboxMessage>().AsNoTracking()
+            .CountAsync(message => message.CausationId == start.MessageId || message.CausationId == continuation.MessageId)
+            .ConfigureAwait(false);
+        if (sagaCount != 1 || completedCount != 1 || outboxCount != 2)
+            throw new InvalidOperationException("Published Saga durability smoke did not persist one completed Saga and exactly two transactional Outbox events.");
+
+        string redacted = SagaCorrelationKey.From(workflowId).ToString();
+        var options = new TCJ.Messaging.Sagas.Configuration.TcjSagaOptions();
+        options.Validate();
+        if (redacted != "[redacted-correlation]")
+            throw new InvalidOperationException("Published Saga correlation redaction contract failed.");
+
+        Console.WriteLine("TCJ_SAGA_SMOKE succeeded for published packages: start, Inbox duplicate deduplication, continuation completion, and transactional Outbox durability.");
+    }
+#endif
+
 #if TCJ_HEALTH_CHECK_SMOKE
     private static async Task VerifyPublishedHealthChecksAsync(WebApplication app)
     {
@@ -591,6 +671,9 @@ public sealed class SmokeDbContext(
 #if TCJ_INBOX_SMOKE
         modelBuilder.AddTcjInbox();
 #endif
+#if TCJ_SAGA_SMOKE
+        modelBuilder.AddTcjSqlServerSagas();
+#endif
     }
 }
 
@@ -649,6 +732,42 @@ public sealed class SmokeInboundHandler(SmokeDbContext dbContext) : IInboxMessag
     }
 }
 #endif
+#endif
+
+#if TCJ_SAGA_SMOKE
+public sealed class PublishedSmokeSagaState : ISagaState
+{
+    public int TransitionCount { get; set; }
+}
+
+public sealed record PublishedSmokeSagaStart(Guid WorkflowId);
+public sealed record PublishedSmokeSagaContinue(Guid WorkflowId);
+
+public sealed class PublishedSmokeSaga :
+    ISagaStartsWith<PublishedSmokeSagaState, PublishedSmokeSagaStart>,
+    ISagaHandles<PublishedSmokeSagaState, PublishedSmokeSagaContinue>
+{
+    public Task HandleAsync(PublishedSmokeSagaState state, PublishedSmokeSagaStart message, SagaContext context, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        state.TransitionCount++;
+        context.TransitionTo("AwaitingContinuation");
+        context.Emit(new SmokeChanged(context.SagaId, "saga-start", context.UtcNow));
+        return Task.CompletedTask;
+    }
+
+    public Task HandleAsync(PublishedSmokeSagaState state, PublishedSmokeSagaContinue message, SagaContext context, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        state.TransitionCount++;
+        context.Emit(new SmokeChanged(context.SagaId, "saga-complete", context.UtcNow));
+        context.Complete();
+        return Task.CompletedTask;
+    }
+}
+
+[JsonSerializable(typeof(PublishedSmokeSagaState))]
+internal sealed partial class PublishedSmokeSagaJsonContext : JsonSerializerContext;
 #endif
 
 #if TCJ_MESSAGING_SMOKE

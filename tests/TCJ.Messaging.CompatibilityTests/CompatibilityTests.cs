@@ -17,6 +17,7 @@ using TCJ.Messaging.Extensions;
 using TCJ.Messaging.Integration;
 using TCJ.Messaging.Publishing;
 using TCJ.Messaging.Receiving;
+using TCJ.Messaging.Sagas;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 namespace TCJ.Messaging.CompatibilityTests;
@@ -62,6 +63,7 @@ public sealed class CompatibilityTests
             await Record("outbox-retry", () => OutboxRetry(fixture));
             await Record("readiness", () => Readiness(fixture));
             await Record("startup-diagnostics", () => StartupDiagnostics(fixture));
+            await Record("saga-orchestration", () => SagaOrchestration(fixture));
             await Record("ordering", () => Ordering(fixture));
         }
         catch (Exception)
@@ -284,6 +286,60 @@ public sealed class CompatibilityTests
         Assert.All(activities.SelectMany(a => a.TagObjects).Concat(metricTags), tag => Assert.DoesNotContain("tcj-compat-secret", tag.Value?.ToString() ?? "", StringComparison.Ordinal));
     }
 
+
+    internal static async Task SagaOrchestration(CompatibilityFixture fixture)
+    {
+        await using var h = await fixture.CreateAsync();
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var pipeline = new SagaSemanticPipeline();
+        var inboxOptions = new TcjInboxOptions { ConsumerName = "saga-compatibility" };
+        var messagingOptions = new TcjMessagingOptions();
+        var bridge = new InboxTransportBridge(
+            pipeline,
+            inboxOptions,
+            messagingOptions,
+            h.Descriptor,
+            new MessagingHeaderPolicy(messagingOptions),
+            TimeProvider.System);
+
+        var start = new TransportMessageEnvelope(
+            "saga-start-1",
+            "compatibility.saga.start",
+            1,
+            Encoding.UTF8.GetBytes("{\"phase\":\"start\"}"),
+            "application/json",
+            DateTimeOffset.UtcNow,
+            "saga-correlation",
+            null);
+
+        Assert.True((await h.Publisher.PublishAsync(start, Context(h), cancellation.Token)).IsSuccess);
+        await using (IAsyncEnumerator<ReceivedMessage> receiver = Receive(h, cancellation.Token))
+        {
+            Assert.True(await receiver.MoveNextAsync());
+            InboxTransportBridgeResult committed = await bridge.ProcessAsync(receiver.Current, cancellation.Token);
+            Assert.Equal(MessageSettlement.Complete, committed.Settlement);
+            Assert.Equal(SagaStatus.Active, pipeline.Status);
+        }
+
+        // The transport publish happens only after the Inbox/Saga semantic boundary returned a committed result.
+        TransportMessageEnvelope continuation = pipeline.DequeueDurableOutbox();
+        Assert.True((await h.Publisher.PublishAsync(continuation, Context(h), cancellation.Token)).IsSuccess);
+        Assert.True((await h.Publisher.PublishAsync(continuation, Context(h), cancellation.Token)).IsSuccess);
+
+        await using IAsyncEnumerator<ReceivedMessage> continuationReceiver = Receive(h, cancellation.Token);
+        Assert.True(await continuationReceiver.MoveNextAsync());
+        InboxTransportBridgeResult firstContinuation = await bridge.ProcessAsync(continuationReceiver.Current, cancellation.Token);
+        Assert.Equal(InboxHandlingOutcome.Acknowledge, firstContinuation.InboxResult.Outcome);
+
+        Assert.True(await continuationReceiver.MoveNextAsync());
+        InboxTransportBridgeResult duplicateContinuation = await bridge.ProcessAsync(continuationReceiver.Current, cancellation.Token);
+        Assert.Equal(InboxHandlingOutcome.IgnoreDuplicate, duplicateContinuation.InboxResult.Outcome);
+        Assert.Equal(SagaStatus.Completed, pipeline.Status);
+        Assert.Equal(2, pipeline.CommittedBusinessEffects);
+        Assert.Equal(1, pipeline.DuplicateDeliveries);
+        Assert.Equal("[redacted-correlation]", pipeline.Correlation.ToString());
+    }
+
     private static async Task Ordering(CompatibilityFixture fixture)
     {
         await using var h = await fixture.CreateAsync(); var guarantee = h.Descriptor.Capabilities.OrderingGuarantee;
@@ -295,6 +351,61 @@ public sealed class CompatibilityTests
         for (int i = 0; i < 3; i++) Assert.True((await h.Publisher.PublishAsync(Envelope("order-" + i), Context(h), c.Token)).IsSuccess);
         await using var receiver = Receive(h, c.Token);
         for (int i = 0; i < 3; i++) { Assert.True(await receiver.MoveNextAsync()); Assert.Equal("order-" + i, receiver.Current.Envelope.MessageId); await receiver.Current.Settlement.CompleteAsync(c.Token); }
+    }
+
+
+    private sealed class SagaSemanticPipeline : IInboxPipeline
+    {
+        private readonly HashSet<string> _processed = new(StringComparer.Ordinal);
+        private TransportMessageEnvelope? _durableOutbox;
+
+        internal SagaStatus Status { get; private set; } = SagaStatus.Failed;
+        internal int CommittedBusinessEffects { get; private set; }
+        internal int DuplicateDeliveries { get; private set; }
+        internal SagaCorrelationKey Correlation { get; } = SagaCorrelationKey.From("compatibility-order-42");
+
+        public Task<InboxHandlingResult> ProcessAsync(IncomingMessageEnvelope envelope, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_processed.Add(envelope.MessageId))
+            {
+                DuplicateDeliveries++;
+                return Task.FromResult(new InboxHandlingResult(InboxHandlingOutcome.IgnoreDuplicate));
+            }
+
+            if (envelope.MessageType == "compatibility.saga.start")
+            {
+                Status = SagaStatus.Active;
+                CommittedBusinessEffects++;
+                _durableOutbox = new TransportMessageEnvelope(
+                    "saga-continuation-1",
+                    "compatibility.saga.continue",
+                    1,
+                    Encoding.UTF8.GetBytes("{\"phase\":\"continue\"}"),
+                    "application/json",
+                    DateTimeOffset.UtcNow,
+                    "saga-correlation",
+                    envelope.MessageId);
+                return Task.FromResult(new InboxHandlingResult(InboxHandlingOutcome.Acknowledge));
+            }
+
+            if (envelope.MessageType == "compatibility.saga.continue" && Status == SagaStatus.Active)
+            {
+                Status = SagaStatus.Completed;
+                CommittedBusinessEffects++;
+                return Task.FromResult(new InboxHandlingResult(InboxHandlingOutcome.Acknowledge));
+            }
+
+            return Task.FromResult(new InboxHandlingResult(InboxHandlingOutcome.DeadLetter, FailureType: InboxFailureType.PermanentValidation));
+        }
+
+        internal TransportMessageEnvelope DequeueDurableOutbox()
+        {
+            TransportMessageEnvelope value = _durableOutbox
+                ?? throw new InvalidOperationException("Saga start did not produce durable Outbox-compatible work.");
+            _durableOutbox = null;
+            return value;
+        }
     }
 
     private sealed class Pipeline(Task<InboxHandlingResult> result) : IInboxPipeline
@@ -322,3 +433,20 @@ public sealed class CompatibilityTests
 internal sealed record CompatibilityEvent(string Value, DateTimeOffset OccurredOn) : IDomainEvent;
 [JsonSerializable(typeof(CompatibilityEvent))]
 internal sealed partial class CompatibilityJsonContext : JsonSerializerContext;
+
+
+[Trait("Category", "MessagingCompatibility")]
+public sealed class SagaTransportCompatibilityTests
+{
+    [Fact, Trait("Transport", "InMemory")] public Task InMemory() => RunAsync("InMemory");
+    [Fact, Trait("Transport", "RabbitMQ")] public Task RabbitMQ() => RunAsync("RabbitMQ");
+    [Fact, Trait("Transport", "AzureServiceBus")] public Task AzureServiceBus() => RunAsync("AzureServiceBus");
+    [Fact, Trait("Transport", "Kafka")] public Task Kafka() => RunAsync("Kafka");
+
+    private static async Task RunAsync(string transport)
+    {
+        await using var fixture = new CompatibilityFixture(transport);
+        await fixture.InitializeAsync();
+        await CompatibilityTests.SagaOrchestration(fixture);
+    }
+}

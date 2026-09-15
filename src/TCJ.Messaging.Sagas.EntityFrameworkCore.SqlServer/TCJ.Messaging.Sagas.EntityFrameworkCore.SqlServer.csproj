@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../eng/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer</PackageId>
+    <Title>TCJ Messaging Sagas Entity Framework Core SQL Server</Title>
+    <Description>SQL Server rowversion, correlation uniqueness, and atomic lease-based timer claiming for TCJ durable Sagas.</Description>
+    <PackageTags>tcj;messaging;saga;process-manager;entity-framework-core;sql-server;rowversion</PackageTags>
+    <RootNamespace>TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer</RootNamespace>
+    <AssemblyName>TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer</AssemblyName>
+    <IsAotCompatible>false</IsAotCompatible>
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TCJ.Messaging.Sagas.EntityFrameworkCore/TCJ.Messaging.Sagas.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="../TCJ.EntityFrameworkCore.SqlServer/TCJ.EntityFrameworkCore.SqlServer.csproj" />
+  </ItemGroup>
+</Project>

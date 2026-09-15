@@ -265,6 +265,48 @@
         }
       ],
       "fullSupportEvidence": []
+    },
+    {
+      "packageId": "TCJ.Messaging.Sagas",
+      "tier": "Conditional",
+      "rationale": "The transport-neutral Saga package uses explicit registration and caller-supplied JsonTypeInfo state metadata without assembly scanning or persisted CLR type activation. Full Native AOT support is not claimed until a packed-NuGet Saga consumer is published and executed as blocking release evidence.",
+      "restrictions": [
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.Messaging.Sagas.EntityFrameworkCore.Registration.SagaServiceCollectionExtensions.AddTcjSaga<TDbContext,TSaga,TState>(...)",
+          "status": "Restricted",
+          "reason": "Trimming and Native AOT consumers must provide explicit JsonTypeInfo<TState> metadata and an explicit state factory for every Saga state contract. Runtime assembly scanning and assembly-qualified persisted type names are not supported."
+        }
+      ],
+      "fullSupportEvidence": []
+    },
+    {
+      "packageId": "TCJ.Messaging.Sagas.EntityFrameworkCore",
+      "tier": "Experimental",
+      "rationale": "Saga EF persistence avoids reflection-only serializer registration and uses explicit state metadata, but it inherits the repository EF Core Native AOT experimental boundary and therefore does not set IsAotCompatible=true or claim production Native AOT support.",
+      "restrictions": [
+        {
+          "kind": "Upstream",
+          "symbol": "Microsoft.EntityFrameworkCore NativeAOT / compiled model support",
+          "status": "Experimental",
+          "reason": "The Saga EF package participates in EF relational models, transactions, compiled queries, and consumer-controlled migrations. Its Native AOT support cannot exceed the existing Experimental TCJ.EntityFrameworkCore boundary."
+        }
+      ],
+      "fullSupportEvidence": []
+    },
+    {
+      "packageId": "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
+      "tier": "Experimental",
+      "rationale": "SQL Server Saga persistence uses provider-native rowversion and parameterized lease claiming, but it inherits the SQL Server/EF Native AOT experimental boundary and has no packed Native AOT execution evidence.",
+      "restrictions": [
+        {
+          "kind": "Upstream",
+          "symbol": "Microsoft.EntityFrameworkCore.SqlServer NativeAOT / precompiled-query provider support",
+          "status": "Experimental",
+          "reason": "Provider support and EF query precompilation remain upstream-experimental; TCJ does not claim Full Native AOT support for Saga SQL Server persistence."
+        }
+      ],
+      "fullSupportEvidence": []
     }
   ],
   "supportedCiRuntimeIdentifiers": [

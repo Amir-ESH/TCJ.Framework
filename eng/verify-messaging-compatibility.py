@@ -93,7 +93,10 @@ def validate_config(run_adapters=True):
         require(contract.get(key) == neutral[key], f"Neutral {key} drift.")
     require(contract.get("normalizedEnvelopeFields") == neutral["rawEnvelopeFields"], "Envelope normalization drift.")
     require(set(policy.get("requiredScenarios", [])) >= {"identity", "headers", "inbox-order", "inbox-failure", "ordering", "publish-telemetry", "readiness", "settlement", "unsupported-options", "batch"}, "Required scenario missing.")
-    packages = {p.stem for p in (ROOT / "src").glob("TCJ.Messaging.*/*.csproj")}
+    messaging_family_packages = {p.stem for p in (ROOT / "src").glob("TCJ.Messaging.*/*.csproj")}
+    non_adapter_packages = set(policy.get("nonAdapterPackages", []))
+    require(non_adapter_packages <= messaging_family_packages, "Messaging compatibility non-adapter package list contains an unknown package.")
+    packages = messaging_family_packages - non_adapter_packages
     required_packages = {Path(s["testProject"]).stem.removesuffix(".Tests") for n, s in contract["transports"].items() if n != "InMemory"}
     require(packages == required_packages, "Every production adapter must join the compatibility matrix before release.")
     for name, spec in contract["transports"].items():

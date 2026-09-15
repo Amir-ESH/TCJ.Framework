@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../eng/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>TCJ.Messaging.Sagas.EntityFrameworkCore</PackageId>
+    <Title>TCJ Messaging Sagas Entity Framework Core</Title>
+    <Description>Provider-neutral EF Core persistence and transactional Inbox integration for TCJ durable Sagas.</Description>
+    <PackageTags>tcj;messaging;saga;process-manager;entity-framework-core;inbox;outbox</PackageTags>
+    <RootNamespace>TCJ.Messaging.Sagas.EntityFrameworkCore</RootNamespace>
+    <AssemblyName>TCJ.Messaging.Sagas.EntityFrameworkCore</AssemblyName>
+    <IsAotCompatible>false</IsAotCompatible>
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TCJ.Messaging.Sagas/TCJ.Messaging.Sagas.csproj" />
+    <ProjectReference Include="../TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+</Project>

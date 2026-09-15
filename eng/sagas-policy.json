@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "packages": {
+    "TCJ.Messaging.Sagas": "src/TCJ.Messaging.Sagas/TCJ.Messaging.Sagas.csproj",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore": "src/TCJ.Messaging.Sagas.EntityFrameworkCore/TCJ.Messaging.Sagas.EntityFrameworkCore.csproj",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer": "src/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.csproj"
+  },
+  "supportedProviders": [
+    "SqlServer"
+  ],
+  "unitTestProject": "tests/TCJ.Messaging.Sagas.Tests/TCJ.Messaging.Sagas.Tests.csproj",
+  "sqlServerTestProject": "tests/TCJ.Messaging.Sagas.SqlServer.Tests/TCJ.Messaging.Sagas.SqlServer.Tests.csproj",
+  "transportCompatibilityTestProject": "tests/TCJ.Messaging.CompatibilityTests/TCJ.Messaging.CompatibilityTests.csproj",
+  "requiredUnitTests": [
+    "Correlation_key_is_bounded_and_redacted",
+    "Lifecycle_is_explicit_and_only_one_terminal_action_is_allowed",
+    "Timer_deadline_must_be_future_and_output_is_outbox_compatible_domain_event",
+    "Compensation_completion_is_explicit_business_action",
+    "Registration_requires_stable_positive_explicit_contracts",
+    "Duplicate_saga_type_fails_registration",
+    "Duplicate_message_handler_across_sagas_is_rejected",
+    "Conflicting_start_and_continue_correlation_names_are_rejected",
+    "Incomplete_state_migration_graph_fails_startup_definition_validation"
+  ],
+  "requiredSqlServerTests": [
+    "Start_commits_inbox_saga_business_timer_and_outbox_atomically_and_duplicate_is_idempotent",
+    "Handler_failure_rolls_back_saga_business_timer_correlation_and_outbox_state",
+    "Concurrent_transitions_use_rowversion_retry_without_lost_update_or_duplicate_committed_outbox",
+    "Due_timer_failure_rolls_back_transition_and_is_retried_with_bounded_attempts",
+    "Timer_claim_is_atomic_between_workers_and_expired_lease_recovers",
+    "Explicit_compensation_is_durable_and_completes_as_new_business_action",
+    "Supported_state_and_definition_version_migrate_transactionally_without_identity_change",
+    "Cleanup_is_bounded_and_never_removes_active_saga",
+    "Cleanup_never_removes_terminal_saga_with_active_timer",
+    "Stale_terminal_cleanup_delete_loses_rowversion_race_without_removing_saga"
+  ],
+  "requiredTransportScenarios": [
+    "InMemory",
+    "RabbitMQ",
+    "AzureServiceBus",
+    "Kafka"
+  ],
+  "requireSameInboxSagaDbContext": true,
+  "requireExistingOutbox": true,
+  "requireRealSqlServerConcurrencyTests": true,
+  "requireRealSqlServerTimerTests": true,
+  "requireCrossTransportSagaSmoke": true,
+  "requireSensitiveDataScan": true,
+  "requirePackageConsumer": true,
+  "requireUpgradeScenario": true,
+  "requireCommitMatchedReleaseEvidence": true,
+  "packageConsumer": "Sagas.SqlServer.Console",
+  "upgradeScenario": "SagaConsumer",
+  "workflow": ".github/workflows/sagas.yml",
+  "documentation": "docs/messaging-sagas.md",
+  "generatedArtifactDirectory": "artifacts/sagas/",
+  "limits": {
+    "maximumStatePayloadBytes": 262144,
+    "maximumTimerBatchSize": 500,
+    "defaultTimerBatchSize": 20,
+    "maximumTimerAttempts": 20,
+    "defaultTimerAttempts": 5,
+    "maximumCompensationAttempts": 20,
+    "defaultCompensationAttempts": 5,
+    "defaultTerminalRetentionDays": 30,
+    "defaultCleanupBatchSize": 100
+  },
+  "sensitiveMarkers": [
+    "tcj-saga-secret-payload",
+    "tcj-saga-secret-correlation"
+  ]
+}

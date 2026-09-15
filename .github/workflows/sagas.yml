@@ -1,0 +1,238 @@
+name: Saga orchestration
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, develop]
+    paths: &paths
+      - 'src/TCJ.Messaging.Sagas*/**'
+      - 'src/TCJ.EntityFrameworkCore/Inbox/**'
+      - 'src/TCJ.EntityFrameworkCore/Outbox/**'
+      - 'src/TCJ.EntityFrameworkCore/Properties/AssemblyInfo.cs'
+      - 'tests/TCJ.Messaging.Sagas*/**'
+      - 'tests/TCJ.Messaging.CompatibilityTests/**'
+      - 'compatibility/Consumers/Sagas.SqlServer.Console/**'
+      - 'upgrade-tests/Scenarios/SagaConsumer/**'
+      - 'eng/sagas-*.json'
+      - 'eng/verify-sagas.py'
+      - 'eng/tests/test_verify_sagas.py'
+      - 'eng/architecture-policy.json'
+      - 'eng/aot-policy.json'
+      - 'eng/sbom-policy.json'
+      - 'eng/reproducibility-policy.json'
+      - 'eng/compatibility-policy.json'
+      - 'eng/upgrade-compatibility-policy.json'
+      - 'eng/messaging-compatibility-policy.json'
+      - 'docs/messaging-sagas.md'
+      - 'docs/nuget/TCJ.Messaging.Sagas*.md'
+      - '.github/workflows/sagas.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/release-preflight.yml'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/required-pr-gate.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'TCJ.slnx'
+  push:
+    branches: [main, develop]
+    paths: *paths
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+concurrency:
+  group: saga-orchestration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-contract:
+    name: Validate contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Validate Saga policy and verifier tests
+        run: |
+          python3 -m unittest eng.tests.test_verify_sagas
+          python3 eng/verify-sagas.py validate-config
+          python3 eng/verify-architecture-policy.py validate-config
+          python3 eng/verify-consumer-compatibility.py validate-config
+          python3 eng/verify-upgrade-compatibility.py validate-config
+      - name: Restore Saga projects
+        run: |
+          dotnet restore tests/TCJ.Messaging.Sagas.Tests/TCJ.Messaging.Sagas.Tests.csproj
+          dotnet restore tests/TCJ.Messaging.Sagas.SqlServer.Tests/TCJ.Messaging.Sagas.SqlServer.Tests.csproj
+      - name: Build Saga projects
+        run: |
+          dotnet build tests/TCJ.Messaging.Sagas.Tests/TCJ.Messaging.Sagas.Tests.csproj -c Release --no-restore
+          dotnet build tests/TCJ.Messaging.Sagas.SqlServer.Tests/TCJ.Messaging.Sagas.SqlServer.Tests.csproj -c Release --no-restore
+
+  unit-tests:
+    name: Unit tests
+    needs: validate-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Run Saga unit tests
+        run: >
+          dotnet test tests/TCJ.Messaging.Sagas.Tests/TCJ.Messaging.Sagas.Tests.csproj
+          -c Release
+          --logger "trx;LogFileName=sagas-unit.trx"
+          --results-directory TestResults/Sagas/unit
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: saga-unit-${{ github.run_id }}
+          path: TestResults/Sagas/unit
+          if-no-files-found: error
+
+  sql-server-integration:
+    name: SQL Server integration
+    needs: validate-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Run real SQL Server Saga integration tests
+        run: >
+          dotnet test tests/TCJ.Messaging.Sagas.SqlServer.Tests/TCJ.Messaging.Sagas.SqlServer.Tests.csproj
+          -c Release
+          --logger "trx;LogFileName=sagas-sqlserver.trx"
+          --results-directory TestResults/Sagas/sqlserver
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: saga-sqlserver-${{ github.run_id }}
+          path: TestResults/Sagas/sqlserver
+          if-no-files-found: error
+
+  concurrency-and-timers:
+    name: Concurrency and timers
+    needs: validate-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Run focused concurrency and timer recovery tests
+        run: >
+          dotnet test tests/TCJ.Messaging.Sagas.SqlServer.Tests/TCJ.Messaging.Sagas.SqlServer.Tests.csproj
+          -c Release
+          --filter "FullyQualifiedName~Concurrent_transitions_use_rowversion_retry_without_lost_update_or_duplicate_committed_outbox|FullyQualifiedName~Due_timer_failure_rolls_back_transition_and_is_retried_with_bounded_attempts|FullyQualifiedName~Timer_claim_is_atomic_between_workers_and_expired_lease_recovers"
+          --logger "trx;LogFileName=sagas-concurrency-timers.trx"
+          --results-directory TestResults/Sagas/concurrency-timers
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: saga-concurrency-timers-${{ github.run_id }}
+          path: TestResults/Sagas/concurrency-timers
+          if-no-files-found: error
+
+  messaging-compatibility:
+    name: Messaging compatibility / ${{ matrix.transport }}
+    needs: validate-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        transport: [InMemory, RabbitMQ, AzureServiceBus, Kafka]
+    env:
+      TCJ_AZURE_SERVICE_BUS_REQUIRE_INTEGRATION: 1
+      TCJ_AZURE_SERVICE_BUS_TEST_ENVIRONMENT: emulator
+      TCJ_AZURE_SERVICE_BUS_CONNECTION_STRING: Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      TCJ_AZURE_SERVICE_BUS_MANAGEMENT_CONNECTION_STRING: Endpoint=sb://localhost:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Resolve pinned Azure Service Bus emulator infrastructure
+        if: matrix.transport == 'AzureServiceBus'
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          policy = json.load(open('eng/azure-service-bus-policy.json'))
+          print('TCJ_SERVICE_BUS_EMULATOR_IMAGE=' + policy['emulator']['image'])
+          print('TCJ_SQL_SERVER_IMAGE=' + policy['emulator']['sqlServerImage'])
+          PY
+          password="Aa1!$(openssl rand -hex 16)"
+          echo "::add-mask::$password"
+          echo "SQL_PASSWORD=$password" >> "$GITHUB_ENV"
+      - name: Start repository Azure Service Bus emulator
+        if: matrix.transport == 'AzureServiceBus'
+        run: |
+          docker compose -f eng/azure-service-bus-emulator/docker-compose.yml up -d
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent http://localhost:5300/health >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Run focused Saga transport semantics
+        run: >
+          dotnet test tests/TCJ.Messaging.CompatibilityTests/TCJ.Messaging.CompatibilityTests.csproj
+          -c Release
+          --filter "FullyQualifiedName~SagaTransportCompatibilityTests.${{ matrix.transport }}"
+          --logger "trx;LogFileName=saga-${{ matrix.transport }}.trx"
+          --results-directory TestResults/Sagas/transport/${{ matrix.transport }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: saga-transport-${{ matrix.transport }}-${{ github.run_id }}
+          path: TestResults/Sagas/transport/${{ matrix.transport }}
+          if-no-files-found: error
+      - name: Stop Azure Service Bus emulator
+        if: always() && matrix.transport == 'AzureServiceBus'
+        run: docker compose -f eng/azure-service-bus-emulator/docker-compose.yml down -v --remove-orphans
+
+  aggregate:
+    name: Verify Saga evidence
+    needs: [unit-tests, sql-server-integration, concurrency-and-timers, messaging-compatibility]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: saga-*-${{ github.run_id }}
+          path: TestResults/Sagas
+          merge-multiple: true
+      - name: Verify test, transport, and sensitive-data evidence
+        run: python3 eng/verify-sagas.py verify --results TestResults/Sagas --output artifacts/sagas
+      - name: Publish Saga summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/sagas/SAGAS_SUMMARY.md ]]; then
+            cat artifacts/sagas/SAGAS_SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sagas-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            artifacts/sagas/saga-summary.json
+            artifacts/sagas/SAGAS_SUMMARY.md
+            artifacts/sagas/sensitive-data-scan.json
+          if-no-files-found: error
+          retention-days: 30

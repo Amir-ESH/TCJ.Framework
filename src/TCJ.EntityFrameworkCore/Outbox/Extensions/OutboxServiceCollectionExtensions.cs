@@ -75,8 +75,8 @@ public static class OutboxServiceCollectionExtensions
     {
         lock (services)
         {
-            ServiceDescriptor? existing = services.FirstOrDefault(static descriptor => descriptor.ServiceType == typeof(OutboxContextMarker));
-            if (existing?.ImplementationInstance is OutboxContextMarker marker)
+            ServiceDescriptor? existing = services.FirstOrDefault(static descriptor => descriptor.ServiceType == typeof(OutboxContextRegistration));
+            if (existing?.ImplementationInstance is OutboxContextRegistration marker)
             {
                 if (marker.DbContextType != typeof(TDbContext))
                 {
@@ -85,9 +85,11 @@ public static class OutboxServiceCollectionExtensions
                 return;
             }
 
-            services.AddSingleton(new OutboxContextMarker(typeof(TDbContext)));
+            services.AddSingleton(new OutboxContextRegistration(typeof(TDbContext)));
         }
     }
 
-    private sealed record OutboxContextMarker(Type DbContextType);
 }
+
+internal sealed record OutboxContextRegistration(Type DbContextType);
+

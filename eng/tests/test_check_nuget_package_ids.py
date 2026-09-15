@@ -60,13 +60,24 @@ class NuGetPackageIdPolicyTests(unittest.TestCase):
                 "TCJ.EntityFrameworkCore.SqlServer",
                 "TCJ.AspNetCore",
                 "TCJ.Messaging",
+                "TCJ.Messaging.Sagas",
+                "TCJ.Messaging.Sagas.EntityFrameworkCore",
+                "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
                 "TCJ.Messaging.RabbitMQ",
                 "TCJ.Messaging.AzureServiceBus",
                 "TCJ.Messaging.Kafka",
                 "TCJ.Generators",
             ],
         )
-        target_only = {"TCJ.Messaging", "TCJ.Messaging.RabbitMQ", "TCJ.Messaging.AzureServiceBus", "TCJ.Messaging.Kafka"}
+        target_only = {
+            "TCJ.Messaging",
+            "TCJ.Messaging.Sagas",
+            "TCJ.Messaging.Sagas.EntityFrameworkCore",
+            "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
+            "TCJ.Messaging.RabbitMQ",
+            "TCJ.Messaging.AzureServiceBus",
+            "TCJ.Messaging.Kafka",
+        }
         self.assertEqual(set(current) - published, target_only)
         self.assertEqual(published, set(current) - target_only)
         self.assertTrue(

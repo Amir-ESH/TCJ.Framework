@@ -106,14 +106,15 @@ public static class InboxServiceCollectionExtensions
     {
         lock (services)
         {
-            ServiceDescriptor? descriptor = services.FirstOrDefault(static d => d.ServiceType == typeof(InboxContextMarker));
-            if (descriptor?.ImplementationInstance is InboxContextMarker marker)
+            ServiceDescriptor? descriptor = services.FirstOrDefault(static d => d.ServiceType == typeof(InboxContextRegistration));
+            if (descriptor?.ImplementationInstance is InboxContextRegistration marker)
             {
                 if (marker.DbContextType != typeof(TDbContext)) throw new InvalidOperationException($"TCJ Inbox is already registered for DbContext '{marker.DbContextType.Name}'. Register one Inbox DbContext per service container.");
                 return;
             }
-            services.AddSingleton(new InboxContextMarker(typeof(TDbContext)));
+            services.AddSingleton(new InboxContextRegistration(typeof(TDbContext)));
         }
     }
-    private sealed record InboxContextMarker(Type DbContextType);
 }
+
+internal sealed record InboxContextRegistration(Type DbContextType);

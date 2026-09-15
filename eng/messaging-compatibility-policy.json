@@ -26,7 +26,8 @@
     "header-limit",
     "outbox-retry",
     "neutral-runner-telemetry",
-    "startup-diagnostics"
+    "startup-diagnostics",
+    "saga-orchestration"
   ],
   "maximumEvidenceFileBytes": 16777216,
   "sensitiveMarkers": [
@@ -49,5 +50,10 @@
   "requireSensitiveDataScan": true,
   "requireMachineReadableMatrix": true,
   "requireMarkdownMatrix": true,
-  "requirePublishedPackageEvidence": true
+  "requirePublishedPackageEvidence": true,
+  "nonAdapterPackages": [
+    "TCJ.Messaging.Sagas",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore",
+    "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer"
+  ]
 }
