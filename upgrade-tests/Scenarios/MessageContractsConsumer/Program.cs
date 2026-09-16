@@ -12,8 +12,8 @@ using ServiceProvider provider = services.BuildServiceProvider();
 MessagingMessageContract contract = provider.GetRequiredService<IMessageContractRegistry>().Resolve("upgrade.contract", 1);
 GeneratedMessageContractSchema schema = new MessageContractSchemaGenerator().Generate(contract);
 var analyzer = new MessageContractCompatibilityAnalyzer();
-ReadOnlyMemory<byte> oldSchema = """{"type":"object","properties":{"value":{"type":"string"}},"required":["value"],"additionalProperties":true}"""u8.ToArray();
-ReadOnlyMemory<byte> newSchema = """{"type":"object","properties":{"value":{"type":"string"},"note":{"type":["string","null"]}},"required":["value"],"additionalProperties":true}"""u8.ToArray();
+ReadOnlyMemory<byte> oldSchema = """{"type":"object","properties":{"value":{"type":"string"}},"required":["value"],"additionalProperties":false}"""u8.ToArray();
+ReadOnlyMemory<byte> newSchema = """{"type":"object","properties":{"value":{"type":"string"},"note":{"type":["string","null"]}},"required":["value"],"additionalProperties":false}"""u8.ToArray();
 var behavior = new
 {
     schemaVersion = 1,
