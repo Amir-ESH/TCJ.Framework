@@ -185,6 +185,8 @@
       "name": "MessageContractsConsumer",
       "project": "upgrade-tests/Scenarios/MessageContractsConsumer/MessageContractsConsumer.csproj",
       "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
         "TCJ.Messaging.Contracts"
       ],
       "expectedBehavior": "upgrade-tests/Expected/MessageContractsConsumer.json",

@@ -247,6 +247,8 @@
       "name": "MessageContracts.Console",
       "project": "compatibility/Consumers/MessageContracts.Console/MessageContracts.Console.csproj",
       "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
         "TCJ.Messaging.Contracts"
       ],
       "expectedOutput": "TCJ.Messaging.Contracts package-only consumer passed"
