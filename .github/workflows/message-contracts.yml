@@ -78,12 +78,13 @@ jobs:
         run: |
           version="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
           for package in TCJ.Core TCJ.Messaging TCJ.Messaging.Contracts; do
-            dotnet pack "src/$package/$package.csproj" -c Release -o artifacts/message-contracts/packages
+            dotnet pack "src/$package/$package.csproj" -c Release -o artifacts/compatibility/packages
           done
           dotnet restore compatibility/Consumers/MessageContracts.Console/MessageContracts.Console.csproj \
             -p:TCJCompatibilityVersion="$version" \
-            --source artifacts/message-contracts/packages \
-            --source https://api.nuget.org/v3/index.json
+            --configfile compatibility/NuGet.Config \
+            --force \
+            --no-cache
           dotnet run --project compatibility/Consumers/MessageContracts.Console/MessageContracts.Console.csproj \
             -c Release --no-restore -p:TCJCompatibilityVersion="$version"
           TCJ_MESSAGE_CONTRACT_PACKAGE_VERSION="$version" python3 - <<'PY2'
