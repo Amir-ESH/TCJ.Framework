@@ -104,6 +104,21 @@ public sealed class EnvelopeAndSerializationTests
     }
 
     [Fact]
+    public void Registry_enumeration_is_deterministic()
+    {
+        var services = new ServiceCollection();
+        services.AddTcjMessaging();
+        services.AddTcjMessage("z.message", 2, TestJsonContext.Default.TestMessage);
+        services.AddTcjMessage("a.message", 2, TestJsonContext.Default.TestMessage);
+        services.AddTcjMessage("a.message", 1, TestJsonContext.Default.TestMessage);
+        using ServiceProvider provider = services.BuildServiceProvider();
+        IMessageContractRegistry registry = provider.GetRequiredService<IMessageContractRegistry>();
+        Assert.Equal(
+            [("a.message", 1), ("a.message", 2), ("z.message", 2)],
+            registry.Contracts.Select(static contract => (contract.MessageType, contract.MessageVersion)).ToArray());
+    }
+
+    [Fact]
     public void Registry_rejects_duplicate_wire_contracts()
     {
         var services = new ServiceCollection();

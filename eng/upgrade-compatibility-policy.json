@@ -15,6 +15,7 @@
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
+    "TCJ.Messaging.Contracts",
     "TCJ.Messaging.Sagas",
     "TCJ.Messaging.Sagas.EntityFrameworkCore",
     "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
@@ -24,6 +25,7 @@
   ],
   "targetOnlyPackages": [
     "TCJ.Messaging",
+    "TCJ.Messaging.Contracts",
     "TCJ.Messaging.Sagas",
     "TCJ.Messaging.Sagas.EntityFrameworkCore",
     "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
@@ -59,7 +61,8 @@
     "MessagingConsumer",
     "AzureServiceBusConsumer",
     "KafkaConsumer",
-    "SagaConsumer"
+    "SagaConsumer",
+    "MessageContractsConsumer"
   ],
   "scenarios": [
     {
@@ -177,6 +180,17 @@
       ],
       "expectedBehavior": "upgrade-tests/Expected/SagaConsumer.json",
       "expectedOutput": "TCJ durable Saga target-only upgrade scenario passed"
+    },
+    {
+      "name": "MessageContractsConsumer",
+      "project": "upgrade-tests/Scenarios/MessageContractsConsumer/MessageContractsConsumer.csproj",
+      "packages": [
+        "TCJ.Core",
+        "TCJ.Messaging",
+        "TCJ.Messaging.Contracts"
+      ],
+      "expectedBehavior": "upgrade-tests/Expected/MessageContractsConsumer.json",
+      "expectedOutput": "TCJ.Messaging.Contracts target-only upgrade scenario passed"
     }
   ]
 }

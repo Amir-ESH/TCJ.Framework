@@ -9,6 +9,7 @@
     <Project Path="Consumers/FullStack.MinimalApi/FullStack.MinimalApi.csproj" />
     <Project Path="Consumers/Outbox.Console/Outbox.Console.csproj" />
     <Project Path="Consumers/MessagingPublisher.Console/MessagingPublisher.Console.csproj" />
+    <Project Path="Consumers/MessageContracts.Console/MessageContracts.Console.csproj" />
     <Project Path="Consumers/MessagingConsumer.Worker/MessagingConsumer.Worker.csproj" />
     <Project Path="Consumers/MessagingInboxOutbox.Worker/MessagingInboxOutbox.Worker.csproj" />
     <Project Path="Consumers/AzureServiceBusPublisher.Console/AzureServiceBusPublisher.Console.csproj" />

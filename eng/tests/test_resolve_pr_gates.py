@@ -111,6 +111,24 @@ class RequiredPrGateTests(unittest.TestCase):
         selected = self.required("develop", ".github/workflows/required-pr-gate.yml")
         self.assertEqual({"ci", "dependency_review", *POLICY["gates"].keys()}, selected)
 
+    def test_orchestration_wires_every_policy_gate(self):
+        workflow = (ROOT / ".github" / "workflows" / "required-pr-gate.yml").read_text(
+            encoding="utf-8"
+        )
+
+        for gate in POLICY["gates"]:
+            with self.subTest(gate=gate):
+                self.assertIn(
+                    f"      {gate}: ${{{{ steps.resolve.outputs.{gate} }}}}",
+                    workflow,
+                )
+                self.assertIn(f"\n  {gate}:\n", workflow)
+                self.assertIn(f"\n      - {gate}\n", workflow)
+                self.assertIn(
+                    f'"{gate}":"${{{{ needs.{gate}.result }}}}"',
+                    workflow,
+                )
+
     def test_unknown_target_is_rejected(self):
         with self.assertRaises(ValueError):
             MODULE.resolve_plan(POLICY, "feature", ["src/TCJ.Core/Foo.cs"])

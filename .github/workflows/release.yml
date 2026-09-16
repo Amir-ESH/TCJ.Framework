@@ -78,12 +78,16 @@ jobs:
     name: Cross-transport messaging compatibility gate
     uses: ./.github/workflows/messaging-compatibility.yml
 
+  message-contracts:
+    name: Message contract governance gate
+    uses: ./.github/workflows/message-contracts.yml
+
   kafka:
     name: Kafka transport gate
     uses: ./.github/workflows/kafka.yml
 
   build-and-pack:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus, kafka, rabbitmq, messaging-compatibility]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus, kafka, rabbitmq, messaging-compatibility, message-contracts]
     name: Validate, build, test and pack
     runs-on: ubuntu-latest
 
@@ -144,6 +148,9 @@ jobs:
 
       - name: Validate Kafka release contract
         run: python3 eng/verify-kafka.py validate-config
+
+      - name: Validate message-contract governance configuration
+        run: python3 eng/verify-message-contracts.py validate-config
 
       - name: Validate package consumer compatibility configuration
         run: python3 eng/verify-consumer-compatibility.py validate-config

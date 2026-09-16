@@ -237,6 +237,20 @@ jobs:
           fi
           echo "required=$required" >> "$GITHUB_OUTPUT"
 
+      - name: Determine whether Step 52 TCJ.Messaging.Contracts published smoke is required
+        id: message-contracts-smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          current="$(python3 -c 'import json; print(json.load(open("eng/release-manifest.json"))["version"])')"
+          published="$(python3 -c 'import json; print(json.load(open("eng/published-release.json"))["version"])')"
+          candidate="${{ needs.verify-publication.outputs.version }}"
+          required=false
+          if [[ ( "$candidate" == "$current" || "$candidate" == "$published" ) && "${{ matrix.slug }}" == "linux" ]]; then
+            if python3 -c 'import re,sys; v=sys.argv[1]; core,sep,pre=v.partition("-"); parts=tuple(map(int,core.split("."))); match=re.fullmatch(r"preview\.(\d+)",pre); ok=parts>(0,1,0) or (parts==(0,1,0) and (not sep or (match is not None and int(match.group(1))>=5))); sys.exit(0 if ok else 1)' "$candidate"; then required=true; fi
+          fi
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+
       - name: Determine whether Step 49 TCJ.Messaging.Kafka published smoke is required
         id: kafka-smoke
         shell: bash
@@ -313,6 +327,7 @@ jobs:
           -p:EnableOutboxSmoke=${{ steps.outbox-smoke.outputs.required }}
           -p:EnableInboxSmoke=${{ steps.inbox-smoke.outputs.required }}
           -p:EnableMessagingSmoke=${{ steps.messaging-smoke.outputs.required }}
+          -p:EnableMessageContractsSmoke=${{ steps.message-contracts-smoke.outputs.required }}
           -p:EnableSagaSmoke=${{ steps.saga-smoke.outputs.required }}
           -p:EnableAzureServiceBusSmoke=${{ steps.azure-service-bus-smoke.outputs.required }}
           -p:EnableKafkaSmoke=${{ steps.kafka-smoke.outputs.required }}
@@ -324,6 +339,7 @@ jobs:
           TCJ_OUTBOX_SMOKE: ${{ steps.outbox-smoke.outputs.required }}
           TCJ_INBOX_SMOKE: ${{ steps.inbox-smoke.outputs.required }}
           TCJ_MESSAGING_SMOKE: ${{ steps.messaging-smoke.outputs.required }}
+          TCJ_MESSAGE_CONTRACTS_SMOKE: ${{ steps.message-contracts-smoke.outputs.required }}
           TCJ_SAGA_SMOKE: ${{ steps.saga-smoke.outputs.required }}
           TCJ_AZURE_SERVICE_BUS_SMOKE: ${{ steps.azure-service-bus-smoke.outputs.required }}
           TCJ_KAFKA_SMOKE: ${{ steps.kafka-smoke.outputs.required }}
@@ -338,6 +354,7 @@ jobs:
           -p:EnableOutboxSmoke=${{ steps.outbox-smoke.outputs.required }}
           -p:EnableInboxSmoke=${{ steps.inbox-smoke.outputs.required }}
           -p:EnableMessagingSmoke=${{ steps.messaging-smoke.outputs.required }}
+          -p:EnableMessageContractsSmoke=${{ steps.message-contracts-smoke.outputs.required }}
           -p:EnableSagaSmoke=${{ steps.saga-smoke.outputs.required }}
           -p:EnableAzureServiceBusSmoke=${{ steps.azure-service-bus-smoke.outputs.required }}
           -p:EnableKafkaSmoke=${{ steps.kafka-smoke.outputs.required }}

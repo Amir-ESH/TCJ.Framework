@@ -21,6 +21,7 @@ POLICY_REL = Path("eng/compatibility-policy.json")
 REQUIRED_PACKAGE_IDS = {
     "TCJ.Core", "TCJ.DependencyInjection", "TCJ.EntityFrameworkCore",
     "TCJ.EntityFrameworkCore.SqlServer", "TCJ.AspNetCore", "TCJ.Messaging",
+    "TCJ.Messaging.Contracts",
     "TCJ.Messaging.Sagas", "TCJ.Messaging.Sagas.EntityFrameworkCore",
     "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
     "TCJ.Messaging.AzureServiceBus", "TCJ.Messaging.Kafka", "TCJ.Messaging.RabbitMQ",

@@ -39,6 +39,8 @@ services.AddTcjMessage(
 
 Schema upcasters are explicit `IMessageUpcaster` registrations. A missing or ambiguous upcast chain fails closed.
 
+Optional build/test/CI schema governance is provided by `TCJ.Messaging.Contracts`; see [Message contract governance](message-contract-governance.md). The runtime registry remains owned by `TCJ.Messaging` and does not load schema files or contact a remote registry.
+
 ## Header policy and trace context
 
 Headers are allowlist-based and bounded by count, key length, value length, and aggregate byte size. Security-sensitive names such as `authorization`, `cookie`, `set-cookie`, API keys, access/refresh tokens, passwords, and connection strings are not propagated by default.

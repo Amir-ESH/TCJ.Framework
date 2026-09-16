@@ -225,6 +225,20 @@
       "fullSupportEvidence": []
     },
     {
+      "packageId": "TCJ.Messaging.Contracts",
+      "tier": "Conditional",
+      "rationale": "TCJ.Messaging.Contracts uses explicit JsonTypeInfo metadata and BCL System.Text.Json schema export without reflection scanning or broker/provider SDKs. It declares IsAotCompatible=true, but Full Native AOT support is not claimed until a packed-package Native AOT governance consumer is recorded as blocking evidence; the package is primarily optional build/test/CI tooling.",
+      "restrictions": [
+        {
+          "kind": "PublicApi",
+          "symbol": "TCJ.Messaging.Contracts.MessageContractSchemaGenerator",
+          "status": "Restricted",
+          "reason": "Native AOT/trimming consumers must supply runtime contracts backed by explicit source-generated or otherwise trimming-safe JsonTypeInfo metadata. Full packed-package AOT execution evidence is not yet recorded."
+        }
+      ],
+      "fullSupportEvidence": []
+    },
+    {
       "packageId": "TCJ.Messaging.RabbitMQ",
       "tier": "Conditional",
       "rationale": "TCJ.Messaging.RabbitMQ avoids reflection-based message activation and keeps RabbitMQ SDK types out of its public API. Native AOT support remains Conditional because RabbitMQ.Client is an upstream runtime dependency and this step does not claim Full support without packed-NuGet Native AOT execution evidence.",

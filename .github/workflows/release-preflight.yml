@@ -87,6 +87,10 @@ jobs:
     name: Cross-transport messaging compatibility gate
     uses: ./.github/workflows/messaging-compatibility.yml
 
+  message-contracts:
+    name: Message contract governance gate
+    uses: ./.github/workflows/message-contracts.yml
+
   kafka:
     name: Kafka transport gate
     uses: ./.github/workflows/kafka.yml
@@ -96,7 +100,7 @@ jobs:
     uses: ./.github/workflows/sagas.yml
 
   preflight:
-    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus, kafka, rabbitmq, messaging-compatibility, sagas]
+    needs: [sqlserver-integration, aspnetcore-integration, consumer-compatibility, concurrency-stress, performance-benchmarks, resilience, health-checks, outbox, inbox, messaging, azure-service-bus, kafka, rabbitmq, messaging-compatibility, message-contracts, sagas]
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -121,6 +125,39 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
+
+      - name: Download commit-matched message-contract evidence
+        uses: actions/download-artifact@v8
+        with:
+          name: message-contracts-${{ github.sha }}-${{ github.run_id }}
+          path: artifacts/message-contracts
+
+      - name: Verify commit-matched message-contract evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY2'
+          import json
+          import os
+          from pathlib import Path
+          import hashlib
+          evidence_path = Path('artifacts/message-contracts/message-contract-evidence.json')
+          package_path = Path('artifacts/message-contracts/package-consumer-evidence.json')
+          evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
+          package = json.loads(package_path.read_text(encoding='utf-8'))
+          expected = os.environ['GITHUB_SHA'].lower()
+          package_hash = hashlib.sha256(package_path.read_bytes()).hexdigest()
+          if (
+              evidence.get('sourceCommit') != expected
+              or evidence.get('status') != 'passed'
+              or evidence.get('packageConsumerStatus') != 'passed'
+              or evidence.get('packageConsumerEvidenceSha256') != package_hash
+              or package.get('sourceCommit') != expected
+              or package.get('packageId') != 'TCJ.Messaging.Contracts'
+              or package.get('status') != 'passed'
+          ):
+              raise SystemExit('Message-contract governance/package-consumer evidence does not match the release commit.')
+          PY2
 
       - name: Download commit-matched Saga evidence
         uses: actions/download-artifact@v8
@@ -211,6 +248,9 @@ jobs:
 
       - name: Validate transport-neutral messaging configuration
         run: python3 eng/verify-messaging.py validate-config
+
+      - name: Validate message-contract governance configuration
+        run: python3 eng/verify-message-contracts.py validate-config
 
       - name: Validate durable Saga orchestration configuration
         run: python3 eng/verify-sagas.py validate-config

@@ -26,6 +26,9 @@
         "id": "TCJ.Messaging"
       },
       {
+        "id": "TCJ.Messaging.Contracts"
+      },
+      {
         "id": "TCJ.Messaging.Sagas"
       },
       {

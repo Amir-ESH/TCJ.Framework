@@ -22,7 +22,10 @@ public sealed class MessageContractRegistry : IMessageContractRegistry
                 throw new InvalidOperationException($"Duplicate messaging contract '{contract.MessageType}' v{contract.MessageVersion}.");
         }
         _byWire = map;
-        Contracts = map.Values.ToArray();
+        Contracts = map.Values
+            .OrderBy(static contract => contract.MessageType, StringComparer.Ordinal)
+            .ThenBy(static contract => contract.MessageVersion)
+            .ToArray();
     }
 
     /// <inheritdoc />

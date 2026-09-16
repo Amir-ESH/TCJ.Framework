@@ -52,6 +52,7 @@
   "requireMarkdownMatrix": true,
   "requirePublishedPackageEvidence": true,
   "nonAdapterPackages": [
+    "TCJ.Messaging.Contracts",
     "TCJ.Messaging.Sagas",
     "TCJ.Messaging.Sagas.EntityFrameworkCore",
     "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer"

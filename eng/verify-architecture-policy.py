@@ -24,6 +24,7 @@ REQUIRED_ASSEMBLIES = (
     "TCJ.EntityFrameworkCore.SqlServer",
     "TCJ.AspNetCore",
     "TCJ.Messaging",
+    "TCJ.Messaging.Contracts",
     "TCJ.Messaging.RabbitMQ",
     "TCJ.Messaging.AzureServiceBus",
     "TCJ.Messaging.Kafka",
