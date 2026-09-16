@@ -11,13 +11,36 @@ public sealed class CompatibilityAndGovernanceTests
     private static readonly ReadOnlyMemory<byte> V2Required = ContractTestFixture.Utf8("""
         {"type":"object","properties":{"id":{"type":"string"},"note":{"type":"string"}},"required":["id","note"],"additionalProperties":true}
         """);
+    private static readonly ReadOnlyMemory<byte> V1Closed = ContractTestFixture.Utf8("""
+        {"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":false}
+        """);
+    private static readonly ReadOnlyMemory<byte> V2OptionalClosed = ContractTestFixture.Utf8("""
+        {"type":"object","properties":{"id":{"type":"string"},"note":{"type":["string","null"]}},"required":["id"],"additionalProperties":false}
+        """);
+    private static readonly ReadOnlyMemory<byte> V2RequiredClosed = ContractTestFixture.Utf8("""
+        {"type":"object","properties":{"id":{"type":"string"},"note":{"type":"string"}},"required":["id","note"],"additionalProperties":false}
+        """);
+    private static readonly ReadOnlyMemory<byte> V1Documented = ContractTestFixture.Utf8("""
+        {"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":true,"description":"Documentation-only metadata."}
+        """);
 
     [Fact]
     public void Backward_allows_optional_property_but_required_property_breaks()
     {
         var analyzer = new MessageContractCompatibilityAnalyzer();
-        Assert.Equal(MessageContractCompatibilityStatus.Compatible, analyzer.Analyze(V1, V2Optional, MessageContractCompatibilityMode.Backward).Status);
-        Assert.Equal(MessageContractCompatibilityStatus.Breaking, analyzer.Analyze(V1, V2Required, MessageContractCompatibilityMode.Backward).Status);
+        Assert.Equal(MessageContractCompatibilityStatus.Compatible, analyzer.Analyze(V1Closed, V2OptionalClosed, MessageContractCompatibilityMode.Backward).Status);
+        Assert.Equal(MessageContractCompatibilityStatus.Breaking, analyzer.Analyze(V1Closed, V2RequiredClosed, MessageContractCompatibilityMode.Backward).Status);
+    }
+
+    [Fact]
+    public void Open_writer_with_new_constrained_reader_property_requires_review()
+    {
+        var analyzer = new MessageContractCompatibilityAnalyzer();
+
+        MessageContractCompatibilityResult result = analyzer.Analyze(V1, V2Optional, MessageContractCompatibilityMode.Backward);
+
+        Assert.Equal(MessageContractCompatibilityStatus.ReviewRequired, result.Status);
+        Assert.Contains(result.Findings, static finding => finding.Code.EndsWith(":OPEN_WRITER_KNOWN_READER_PROPERTY", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -43,8 +66,8 @@ public sealed class CompatibilityAndGovernanceTests
     public void Transitive_mode_checks_every_retained_version()
     {
         ReadOnlyMemory<byte> permissive = ContractTestFixture.Utf8("{\"type\":\"object\",\"additionalProperties\":true}");
-        MessageContractCompatibilityResult direct = new MessageContractCompatibilityAnalyzer().Analyze([permissive, V1], V2Optional, MessageContractCompatibilityMode.Backward);
-        MessageContractCompatibilityResult transitive = new MessageContractCompatibilityAnalyzer().Analyze([permissive, V1], V2Optional, MessageContractCompatibilityMode.BackwardTransitive);
+        MessageContractCompatibilityResult direct = new MessageContractCompatibilityAnalyzer().Analyze([permissive, V1Closed], V2OptionalClosed, MessageContractCompatibilityMode.Backward);
+        MessageContractCompatibilityResult transitive = new MessageContractCompatibilityAnalyzer().Analyze([permissive, V1Closed], V2OptionalClosed, MessageContractCompatibilityMode.BackwardTransitive);
         Assert.Equal(MessageContractCompatibilityStatus.Compatible, direct.Status);
         Assert.NotEqual(MessageContractCompatibilityStatus.Compatible, transitive.Status);
     }
@@ -66,7 +89,7 @@ public sealed class CompatibilityAndGovernanceTests
     public void Full_requires_both_backward_and_forward_compatibility()
     {
         var analyzer = new MessageContractCompatibilityAnalyzer();
-        Assert.Equal(MessageContractCompatibilityStatus.Compatible, analyzer.Analyze(V1, V2Optional, MessageContractCompatibilityMode.Full).Status);
+        Assert.Equal(MessageContractCompatibilityStatus.Compatible, analyzer.Analyze(V1, V1Documented, MessageContractCompatibilityMode.Full).Status);
         Assert.Equal(MessageContractCompatibilityStatus.Breaking, analyzer.Analyze(V1, V2Required, MessageContractCompatibilityMode.Full).Status);
     }
 
