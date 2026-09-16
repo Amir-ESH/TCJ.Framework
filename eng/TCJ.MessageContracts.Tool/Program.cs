@@ -63,9 +63,9 @@ internal static class ProgramEntry
         Generate(runB);
         CompareTrees(runA, runB);
 
-        ReadOnlyMemory<byte> previous = """{"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":true}"""u8.ToArray();
-        ReadOnlyMemory<byte> compatible = """{"type":"object","properties":{"id":{"type":"string"},"note":{"type":["string","null"]}},"required":["id"],"additionalProperties":true}"""u8.ToArray();
-        ReadOnlyMemory<byte> breaking = """{"type":"object","properties":{"id":{"type":"string"},"note":{"type":"string"}},"required":["id","note"],"additionalProperties":true}"""u8.ToArray();
+        ReadOnlyMemory<byte> previous = """{"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":false}"""u8.ToArray();
+        ReadOnlyMemory<byte> compatible = """{"type":"object","properties":{"id":{"type":"string"},"note":{"type":["string","null"]}},"required":["id"],"additionalProperties":false}"""u8.ToArray();
+        ReadOnlyMemory<byte> breaking = """{"type":"object","properties":{"id":{"type":"string"},"note":{"type":"string"}},"required":["id","note"],"additionalProperties":false}"""u8.ToArray();
         var analyzer = new MessageContractCompatibilityAnalyzer();
         if (analyzer.Analyze(previous, compatible, MessageContractCompatibilityMode.Backward).Status != MessageContractCompatibilityStatus.Compatible ||
             analyzer.Analyze(previous, breaking, MessageContractCompatibilityMode.Backward).Status != MessageContractCompatibilityStatus.Breaking)
