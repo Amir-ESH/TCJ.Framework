@@ -48,8 +48,14 @@ internal static class ContractTestFixture
         var services = new ServiceCollection();
         services.AddTcjMessaging();
         services.AddTcjMessage(type, version, typeInfo);
-        using ServiceProvider provider = services.BuildServiceProvider();
-        return provider.GetRequiredService<IMessageContractRegistry>().Resolve(type, version);
+
+        MessagingMessageContract[] contracts = services
+            .Where(static descriptor => descriptor.ServiceType == typeof(MessagingMessageContract))
+            .Select(static descriptor => descriptor.ImplementationInstance)
+            .OfType<MessagingMessageContract>()
+            .ToArray();
+
+        return new MessageContractRegistry(contracts).Resolve(type, version);
     }
 
     public static MessageContractMetadata Metadata(string summary = "synthetic fixture") => new()

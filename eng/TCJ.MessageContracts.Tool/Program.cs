@@ -80,8 +80,14 @@ internal static class ProgramEntry
         var services = new ServiceCollection();
         services.AddTcjMessaging();
         services.AddTcjMessage("tcj.fixture.message", 1, ToolJsonContext.Default.ToolContract);
-        using ServiceProvider provider = services.BuildServiceProvider();
-        return provider.GetRequiredService<IMessageContractRegistry>().Resolve("tcj.fixture.message", 1);
+
+        MessagingMessageContract[] contracts = services
+            .Where(static descriptor => descriptor.ServiceType == typeof(MessagingMessageContract))
+            .Select(static descriptor => descriptor.ImplementationInstance)
+            .OfType<MessagingMessageContract>()
+            .ToArray();
+
+        return new MessageContractRegistry(contracts).Resolve("tcj.fixture.message", 1);
     }
 
     private static void CompareTrees(string first, string second)
