@@ -19,6 +19,7 @@ VALID_TIERS = ("Full", "Conditional", "Experimental", "Unsupported")
 VALID_RESTRICTION_KINDS = ("PublicApi", "Upstream", "PackageMetadata")
 VALID_RESTRICTION_STATUSES = ("Restricted", "Experimental", "Unsupported")
 RELEASE_MANIFEST = "eng/release-manifest.json"
+OFFLINE_TOOLING_PACKAGE_IDS = {"TCJ.Messaging.AsyncApi"}
 PR_TEMPLATE = ".github/PULL_REQUEST_TEMPLATE.md"
 
 
@@ -408,7 +409,16 @@ def source_package_ids(root: Path) -> tuple[str, ...]:
         if include_build_output is not None and (include_build_output.text or "").strip().lower() == "false":
             continue
 
-        result.append(package_id_node.text.strip())
+        package_id = package_id_node.text.strip()
+        if package_id in OFFLINE_TOOLING_PACKAGE_IDS:
+            is_aot_compatible = xml.find(".//IsAotCompatible")
+            if is_aot_compatible is None or (is_aot_compatible.text or "").strip().lower() != "false":
+                fail(
+                    f"Offline tooling package {package_id} must explicitly set IsAotCompatible=false."
+                )
+            continue
+
+        result.append(package_id)
     if len(result) != len(set(result)):
         fail("Production project PackageId values must be unique.")
     return tuple(result)

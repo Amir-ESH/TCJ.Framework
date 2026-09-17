@@ -53,6 +53,7 @@
   "requirePublishedPackageEvidence": true,
   "nonAdapterPackages": [
     "TCJ.Messaging.Contracts",
+    "TCJ.Messaging.AsyncApi",
     "TCJ.Messaging.Sagas",
     "TCJ.Messaging.Sagas.EntityFrameworkCore",
     "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer"

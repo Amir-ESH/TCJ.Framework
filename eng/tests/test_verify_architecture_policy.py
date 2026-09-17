@@ -137,6 +137,7 @@ class ArchitecturePolicyVerifierTests(unittest.TestCase):
             "TCJ.AspNetCore": ["TCJ.Core", "TCJ.DependencyInjection"],
             "TCJ.Messaging": ["TCJ.Core"],
             "TCJ.Messaging.Contracts": ["TCJ.Messaging"],
+            "TCJ.Messaging.AsyncApi": ["TCJ.Messaging.Contracts"],
             "TCJ.Messaging.RabbitMQ": ["TCJ.Messaging"],
             "TCJ.Messaging.AzureServiceBus": ["TCJ.Messaging"],
             "TCJ.Messaging.Kafka": ["TCJ.Messaging"],
@@ -179,7 +180,7 @@ class ArchitecturePolicyVerifierTests(unittest.TestCase):
         }
         self._write_policy(policy)
         (self.root / "eng/release-manifest.json").write_text(
-            json.dumps({"packages": list(MODULE.REQUIRED_ASSEMBLIES)}),
+            json.dumps({"packages": list(MODULE.RELEASE_RUNTIME_ASSEMBLIES)}),
             encoding="utf-8",
         )
         (self.root / "docs/architecture-tests.md").write_text(

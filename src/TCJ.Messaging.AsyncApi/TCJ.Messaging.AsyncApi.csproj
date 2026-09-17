@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../eng/Packaging.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TCJ.Messaging.AsyncApi</RootNamespace>
+    <AssemblyName>TCJ.Messaging.AsyncApi</AssemblyName>
+
+    <PackageId>TCJ.Messaging.AsyncApi</PackageId>
+    <Title>TCJ Messaging AsyncAPI</Title>
+    <Description>Optional build-time and offline AsyncAPI governance tooling for TCJ messaging contracts.</Description>
+    <PackageTags>tcj;messaging;asyncapi;governance;tooling</PackageTags>
+
+    <PublishTrimmed>false</PublishTrimmed>
+    <IsAotCompatible>false</IsAotCompatible>
+
+    <!-- TCJ.Messaging.AsyncApi is introduced in preview.5, so no preview.4 package baseline exists. -->
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TCJ.Messaging.Contracts/TCJ.Messaging.Contracts.csproj" />
+  </ItemGroup>
+</Project>

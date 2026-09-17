@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "governanceVersion": "1.0",
+  "compatibilitySensitive": true,
+  "asyncApiSpecificationVersion": "3.1.0",
+  "versions": {
+    "messagingCatalogInputSchema": "1.0",
+    "eventCatalogSchema": "1.0",
+    "tcjExtensionSchema": "1.0",
+    "identifierNormalization": "1.0",
+    "deterministicSerialization": "1.0",
+    "validationReportSchema": "1.0"
+  },
+  "canonicalFileNames": {
+    "asyncApi": "asyncapi.json",
+    "eventCatalog": "event-catalog.json"
+  },
+  "canonicalOutputRoots": {
+    "generatedArtifacts": "artifacts/asyncapi",
+    "validationResults": "TestResults/AsyncApi"
+  },
+  "identifierNormalization": {
+    "contract": "stable-lowercase-kebab-case-with-collision-detection"
+  },
+  "deterministicSerialization": {
+    "format": "JSON",
+    "propertyOrdering": "ordinal",
+    "newline": "LF",
+    "encoding": "UTF-8"
+  },
+  "deliverySemantics": [
+    "AtLeastOnce",
+    "AtMostOnce",
+    "BestEffort",
+    "TransportSpecific"
+  ],
+  "orderingSemantics": [
+    "None",
+    "BestEffort",
+    "PerPartition",
+    "PerSession"
+  ],
+  "deadLetterSemantics": [
+    "Native",
+    "ConventionBased",
+    "Unsupported",
+    "TransportSpecific"
+  ]
+}

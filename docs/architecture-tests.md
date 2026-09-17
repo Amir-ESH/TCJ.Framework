@@ -1,6 +1,6 @@
 # Architecture tests and module dependency rules
 
-TCJ Framework has thirteen runtime packages with intentionally one-way dependencies, plus the analyzer-only `TCJ.Generators` compile-time tooling package. Compiler checks prove that code builds; architecture tests prove that runtime code still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
+TCJ Framework has thirteen release-managed runtime packages with intentionally one-way dependencies, the optional offline `TCJ.Messaging.AsyncApi` package foundation, plus the analyzer-only `TCJ.Generators` compile-time tooling package. Compiler checks prove that code builds; architecture tests prove that runtime code still belongs in the correct module and that public APIs do not pull infrastructure concerns into lower layers.
 
 The executable policy is stored in `eng/architecture-policy.json` (repository path: `eng/architecture-policy.json`). The test implementation lives in `tests/TCJ.Architecture.Tests` (repository path: `tests/TCJ.Architecture.Tests`).
 
@@ -14,6 +14,8 @@ The executable policy is stored in `eng/architecture-policy.json` (repository pa
 | `TCJ.EntityFrameworkCore.SqlServer` | SQL Server provider registration, retry options, and SQL Server model conventions. |
 | `TCJ.AspNetCore` | HTTP result mapping, Problem Details, exception handling, current-user resolution, middleware/application integration, and ASP.NET Core options. |
 | `TCJ.Messaging` | Broker-neutral message envelopes, serialization, publishing/receiving contracts, Inbox/Outbox bridges, adapter capabilities, topology naming, telemetry, health checks, and the non-durable in-memory test transport. |
+| `TCJ.Messaging.Contracts` | Deterministic message-contract governance, JSON-schema artifacts, compatibility metadata, fingerprints, examples, and upcaster validation. |
+| `TCJ.Messaging.AsyncApi` | Optional build-time/offline AsyncAPI governance package boundary. Step 53.1 contains no document generation or runtime discovery behavior. |
 | `TCJ.Messaging.Sagas` | Transport-neutral durable Saga contracts, lifecycle, policies, timers, compensation/remediation abstractions, diagnostics, and state migration contracts. |
 | `TCJ.Messaging.Sagas.EntityFrameworkCore` | Provider-neutral Saga persistence, explicit definitions, Inbox/Outbox transaction integration, state migration, timers, health, cleanup, and remediation. |
 | `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer` | SQL Server Saga `rowversion`, active-correlation uniqueness, and atomic lease-based timer claiming. |
@@ -41,6 +43,14 @@ TCJ.Core
     ↑
 TCJ.Messaging
     ↑
+TCJ.Messaging.Contracts
+    ↑
+TCJ.Messaging.AsyncApi
+
+TCJ.Core
+    ↑
+TCJ.Messaging
+    ↑
 TCJ.Messaging.Sagas
     ↑
 TCJ.Messaging.Sagas.EntityFrameworkCore
@@ -59,6 +69,7 @@ The following directions are forbidden:
 - `TCJ.AspNetCore` to SQL Server-specific or Messaging modules;
 - `TCJ.Messaging` to dependency-injection, EF Core, SQL Server, ASP.NET Core, or Saga modules;
 - existing non-Saga packages to any Saga package;
+- runtime messaging, transport, EF, ASP.NET Core, Saga, Inbox, and Outbox packages to `TCJ.Messaging.AsyncApi`;
 - `TCJ.Messaging.Sagas` to EF Core, SQL Server, ASP.NET Core, or broker SDK packages;
 - `TCJ.Messaging.Sagas.EntityFrameworkCore` to SQL Server-specific or broker SDK packages;
 - `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer` to broker SDK or ASP.NET Core packages;
@@ -77,6 +88,8 @@ TCJ.EntityFrameworkCore.*
 TCJ.EntityFrameworkCore.SqlServer.*
 TCJ.AspNetCore.*
 TCJ.Messaging.*
+TCJ.Messaging.Contracts.*
+TCJ.Messaging.AsyncApi.*
 TCJ.Messaging.Sagas.*
 TCJ.Messaging.Sagas.EntityFrameworkCore.*
 TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.*
@@ -95,6 +108,7 @@ The tests reject public contracts that expose infrastructure forbidden for their
 - SQL Server or ASP.NET Core types leaking from provider-independent EF Core contracts;
 - EF Core or SQL Server types leaking from `TCJ.AspNetCore`;
 - broker SDK, EF Core, SQL Server, or ASP.NET Core types leaking from `TCJ.Messaging`;
+- broker SDK, EF Core, SQL Server, or ASP.NET Core types leaking from `TCJ.Messaging.AsyncApi`;
 - EF Core, SQL Server, ASP.NET Core, or broker SDK types leaking from `TCJ.Messaging.Sagas`;
 - SQL Server or broker SDK types leaking from `TCJ.Messaging.Sagas.EntityFrameworkCore`;
 - broker SDK or ASP.NET Core types leaking from `TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer`;
@@ -151,7 +165,7 @@ Architecture tests run in normal CI, release preflight, and the official tagged 
 
 A new production module requires one coordinated change:
 
-1. Add the project and package ID to the release manifest and solution.
+1. Add the project to the solution; add its package ID to the release manifest only when the package enters the release-managed set. Offline/build-time package foundations may remain opt-in and unreleased until their release validation is separately approved.
 2. Add its project path, namespace root, allowed dependencies, forbidden dependency prefixes, and public API restrictions to `eng/architecture-policy.json`.
 3. Reference the project from `TCJ.Architecture.Tests` for inspection.
 4. Update the dependency diagram and package responsibility documentation.

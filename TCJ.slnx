@@ -2,6 +2,9 @@
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/TCJ.Benchmarks/TCJ.Benchmarks.csproj" />
   </Folder>
+  <Folder Name="/eng/">
+    <Project Path="eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj" />
+  </Folder>
   <Folder Name="/fuzz/">
     <Project Path="fuzz/TCJ.FuzzTests/TCJ.FuzzTests.csproj" />
   </Folder>
@@ -20,6 +23,7 @@
     <Project Path="src/TCJ.EntityFrameworkCore/TCJ.EntityFrameworkCore.csproj" />
     <Project Path="src/TCJ.Messaging/TCJ.Messaging.csproj" />
     <Project Path="src/TCJ.Messaging.Contracts/TCJ.Messaging.Contracts.csproj" />
+    <Project Path="src/TCJ.Messaging.AsyncApi/TCJ.Messaging.AsyncApi.csproj" />
     <Project Path="src/TCJ.Messaging.Sagas/TCJ.Messaging.Sagas.csproj" />
     <Project Path="src/TCJ.Messaging.Sagas.EntityFrameworkCore/TCJ.Messaging.Sagas.EntityFrameworkCore.csproj" />
     <Project Path="src/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer/TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer.csproj" />
