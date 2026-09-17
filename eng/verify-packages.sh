@@ -22,6 +22,7 @@ package_ids=(
   TCJ.AspNetCore
   TCJ.Messaging
   TCJ.Messaging.Contracts
+  TCJ.Messaging.AsyncApi
   TCJ.Messaging.Sagas
   TCJ.Messaging.Sagas.EntityFrameworkCore
   TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer
