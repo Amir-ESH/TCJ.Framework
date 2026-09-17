@@ -30,6 +30,9 @@
         "id": "TCJ.Messaging.Contracts"
       },
       {
+        "id": "TCJ.Messaging.AsyncApi"
+      },
+      {
         "id": "TCJ.Messaging.Sagas"
       },
       {
