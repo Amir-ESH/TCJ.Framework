@@ -35,8 +35,10 @@ class AsyncApiFoundationVerifierTests(unittest.TestCase):
             (self.root / relative).write_text("placeholder", encoding="utf-8")
         self.policy_path = self.root / "eng/asyncapi-policy.json"
         self.governance_path = self.root / "eng/asyncapi-governance-contract.json"
+        self.catalog_schema_path = self.root / "eng/messaging-catalog-input.schema.json"
         self.policy_path.write_text((ENG / "asyncapi-policy.json").read_text(encoding="utf-8"), encoding="utf-8")
         self.governance_path.write_text((ENG / "asyncapi-governance-contract.json").read_text(encoding="utf-8"), encoding="utf-8")
+        self.catalog_schema_path.write_text((ENG / "messaging-catalog-input.schema.json").read_text(encoding="utf-8"), encoding="utf-8")
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -94,6 +96,28 @@ class AsyncApiFoundationVerifierTests(unittest.TestCase):
         self._write(self.governance_path, governance)
         with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "deliverySemantics must be exactly"):
             MODULE.validate_configuration(self.root, self.policy_path, self.governance_path)
+
+
+    def test_messaging_catalog_policy_and_governance_versions_must_be_one(self) -> None:
+        policy = self._read(self.policy_path)
+        policy["versions"]["messagingCatalogInputSchema"] = 2
+        self._write(self.policy_path, policy)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "messagingCatalogInputSchema must be 1"):
+            MODULE.validate_configuration(self.root, self.policy_path, self.governance_path, self.catalog_schema_path)
+
+    def test_messaging_catalog_schema_version_is_pinned(self) -> None:
+        schema = self._read(self.catalog_schema_path)
+        schema["properties"]["schemaVersion"] = {"const": 2}
+        self._write(self.catalog_schema_path, schema)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "schema version must be exactly 1"):
+            MODULE.validate_configuration(self.root, self.policy_path, self.governance_path, self.catalog_schema_path)
+
+    def test_messaging_catalog_schema_root_must_be_closed(self) -> None:
+        schema = self._read(self.catalog_schema_path)
+        schema["additionalProperties"] = True
+        self._write(self.catalog_schema_path, schema)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "root must be a closed object"):
+            MODULE.validate_configuration(self.root, self.policy_path, self.governance_path, self.catalog_schema_path)
 
     def test_configured_paths_must_exist(self) -> None:
         (self.root / "eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj").unlink()

@@ -48,6 +48,7 @@
     <Project Path="tests/TCJ.Inbox.Tests/TCJ.Inbox.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.Tests/TCJ.Messaging.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.Contracts.Tests/TCJ.Messaging.Contracts.Tests.csproj" />
+    <Project Path="tests/TCJ.Messaging.AsyncApi.Tests/TCJ.Messaging.AsyncApi.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.Sagas.Tests/TCJ.Messaging.Sagas.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.Sagas.SqlServer.Tests/TCJ.Messaging.Sagas.SqlServer.Tests.csproj" />
     <Project Path="tests/TCJ.Messaging.ConformanceTests/TCJ.Messaging.ConformanceTests.csproj" />

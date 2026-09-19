@@ -1,0 +1,750 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tcj-framework.dev/schemas/messaging-catalog-input.schema.json",
+  "title": "TCJ Messaging Catalog Input",
+  "description": "Version 1 bounded application-owned messaging topology input. Secret-bearing and provider runtime objects are intentionally unsupported.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "application": {
+      "$ref": "#/$defs/application"
+    },
+    "document": {
+      "$ref": "#/$defs/document"
+    },
+    "securitySchemes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/securityScheme"
+      },
+      "maxItems": 512
+    },
+    "transports": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/transport"
+      },
+      "maxItems": 512
+    },
+    "producers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/producer"
+      },
+      "maxItems": 512
+    },
+    "consumers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/consumer"
+      },
+      "maxItems": 512
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/channel"
+      },
+      "maxItems": 512
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relationship"
+      },
+      "maxItems": 2048
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "application",
+    "document"
+  ],
+  "$defs": {
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "externalDocumentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "contact": {
+          "$ref": "#/$defs/contact"
+        },
+        "license": {
+          "$ref": "#/$defs/license"
+        },
+        "externalDocumentation": {
+          "$ref": "#/$defs/externalDocumentation"
+        }
+      },
+      "required": [
+        "title",
+        "version"
+      ]
+    },
+    "securityScheme": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "mechanism": {
+          "type": "string",
+          "enum": [
+            "TLS",
+            "X509",
+            "SASL/PLAIN",
+            "SASL/SCRAM",
+            "OAuth2",
+            "ManagedIdentity",
+            "UserPassword",
+            "ConnectionStringCredential"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "id",
+        "mechanism"
+      ]
+    },
+    "messageReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "type",
+        "version"
+      ]
+    },
+    "dynamicDestination": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "namingStrategyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "pattern": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "namingStrategyId",
+        "pattern"
+      ]
+    },
+    "outbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "deduplicationModel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "transactionalBoundary": {
+          "type": "string",
+          "enum": [
+            "Application",
+            "MessageHandler",
+            "Separate"
+          ]
+        },
+        "durablePublicationModel": {
+          "type": "string",
+          "enum": [
+            "ApplicationManaged",
+            "TransportManaged"
+          ]
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "inbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "deduplicationModel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "transactionalBoundary": {
+          "type": "string",
+          "enum": [
+            "Application",
+            "MessageHandler",
+            "Separate"
+          ]
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "protocol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "deliverySemantics": {
+          "type": "string",
+          "enum": [
+            "AtLeastOnce",
+            "AtMostOnce",
+            "BestEffort",
+            "TransportSpecific"
+          ]
+        },
+        "orderingSemantics": {
+          "type": "string",
+          "enum": [
+            "None",
+            "BestEffort",
+            "PerPartition",
+            "PerSession"
+          ]
+        },
+        "deadLetterSemantics": {
+          "type": "string",
+          "enum": [
+            "Native",
+            "ConventionBased",
+            "Unsupported",
+            "TransportSpecific"
+          ]
+        },
+        "partitioningSemantics": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Supported",
+            "Required",
+            "TransportSpecific"
+          ]
+        },
+        "capabilityIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "securitySchemeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "protocol"
+      ]
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "component": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "message": {
+          "$ref": "#/$defs/messageReference"
+        },
+        "channelId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "transportId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "outbox": {
+          "$ref": "#/$defs/outbox"
+        },
+        "partitionKeyStrategy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "orderingKeyStrategy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "retryOwner": {
+          "type": "string",
+          "enum": [
+            "Application",
+            "Transport",
+            "None"
+          ]
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "Draft",
+            "Published",
+            "Deprecated",
+            "Retired"
+          ]
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "dynamicDestination": {
+          "$ref": "#/$defs/dynamicDestination"
+        }
+      },
+      "required": [
+        "id",
+        "component",
+        "message",
+        "channelId",
+        "transportId"
+      ]
+    },
+    "consumer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "component": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "messageType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "acceptedMessageVersions": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "channelId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "transportId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "subscriptionOrGroup": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "inbox": {
+          "$ref": "#/$defs/inbox"
+        },
+        "orderingScope": {
+          "type": "string",
+          "enum": [
+            "None",
+            "BestEffort",
+            "PerPartition",
+            "PerSession"
+          ]
+        },
+        "retryOwner": {
+          "type": "string",
+          "enum": [
+            "Application",
+            "Transport",
+            "None"
+          ]
+        },
+        "deadLetterSemantics": {
+          "type": "string",
+          "enum": [
+            "Native",
+            "ConventionBased",
+            "Unsupported",
+            "TransportSpecific"
+          ]
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "Draft",
+            "Published",
+            "Deprecated",
+            "Retired"
+          ]
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "id",
+        "component",
+        "messageType",
+        "acceptedMessageVersions",
+        "channelId",
+        "transportId"
+      ]
+    },
+    "channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "address": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "transportId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/messageReference"
+          },
+          "maxItems": 64
+        },
+        "dynamicDestination": {
+          "$ref": "#/$defs/dynamicDestination"
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "Draft",
+            "Published",
+            "Deprecated",
+            "Retired"
+          ]
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "dataClassifications": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Public",
+              "Internal",
+              "Personal",
+              "Confidential",
+              "SecretProhibited"
+            ]
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "address",
+        "transportId"
+      ]
+    },
+    "entityReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Application",
+            "Transport",
+            "Producer",
+            "Consumer",
+            "Channel",
+            "SecurityScheme"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ]
+    },
+    "sagaReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "definitionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "definitionVersion": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "definitionId",
+        "definitionVersion"
+      ]
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Publishes",
+            "Consumes",
+            "UsesChannel",
+            "UsesTransport",
+            "StartsSaga",
+            "ContinuesSaga",
+            "CompensatesSaga",
+            "Replaces",
+            "UpcastsTo"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/entityReference"
+        },
+        "target": {
+          "$ref": "#/$defs/entityReference"
+        },
+        "saga": {
+          "$ref": "#/$defs/sagaReference"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "source",
+        "target"
+      ]
+    }
+  }
+}

@@ -12,6 +12,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY = ROOT / "eng/asyncapi-policy.json"
 DEFAULT_GOVERNANCE = ROOT / "eng/asyncapi-governance-contract.json"
+DEFAULT_CATALOG_SCHEMA = ROOT / "eng/messaging-catalog-input.schema.json"
 PINNED_ASYNCAPI_VERSION = "3.1.0"
 CANONICAL_FORMAT = "JSON"
 REQUIRED_OUTPUT_MODES = ("referenced", "bundled")
@@ -73,11 +74,14 @@ def validate_configuration(
     root: Path = ROOT,
     policy_path: Path | None = None,
     governance_path: Path | None = None,
+    catalog_schema_path: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     policy_path = policy_path or root / "eng/asyncapi-policy.json"
     governance_path = governance_path or root / "eng/asyncapi-governance-contract.json"
+    catalog_schema_path = catalog_schema_path or root / "eng/messaging-catalog-input.schema.json"
     policy = read_json(policy_path, "AsyncAPI policy")
     governance = read_json(governance_path, "AsyncAPI governance contract")
+    catalog_schema = read_json(catalog_schema_path, "messaging catalog input schema")
 
     if policy.get("schemaVersion") != 1:
         fail("AsyncAPI policy schemaVersion must be 1.")
@@ -105,13 +109,10 @@ def validate_configuration(
     versions = policy.get("versions")
     if not isinstance(versions, dict):
         fail("versions must be an object.")
-    for key in (
-        "tcjExtensionSchema",
-        "eventCatalogSchema",
-        "messagingCatalogInputSchema",
-        "governanceContract",
-    ):
+    for key in ("tcjExtensionSchema", "eventCatalogSchema", "governanceContract"):
         require_version(versions.get(key), f"versions.{key}")
+    if versions.get("messagingCatalogInputSchema") != 1:
+        fail("versions.messagingCatalogInputSchema must be 1.")
 
     remote = policy.get("remoteReferences")
     if not isinstance(remote, dict) or remote.get("allowed") is not False:
@@ -157,11 +158,11 @@ def validate_configuration(
     governance_versions = governance.get("versions")
     if not isinstance(governance_versions, dict):
         fail("Governance versions must be an object.")
-    agreements = {
-        "messagingCatalogInputSchema": "messagingCatalogInputSchema",
-        "eventCatalogSchema": "eventCatalogSchema",
-        "tcjExtensionSchema": "tcjExtensionSchema",
-    }
+    if governance_versions.get("messagingCatalogInputSchema") != 1:
+        fail("Governance messagingCatalogInputSchema version must be 1.")
+    if governance_versions["messagingCatalogInputSchema"] != versions["messagingCatalogInputSchema"]:
+        fail("Governance messagingCatalogInputSchema version must agree with policy.")
+    agreements = {"eventCatalogSchema": "eventCatalogSchema", "tcjExtensionSchema": "tcjExtensionSchema"}
     for governance_key, policy_key in agreements.items():
         version = require_version(governance_versions.get(governance_key), f"governance.versions.{governance_key}")
         if version != versions[policy_key]:
@@ -192,6 +193,17 @@ def validate_configuration(
     require_exact_enum(governance.get("deliverySemantics"), DELIVERY_SEMANTICS, "deliverySemantics")
     require_exact_enum(governance.get("orderingSemantics"), ORDERING_SEMANTICS, "orderingSemantics")
     require_exact_enum(governance.get("deadLetterSemantics"), DEAD_LETTER_SEMANTICS, "deadLetterSemantics")
+
+    if catalog_schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+        fail("Messaging catalog input schema must use JSON Schema draft 2020-12.")
+    if catalog_schema.get("type") != "object" or catalog_schema.get("additionalProperties") is not False:
+        fail("Messaging catalog input schema root must be a closed object.")
+    properties = catalog_schema.get("properties")
+    if not isinstance(properties, dict) or properties.get("schemaVersion") != {"const": 1}:
+        fail("Messaging catalog input schema version must be exactly 1.")
+    required = catalog_schema.get("required")
+    if required != ["schemaVersion", "application", "document"]:
+        fail("Messaging catalog input schema must require schemaVersion, application, and document.")
 
     return policy, governance
 
