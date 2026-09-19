@@ -37,5 +37,19 @@
   "expectedGeneratedArtifactRoots": [
     "artifacts/asyncapi",
     "TestResults/AsyncApi"
-  ]
+  ],
+  "step52ContractArtifacts": {
+    "manifestFileName": "manifest.json",
+    "manifestValidation": "TCJ.Messaging.Contracts.MessageContractManifestSerializer",
+    "fingerprintValidation": "TCJ.Messaging.Contracts.MessageContractSchemaGenerator",
+    "maximumSchemaBytes": 16777216,
+    "maximumExampleBytes": 1048576,
+    "maximumReferenceDepth": 32,
+    "localReferences": {
+      "allowed": true,
+      "artifactRootConstrained": true,
+      "parentTraversalAllowed": false
+    },
+    "governedExamplesOnly": true
+  }
 }
