@@ -13,6 +13,9 @@
     <Description>Optional build-time and offline AsyncAPI governance tooling for TCJ messaging contracts.</Description>
     <PackageTags>tcj;messaging;asyncapi;governance;tooling</PackageTags>
 
+    <!-- Keep the package opt-in: repository-wide solution packs produce only the release-managed package set. -->
+    <IsPackable Condition="'$(BuildingSolutionFile)' == 'true'">false</IsPackable>
+
     <PublishTrimmed>false</PublishTrimmed>
     <IsAotCompatible>false</IsAotCompatible>
 
