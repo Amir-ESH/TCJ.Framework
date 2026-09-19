@@ -201,11 +201,18 @@ public static partial class MessagingCatalogValidator
 
     private static bool ValidateIdentifier(string? value, string path, List<MessagingCatalogValidationError> errors)
     {
-        if (string.IsNullOrWhiteSpace(value) || value.Length > MaxIdentifierLength || !StableIdentifier().IsMatch(value))
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            errors.Add(new(MessagingCatalogValidationCodes.RequiredValue, path, "Identifier is required."));
+            return false;
+        }
+
+        if (value.Length > MaxIdentifierLength || !StableIdentifier().IsMatch(value))
         {
             errors.Add(new(MessagingCatalogValidationCodes.InvalidIdentifier, path, "Identifier must use 1-128 ASCII letters, digits, '.', '_' or '-' and start/end with a letter or digit."));
             return false;
         }
+
         return true;
     }
 
