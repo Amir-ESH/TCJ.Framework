@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "1.0",
+  "asyncApiSpecificationVersion": "3.1.0",
+  "canonicalOutput": {
+    "format": "JSON",
+    "asyncApiFileName": "asyncapi.json"
+  },
+  "outputModes": [
+    "referenced",
+    "bundled"
+  ],
+  "validator": {
+    "strategy": "Deferred",
+    "implementation": null,
+    "selectionRequiresGovernanceReview": true
+  },
+  "versions": {
+    "tcjExtensionSchema": "1.0",
+    "eventCatalogSchema": "1.0",
+    "messagingCatalogInputSchema": "1.0",
+    "governanceContract": "1.0"
+  },
+  "remoteReferences": {
+    "allowed": false
+  },
+  "secretScanning": {
+    "secretValuesAllowed": false,
+    "required": true
+  },
+  "deterministicOutputRequired": true,
+  "paths": {
+    "package": "src/TCJ.Messaging.AsyncApi/TCJ.Messaging.AsyncApi.csproj",
+    "tool": "eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj",
+    "tests": "eng/tests/test_verify_asyncapi.py"
+  },
+  "expectedGeneratedArtifactRoots": [
+    "artifacts/asyncapi",
+    "TestResults/AsyncApi"
+  ]
+}

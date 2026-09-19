@@ -25,12 +25,16 @@ REQUIRED_ASSEMBLIES = (
     "TCJ.AspNetCore",
     "TCJ.Messaging",
     "TCJ.Messaging.Contracts",
+    "TCJ.Messaging.AsyncApi",
     "TCJ.Messaging.RabbitMQ",
     "TCJ.Messaging.AzureServiceBus",
     "TCJ.Messaging.Kafka",
     "TCJ.Messaging.Sagas",
     "TCJ.Messaging.Sagas.EntityFrameworkCore",
     "TCJ.Messaging.Sagas.EntityFrameworkCore.SqlServer",
+)
+RELEASE_RUNTIME_ASSEMBLIES = tuple(
+    assembly for assembly in REQUIRED_ASSEMBLIES if assembly != "TCJ.Messaging.AsyncApi"
 )
 REQUIRED_WORKFLOWS = (
     ".github/workflows/ci.yml",
@@ -345,10 +349,10 @@ def validate_configuration(
         packages = list(get_release_package_ids(manifest, "runtime"))
     except ValueError as error:
         fail(str(error))
-    if set(packages) != set(REQUIRED_ASSEMBLIES):
+    if set(packages) != set(RELEASE_RUNTIME_ASSEMBLIES):
         fail(
-            "Architecture policy assembly names must match release-manifest package IDs. "
-            f"Expected: {', '.join(REQUIRED_ASSEMBLIES)}."
+            "Architecture release-managed assembly set must match release-manifest runtime package IDs. "
+            f"Expected: {', '.join(RELEASE_RUNTIME_ASSEMBLIES)}."
         )
 
     documentation_path = root / policy.documentation
