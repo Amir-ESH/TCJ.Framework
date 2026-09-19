@@ -25,7 +25,6 @@
   ],
   "targetOnlyPackages": [
     "TCJ.Messaging",
-    "TCJ.Messaging.AsyncApi",
     "TCJ.Messaging.Contracts",
     "TCJ.Messaging.Sagas",
     "TCJ.Messaging.Sagas.EntityFrameworkCore",
