@@ -18,7 +18,7 @@
   "versions": {
     "tcjExtensionSchema": "1.0",
     "eventCatalogSchema": "1.0",
-    "messagingCatalogInputSchema": "1.0",
+    "messagingCatalogInputSchema": 1,
     "governanceContract": "1.0"
   },
   "remoteReferences": {
