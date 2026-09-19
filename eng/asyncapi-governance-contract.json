@@ -45,5 +45,15 @@
     "ConventionBased",
     "Unsupported",
     "TransportSpecific"
-  ]
+  ],
+  "step52ContractIntegration": {
+    "contractIdentity": "MessageType+MessageVersion",
+    "manifestSource": "TCJ.Messaging.Contracts.MessageContractManifestSerializer",
+    "schemaSource": "Step52-governed-artifact",
+    "fingerprintSource": "TCJ.Messaging.Contracts.MessageContractSchemaGenerator",
+    "localReferenceBehavior": "root-constrained-no-parent-traversal",
+    "remoteReferenceBehavior": "fail-closed-no-network",
+    "exampleBehavior": "manifest-declared-governed-only",
+    "compatibilityBehavior": "link-existing-Step52-evidence-only"
+  }
 }

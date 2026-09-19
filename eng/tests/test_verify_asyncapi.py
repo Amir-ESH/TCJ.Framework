@@ -76,6 +76,20 @@ class AsyncApiFoundationVerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "Deterministic output"):
             MODULE.validate_configuration(self.root, self.policy_path, self.governance_path)
 
+    def test_step52_local_references_must_remain_root_constrained(self) -> None:
+        policy = self._read(self.policy_path)
+        policy["step52ContractArtifacts"]["localReferences"]["parentTraversalAllowed"] = True
+        self._write(self.policy_path, policy)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "parent traversal"):
+            MODULE.validate_configuration(self.root, self.policy_path, self.governance_path)
+
+    def test_step52_fingerprint_validation_must_reuse_governed_implementation(self) -> None:
+        policy = self._read(self.policy_path)
+        policy["step52ContractArtifacts"]["fingerprintValidation"] = "custom"
+        self._write(self.policy_path, policy)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "MessageContractSchemaGenerator"):
+            MODULE.validate_configuration(self.root, self.policy_path, self.governance_path)
+
     def test_policy_and_governance_versions_must_agree(self) -> None:
         governance = self._read(self.governance_path)
         governance["asyncApiSpecificationVersion"] = "3.0.0"
@@ -88,6 +102,13 @@ class AsyncApiFoundationVerifierTests(unittest.TestCase):
         governance["compatibilitySensitive"] = False
         self._write(self.governance_path, governance)
         with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "compatibility-sensitive"):
+            MODULE.validate_configuration(self.root, self.policy_path, self.governance_path)
+
+    def test_step52_contract_identity_must_remain_logical_type_and_version(self) -> None:
+        governance = self._read(self.governance_path)
+        governance["step52ContractIntegration"]["contractIdentity"] = "ClrType"
+        self._write(self.governance_path, governance)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "governed-contract integration semantics"):
             MODULE.validate_configuration(self.root, self.policy_path, self.governance_path)
 
     def test_exactly_once_delivery_semantics_is_rejected(self) -> None:
