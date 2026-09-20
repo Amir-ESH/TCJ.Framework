@@ -4,6 +4,8 @@
     "title": "Orders Messaging API",
     "version": "1.4.0"
   },
+  "x-tcj-extension-version": "1.0",
+  "x-tcj-owner": "orders-team",
   "channels": {
     "orders-created": {
       "address": "orders.created",
@@ -11,7 +13,11 @@
         "orders-created-v1": {
           "$ref": "#/components/messages/orders-created-v1"
         }
-      }
+      },
+      "x-tcj-extension-version": "1.0",
+      "x-tcj-data-classification": [
+        "Internal"
+      ]
     }
   },
   "operations": {
@@ -24,7 +30,20 @@
         {
           "$ref": "#/channels/orders-created/messages/orders-created-v1"
         }
-      ]
+      ],
+      "x-tcj-extension-version": "1.0",
+      "x-tcj-delivery-semantics": "AtLeastOnce",
+      "x-tcj-ordering-scope": {
+        "scope": "PerSession",
+        "partitionKeyStrategy": "order-id",
+        "orderingKeyStrategy": "order-id"
+      },
+      "x-tcj-outbox": {
+        "enabled": true,
+        "deduplicationIdentity": "message-identity",
+        "transactionalBoundary": "Application",
+        "publicationModel": "DurableAtLeastOnce"
+      }
     }
   },
   "components": {
@@ -36,7 +55,23 @@
           "schema": {
             "$ref": "./orders.created/v1/schema.json"
           }
-        }
+        },
+        "x-tcj-extension-version": "1.0",
+        "x-tcj-contract-id": "orders.created",
+        "x-tcj-contract-version": 1,
+        "x-tcj-schema-fingerprint": {
+          "algorithm": "SHA-256",
+          "value": "85d708fc6f8d200041c3fae9d193483067fc559850e1977bd6ff3f690f8fe2cd"
+        },
+        "x-tcj-owner": "synthetic-test-owner",
+        "x-tcj-compatibility": {
+          "mode": "Backward",
+          "deprecated": false,
+          "semanticNotes": "Synthetic reviewed compatibility evidence."
+        },
+        "x-tcj-data-classification": [
+          "Internal"
+        ]
       }
     }
   }

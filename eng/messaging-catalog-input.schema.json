@@ -501,7 +501,14 @@
           "enum": [
             "Application",
             "Transport",
-            "None"
+            "None",
+            "TransportClient",
+            "Outbox",
+            "Broker",
+            "Inbox",
+            "HandlerResilience",
+            "Saga",
+            "TransportSpecific"
           ]
         },
         "lifecycle": {
@@ -594,7 +601,14 @@
           "enum": [
             "Application",
             "Transport",
-            "None"
+            "None",
+            "TransportClient",
+            "Outbox",
+            "Broker",
+            "Inbox",
+            "HandlerResilience",
+            "Saga",
+            "TransportSpecific"
           ]
         },
         "deadLetterSemantics": {
@@ -770,7 +784,10 @@
             "ContinuesSaga",
             "CompensatesSaga",
             "Replaces",
-            "UpcastsTo"
+            "UpcastsTo",
+            "TimesOutSaga",
+            "CompletesSaga",
+            "FailsSaga"
           ]
         },
         "source": {

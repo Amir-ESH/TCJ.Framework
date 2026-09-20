@@ -46,6 +46,7 @@ public static class AsyncApiGenerationCodes
     public const string DocumentBoundExceeded = "AAG007";
     public const string InvalidSchemaArtifact = "AAG008";
     public const string InvalidServerReference = "AAG009";
+    public const string InvalidTcjExtension = "AAG010";
 }
 
 /// <summary>One deterministic, sensitive-safe AsyncAPI generation error.</summary>
