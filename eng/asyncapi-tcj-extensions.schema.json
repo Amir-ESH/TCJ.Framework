@@ -1,0 +1,314 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tcj-framework.dev/schemas/asyncapi-tcj-extensions.schema.json",
+  "title": "TCJ AsyncAPI Extensions 1.0",
+  "description": "Versioned bounded schema for governed x-tcj-* extension sets. Apply this schema to an AsyncAPI object after selecting its x-tcj-* properties.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "x-tcj-extension-version": {
+      "const": "1.0"
+    },
+    "x-tcj-contract-id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "x-tcj-contract-version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "x-tcj-schema-fingerprint": {
+      "$ref": "#/$defs/fingerprint"
+    },
+    "x-tcj-owner": {
+      "$ref": "#/$defs/identifier"
+    },
+    "x-tcj-lifecycle": {
+      "enum": [
+        "Draft",
+        "Published",
+        "Deprecated",
+        "Retired"
+      ]
+    },
+    "x-tcj-compatibility": {
+      "$ref": "#/$defs/compatibility"
+    },
+    "x-tcj-outbox": {
+      "$ref": "#/$defs/outbox"
+    },
+    "x-tcj-inbox": {
+      "$ref": "#/$defs/inbox"
+    },
+    "x-tcj-saga": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/sagaRelationship"
+      }
+    },
+    "x-tcj-delivery-semantics": {
+      "enum": [
+        "AtLeastOnce",
+        "AtMostOnce",
+        "BestEffort",
+        "TransportSpecific"
+      ]
+    },
+    "x-tcj-ordering-scope": {
+      "$ref": "#/$defs/ordering"
+    },
+    "x-tcj-retry-owner": {
+      "$ref": "#/$defs/retryOwner"
+    },
+    "x-tcj-dead-letter": {
+      "enum": [
+        "Native",
+        "ConventionBased",
+        "Unsupported",
+        "TransportSpecific"
+      ]
+    },
+    "x-tcj-upcaster-path": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "x-tcj-data-classification": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "Public",
+          "Internal",
+          "Personal",
+          "Confidential",
+          "SecretProhibited"
+        ]
+      }
+    },
+    "x-tcj-dynamic-destination": {
+      "$ref": "#/$defs/dynamicDestination"
+    }
+  },
+  "required": [
+    "x-tcj-extension-version"
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "retryOwner": {
+      "enum": [
+        "TransportClient",
+        "Outbox",
+        "Broker",
+        "Inbox",
+        "HandlerResilience",
+        "Saga",
+        "Application",
+        "TransportSpecific"
+      ]
+    },
+    "fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "$ref": "#/$defs/identifier"
+        },
+        "value": {
+          "$ref": "#/$defs/identifier"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ]
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "None",
+            "Backward",
+            "Forward",
+            "Full",
+            "BackwardTransitive",
+            "ForwardTransitive",
+            "FullTransitive"
+          ]
+        },
+        "deprecated": {
+          "type": "boolean"
+        },
+        "deprecatedSince": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "replacementVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "semanticNotes": {
+          "$ref": "#/$defs/text"
+        }
+      },
+      "required": [
+        "mode",
+        "deprecated"
+      ]
+    },
+    "ordering": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "enum": [
+            "None",
+            "BestEffort",
+            "PerPartition",
+            "PerSession"
+          ]
+        },
+        "partitioning": {
+          "enum": [
+            "None",
+            "Supported",
+            "Required",
+            "TransportSpecific"
+          ]
+        },
+        "partitionKeyStrategy": {
+          "$ref": "#/$defs/identifier"
+        },
+        "orderingKeyStrategy": {
+          "$ref": "#/$defs/identifier"
+        }
+      },
+      "minProperties": 1
+    },
+    "inbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "deduplicationIdentity": {
+          "$ref": "#/$defs/identifier"
+        },
+        "transactionalBoundary": {
+          "enum": [
+            "Application",
+            "MessageHandler",
+            "Separate"
+          ]
+        },
+        "retryOwner": {
+          "$ref": "#/$defs/retryOwner"
+        }
+      },
+      "required": [
+        "enabled",
+        "transactionalBoundary"
+      ]
+    },
+    "outbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "deduplicationIdentity": {
+          "$ref": "#/$defs/identifier"
+        },
+        "transactionalBoundary": {
+          "enum": [
+            "Application",
+            "MessageHandler",
+            "Separate"
+          ]
+        },
+        "publicationModel": {
+          "enum": [
+            "DurableAtLeastOnce",
+            "Disabled"
+          ]
+        },
+        "retryOwner": {
+          "$ref": "#/$defs/retryOwner"
+        }
+      },
+      "required": [
+        "enabled",
+        "transactionalBoundary",
+        "publicationModel"
+      ]
+    },
+    "sagaRelationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "definitionId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "definitionVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "relationship": {
+          "enum": [
+            "Start",
+            "Continue",
+            "Timeout",
+            "Compensation",
+            "Completion",
+            "Failure"
+          ]
+        }
+      },
+      "required": [
+        "definitionId",
+        "definitionVersion",
+        "relationship"
+      ]
+    },
+    "dynamicDestination": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dynamic": {
+          "const": true
+        },
+        "namingStrategyId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "pattern": {
+          "$ref": "#/$defs/text"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        }
+      },
+      "required": [
+        "dynamic",
+        "namingStrategyId",
+        "pattern"
+      ]
+    }
+  }
+}

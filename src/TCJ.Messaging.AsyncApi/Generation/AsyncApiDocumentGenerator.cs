@@ -44,7 +44,10 @@ public static class AsyncApiDocumentGenerator
         }
 
         byte[] canonical = EnsureTrailingLf(buffer.WrittenSpan);
-        return new(canonical, Array.Empty<AsyncApiGenerationError>());
+        IReadOnlyList<AsyncApiGenerationError> extensionErrors = ValidateGeneratedExtensions(canonical);
+        return extensionErrors.Count == 0
+            ? new(canonical, Array.Empty<AsyncApiGenerationError>())
+            : new(ReadOnlyMemory<byte>.Empty, extensionErrors);
     }
 
     /// <summary>Writes generated canonical JSON to an explicitly supplied stream without closing it.</summary>
@@ -186,7 +189,7 @@ public static class AsyncApiDocumentGenerator
                 errors.Add(new(AsyncApiGenerationCodes.IdentifierCollision, "$.operations", $"Operation id collision for '{operationId}'."));
                 return;
             }
-            result.Add(new(operationId, action, channelId, refs.OrderBy(static x => x.MessageId, StringComparer.Ordinal).ToArray()));
+            result.Add(new(operationId, action, logicalId, channelId, refs.OrderBy(static x => x.MessageId, StringComparer.Ordinal).ToArray()));
         }
     }
 
@@ -230,9 +233,10 @@ public static class AsyncApiDocumentGenerator
         writer.WriteStartObject();
         writer.WriteString("asyncapi", SupportedAsyncApiVersion);
         WriteInfo(writer, catalog.Document);
+        TcjAsyncApiExtensionWriter.WriteDocument(writer, catalog);
         if (catalog.Servers.Count != 0) WriteServers(writer, catalog, serverIds, securityIds);
         WriteChannels(writer, catalog, messageIds, channelIds);
-        WriteOperations(writer, operations);
+        WriteOperations(writer, catalog, operations);
         WriteComponents(writer, catalog, contracts, messageIds, securityIds, schemaMode);
         writer.WriteEndObject();
         writer.Flush();
@@ -306,12 +310,13 @@ public static class AsyncApiDocumentGenerator
                 writer.WriteEndObject();
             }
             writer.WriteEndObject();
+            TcjAsyncApiExtensionWriter.WriteChannel(writer, channel);
             writer.WriteEndObject();
         }
         writer.WriteEndObject();
     }
 
-    private static void WriteOperations(Utf8JsonWriter writer, IReadOnlyList<GeneratedOperation> operations)
+    private static void WriteOperations(Utf8JsonWriter writer, MessagingCatalog catalog, IReadOnlyList<GeneratedOperation> operations)
     {
         writer.WritePropertyName("operations"); writer.WriteStartObject();
         foreach (GeneratedOperation operation in operations)
@@ -325,6 +330,18 @@ public static class AsyncApiDocumentGenerator
                 writer.WriteStartObject(); writer.WriteString("$ref", $"#/channels/{operation.ChannelId}/messages/{channelMessageId}"); writer.WriteEndObject();
             }
             writer.WriteEndArray();
+            if (string.Equals(operation.Action, "send", StringComparison.Ordinal))
+            {
+                MessagingProducer producer = catalog.Producers.First(x => string.Equals(x.Id, operation.LogicalId, StringComparison.Ordinal));
+                MessagingTransport transport = catalog.Transports.First(x => string.Equals(MessagingCatalogValidator.NormalizeIdentifier(x.Id), MessagingCatalogValidator.NormalizeIdentifier(producer.TransportId), StringComparison.Ordinal));
+                TcjAsyncApiExtensionWriter.WriteProducerOperation(writer, producer, transport, catalog.Relationships);
+            }
+            else
+            {
+                MessagingConsumer consumer = catalog.Consumers.First(x => string.Equals(x.Id, operation.LogicalId, StringComparison.Ordinal));
+                MessagingTransport transport = catalog.Transports.First(x => string.Equals(MessagingCatalogValidator.NormalizeIdentifier(x.Id), MessagingCatalogValidator.NormalizeIdentifier(consumer.TransportId), StringComparison.Ordinal));
+                TcjAsyncApiExtensionWriter.WriteConsumerOperation(writer, consumer, transport, catalog.Relationships);
+            }
             writer.WriteEndObject();
         }
         writer.WriteEndObject();
@@ -361,6 +378,7 @@ public static class AsyncApiDocumentGenerator
                 schema.RootElement.WriteTo(writer);
             }
             writer.WriteEndObject();
+            TcjAsyncApiExtensionWriter.WriteMessage(writer, contract);
             if (contract.Examples.Count != 0)
             {
                 writer.WritePropertyName("examples"); writer.WriteStartArray();
@@ -396,6 +414,37 @@ public static class AsyncApiDocumentGenerator
             writer.WriteEndObject();
         }
         writer.WriteEndObject();
+    }
+
+
+    private static IReadOnlyList<AsyncApiGenerationError> ValidateGeneratedExtensions(ReadOnlyMemory<byte> utf8Json)
+    {
+        using JsonDocument document = JsonDocument.Parse(utf8Json);
+        var errors = new List<AsyncApiGenerationError>();
+        Visit(document.RootElement, "$", errors);
+        return SortErrors(errors);
+
+        static void Visit(JsonElement element, string path, List<AsyncApiGenerationError> errors)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                bool hasTcjExtension = element.EnumerateObject().Any(static property => property.Name.StartsWith("x-tcj-", StringComparison.Ordinal));
+                if (hasTcjExtension)
+                {
+                    TcjAsyncApiExtensionValidationResult result = TcjAsyncApiExtensionValidator.Validate(element);
+                    foreach (TcjAsyncApiExtensionValidationError error in result.Errors)
+                        errors.Add(new(AsyncApiGenerationCodes.InvalidTcjExtension, path + error.Path.TrimStart('$'), error.Code + ": " + error.Message));
+                }
+
+                foreach (JsonProperty property in element.EnumerateObject())
+                    Visit(property.Value, path + "." + property.Name, errors);
+            }
+            else if (element.ValueKind == JsonValueKind.Array)
+            {
+                int index = 0;
+                foreach (JsonElement item in element.EnumerateArray()) Visit(item, path + "[" + index++ + "]", errors);
+            }
+        }
     }
 
     private static string SchemaFormat(string schemaDialect) => schemaDialect switch
@@ -438,5 +487,5 @@ public static class AsyncApiDocumentGenerator
             .ThenBy(static x => x.Message, StringComparer.Ordinal)
             .ToList();
 
-    private sealed record GeneratedOperation(string Id, string Action, string ChannelId, IReadOnlyList<(string MessageId, string ChannelMessageId)> Messages);
+    private sealed record GeneratedOperation(string Id, string Action, string LogicalId, string ChannelId, IReadOnlyList<(string MessageId, string ChannelMessageId)> Messages);
 }

@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_POLICY = ROOT / "eng/asyncapi-policy.json"
 DEFAULT_GOVERNANCE = ROOT / "eng/asyncapi-governance-contract.json"
 DEFAULT_CATALOG_SCHEMA = ROOT / "eng/messaging-catalog-input.schema.json"
+DEFAULT_TCJ_EXTENSION_SCHEMA = ROOT / "eng/asyncapi-tcj-extensions.schema.json"
 PINNED_ASYNCAPI_VERSION = "3.1.0"
 CANONICAL_FORMAT = "JSON"
 REQUIRED_OUTPUT_MODES = ("referenced", "bundled")
@@ -75,13 +76,16 @@ def validate_configuration(
     policy_path: Path | None = None,
     governance_path: Path | None = None,
     catalog_schema_path: Path | None = None,
+    tcj_extension_schema_path: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     policy_path = policy_path or root / "eng/asyncapi-policy.json"
     governance_path = governance_path or root / "eng/asyncapi-governance-contract.json"
     catalog_schema_path = catalog_schema_path or root / "eng/messaging-catalog-input.schema.json"
+    tcj_extension_schema_path = tcj_extension_schema_path or root / "eng/asyncapi-tcj-extensions.schema.json"
     policy = read_json(policy_path, "AsyncAPI policy")
     governance = read_json(governance_path, "AsyncAPI governance contract")
     catalog_schema = read_json(catalog_schema_path, "messaging catalog input schema")
+    extension_schema = read_json(tcj_extension_schema_path, "TCJ AsyncAPI extension schema")
 
     if policy.get("schemaVersion") != 1:
         fail("AsyncAPI policy schemaVersion must be 1.")
@@ -163,6 +167,7 @@ def validate_configuration(
         "package": "src/TCJ.Messaging.AsyncApi/TCJ.Messaging.AsyncApi.csproj",
         "tool": "eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj",
         "tests": "eng/tests/test_verify_asyncapi.py",
+        "tcjExtensionSchema": "eng/asyncapi-tcj-extensions.schema.json",
     }
     for key, expected in required_paths.items():
         actual = require_relative_path(paths.get(key), f"paths.{key}")
@@ -226,6 +231,34 @@ def validate_configuration(
     require_exact_enum(governance.get("deliverySemantics"), DELIVERY_SEMANTICS, "deliverySemantics")
     require_exact_enum(governance.get("orderingSemantics"), ORDERING_SEMANTICS, "orderingSemantics")
     require_exact_enum(governance.get("deadLetterSemantics"), DEAD_LETTER_SEMANTICS, "deadLetterSemantics")
+
+    tcj_policy = policy.get("tcjExtensions")
+    tcj_governance = governance.get("tcjExtensions")
+    if not isinstance(tcj_policy, dict) or not isinstance(tcj_governance, dict):
+        fail("TCJ extension policy and governance must be explicit.")
+    if tcj_policy.get("version") != versions["tcjExtensionSchema"] or tcj_governance.get("version") != versions["tcjExtensionSchema"]:
+        fail("TCJ extension versions must agree with the governed schema version.")
+    if tcj_policy.get("schemaPath") != "eng/asyncapi-tcj-extensions.schema.json":
+        fail("TCJ extension schema path is invalid.")
+    approved = tcj_governance.get("approvedNames")
+    if not isinstance(approved, list) or approved != tcj_policy.get("allowedNames") or len(approved) != len(set(approved)):
+        fail("TCJ extension names must be unique and agree between policy and governance.")
+    if extension_schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema" or extension_schema.get("type") != "object" or extension_schema.get("additionalProperties") is not False:
+        fail("TCJ extension schema must be a closed draft 2020-12 object schema.")
+    extension_properties = extension_schema.get("properties")
+    if not isinstance(extension_properties, dict) or list(extension_properties.keys()) != approved:
+        fail("TCJ extension schema properties must exactly match the governed extension names and order.")
+    if extension_schema.get("required") != ["x-tcj-extension-version"]:
+        fail("TCJ extension schema must require x-tcj-extension-version.")
+    version_schema = extension_properties.get("x-tcj-extension-version")
+    if version_schema != {"const": versions["tcjExtensionSchema"]}:
+        fail("TCJ extension schema version must be pinned to the governed version.")
+    placement = tcj_governance.get("placement")
+    if not isinstance(placement, dict) or set(placement) != {"document", "message", "channel", "operation"}:
+        fail("TCJ extension placement governance is incomplete.")
+    for location, names_at_location in placement.items():
+        if not isinstance(names_at_location, list) or "x-tcj-extension-version" not in names_at_location or any(name not in approved for name in names_at_location):
+            fail(f"TCJ extension placement for {location} is invalid.")
 
     integration = governance.get("step52ContractIntegration")
     expected_integration = {

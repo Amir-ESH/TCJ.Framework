@@ -69,5 +69,95 @@
     "bundledSchemaBehavior": "validated-Step52-bytes-no-regeneration",
     "serverBehavior": "omit-unless-explicit-safe-metadata",
     "collisionBehavior": "fail-closed"
+  },
+  "tcjExtensions": {
+    "version": "1.0",
+    "compatibilitySensitive": true,
+    "approvedNames": [
+      "x-tcj-extension-version",
+      "x-tcj-contract-id",
+      "x-tcj-contract-version",
+      "x-tcj-schema-fingerprint",
+      "x-tcj-owner",
+      "x-tcj-lifecycle",
+      "x-tcj-compatibility",
+      "x-tcj-outbox",
+      "x-tcj-inbox",
+      "x-tcj-saga",
+      "x-tcj-delivery-semantics",
+      "x-tcj-ordering-scope",
+      "x-tcj-retry-owner",
+      "x-tcj-dead-letter",
+      "x-tcj-upcaster-path",
+      "x-tcj-data-classification",
+      "x-tcj-dynamic-destination"
+    ],
+    "placement": {
+      "document": [
+        "x-tcj-extension-version",
+        "x-tcj-owner"
+      ],
+      "message": [
+        "x-tcj-extension-version",
+        "x-tcj-contract-id",
+        "x-tcj-contract-version",
+        "x-tcj-schema-fingerprint",
+        "x-tcj-owner",
+        "x-tcj-lifecycle",
+        "x-tcj-compatibility",
+        "x-tcj-upcaster-path",
+        "x-tcj-data-classification"
+      ],
+      "channel": [
+        "x-tcj-extension-version",
+        "x-tcj-owner",
+        "x-tcj-lifecycle",
+        "x-tcj-data-classification",
+        "x-tcj-dynamic-destination"
+      ],
+      "operation": [
+        "x-tcj-extension-version",
+        "x-tcj-owner",
+        "x-tcj-lifecycle",
+        "x-tcj-delivery-semantics",
+        "x-tcj-ordering-scope",
+        "x-tcj-retry-owner",
+        "x-tcj-dead-letter",
+        "x-tcj-inbox",
+        "x-tcj-outbox",
+        "x-tcj-saga",
+        "x-tcj-dynamic-destination"
+      ]
+    },
+    "retryOwnerSemantics": [
+      "TransportClient",
+      "Outbox",
+      "Broker",
+      "Inbox",
+      "HandlerResilience",
+      "Saga",
+      "Application",
+      "TransportSpecific"
+    ],
+    "sagaRelationships": [
+      "Start",
+      "Continue",
+      "Timeout",
+      "Compensation",
+      "Completion",
+      "Failure"
+    ],
+    "dataClassifications": [
+      "Public",
+      "Internal",
+      "Personal",
+      "Confidential",
+      "SecretProhibited"
+    ],
+    "contractIdentity": "Step52-governed-logical-message-type-and-version",
+    "fingerprint": "copy-Step52-governed-fingerprint-never-recompute",
+    "compatibility": "link-existing-Step52-evidence-only-no-recompute",
+    "dynamicDestinations": "strategy-and-pattern-only-no-runtime-values",
+    "transportBindingFallback": "use-standard-binding-only-when-semantically-accurate-otherwise-governed-extension"
   }
 }

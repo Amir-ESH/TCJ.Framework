@@ -32,7 +32,8 @@
   "paths": {
     "package": "src/TCJ.Messaging.AsyncApi/TCJ.Messaging.AsyncApi.csproj",
     "tool": "eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj",
-    "tests": "eng/tests/test_verify_asyncapi.py"
+    "tests": "eng/tests/test_verify_asyncapi.py",
+    "tcjExtensionSchema": "eng/asyncapi-tcj-extensions.schema.json"
   },
   "expectedGeneratedArtifactRoots": [
     "artifacts/asyncapi",
@@ -61,5 +62,44 @@
     "maximumOperations": 1024,
     "maximumServers": 512,
     "maximumSecuritySchemes": 512
+  },
+  "tcjExtensions": {
+    "version": "1.0",
+    "schemaPath": "eng/asyncapi-tcj-extensions.schema.json",
+    "allowedNames": [
+      "x-tcj-extension-version",
+      "x-tcj-contract-id",
+      "x-tcj-contract-version",
+      "x-tcj-schema-fingerprint",
+      "x-tcj-owner",
+      "x-tcj-lifecycle",
+      "x-tcj-compatibility",
+      "x-tcj-outbox",
+      "x-tcj-inbox",
+      "x-tcj-saga",
+      "x-tcj-delivery-semantics",
+      "x-tcj-ordering-scope",
+      "x-tcj-retry-owner",
+      "x-tcj-dead-letter",
+      "x-tcj-upcaster-path",
+      "x-tcj-data-classification",
+      "x-tcj-dynamic-destination"
+    ],
+    "retryOwnerValues": [
+      "TransportClient",
+      "Outbox",
+      "Broker",
+      "Inbox",
+      "HandlerResilience",
+      "Saga",
+      "Application",
+      "TransportSpecific"
+    ],
+    "maximumCollectionItems": 64,
+    "maximumIdentifierLength": 128,
+    "maximumTextLength": 2048,
+    "unknownExtensions": "reject",
+    "secretBearingMetadata": "reject",
+    "transportBindings": "standard-only-when-semantically-explicit-otherwise-governed-extension"
   }
 }

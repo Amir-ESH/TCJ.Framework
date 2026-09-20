@@ -160,7 +160,7 @@ public static partial class MessagingCatalogValidator
                 ValidateRequiredText(item.Saga.DefinitionId, path + ".saga.definitionId", errors, MaxIdentifierLength);
                 if (item.Saga.DefinitionVersion <= 0)
                     errors.Add(new(MessagingCatalogValidationCodes.InvalidRelationship, path + ".saga.definitionVersion", "Saga definition version must be positive."));
-                if (item.Kind is not (MessagingRelationshipKind.StartsSaga or MessagingRelationshipKind.ContinuesSaga or MessagingRelationshipKind.CompensatesSaga))
+                if (item.Kind is not (MessagingRelationshipKind.StartsSaga or MessagingRelationshipKind.ContinuesSaga or MessagingRelationshipKind.TimesOutSaga or MessagingRelationshipKind.CompensatesSaga or MessagingRelationshipKind.CompletesSaga or MessagingRelationshipKind.FailsSaga))
                     errors.Add(new(MessagingCatalogValidationCodes.InvalidRelationship, path + ".saga", "Saga metadata is allowed only for Saga relationship kinds."));
             }
         }

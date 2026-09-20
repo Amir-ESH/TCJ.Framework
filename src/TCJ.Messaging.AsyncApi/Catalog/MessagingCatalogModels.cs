@@ -79,10 +79,10 @@ public sealed record MessagingTransport
     public required string Kind { get; init; }
     public required string Protocol { get; init; }
     public string? Description { get; init; }
-    public MessagingDeliverySemantics DeliverySemantics { get; init; } = MessagingDeliverySemantics.TransportSpecific;
-    public MessagingOrderingSemantics OrderingSemantics { get; init; } = MessagingOrderingSemantics.None;
-    public MessagingDeadLetterSemantics DeadLetterSemantics { get; init; } = MessagingDeadLetterSemantics.TransportSpecific;
-    public MessagingPartitioningSemantics PartitioningSemantics { get; init; } = MessagingPartitioningSemantics.TransportSpecific;
+    public MessagingDeliverySemantics? DeliverySemantics { get; init; }
+    public MessagingOrderingSemantics? OrderingSemantics { get; init; }
+    public MessagingDeadLetterSemantics? DeadLetterSemantics { get; init; }
+    public MessagingPartitioningSemantics? PartitioningSemantics { get; init; }
     public IReadOnlyList<string> CapabilityIds { get; init; } = [];
     public string? SecuritySchemeId { get; init; }
     public string? Owner { get; init; }
@@ -98,8 +98,8 @@ public sealed record MessagingProducer
     public MessagingOutboxDeclaration? Outbox { get; init; }
     public string? PartitionKeyStrategy { get; init; }
     public string? OrderingKeyStrategy { get; init; }
-    public MessagingRetryOwner RetryOwner { get; init; } = MessagingRetryOwner.Application;
-    public MessagingLifecycle Lifecycle { get; init; } = MessagingLifecycle.Published;
+    public MessagingRetryOwner? RetryOwner { get; init; }
+    public MessagingLifecycle? Lifecycle { get; init; }
     public string? Owner { get; init; }
     public MessagingDynamicDestination? DynamicDestination { get; init; }
 }
@@ -114,10 +114,10 @@ public sealed record MessagingConsumer
     public required string TransportId { get; init; }
     public string? SubscriptionOrGroup { get; init; }
     public MessagingInboxDeclaration? Inbox { get; init; }
-    public MessagingOrderingSemantics OrderingScope { get; init; } = MessagingOrderingSemantics.None;
-    public MessagingRetryOwner RetryOwner { get; init; } = MessagingRetryOwner.Application;
-    public MessagingDeadLetterSemantics DeadLetterSemantics { get; init; } = MessagingDeadLetterSemantics.TransportSpecific;
-    public MessagingLifecycle Lifecycle { get; init; } = MessagingLifecycle.Published;
+    public MessagingOrderingSemantics? OrderingScope { get; init; }
+    public MessagingRetryOwner? RetryOwner { get; init; }
+    public MessagingDeadLetterSemantics? DeadLetterSemantics { get; init; }
+    public MessagingLifecycle? Lifecycle { get; init; }
     public string? Owner { get; init; }
 }
 
@@ -129,7 +129,7 @@ public sealed record MessagingChannel
     public string? Description { get; init; }
     public IReadOnlyList<MessagingMessageReference> Messages { get; init; } = [];
     public MessagingDynamicDestination? DynamicDestination { get; init; }
-    public MessagingLifecycle Lifecycle { get; init; } = MessagingLifecycle.Published;
+    public MessagingLifecycle? Lifecycle { get; init; }
     public string? Owner { get; init; }
     public IReadOnlyList<MessagingDataClassification> DataClassifications { get; init; } = [];
 }
@@ -215,13 +215,39 @@ public enum MessagingSecurityMechanism
 public enum MessagingDataClassification { Public, Internal, Personal, Confidential, SecretProhibited }
 
 [JsonConverter(typeof(JsonStringEnumConverter<MessagingRelationshipKind>))]
-public enum MessagingRelationshipKind { Publishes, Consumes, UsesChannel, UsesTransport, StartsSaga, ContinuesSaga, CompensatesSaga, Replaces, UpcastsTo }
+public enum MessagingRelationshipKind
+{
+    Publishes,
+    Consumes,
+    UsesChannel,
+    UsesTransport,
+    StartsSaga,
+    ContinuesSaga,
+    TimesOutSaga,
+    CompensatesSaga,
+    CompletesSaga,
+    FailsSaga,
+    Replaces,
+    UpcastsTo
+}
 
 [JsonConverter(typeof(JsonStringEnumConverter<MessagingEntityKind>))]
 public enum MessagingEntityKind { Application, Transport, Producer, Consumer, Channel, SecurityScheme }
 
 [JsonConverter(typeof(JsonStringEnumConverter<MessagingRetryOwner>))]
-public enum MessagingRetryOwner { Application, Transport, None }
+public enum MessagingRetryOwner
+{
+    Application,
+    Transport,
+    None,
+    TransportClient,
+    Outbox,
+    Broker,
+    Inbox,
+    HandlerResilience,
+    Saga,
+    TransportSpecific
+}
 
 [JsonConverter(typeof(JsonStringEnumConverter<MessagingTransactionalBoundary>))]
 public enum MessagingTransactionalBoundary { Application, MessageHandler, Separate }

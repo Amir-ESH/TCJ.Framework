@@ -36,9 +36,11 @@ class AsyncApiFoundationVerifierTests(unittest.TestCase):
         self.policy_path = self.root / "eng/asyncapi-policy.json"
         self.governance_path = self.root / "eng/asyncapi-governance-contract.json"
         self.catalog_schema_path = self.root / "eng/messaging-catalog-input.schema.json"
+        self.extension_schema_path = self.root / "eng/asyncapi-tcj-extensions.schema.json"
         self.policy_path.write_text((ENG / "asyncapi-policy.json").read_text(encoding="utf-8"), encoding="utf-8")
         self.governance_path.write_text((ENG / "asyncapi-governance-contract.json").read_text(encoding="utf-8"), encoding="utf-8")
         self.catalog_schema_path.write_text((ENG / "messaging-catalog-input.schema.json").read_text(encoding="utf-8"), encoding="utf-8")
+        self.extension_schema_path.write_text((ENG / "asyncapi-tcj-extensions.schema.json").read_text(encoding="utf-8"), encoding="utf-8")
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -163,6 +165,20 @@ class AsyncApiFoundationVerifierTests(unittest.TestCase):
     @staticmethod
     def _read(path: Path) -> dict:
         return json.loads(path.read_text(encoding="utf-8"))
+
+
+    def test_tcj_extension_schema_is_pinned_and_closed(self) -> None:
+        MODULE.validate_configuration(self.root, self.policy_path, self.governance_path, self.catalog_schema_path, self.extension_schema_path)
+        schema = self._read(self.extension_schema_path)
+        self.assertEqual({"const": "1.0"}, schema["properties"]["x-tcj-extension-version"])
+        self.assertFalse(schema["additionalProperties"])
+
+    def test_unknown_governed_extension_name_fails_configuration(self) -> None:
+        governance = self._read(self.governance_path)
+        governance["tcjExtensions"]["approvedNames"].append("x-tcj-unknown")
+        self._write(self.governance_path, governance)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "agree between policy and governance"):
+            MODULE.validate_configuration(self.root, self.policy_path, self.governance_path, self.catalog_schema_path, self.extension_schema_path)
 
     @staticmethod
     def _write(path: Path, value: dict) -> None:
