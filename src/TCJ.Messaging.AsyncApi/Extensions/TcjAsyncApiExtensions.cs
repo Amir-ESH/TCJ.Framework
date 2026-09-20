@@ -205,7 +205,7 @@ public static class TcjAsyncApiExtensionValidator
             AddInvalid(TcjAsyncApiExtensions.UpcasterPath, errors);
         else
             foreach (JsonElement item in value.EnumerateArray())
-                if (item.ValueKind != JsonValueKind.Integer || !item.TryGetInt32(out int version) || version <= 0)
+                if (item.ValueKind != JsonValueKind.Number || !item.TryGetInt32(out int version) || version <= 0)
                     AddInvalid(TcjAsyncApiExtensions.UpcasterPath, errors);
     }
 
