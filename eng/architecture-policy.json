@@ -456,6 +456,7 @@
     "TCJ.DependencyInjection.DomainEvents.TcjDomainEventResilienceOptions",
     "TCJ.DependencyInjection.Registration.TcjDependencyInjectionOptions",
     "TCJ.EntityFrameworkCore.SqlServer.Options.TcjSqlServerOptions",
+    "TCJ.Messaging.AsyncApi.GovernedContractResolutionOptions",
     "TCJ.Messaging.Configuration.TcjMessagingOptions",
     "TCJ.Messaging.Receiving.DeadLetterOptions",
     "TCJ.Messaging.Receiving.RetrySettlementOptions",

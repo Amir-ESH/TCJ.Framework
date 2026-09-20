@@ -123,6 +123,26 @@ def validate_configuration(
     if policy.get("deterministicOutputRequired") is not True:
         fail("Deterministic output must be required.")
 
+    step52 = policy.get("step52ContractArtifacts")
+    if not isinstance(step52, dict):
+        fail("step52ContractArtifacts must be an object.")
+    if step52.get("manifestFileName") != "manifest.json":
+        fail("Step 52 contract manifest file name must be manifest.json.")
+    if step52.get("manifestValidation") != "TCJ.Messaging.Contracts.MessageContractManifestSerializer":
+        fail("Step 52 manifest validation must reuse MessageContractManifestSerializer.")
+    if step52.get("fingerprintValidation") != "TCJ.Messaging.Contracts.MessageContractSchemaGenerator":
+        fail("Step 52 schema fingerprint validation must reuse MessageContractSchemaGenerator.")
+    for key in ("maximumSchemaBytes", "maximumExampleBytes", "maximumReferenceDepth"):
+        if not isinstance(step52.get(key), int) or step52[key] <= 0:
+            fail(f"step52ContractArtifacts.{key} must be a positive integer.")
+    if step52["maximumReferenceDepth"] > 128:
+        fail("Step 52 local reference depth must remain bounded to 128 or fewer levels.")
+    local_refs = step52.get("localReferences")
+    if not isinstance(local_refs, dict) or local_refs.get("allowed") is not True or local_refs.get("artifactRootConstrained") is not True or local_refs.get("parentTraversalAllowed") is not False:
+        fail("Step 52 local references must be root-constrained and parent traversal must be forbidden.")
+    if step52.get("governedExamplesOnly") is not True:
+        fail("Only Step 52 governed examples may be consumed.")
+
     paths = policy.get("paths")
     if not isinstance(paths, dict):
         fail("paths must be an object.")
@@ -193,6 +213,20 @@ def validate_configuration(
     require_exact_enum(governance.get("deliverySemantics"), DELIVERY_SEMANTICS, "deliverySemantics")
     require_exact_enum(governance.get("orderingSemantics"), ORDERING_SEMANTICS, "orderingSemantics")
     require_exact_enum(governance.get("deadLetterSemantics"), DEAD_LETTER_SEMANTICS, "deadLetterSemantics")
+
+    integration = governance.get("step52ContractIntegration")
+    expected_integration = {
+        "contractIdentity": "MessageType+MessageVersion",
+        "manifestSource": "TCJ.Messaging.Contracts.MessageContractManifestSerializer",
+        "schemaSource": "Step52-governed-artifact",
+        "fingerprintSource": "TCJ.Messaging.Contracts.MessageContractSchemaGenerator",
+        "localReferenceBehavior": "root-constrained-no-parent-traversal",
+        "remoteReferenceBehavior": "fail-closed-no-network",
+        "exampleBehavior": "manifest-declared-governed-only",
+        "compatibilityBehavior": "link-existing-Step52-evidence-only",
+    }
+    if integration != expected_integration:
+        fail("Step 52 governed-contract integration semantics are invalid.")
 
     if catalog_schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
         fail("Messaging catalog input schema must use JSON Schema draft 2020-12.")
