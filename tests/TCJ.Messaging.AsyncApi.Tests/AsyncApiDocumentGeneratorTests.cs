@@ -143,7 +143,10 @@ public sealed class AsyncApiDocumentGeneratorTests
         using JsonDocument document = JsonDocument.Parse(result.Utf8Json);
         JsonElement channel = document.RootElement.GetProperty("channels").GetProperty("orders-created");
         Assert.Equal(JsonValueKind.Null, channel.GetProperty("address").ValueKind);
-        Assert.DoesNotContain("tenant-{tenantId}.orders", Encoding.UTF8.GetString(result.Utf8Json.Span), StringComparison.Ordinal);
+        JsonElement dynamicDestination = channel.GetProperty(TcjAsyncApiExtensions.DynamicDestination);
+        Assert.True(dynamicDestination.GetProperty("dynamic").GetBoolean());
+        Assert.Equal("tenant", dynamicDestination.GetProperty("namingStrategyId").GetString());
+        Assert.Equal("tenant-{tenantId}.orders", dynamicDestination.GetProperty("pattern").GetString());
     }
 
     [Fact]

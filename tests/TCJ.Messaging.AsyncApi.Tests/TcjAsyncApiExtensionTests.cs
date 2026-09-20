@@ -13,10 +13,29 @@ public sealed class TcjAsyncApiExtensionTests
         Assert.Equal("https://json-schema.org/draft/2020-12/schema", root.GetProperty("$schema").GetString());
         Assert.False(root.GetProperty("additionalProperties").GetBoolean());
         Assert.Equal(TcjAsyncApiExtensions.Version, root.GetProperty("properties").GetProperty(TcjAsyncApiExtensions.VersionName).GetProperty("const").GetString());
-        string[] names = root.GetProperty("properties").EnumerateObject().Select(static property => property.Name).ToArray();
-        Assert.Equal(16, names.Length);
-        Assert.Contains(TcjAsyncApiExtensions.UpcasterPath, names);
-        Assert.Contains(TcjAsyncApiExtensions.DynamicDestination, names);
+        string[] names = root.GetProperty("properties").EnumerateObject().Select(static property => property.Name).OrderBy(static name => name, StringComparer.Ordinal).ToArray();
+        string[] expectedNames =
+        [
+            TcjAsyncApiExtensions.Compatibility,
+            TcjAsyncApiExtensions.ContractId,
+            TcjAsyncApiExtensions.ContractVersion,
+            TcjAsyncApiExtensions.DataClassification,
+            TcjAsyncApiExtensions.DeadLetter,
+            TcjAsyncApiExtensions.DeliverySemantics,
+            TcjAsyncApiExtensions.DynamicDestination,
+            TcjAsyncApiExtensions.Inbox,
+            TcjAsyncApiExtensions.Lifecycle,
+            TcjAsyncApiExtensions.OrderingScope,
+            TcjAsyncApiExtensions.Outbox,
+            TcjAsyncApiExtensions.Owner,
+            TcjAsyncApiExtensions.RetryOwner,
+            TcjAsyncApiExtensions.Saga,
+            TcjAsyncApiExtensions.SchemaFingerprint,
+            TcjAsyncApiExtensions.UpcasterPath,
+            TcjAsyncApiExtensions.VersionName
+        ];
+        Array.Sort(expectedNames, StringComparer.Ordinal);
+        Assert.Equal(expectedNames, names);
     }
 
     [Fact]
