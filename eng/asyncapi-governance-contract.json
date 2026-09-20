@@ -55,5 +55,19 @@
     "remoteReferenceBehavior": "fail-closed-no-network",
     "exampleBehavior": "manifest-declared-governed-only",
     "compatibilityBehavior": "link-existing-Step52-evidence-only"
+  },
+  "coreGeneration": {
+    "documentFormatVersion": "1.0",
+    "messageComponentIdentity": "normalized-MessageType.vMessageVersion",
+    "channelIdentity": "normalized-explicit-catalog-channel-id",
+    "operationIdentity": "normalized-application.action.MessageType.version.logical-id",
+    "schemaModes": [
+      "referenced",
+      "bundled"
+    ],
+    "referencedSchemaBehavior": "validated-Step52-relative-path-no-rewrite",
+    "bundledSchemaBehavior": "validated-Step52-bytes-no-regeneration",
+    "serverBehavior": "omit-unless-explicit-safe-metadata",
+    "collisionBehavior": "fail-closed"
   }
 }

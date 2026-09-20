@@ -22,6 +22,13 @@
       },
       "maxItems": 512
     },
+    "servers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/server"
+      },
+      "maxItems": 512
+    },
     "transports": {
       "type": "array",
       "items": {
@@ -215,6 +222,43 @@
       "required": [
         "id",
         "mechanism"
+      ]
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "protocol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "securitySchemeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "id",
+        "host",
+        "protocol"
       ]
     },
     "messageReference": {

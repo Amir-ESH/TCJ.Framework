@@ -123,6 +123,19 @@ def validate_configuration(
     if policy.get("deterministicOutputRequired") is not True:
         fail("Deterministic output must be required.")
 
+    generation = policy.get("generation")
+    if not isinstance(generation, dict):
+        fail("generation must be an object.")
+    if generation.get("canonicalNewline") != "LF":
+        fail("Generation canonical newline must be LF.")
+    if generation.get("identifierNormalization") != "stable-lowercase-kebab-case-with-collision-detection":
+        fail("Generation identifier normalization must match the governed contract.")
+    if generation.get("serverDefaultBehavior") != "omit-when-not-explicitly-supplied":
+        fail("Generation must omit servers unless safe metadata is explicitly supplied.")
+    for key in ("maximumChannels", "maximumMessages", "maximumOperations", "maximumServers", "maximumSecuritySchemes"):
+        if not isinstance(generation.get(key), int) or generation[key] <= 0:
+            fail(f"generation.{key} must be a positive integer.")
+
     step52 = policy.get("step52ContractArtifacts")
     if not isinstance(step52, dict):
         fail("step52ContractArtifacts must be an object.")
@@ -227,6 +240,21 @@ def validate_configuration(
     }
     if integration != expected_integration:
         fail("Step 52 governed-contract integration semantics are invalid.")
+
+    core_generation = governance.get("coreGeneration")
+    expected_core_generation = {
+        "documentFormatVersion": "1.0",
+        "messageComponentIdentity": "normalized-MessageType.vMessageVersion",
+        "channelIdentity": "normalized-explicit-catalog-channel-id",
+        "operationIdentity": "normalized-application.action.MessageType.version.logical-id",
+        "schemaModes": ["referenced", "bundled"],
+        "referencedSchemaBehavior": "validated-Step52-relative-path-no-rewrite",
+        "bundledSchemaBehavior": "validated-Step52-bytes-no-regeneration",
+        "serverBehavior": "omit-unless-explicit-safe-metadata",
+        "collisionBehavior": "fail-closed",
+    }
+    if core_generation != expected_core_generation:
+        fail("Core AsyncAPI generation governance semantics are invalid.")
 
     if catalog_schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
         fail("Messaging catalog input schema must use JSON Schema draft 2020-12.")

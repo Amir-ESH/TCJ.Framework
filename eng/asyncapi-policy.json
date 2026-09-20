@@ -51,5 +51,15 @@
       "parentTraversalAllowed": false
     },
     "governedExamplesOnly": true
+  },
+  "generation": {
+    "canonicalNewline": "LF",
+    "identifierNormalization": "stable-lowercase-kebab-case-with-collision-detection",
+    "serverDefaultBehavior": "omit-when-not-explicitly-supplied",
+    "maximumChannels": 512,
+    "maximumMessages": 512,
+    "maximumOperations": 1024,
+    "maximumServers": 512,
+    "maximumSecuritySchemes": 512
   }
 }

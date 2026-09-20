@@ -12,6 +12,7 @@ public sealed record MessagingCatalog
     public required MessagingApplication Application { get; init; }
     public required MessagingDocumentInfo Document { get; init; }
     public IReadOnlyList<MessagingSecurityScheme> SecuritySchemes { get; init; } = [];
+    public IReadOnlyList<MessagingServer> Servers { get; init; } = [];
     public IReadOnlyList<MessagingTransport> Transports { get; init; } = [];
     public IReadOnlyList<MessagingProducer> Producers { get; init; } = [];
     public IReadOnlyList<MessagingConsumer> Consumers { get; init; } = [];
@@ -60,6 +61,16 @@ public sealed record MessagingSecurityScheme
     public required string Id { get; init; }
     public required MessagingSecurityMechanism Mechanism { get; init; }
     public string? Description { get; init; }
+}
+
+
+public sealed record MessagingServer
+{
+    public required string Id { get; init; }
+    public required string Host { get; init; }
+    public required string Protocol { get; init; }
+    public string? Description { get; init; }
+    public string? SecuritySchemeId { get; init; }
 }
 
 public sealed record MessagingTransport

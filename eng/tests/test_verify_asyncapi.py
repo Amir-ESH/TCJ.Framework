@@ -140,6 +140,21 @@ class AsyncApiFoundationVerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "root must be a closed object"):
             MODULE.validate_configuration(self.root, self.policy_path, self.governance_path, self.catalog_schema_path)
 
+
+    def test_core_generation_newline_and_server_behavior_are_governed(self) -> None:
+        policy = self._read(self.policy_path)
+        policy["generation"]["canonicalNewline"] = "CRLF"
+        self._write(self.policy_path, policy)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "newline must be LF"):
+            MODULE.validate_configuration(self.root, self.policy_path, self.governance_path, self.catalog_schema_path)
+
+    def test_core_generation_schema_modes_and_collision_behavior_are_governed(self) -> None:
+        governance = self._read(self.governance_path)
+        governance["coreGeneration"]["schemaModes"] = ["referenced"]
+        self._write(self.governance_path, governance)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "Core AsyncAPI generation governance semantics"):
+            MODULE.validate_configuration(self.root, self.policy_path, self.governance_path, self.catalog_schema_path)
+
     def test_configured_paths_must_exist(self) -> None:
         (self.root / "eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj").unlink()
         with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "Configured path does not exist"):

@@ -57,6 +57,7 @@ public static partial class MessagingCatalogValidator
         ValidateApplication(catalog.Application, errors);
         ValidateDocument(catalog.Document, errors);
         ValidateCount(catalog.SecuritySchemes, "$.securitySchemes", MaxEntityCount, errors);
+        ValidateCount(catalog.Servers, "$.servers", MaxEntityCount, errors);
         ValidateCount(catalog.Transports, "$.transports", MaxEntityCount, errors);
         ValidateCount(catalog.Producers, "$.producers", MaxEntityCount, errors);
         ValidateCount(catalog.Consumers, "$.consumers", MaxEntityCount, errors);
@@ -64,6 +65,8 @@ public static partial class MessagingCatalogValidator
         ValidateCount(catalog.Relationships, "$.relationships", MaxRelationshipCount, errors);
 
         var securities = BuildIdSet(catalog.SecuritySchemes, x => x.Id, "$.securitySchemes", errors);
+        var servers = BuildIdSet(catalog.Servers, x => x.Id, "$.servers", errors);
+        _ = servers;
         var transports = BuildIdSet(catalog.Transports, x => x.Id, "$.transports", errors);
         var producers = BuildIdSet(catalog.Producers, x => x.Id, "$.producers", errors);
         var consumers = BuildIdSet(catalog.Consumers, x => x.Id, "$.consumers", errors);
@@ -75,6 +78,16 @@ public static partial class MessagingCatalogValidator
         {
             var item = catalog.SecuritySchemes[i];
             ValidateText(item.Description, $"$.securitySchemes[{i}].description", errors);
+        }
+
+        for (var i = 0; i < catalog.Servers.Count; i++)
+        {
+            var item = catalog.Servers[i];
+            var path = $"$.servers[{i}]";
+            ValidateRequiredText(item.Host, path + ".host", errors);
+            ValidateRequiredText(item.Protocol, path + ".protocol", errors, MaxIdentifierLength);
+            ValidateText(item.Description, path + ".description", errors);
+            ValidateReference(item.SecuritySchemeId, securities, path + ".securitySchemeId", "security scheme", errors, optional: true);
         }
 
         for (var i = 0; i < catalog.Transports.Count; i++)

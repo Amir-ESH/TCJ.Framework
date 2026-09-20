@@ -1,0 +1,43 @@
+{
+  "asyncapi": "3.1.0",
+  "info": {
+    "title": "Orders Messaging API",
+    "version": "1.4.0"
+  },
+  "channels": {
+    "orders-created": {
+      "address": "orders.created",
+      "messages": {
+        "orders-created-v1": {
+          "$ref": "#/components/messages/orders-created-v1"
+        }
+      }
+    }
+  },
+  "operations": {
+    "orders-api-send-orders-created-v1-orders-publisher": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/orders-created"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/orders-created/messages/orders-created-v1"
+        }
+      ]
+    }
+  },
+  "components": {
+    "messages": {
+      "orders-created-v1": {
+        "name": "orders.created.v1",
+        "payload": {
+          "schemaFormat": "application/schema\u002Bjson;version=draft-2020-12",
+          "schema": {
+            "$ref": "./orders.created/v1/schema.json"
+          }
+        }
+      }
+    }
+  }
+}

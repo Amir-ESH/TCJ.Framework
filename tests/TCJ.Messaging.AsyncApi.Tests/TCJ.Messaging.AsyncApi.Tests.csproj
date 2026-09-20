@@ -11,4 +11,7 @@
   <ItemGroup>
     <None Include="..\..\eng\messaging-catalog-input.schema.json" Link="messaging-catalog-input.schema.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="Golden\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
