@@ -95,9 +95,19 @@ public sealed class AsyncApiDocumentGeneratorTests
         AsyncApiGenerationResult result = AsyncApiDocumentGenerator.Generate(catalog, resolved, new AsyncApiGenerationOptions { SchemaMode = AsyncApiSchemaMode.Referenced });
 
         string json = Encoding.UTF8.GetString(result.Utf8Json.Span);
-        Assert.Contains("\"$ref\": \"./orders.created/v1/schema.json\"", json, StringComparison.Ordinal);
+        using JsonDocument document = JsonDocument.Parse(result.Utf8Json);
+        string schemaReference = document.RootElement
+            .GetProperty("components")
+            .GetProperty("messages")
+            .GetProperty("orders-created-v1")
+            .GetProperty("payload")
+            .GetProperty("schema")
+            .GetProperty("$ref")
+            .GetString()!;
+
+        Assert.Equal("./orders.created/v1/schema.json", schemaReference);
         Assert.DoesNotContain(fixture.Root, json, StringComparison.Ordinal);
-        Assert.DoesNotContain('\\', json);
+        Assert.DoesNotContain('\\', schemaReference);
     }
 
     [Fact]

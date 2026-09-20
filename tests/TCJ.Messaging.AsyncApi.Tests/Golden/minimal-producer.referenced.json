@@ -32,7 +32,7 @@
       "orders-created-v1": {
         "name": "orders.created.v1",
         "payload": {
-          "schemaFormat": "application/schema+json;version=draft-2020-12",
+          "schemaFormat": "application/schema\u002Bjson;version=draft-2020-12",
           "schema": {
             "$ref": "./orders.created/v1/schema.json"
           }
