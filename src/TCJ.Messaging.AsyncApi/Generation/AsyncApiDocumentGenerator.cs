@@ -93,7 +93,7 @@ public static class AsyncApiDocumentGenerator
             options.MaximumServers <= 0 || options.MaximumSecuritySchemes <= 0)
             errors.Add(new(AsyncApiGenerationCodes.DocumentBoundExceeded, "$.options", "Generation bounds must be positive."));
 
-        return SortErrors(errors).ToList();
+        return SortErrors(errors);
     }
 
     private static Dictionary<string, string> BuildMessageIds(
@@ -432,8 +432,11 @@ public static class AsyncApiDocumentGenerator
         return result;
     }
 
-    private static IEnumerable<AsyncApiGenerationError> SortErrors(IEnumerable<AsyncApiGenerationError> errors) =>
-        errors.OrderBy(static x => x.Path, StringComparer.Ordinal).ThenBy(static x => x.Code, StringComparer.Ordinal).ThenBy(static x => x.Message, StringComparer.Ordinal);
+    private static List<AsyncApiGenerationError> SortErrors(IEnumerable<AsyncApiGenerationError> errors) =>
+        errors.OrderBy(static x => x.Path, StringComparer.Ordinal)
+            .ThenBy(static x => x.Code, StringComparer.Ordinal)
+            .ThenBy(static x => x.Message, StringComparer.Ordinal)
+            .ToList();
 
     private sealed record GeneratedOperation(string Id, string Action, string ChannelId, IReadOnlyList<(string MessageId, string ChannelMessageId)> Messages);
 }
