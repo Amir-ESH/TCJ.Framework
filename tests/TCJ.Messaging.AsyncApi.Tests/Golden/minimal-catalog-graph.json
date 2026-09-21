@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "catalogIdentity": {
+    "applicationName": "sample-app",
+    "applicationVersion": "1.0.0"
+  },
+  "nodes": [
+    {
+      "id": "application-sample",
+      "type": "Application"
+    }
+  ],
+  "edges": []
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tcj.dev/schemas/event-catalog/1.0",
+  "title": "TCJ Event Catalog 1.0",
+  "$ref": "#/$defs/eventCatalog",
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applicationName", "applicationVersion"],
+      "properties": {
+        "applicationName": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "applicationVersion": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completeness", "runtimeDiscovery", "organizationWide", "runtimeAvailability", "synthetic"],
+      "properties": {
+        "completeness": { "const": "DeclaredMetadataOnly" },
+        "runtimeDiscovery": { "const": false },
+        "organizationWide": { "const": false },
+        "runtimeAvailability": { "const": false },
+        "synthetic": { "type": "boolean" }
+      }
+    },
+    "nodeType": {
+      "enum": ["Application", "Producer", "Consumer", "MessageContract", "Channel", "Transport", "Saga"]
+    },
+    "relationshipType": {
+      "enum": ["Publishes", "Consumes", "UsesChannel", "UsesTransport", "StartsSaga", "ContinuesSaga", "TimesOutSaga", "CompensatesSaga", "CompletesSaga", "FailsSaga", "Replaces", "UpcastsTo"]
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "logicalId"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "type": { "$ref": "#/$defs/nodeType" },
+        "logicalId": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "version": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "description": { "type": "string", "maxLength": 2048 },
+        "owner": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "lifecycle": { "enum": ["Draft", "Published", "Deprecated", "Retired"] },
+        "component": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "messageType": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "messageVersion": { "type": "integer", "minimum": 1 },
+        "contentType": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "schemaFingerprintAlgorithm": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "schemaFingerprint": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "compatibilityMode": { "enum": ["None", "Backward", "Forward", "Full", "BackwardTransitive", "ForwardTransitive", "FullTransitive"] },
+        "dataClassifications": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "enum": ["Public", "Internal", "Personal", "Confidential", "SecretProhibited"] }
+        },
+        "address": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "transportKind": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "protocol": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "deliverySemantics": { "enum": ["AtLeastOnce", "AtMostOnce", "BestEffort", "TransportSpecific"] },
+        "orderingSemantics": { "enum": ["None", "BestEffort", "PerPartition", "PerSession"] },
+        "partitioningSemantics": { "enum": ["None", "Supported", "Required", "TransportSpecific"] },
+        "deadLetterSemantics": { "enum": ["Native", "ConventionBased", "Unsupported", "TransportSpecific"] },
+        "inboxEnabled": { "type": "boolean" },
+        "outboxEnabled": { "type": "boolean" },
+        "retryOwner": { "enum": ["Application", "Transport", "None", "TransportClient", "Outbox", "Broker", "Inbox", "HandlerResilience", "Saga", "TransportSpecific"] },
+        "subscriptionOrGroup": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "dynamicDestination": { "const": true },
+        "dynamicNamingStrategyId": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "dynamicPattern": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "sagaDefinitionVersion": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "sourceNodeId", "targetNodeId"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "type": { "$ref": "#/$defs/relationshipType" },
+        "sourceNodeId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "targetNodeId": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "eventCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "identity", "scope", "nodes", "relationships"],
+      "properties": {
+        "schemaVersion": { "const": "1.0" },
+        "identity": { "$ref": "#/$defs/identity" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "nodes": { "type": "array", "maxItems": 2048, "items": { "$ref": "#/$defs/node" } },
+        "relationships": { "type": "array", "maxItems": 8192, "items": { "$ref": "#/$defs/edge" } }
+      }
+    },
+    "graphNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "type": { "$ref": "#/$defs/nodeType" }
+      }
+    },
+    "relationshipGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "catalogIdentity", "nodes", "edges"],
+      "properties": {
+        "schemaVersion": { "const": "1.0" },
+        "catalogIdentity": { "$ref": "#/$defs/identity" },
+        "nodes": { "type": "array", "maxItems": 2048, "items": { "$ref": "#/$defs/graphNode" } },
+        "edges": { "type": "array", "maxItems": 8192, "items": { "$ref": "#/$defs/edge" } }
+      }
+    }
+  }
+}

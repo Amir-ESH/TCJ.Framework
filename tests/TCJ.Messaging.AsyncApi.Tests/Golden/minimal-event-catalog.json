@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "identity": {
+    "applicationName": "sample-app",
+    "applicationVersion": "1.0.0"
+  },
+  "scope": {
+    "completeness": "DeclaredMetadataOnly",
+    "runtimeDiscovery": false,
+    "organizationWide": false,
+    "runtimeAvailability": false,
+    "synthetic": true
+  },
+  "nodes": [
+    {
+      "id": "application-sample",
+      "type": "Application",
+      "logicalId": "sample-app",
+      "version": "1.0.0"
+    }
+  ],
+  "relationships": []
+}
