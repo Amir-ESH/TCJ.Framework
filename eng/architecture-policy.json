@@ -458,6 +458,7 @@
     "TCJ.EntityFrameworkCore.SqlServer.Options.TcjSqlServerOptions",
     "TCJ.Messaging.AsyncApi.GovernedContractResolutionOptions",
     "TCJ.Messaging.AsyncApi.AsyncApiGenerationOptions",
+    "TCJ.Messaging.AsyncApi.EventCatalogGenerationOptions",
     "TCJ.Messaging.Configuration.TcjMessagingOptions",
     "TCJ.Messaging.Receiving.DeadLetterOptions",
     "TCJ.Messaging.Receiving.RetrySettlementOptions",

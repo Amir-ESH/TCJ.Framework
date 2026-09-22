@@ -14,6 +14,7 @@ DEFAULT_POLICY = ROOT / "eng/asyncapi-policy.json"
 DEFAULT_GOVERNANCE = ROOT / "eng/asyncapi-governance-contract.json"
 DEFAULT_CATALOG_SCHEMA = ROOT / "eng/messaging-catalog-input.schema.json"
 DEFAULT_TCJ_EXTENSION_SCHEMA = ROOT / "eng/asyncapi-tcj-extensions.schema.json"
+DEFAULT_EVENT_CATALOG_SCHEMA = ROOT / "eng/event-catalog.schema.json"
 PINNED_ASYNCAPI_VERSION = "3.1.0"
 CANONICAL_FORMAT = "JSON"
 REQUIRED_OUTPUT_MODES = ("referenced", "bundled")
@@ -77,15 +78,18 @@ def validate_configuration(
     governance_path: Path | None = None,
     catalog_schema_path: Path | None = None,
     tcj_extension_schema_path: Path | None = None,
+    event_catalog_schema_path: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     policy_path = policy_path or root / "eng/asyncapi-policy.json"
     governance_path = governance_path or root / "eng/asyncapi-governance-contract.json"
     catalog_schema_path = catalog_schema_path or root / "eng/messaging-catalog-input.schema.json"
     tcj_extension_schema_path = tcj_extension_schema_path or root / "eng/asyncapi-tcj-extensions.schema.json"
+    event_catalog_schema_path = event_catalog_schema_path or root / "eng/event-catalog.schema.json"
     policy = read_json(policy_path, "AsyncAPI policy")
     governance = read_json(governance_path, "AsyncAPI governance contract")
     catalog_schema = read_json(catalog_schema_path, "messaging catalog input schema")
     extension_schema = read_json(tcj_extension_schema_path, "TCJ AsyncAPI extension schema")
+    event_catalog_schema = read_json(event_catalog_schema_path, "event catalog schema")
 
     if policy.get("schemaVersion") != 1:
         fail("AsyncAPI policy schemaVersion must be 1.")
@@ -100,6 +104,8 @@ def validate_configuration(
         fail(f"Canonical output format must be {CANONICAL_FORMAT}.")
     if canonical.get("asyncApiFileName") != "asyncapi.json":
         fail("Canonical AsyncAPI file name must be asyncapi.json.")
+    if canonical.get("eventCatalogFileName") != "event-catalog.json" or canonical.get("relationshipGraphFileName") != "catalog-graph.json":
+        fail("Canonical event catalog and relationship graph file names are invalid.")
     require_exact_enum(policy.get("outputModes"), REQUIRED_OUTPUT_MODES, "outputModes")
 
     validator = policy.get("validator")
@@ -136,7 +142,7 @@ def validate_configuration(
         fail("Generation identifier normalization must match the governed contract.")
     if generation.get("serverDefaultBehavior") != "omit-when-not-explicitly-supplied":
         fail("Generation must omit servers unless safe metadata is explicitly supplied.")
-    for key in ("maximumChannels", "maximumMessages", "maximumOperations", "maximumServers", "maximumSecuritySchemes"):
+    for key in ("maximumChannels", "maximumMessages", "maximumOperations", "maximumServers", "maximumSecuritySchemes", "maximumCatalogNodes", "maximumCatalogEdges", "maximumCatalogMetadataStringLength"):
         if not isinstance(generation.get(key), int) or generation[key] <= 0:
             fail(f"generation.{key} must be a positive integer.")
 
@@ -168,6 +174,7 @@ def validate_configuration(
         "tool": "eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj",
         "tests": "eng/tests/test_verify_asyncapi.py",
         "tcjExtensionSchema": "eng/asyncapi-tcj-extensions.schema.json",
+        "eventCatalogSchema": "eng/event-catalog.schema.json",
     }
     for key, expected in required_paths.items():
         actual = require_relative_path(paths.get(key), f"paths.{key}")
@@ -209,7 +216,7 @@ def validate_configuration(
         require_version(governance_versions.get(key), f"governance.versions.{key}")
 
     names = governance.get("canonicalFileNames")
-    if not isinstance(names, dict) or names.get("asyncApi") != "asyncapi.json" or names.get("eventCatalog") != "event-catalog.json":
+    if not isinstance(names, dict) or names.get("asyncApi") != "asyncapi.json" or names.get("eventCatalog") != "event-catalog.json" or names.get("relationshipGraph") != "catalog-graph.json":
         fail("Canonical governance file names are invalid.")
     if names["asyncApi"] != canonical["asyncApiFileName"]:
         fail("Policy and governance canonical AsyncAPI file names must agree.")
@@ -259,6 +266,44 @@ def validate_configuration(
     for location, names_at_location in placement.items():
         if not isinstance(names_at_location, list) or "x-tcj-extension-version" not in names_at_location or any(name not in approved for name in names_at_location):
             fail(f"TCJ extension placement for {location} is invalid.")
+
+
+    event_policy = policy.get("eventCatalog")
+    event_governance = governance.get("eventCatalog")
+    if not isinstance(event_policy, dict) or not isinstance(event_governance, dict):
+        fail("Event catalog policy and governance must be explicit.")
+    if event_policy.get("version") != versions["eventCatalogSchema"] or event_governance.get("version") != versions["eventCatalogSchema"]:
+        fail("Event catalog versions must agree with the governed schema version.")
+    if event_policy.get("schemaPath") != "eng/event-catalog.schema.json" or event_governance.get("schemaPath") != "eng/event-catalog.schema.json":
+        fail("Event catalog schema path is invalid.")
+    if event_policy.get("requiredOutputs") != ["event-catalog.json", "catalog-graph.json"]:
+        fail("Event catalog required outputs are invalid.")
+    if event_policy.get("scope") != "declared-metadata-only" or event_policy.get("syntheticMarkerRequiredForSyntheticFixtures") is not True:
+        fail("Event catalog scope/synthetic fixture policy is invalid.")
+    if event_policy.get("secretBearingMetadata") != "reject" or event_policy.get("canonicalJson") is not True or event_policy.get("deterministic") is not True:
+        fail("Event catalog safety/determinism policy is invalid.")
+    if event_catalog_schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema" or event_catalog_schema.get("$ref") != "#/$defs/eventCatalog":
+        fail("Event catalog schema must be a draft 2020-12 schema rooted at $defs.eventCatalog.")
+    defs = event_catalog_schema.get("$defs")
+    if not isinstance(defs, dict) or "eventCatalog" not in defs or "relationshipGraph" not in defs:
+        fail("Event catalog schema family must govern both eventCatalog and relationshipGraph structures.")
+    if defs["eventCatalog"].get("properties", {}).get("schemaVersion") != {"const": versions["eventCatalogSchema"]}:
+        fail("Event catalog schema version must be pinned to the governed version.")
+    if defs["relationshipGraph"].get("properties", {}).get("schemaVersion") != {"const": versions["eventCatalogSchema"]}:
+        fail("Relationship graph schema version must be pinned to the governed version.")
+    expected_nodes = ["Application", "Producer", "Consumer", "MessageContract", "Channel", "Transport", "Saga"]
+    expected_relationships = ["Publishes", "Consumes", "UsesChannel", "UsesTransport", "StartsSaga", "ContinuesSaga", "TimesOutSaga", "CompensatesSaga", "CompletesSaga", "FailsSaga", "Replaces", "UpcastsTo"]
+    if event_governance.get("supportedNodeTypes") != expected_nodes or defs.get("nodeType", {}).get("enum") != expected_nodes:
+        fail("Event catalog node types must agree between governance and schema.")
+    if event_governance.get("supportedRelationshipTypes") != expected_relationships or defs.get("relationshipType", {}).get("enum") != expected_relationships:
+        fail("Event catalog relationship types must agree between governance and schema.")
+    if event_governance.get("messageIdentity") != "MessageType+MessageVersion":
+        fail("Event catalog message identity must remain MessageType+MessageVersion.")
+    if event_governance.get("scopeCompleteness") != "DeclaredMetadataOnly" or event_governance.get("runtimeDiscovery") is not False or event_governance.get("organizationWideCompleteness") is not False or event_governance.get("runtimeAvailabilityClaim") is not False:
+        fail("Event catalog scope must remain declared metadata only.")
+    bounds = event_governance.get("bounds")
+    if bounds != {"maximumNodes": 2048, "maximumEdges": 8192, "maximumMetadataStringLength": 2048}:
+        fail("Event catalog governance bounds are invalid.")
 
     integration = governance.get("step52ContractIntegration")
     expected_integration = {

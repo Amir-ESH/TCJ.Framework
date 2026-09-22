@@ -31,16 +31,19 @@ class AsyncApiFoundationVerifierTests(unittest.TestCase):
             "src/TCJ.Messaging.AsyncApi/TCJ.Messaging.AsyncApi.csproj",
             "eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj",
             "eng/tests/test_verify_asyncapi.py",
+            "eng/event-catalog.schema.json",
         ):
             (self.root / relative).write_text("placeholder", encoding="utf-8")
         self.policy_path = self.root / "eng/asyncapi-policy.json"
         self.governance_path = self.root / "eng/asyncapi-governance-contract.json"
         self.catalog_schema_path = self.root / "eng/messaging-catalog-input.schema.json"
         self.extension_schema_path = self.root / "eng/asyncapi-tcj-extensions.schema.json"
+        self.event_catalog_schema_path = self.root / "eng/event-catalog.schema.json"
         self.policy_path.write_text((ENG / "asyncapi-policy.json").read_text(encoding="utf-8"), encoding="utf-8")
         self.governance_path.write_text((ENG / "asyncapi-governance-contract.json").read_text(encoding="utf-8"), encoding="utf-8")
         self.catalog_schema_path.write_text((ENG / "messaging-catalog-input.schema.json").read_text(encoding="utf-8"), encoding="utf-8")
         self.extension_schema_path.write_text((ENG / "asyncapi-tcj-extensions.schema.json").read_text(encoding="utf-8"), encoding="utf-8")
+        self.event_catalog_schema_path.write_text((ENG / "event-catalog.schema.json").read_text(encoding="utf-8"), encoding="utf-8")
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -161,6 +164,26 @@ class AsyncApiFoundationVerifierTests(unittest.TestCase):
         (self.root / "eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj").unlink()
         with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "Configured path does not exist"):
             MODULE.validate_configuration(self.root, self.policy_path, self.governance_path)
+
+
+    def test_event_catalog_schema_and_graph_are_governed(self) -> None:
+        policy, governance = MODULE.validate_configuration(
+            self.root, self.policy_path, self.governance_path, self.catalog_schema_path, self.extension_schema_path, self.event_catalog_schema_path
+        )
+        self.assertEqual("event-catalog.json", policy["canonicalOutput"]["eventCatalogFileName"])
+        self.assertEqual("catalog-graph.json", governance["canonicalFileNames"]["relationshipGraph"])
+        schema = self._read(self.event_catalog_schema_path)
+        self.assertEqual({"const": "1.0"}, schema["$defs"]["eventCatalog"]["properties"]["schemaVersion"])
+        self.assertIn("relationshipGraph", schema["$defs"])
+
+    def test_event_catalog_runtime_completeness_claim_fails_governance(self) -> None:
+        governance = self._read(self.governance_path)
+        governance["eventCatalog"]["runtimeDiscovery"] = True
+        self._write(self.governance_path, governance)
+        with self.assertRaisesRegex(MODULE.AsyncApiPolicyError, "declared metadata only"):
+            MODULE.validate_configuration(
+                self.root, self.policy_path, self.governance_path, self.catalog_schema_path, self.extension_schema_path, self.event_catalog_schema_path
+            )
 
     @staticmethod
     def _read(path: Path) -> dict:

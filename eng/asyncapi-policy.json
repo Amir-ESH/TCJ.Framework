@@ -4,7 +4,9 @@
   "asyncApiSpecificationVersion": "3.1.0",
   "canonicalOutput": {
     "format": "JSON",
-    "asyncApiFileName": "asyncapi.json"
+    "asyncApiFileName": "asyncapi.json",
+    "eventCatalogFileName": "event-catalog.json",
+    "relationshipGraphFileName": "catalog-graph.json"
   },
   "outputModes": [
     "referenced",
@@ -33,7 +35,8 @@
     "package": "src/TCJ.Messaging.AsyncApi/TCJ.Messaging.AsyncApi.csproj",
     "tool": "eng/TCJ.AsyncApi.Tool/TCJ.AsyncApi.Tool.csproj",
     "tests": "eng/tests/test_verify_asyncapi.py",
-    "tcjExtensionSchema": "eng/asyncapi-tcj-extensions.schema.json"
+    "tcjExtensionSchema": "eng/asyncapi-tcj-extensions.schema.json",
+    "eventCatalogSchema": "eng/event-catalog.schema.json"
   },
   "expectedGeneratedArtifactRoots": [
     "artifacts/asyncapi",
@@ -61,7 +64,10 @@
     "maximumMessages": 512,
     "maximumOperations": 1024,
     "maximumServers": 512,
-    "maximumSecuritySchemes": 512
+    "maximumSecuritySchemes": 512,
+    "maximumCatalogNodes": 2048,
+    "maximumCatalogEdges": 8192,
+    "maximumCatalogMetadataStringLength": 2048
   },
   "tcjExtensions": {
     "version": "1.0",
@@ -101,5 +107,18 @@
     "unknownExtensions": "reject",
     "secretBearingMetadata": "reject",
     "transportBindings": "standard-only-when-semantically-explicit-otherwise-governed-extension"
+  },
+  "eventCatalog": {
+    "version": "1.0",
+    "schemaPath": "eng/event-catalog.schema.json",
+    "requiredOutputs": [
+      "event-catalog.json",
+      "catalog-graph.json"
+    ],
+    "scope": "declared-metadata-only",
+    "syntheticMarkerRequiredForSyntheticFixtures": true,
+    "secretBearingMetadata": "reject",
+    "canonicalJson": true,
+    "deterministic": true
   }
 }

@@ -13,7 +13,8 @@
   },
   "canonicalFileNames": {
     "asyncApi": "asyncapi.json",
-    "eventCatalog": "event-catalog.json"
+    "eventCatalog": "event-catalog.json",
+    "relationshipGraph": "catalog-graph.json"
   },
   "canonicalOutputRoots": {
     "generatedArtifacts": "artifacts/asyncapi",
@@ -159,5 +160,61 @@
     "compatibility": "link-existing-Step52-evidence-only-no-recompute",
     "dynamicDestinations": "strategy-and-pattern-only-no-runtime-values",
     "transportBindingFallback": "use-standard-binding-only-when-semantically-accurate-otherwise-governed-extension"
+  },
+  "eventCatalog": {
+    "version": "1.0",
+    "compatibilitySensitive": true,
+    "schemaPath": "eng/event-catalog.schema.json",
+    "supportedNodeTypes": [
+      "Application",
+      "Producer",
+      "Consumer",
+      "MessageContract",
+      "Channel",
+      "Transport",
+      "Saga"
+    ],
+    "supportedRelationshipTypes": [
+      "Publishes",
+      "Consumes",
+      "UsesChannel",
+      "UsesTransport",
+      "StartsSaga",
+      "ContinuesSaga",
+      "TimesOutSaga",
+      "CompensatesSaga",
+      "CompletesSaga",
+      "FailsSaga",
+      "Replaces",
+      "UpcastsTo"
+    ],
+    "messageIdentity": "MessageType+MessageVersion",
+    "nodeIdRule": "sha256(type+logical-identity)-stable-prefix",
+    "edgeIdRule": "sha256(relationship-type+source-node-id+target-node-id)-stable-prefix",
+    "duplicateEdgeBehavior": "normalize-identical-semantic-edge",
+    "nodeOrdering": [
+      "type",
+      "stable-id"
+    ],
+    "edgeOrdering": [
+      "relationship-type",
+      "source-id",
+      "target-id",
+      "stable-edge-id"
+    ],
+    "scopeCompleteness": "DeclaredMetadataOnly",
+    "runtimeDiscovery": false,
+    "organizationWideCompleteness": false,
+    "runtimeAvailabilityClaim": false,
+    "syntheticFixtureMarker": "scope.synthetic",
+    "graphValidation": "same-schema-family-plus-structural-integrity-validation",
+    "replacementEvidence": "Step52.ReplacementVersion-only",
+    "upcasterEvidence": "governed-Step52-evidence-only-no-inference",
+    "cycles": "allowed-and-bounded",
+    "bounds": {
+      "maximumNodes": 2048,
+      "maximumEdges": 8192,
+      "maximumMetadataStringLength": 2048
+    }
   }
 }

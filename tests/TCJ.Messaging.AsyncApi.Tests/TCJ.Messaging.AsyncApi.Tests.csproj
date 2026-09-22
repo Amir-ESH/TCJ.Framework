@@ -11,6 +11,7 @@
   <ItemGroup>
     <None Include="..\..\eng\messaging-catalog-input.schema.json" Link="messaging-catalog-input.schema.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\eng\asyncapi-tcj-extensions.schema.json" Link="asyncapi-tcj-extensions.schema.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\eng\event-catalog.schema.json" Link="event-catalog.schema.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Golden\*.json" CopyToOutputDirectory="PreserveNewest" />
