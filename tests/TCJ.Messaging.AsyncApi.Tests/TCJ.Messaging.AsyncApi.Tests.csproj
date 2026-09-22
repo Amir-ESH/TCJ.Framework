@@ -15,5 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="Golden\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Golden\*.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

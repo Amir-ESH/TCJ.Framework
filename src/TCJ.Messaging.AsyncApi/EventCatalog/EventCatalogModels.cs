@@ -50,6 +50,10 @@ public sealed record EventCatalogNode
     public string? ContentType { get; init; }
     public string? SchemaFingerprintAlgorithm { get; init; }
     public string? SchemaFingerprint { get; init; }
+    /// <summary>Gets the validated governed schema artifact path relative to the Step 52 artifact root.</summary>
+    public string? SchemaRelativePath { get; init; }
+    /// <summary>Gets validated governed example artifact paths relative to the Step 52 artifact root.</summary>
+    public IReadOnlyList<string> ExampleRelativePaths { get; init; } = [];
     public string? CompatibilityMode { get; init; }
     public IReadOnlyList<string> DataClassifications { get; init; } = [];
     public string? Address { get; init; }

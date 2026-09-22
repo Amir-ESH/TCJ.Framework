@@ -49,6 +49,8 @@
         "contentType": { "type": "string", "minLength": 1, "maxLength": 2048 },
         "schemaFingerprintAlgorithm": { "type": "string", "minLength": 1, "maxLength": 2048 },
         "schemaFingerprint": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "schemaRelativePath": { "type": "string", "minLength": 1, "maxLength": 2048, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+        "exampleRelativePaths": { "type": "array", "maxItems": 64, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 2048 } },
         "compatibilityMode": { "enum": ["None", "Backward", "Forward", "Full", "BackwardTransitive", "ForwardTransitive", "FullTransitive"] },
         "dataClassifications": {
           "type": "array",
