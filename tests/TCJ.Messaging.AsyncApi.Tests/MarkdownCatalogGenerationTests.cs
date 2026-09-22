@@ -75,7 +75,7 @@ public sealed class MarkdownCatalogGenerationTests
 
         Assert.True(result.IsValid);
         string markdown = Text(result.Files.Single(static x => x.RelativePath.EndsWith("orders-created-v1.md", StringComparison.Ordinal)));
-        Assert.Contains("Outbox: Enabled (durable at-least-once publication; not global exactly-once)", markdown, StringComparison.Ordinal);
+        Assert.Contains("Outbox: Enabled (durable at-least-once publication; duplicate delivery remains possible)", markdown, StringComparison.Ordinal);
         Assert.Contains("Inbox: Enabled", markdown, StringComparison.Ordinal);
         Assert.Contains("Dynamic destination: Yes", markdown, StringComparison.Ordinal);
         Assert.Contains("tenant-topic", markdown, StringComparison.Ordinal);

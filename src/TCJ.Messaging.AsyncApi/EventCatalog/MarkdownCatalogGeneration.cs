@@ -230,7 +230,7 @@ public static class MarkdownCatalogGenerator
         {
             Line(b, "- **" + Escape(n.LogicalId) + "**");
             if (!string.IsNullOrWhiteSpace(n.Component)) Line(b, "  - Component: " + Escape(n.Component));
-            if (n.OutboxEnabled == true) Line(b, "  - Outbox: Enabled (durable at-least-once publication; not global exactly-once)");
+            if (n.OutboxEnabled == true) Line(b, "  - Outbox: Enabled (durable at-least-once publication; duplicate delivery remains possible)");
             if (n.InboxEnabled == true) Line(b, "  - Inbox: Enabled (logical deduplication participation)");
             if (!string.IsNullOrWhiteSpace(n.RetryOwner)) Line(b, "  - Retry owner: " + Escape(n.RetryOwner));
             if (n.OrderingSemantics is not null) Line(b, "  - Ordering: " + Escape(n.OrderingSemantics.Value.ToString()));
