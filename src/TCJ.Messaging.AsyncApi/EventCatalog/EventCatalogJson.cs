@@ -67,7 +67,9 @@ public static class EventCatalogJson
         writer.WriteString("id", node.Id); writer.WriteString("type", node.Type.ToString()); writer.WriteString("logicalId", node.LogicalId);
         Optional(writer, "version", node.Version); Optional(writer, "description", node.Description); Optional(writer, "owner", node.Owner); OptionalEnum(writer, "lifecycle", node.Lifecycle);
         Optional(writer, "component", node.Component); Optional(writer, "messageType", node.MessageType); Optional(writer, "messageVersion", node.MessageVersion); Optional(writer, "contentType", node.ContentType);
-        Optional(writer, "schemaFingerprintAlgorithm", node.SchemaFingerprintAlgorithm); Optional(writer, "schemaFingerprint", node.SchemaFingerprint); Optional(writer, "compatibilityMode", node.CompatibilityMode);
+        Optional(writer, "schemaFingerprintAlgorithm", node.SchemaFingerprintAlgorithm); Optional(writer, "schemaFingerprint", node.SchemaFingerprint); Optional(writer, "schemaRelativePath", node.SchemaRelativePath);
+        if (node.ExampleRelativePaths.Count != 0) { writer.WritePropertyName("exampleRelativePaths"); writer.WriteStartArray(); foreach (string value in node.ExampleRelativePaths) writer.WriteStringValue(value); writer.WriteEndArray(); }
+        Optional(writer, "compatibilityMode", node.CompatibilityMode);
         if (node.DataClassifications.Count != 0) { writer.WritePropertyName("dataClassifications"); writer.WriteStartArray(); foreach (string value in node.DataClassifications) writer.WriteStringValue(value); writer.WriteEndArray(); }
         Optional(writer, "address", node.Address); Optional(writer, "transportKind", node.TransportKind); Optional(writer, "protocol", node.Protocol);
         OptionalEnum(writer, "deliverySemantics", node.DeliverySemantics); OptionalEnum(writer, "orderingSemantics", node.OrderingSemantics); OptionalEnum(writer, "partitioningSemantics", node.PartitioningSemantics); OptionalEnum(writer, "deadLetterSemantics", node.DeadLetterSemantics);

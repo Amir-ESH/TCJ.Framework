@@ -176,6 +176,8 @@ public static class EventCatalogGenerator
                 ContentType = contract.ContentType,
                 SchemaFingerprintAlgorithm = contract.SchemaFingerprint.Algorithm,
                 SchemaFingerprint = contract.SchemaFingerprint.Value,
+                SchemaRelativePath = contract.SchemaRelativePath,
+                ExampleRelativePaths = contract.Examples.Select(static x => x.RelativePath).OrderBy(static x => x, StringComparer.Ordinal).ToArray(),
                 Owner = contract.Owner,
                 Lifecycle = contract.Deprecated ? MessagingLifecycle.Deprecated : MessagingLifecycle.Published,
                 CompatibilityMode = contract.CompatibilityMode.ToString(),
@@ -428,7 +430,8 @@ public static class EventCatalogGenerator
         yield return node.LogicalId; yield return node.Version; yield return node.Description; yield return node.Owner; yield return node.Component;
         yield return node.MessageType; yield return node.ContentType; yield return node.SchemaFingerprintAlgorithm; yield return node.SchemaFingerprint;
         yield return node.CompatibilityMode; yield return node.Address; yield return node.TransportKind; yield return node.Protocol; yield return node.RetryOwner;
-        yield return node.SubscriptionOrGroup; yield return node.DynamicNamingStrategyId; yield return node.DynamicPattern;
+        yield return node.SubscriptionOrGroup; yield return node.DynamicNamingStrategyId; yield return node.DynamicPattern; yield return node.SchemaRelativePath;
+        foreach (string path in node.ExampleRelativePaths) yield return path;
         foreach (string classification in node.DataClassifications) yield return classification;
     }
 

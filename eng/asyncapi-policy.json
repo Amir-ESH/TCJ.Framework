@@ -119,6 +119,20 @@
     "syntheticMarkerRequiredForSyntheticFixtures": true,
     "secretBearingMetadata": "reject",
     "canonicalJson": true,
-    "deterministic": true
+    "deterministic": true,
+    "markdown": {
+      "enabled": true,
+      "outputRoot": "catalog",
+      "indexFileName": "index.md",
+      "messageDirectory": "messages",
+      "lineEnding": "LF",
+      "encoding": "UTF-8-no-BOM",
+      "fileNameRule": "stable-lowercase-kebab-case-message-type-plus-version-with-collision-failure",
+      "maximumFiles": 4096,
+      "maximumOutputBytes": 16777216,
+      "scopeDisclaimerRequired": true,
+      "syntheticLabelRequired": true,
+      "brokenLocalLinks": "fail"
+    }
   }
 }

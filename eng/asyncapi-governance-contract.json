@@ -9,12 +9,14 @@
     "tcjExtensionSchema": "1.0",
     "identifierNormalization": "1.0",
     "deterministicSerialization": "1.0",
-    "validationReportSchema": "1.0"
+    "validationReportSchema": "1.0",
+    "markdownCatalog": "1.0"
   },
   "canonicalFileNames": {
     "asyncApi": "asyncapi.json",
     "eventCatalog": "event-catalog.json",
-    "relationshipGraph": "catalog-graph.json"
+    "relationshipGraph": "catalog-graph.json",
+    "markdownCatalogIndex": "catalog/index.md"
   },
   "canonicalOutputRoots": {
     "generatedArtifacts": "artifacts/asyncapi",
@@ -215,6 +217,21 @@
       "maximumNodes": 2048,
       "maximumEdges": 8192,
       "maximumMetadataStringLength": 2048
+    },
+    "markdown": {
+      "version": "1.0",
+      "compatibilitySensitive": true,
+      "indexPath": "catalog/index.md",
+      "messagePageDirectory": "catalog/messages",
+      "fileNameAlgorithm": "normalized-logical-message-type-v-message-version",
+      "fileNameCollisionBehavior": "fail-closed",
+      "pageLayoutVersion": "1.0",
+      "sectionOrdering": "governed-stable-order",
+      "scopeDisclaimer": "This catalog describes explicitly declared messaging topology and governed contract metadata. It does not represent live runtime discovery or prove broker/application availability.",
+      "syntheticMarkerRendering": "explicit-example-not-production-business-event",
+      "localLinkBehavior": "relative-root-constrained-and-validated",
+      "lineEnding": "LF",
+      "encoding": "UTF-8-no-BOM"
     }
   }
 }

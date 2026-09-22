@@ -37,7 +37,7 @@ public static class EventCatalogSchemaValidator
     private static readonly HashSet<string> NodeProperties = new(StringComparer.Ordinal)
     {
         "id", "type", "logicalId", "version", "description", "owner", "lifecycle", "component", "messageType", "messageVersion",
-        "contentType", "schemaFingerprintAlgorithm", "schemaFingerprint", "compatibilityMode", "dataClassifications", "address", "transportKind",
+        "contentType", "schemaFingerprintAlgorithm", "schemaFingerprint", "schemaRelativePath", "exampleRelativePaths", "compatibilityMode", "dataClassifications", "address", "transportKind",
         "protocol", "deliverySemantics", "orderingSemantics", "partitioningSemantics", "deadLetterSemantics", "inboxEnabled", "outboxEnabled",
         "retryOwner", "subscriptionOrGroup", "dynamicDestination", "dynamicNamingStrategyId", "dynamicPattern", "sagaDefinitionVersion"
     };
