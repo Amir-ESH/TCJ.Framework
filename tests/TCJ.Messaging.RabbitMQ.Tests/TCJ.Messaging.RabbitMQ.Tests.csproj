@@ -5,6 +5,7 @@
     <RootNamespace>TCJ.Messaging.RabbitMQ.Tests</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="SSH.NET" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Testcontainers.RabbitMq" />
     <PackageReference Include="RabbitMQ.Client" />
